@@ -1,0 +1,270 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://massfront.invalid/schemas/model-kit-v1.json",
+  "title": "MASSFRONT AI Model Kit V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "kitId",
+    "displayName",
+    "status",
+    "source",
+    "concept",
+    "normalization",
+    "lods",
+    "collision",
+    "textures",
+    "evidence",
+    "budgets"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": 1 },
+    "kitId": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+    "displayName": { "type": "string", "minLength": 1 },
+    "status": {
+      "enum": ["SOURCE_CANDIDATE", "REVIEW_CANDIDATE", "RUNTIME_CANDIDATE"]
+    },
+    "classification": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "glb",
+        "expectedSha256",
+        "publicSceneUrl",
+        "documentName",
+        "rootObjectId",
+        "meshObjectIds",
+        "meshNodeNames",
+        "generation",
+        "sceneDigest",
+        "expectedSceneDigestSha256"
+      ],
+      "properties": {
+        "glb": { "$ref": "#/$defs/relativePath" },
+        "expectedSha256": { "$ref": "#/$defs/nullableSha256" },
+        "publicSceneUrl": { "type": "string", "pattern": "^https://" },
+        "documentName": { "type": "string", "minLength": 1 },
+        "documentId": { "type": ["string", "null"] },
+        "rootObjectId": { "type": "string", "minLength": 1 },
+        "meshObjectIds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "meshNodeNames": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "generation": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": ["system"],
+          "properties": {
+            "system": { "enum": ["spline-ai-3d", "spline-dsl", "mixed"] }
+          }
+        },
+        "sceneDigest": { "$ref": "#/$defs/relativePath" },
+        "expectedSceneDigestSha256": { "$ref": "#/$defs/nullableSha256" }
+      }
+    },
+    "concept": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["image", "expectedSha256", "pixelsUsedAsTexture", "generation"],
+      "properties": {
+        "image": { "$ref": "#/$defs/relativePath" },
+        "expectedSha256": { "$ref": "#/$defs/nullableSha256" },
+        "pixelsUsedAsTexture": { "const": false },
+        "generation": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": ["system"],
+          "properties": {
+            "system": { "enum": ["imagegen", "spline-image-generation", "manual-original"] }
+          }
+        }
+      }
+    },
+    "normalization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sourceUp",
+        "runtimeUp",
+        "runtimeForward",
+        "scaleMode",
+        "targetMeters",
+        "centerXY",
+        "groundOrigin",
+        "toleranceMeters"
+      ],
+      "properties": {
+        "sourceUp": { "enum": ["Y", "Z"] },
+        "runtimeUp": { "const": "Z" },
+        "runtimeForward": { "enum": ["+Y", "-Y"] },
+        "scaleMode": { "enum": ["height", "largest-dimension"] },
+        "targetMeters": { "type": "number", "exclusiveMinimum": 0 },
+        "centerXY": { "const": true },
+        "groundOrigin": { "const": true },
+        "toleranceMeters": { "type": "number", "minimum": 0.0001, "maximum": 0.1 }
+      }
+    },
+    "lods": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "prefixItems": [
+        { "$ref": "#/$defs/lod0" },
+        { "$ref": "#/$defs/lod1" },
+        { "$ref": "#/$defs/lod2" }
+      ]
+    },
+    "collision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "maxTriangles", "output"],
+      "properties": {
+        "mode": { "const": "convex-hull" },
+        "maxTriangles": { "type": "integer", "minimum": 8, "maximum": 1024 },
+        "output": { "$ref": "#/$defs/relativePath" }
+      }
+    },
+    "textures": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "extract",
+        "requireEmbeddedSource",
+        "outputDirectory",
+        "seamPolicy",
+        "maxBorderMeanDelta",
+        "maxBorderP95Delta"
+      ],
+      "properties": {
+        "extract": { "const": true },
+        "requireEmbeddedSource": { "type": "boolean" },
+        "outputDirectory": { "$ref": "#/$defs/relativePath" },
+        "seamPolicy": { "enum": ["uv-atlas-not-tileable", "require-tileable"] },
+        "maxBorderMeanDelta": { "type": "number", "minimum": 0, "maximum": 1 },
+        "maxBorderP95Delta": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "outputDirectory",
+        "thumbnailSize",
+        "views",
+        "contactSheet",
+        "buildReport",
+        "verificationReport",
+        "artifactIndex",
+        "sourceLock",
+        "provenance",
+        "mobileEvidence",
+        "requiredMobileViewports"
+      ],
+      "properties": {
+        "outputDirectory": { "$ref": "#/$defs/relativePath" },
+        "thumbnailSize": {
+          "type": "array",
+          "prefixItems": [
+            { "type": "integer", "minimum": 256, "maximum": 2048 },
+            { "type": "integer", "minimum": 256, "maximum": 2048 }
+          ],
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "views": {
+          "type": "array",
+          "minItems": 4,
+          "uniqueItems": true,
+          "items": { "enum": ["iso", "front", "side", "top"] }
+        },
+        "contactSheet": { "$ref": "#/$defs/relativePath" },
+        "buildReport": { "$ref": "#/$defs/relativePath" },
+        "verificationReport": { "$ref": "#/$defs/relativePath" },
+        "artifactIndex": { "$ref": "#/$defs/relativePath" },
+        "sourceLock": { "$ref": "#/$defs/relativePath" },
+        "provenance": { "$ref": "#/$defs/relativePath" },
+        "mobileEvidence": { "$ref": "#/$defs/relativePath" },
+        "requiredMobileViewports": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": { "enum": ["phone-portrait", "phone-landscape", "tablet", "desktop"] }
+        }
+      }
+    },
+    "budgets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "maxSourceBytes",
+        "maxSourceTriangles",
+        "maxMaterials",
+        "maxTextures",
+        "maxTextureDimension"
+      ],
+      "properties": {
+        "maxSourceBytes": { "type": "integer", "minimum": 1024 },
+        "maxSourceTriangles": { "type": "integer", "minimum": 1 },
+        "maxMaterials": { "type": "integer", "minimum": 1 },
+        "maxTextures": { "type": "integer", "minimum": 1 },
+        "maxTextureDimension": { "type": "integer", "minimum": 64, "maximum": 8192 }
+      }
+    }
+  },
+  "$defs": {
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?![A-Za-z]:[\\\\/])(?!\\\\\\\\)(?!file:)(?!~[\\\\/])(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]+$"
+    },
+    "nullableSha256": {
+      "oneOf": [
+        { "type": "null" },
+        { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      ]
+    },
+    "lodBase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "targetTriangles", "maxTriangles", "output"],
+      "properties": {
+        "name": { "enum": ["LOD0", "LOD1", "LOD2"] },
+        "targetTriangles": { "type": "integer", "minimum": 24 },
+        "maxTriangles": { "type": "integer", "minimum": 24 },
+        "output": { "$ref": "#/$defs/relativePath" }
+      }
+    },
+    "lod0": {
+      "allOf": [
+        { "$ref": "#/$defs/lodBase" },
+        { "properties": { "name": { "const": "LOD0" } } }
+      ]
+    },
+    "lod1": {
+      "allOf": [
+        { "$ref": "#/$defs/lodBase" },
+        { "properties": { "name": { "const": "LOD1" } } }
+      ]
+    },
+    "lod2": {
+      "allOf": [
+        { "$ref": "#/$defs/lodBase" },
+        { "properties": { "name": { "const": "LOD2" } } }
+      ]
+    }
+  }
+}

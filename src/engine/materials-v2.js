@@ -918,7 +918,9 @@ function initMaterialV2(){
     mf2RequestImportedPayload();return false;
   }
   if(mf2Prog)return true;
-  mf2Prog=mkProg(MF2_VS,MF2_FS,'material-v2');if(!mf2Prog)return false;
+  /* mkProg() defers link validation (see mesh.js). This fallback must know
+     NOW whether the V2 program linked, so ask explicitly. */
+  mf2Prog=mkProg(MF2_VS,MF2_FS,'material-v2');if(!mfProgOk(mf2Prog))return false;
   for(const k of ['uVP','uEye','uSun','uSunC','uAmbSky','uAmbGnd','uFogC','uSecondary','uEmissive','uDebug','uShowcase','uDamage','uAssetKind','uBaseAO','uNRE','uMasks','uDamageTex'])
     mf2U[k]=gl.getUniformLocation(mf2Prog,k);
   mf2Geo=(MF2_SHOWCASE&&mf2ImportedTankGeometry())||(MF2_ASSET==='commander'?mf2CommanderGeometry():mf2TankGeometry());

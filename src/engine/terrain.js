@@ -47,6 +47,10 @@ let waterMesh=null, waterVAO=null, waterVBO=null, waterIBO=null, waterIdxCount=0
    inland bowls still stay dirt. */
 let waterNeed=null, waterTH=null, waterDirty=false, waterRebuildT=0, waterBaseCol=null, waterBowlSynced=0;
 let WATER_LIP=null;
+/* Wall clock for the rebuild throttle. -1 = "no reading yet", which makes the
+   first call after a reset fall back to the caller's dt instead of charging
+   the throttle for every second since page load. */
+let waterMaintAt=-1;
 const WATER_FLOOD_CAP=6;
 const waterFloods=[];
 let waterTickAt=-1;
@@ -88,6 +92,7 @@ function waterLipReset(){
   waterBowlSynced=0;
   waterFloods.length=0;
   waterTickAt=-1;
+  waterMaintAt=-1;                       // a new map must not inherit a stale clock
 }
 function terrainWorldH(ix,iy){
   const h=heightF[iy*TS+ix];
@@ -101,7 +106,23 @@ function uploadHeightTex(x0,y0,x1,y1){
   x0=clamp(x0|0,0,TS); y0=clamp(y0|0,0,TS); x1=clamp(Math.ceil(x1),0,TS); y1=clamp(Math.ceil(y1),0,TS);
   const w=x1-x0, h=y1-y0; if(w<=0||h<=0) return;
   const buf=new Float32Array(w*h);
-  for(let y=0;y<h;y++) for(let x=0;x<w;x++) buf[y*w+x]=terrainWorldH(x0+x,y0+y);
+  /* Creep rides on top of the terrain's own height, never inside heightF: this
+     sheet is what the ground shader central-differences for per-pixel normals,
+     so adding here gives Brood biomass real relief and a rolled rim while PASS,
+     slope and pathing keep reading clean ground. */
+  /* Two loops, not one with a branch: this runs for every combat crater as
+     well as every foundation, and a match with no Brood should not pay a
+     per-texel test for a field it never allocated. */
+  const cf=(typeof creepF!=='undefined')?creepF:null;
+  if(cf){
+    const st=CREEP_STEP;
+    for(let y=0;y<h;y++){
+      const row=(y0+y)*TS;
+      for(let x=0;x<w;x++) buf[y*w+x]=terrainWorldH(x0+x,y0+y)+cf[row+x0+x]*st;
+    }
+  }else{
+    for(let y=0;y<h;y++) for(let x=0;x<w;x++) buf[y*w+x]=terrainWorldH(x0+x,y0+y);
+  }
   /* Height lives on unit 10 in the terrain pass. Combat craters upload from
      the sim tick, which can land while TEXTURE0 still holds the material
      atlas. bindTexture(null) on the active unit was the adboards strobe:
@@ -130,9 +151,24 @@ function terrainGLReset(){
   terrVAO=terrVBO=terrIBO=null;
   terrEdgeVAO=terrEdgeVBO=terrEdgeIBO=null;
   waterVAO=waterVBO=waterIBO=null;
-  waterLipReset();
-  mfShadePend=null;
-  if(typeof waterFxReset==='function') waterFxReset();
+  if(typeof waterFxGLReset==='function') waterFxGLReset();
+}
+function terrainGLRebuild(){
+  if(typeof gl==='undefined'||!gl||!heightF||!terrainCanvas)return false;
+  const oldTerrainTex=typeof terrainTex!=='undefined'?terrainTex:null;
+  const oldGroundMaskTex=typeof groundMaskTex!=='undefined'?groundMaskTex:null;
+  buildTerrainMesh(typeof curTheme!=='undefined'?curTheme:undefined);
+  uploadHeightTex(null);
+  if(typeof uploadTerrainCanvasTex!=='function'||typeof uploadGroundMaskTex!=='function')return false;
+  const nextTerrainTex=uploadTerrainCanvasTex();
+  const mask=uploadGroundMaskTex();
+  terrainTex=nextTerrainTex;
+  /* Self-heal can run without a context loss, leaving these two textures live.
+     Delete only objects the current generation still recognizes; restored-
+     context wrappers correctly report the pre-loss handles as non-textures. */
+  for(const old of [oldTerrainTex,oldGroundMaskTex]) if(old&&old!==terrainTex&&old!==mask&&
+    (!gl.isTexture||gl.isTexture(old))) try{ gl.deleteTexture(old); }catch(e){}
+  return !!(terrVAO&&terrVBO&&terrIBO&&heightTex&&terrainTex&&mask);
 }
 
 /* World height in world units. Bilinear so slopes are smooth and the camera
@@ -152,11 +188,27 @@ function rawH(wx,wy){
    held. Half the radius keeps the de-spiking role while letting the new fine
    octave actually shape the mesh; per-pixel normals carry what remains. */
 const HSM=7;
+function mfTerrainSampleCoords(x0,tx,y0,ty){
+  const i=y0*TS+x0;
+  /* Keep rawH's bilinear operation order exactly. This helper receives only
+     coordinates terrainH already calculated; height data and interpolation
+     arithmetic remain authoritative and unchanged. */
+  return (heightF[i]*(1-tx)+heightF[i+1]*tx)*(1-ty)+(heightF[i+TS]*(1-tx)+heightF[i+TS+1]*tx)*ty;
+}
 function terrainH(wx,wy){
   if(!heightF) return 0;
-  const h=(rawH(wx,wy)*2
-        + rawH(wx-HSM,wy) + rawH(wx+HSM,wy) + rawH(wx,wy-HSM) + rawH(wx,wy+HSM)
-        + rawH(wx-HSM,wy-HSM)+rawH(wx+HSM,wy+HSM)+rawH(wx-HSM,wy+HSM)+rawH(wx+HSM,wy-HSM))/10;
+  /* Nine rawH calls recomputed the same three x and y interpolation positions
+     three times each. Reuse only those scalar coordinates; the nine bilinear
+     samples and their weighted sum stay in their original evaluation order. */
+  const fx=clamp(wx/MAP*(TS-1),0,TS-1.001),fxL=clamp((wx-HSM)/MAP*(TS-1),0,TS-1.001),fxR=clamp((wx+HSM)/MAP*(TS-1),0,TS-1.001);
+  const fy=clamp(wy/MAP*(TS-1),0,TS-1.001),fyD=clamp((wy-HSM)/MAP*(TS-1),0,TS-1.001),fyU=clamp((wy+HSM)/MAP*(TS-1),0,TS-1.001);
+  const x0=fx|0,tx=fx-x0,xL=fxL|0,txL=fxL-xL,xR=fxR|0,txR=fxR-xR;
+  const y0=fy|0,ty=fy-y0,yD=fyD|0,tyD=fyD-yD,yU=fyU|0,tyU=fyU-yU;
+  const h=(mfTerrainSampleCoords(x0,tx,y0,ty)*2
+        + mfTerrainSampleCoords(xL,txL,y0,ty) + mfTerrainSampleCoords(xR,txR,y0,ty)
+        + mfTerrainSampleCoords(x0,tx,yD,tyD) + mfTerrainSampleCoords(x0,tx,yU,tyU)
+        + mfTerrainSampleCoords(xL,txL,yD,tyD)+mfTerrainSampleCoords(xR,txR,yU,tyU)
+        + mfTerrainSampleCoords(xL,txL,yU,tyU)+mfTerrainSampleCoords(xR,txR,yD,tyD))/10;
   const wet=(typeof authoredWaterAt==='function'&&authoredWaterAt(wx,wy))||waterLipAt(wx,wy);
   return (wet&&h<=WATER_H) ? Math.max(SEABED,(h-WATER_H)*HSCALE*1.4) : (h-WATER_H)*HSCALE;
 }
@@ -438,7 +490,11 @@ function uploadTerrainRegion(gx0,gz0,gx1,gz1){
 function terrainDirty(wx,wy,rad,depth){
   /* Lip + splash first so the height sheet and vertex colours see the wet
      bowl on this same upload, not a frame later. */
-  waterReactDeform(wx,wy,rad,depth);
+  /* A dirty region is not necessarily an impact. Foundations and organic
+     surface refreshes omit depth; treating their broad upload radius as a
+     crater started shoreline floods and re-shaded freshly painted ground.
+     Only a real positive deformation depth may drive hydrology. */
+  if(Number.isFinite(depth)&&depth>0) waterReactDeform(wx,wy,rad,depth);
   if(!terrVerts) return;
   const cell=MAP/TGRID, pad=2;
   const gx0=Math.floor((wx-rad)/cell)-pad, gx1=Math.ceil((wx+rad)/cell)+pad;
@@ -470,10 +526,17 @@ function terrainDirty(wx,wy,rad,depth){
    First shoreline miss does not wait here — waterSyncBowl rebuilds with
    the splash so the hole is wet when the ring reads. */
 function waterMaintain(dt){
-  if(waterRebuildT>0) waterRebuildT-=dt;
+  /* This now runs only on the fixed simulation clock. Wall time made flooding
+     depend on render FPS and let a slow frame advance both the flood and its
+     rebuild throttle by an arbitrary amount. */
+  const _el=Math.max(0,Math.min(0.25,Number(dt)||0));
+  if(waterRebuildT>0) waterRebuildT-=_el;
   if(waterRebuildT<=0) waterBowlSynced=0;
   if(!waterDirty||waterRebuildT>0||!waterTH||typeof gl==='undefined'||!gl) return;
-  waterRebuildT=waterFloods.length?0.14:0.45;
+  /* Rebuilding scans the whole 320x320 sheet and recreates three GL buffers.
+     Twice a second is visually continuous for a spreading shoreline and keeps
+     bombardment from turning this maintenance pass into a CPU frame spike. */
+  waterRebuildT=waterFloods.length?0.5:0.45;
   waterBowlSynced=0;
   buildWaterMesh(waterTH);
 }
@@ -489,7 +552,7 @@ function waterFloodEnqueue(wx,wy,rad,hx,hy){
     }
   }
   if(waterFloods.length>=WATER_FLOOD_CAP) waterFloods.shift();
-  const F={x:wx,y:wy,r:r,hx:hx,hy:hy,front:0,maxFront:r*1.18+10,speed:54,age:0,fxT:0};
+  const F={x:wx,y:wy,r:r,hx:hx,hy:hy,front:0,maxFront:r*1.18+10,speed:54,age:0,fxT:0,markT:0};
   waterFloods.push(F);
   return F;
 }
@@ -541,13 +604,32 @@ function waterFloodMark(F,frontWu){
 }
 function waterFloodTick(dt){
   if(dt>0&&waterFloods.length){
-    let marked=false;
+    let marked=false, dirtyX0=TS, dirtyY0=TS, dirtyX1=-1, dirtyY1=-1;
+    const includeFloodRect=(F)=>{
+      const k=TS/MAP,cr=Math.max(6,F.r*k),reach=cr+F.front*k+4;
+      dirtyX0=Math.min(dirtyX0,clamp(Math.floor(F.x*k-reach),0,TS-1));
+      dirtyY0=Math.min(dirtyY0,clamp(Math.floor(F.y*k-reach),0,TS-1));
+      dirtyX1=Math.max(dirtyX1,clamp(Math.ceil(F.x*k+reach),0,TS-1));
+      dirtyY1=Math.max(dirtyY1,clamp(Math.ceil(F.y*k+reach),0,TS-1));
+    };
     for(let i=waterFloods.length-1;i>=0;i--){
       const F=waterFloods[i];
       F.age+=dt;
       F.front=Math.min(F.maxFront, F.front+F.speed*dt);
-      if(waterFloodMark(F,F.front)){
+      F.markT=(F.markT||0)+dt;
+      const completing=F.front>=F.maxFront-0.05||F.age>3.6;
+      /* Expansion is much slower than the 30 Hz authority clock. An 8 Hz BFS
+         looks identical but avoids allocating and rescanning its flood window
+         on every simulation step. Completion always receives a final pass. */
+      const markNow=completing||F.markT>=0.125;
+      let floodMarked=false;
+      if(markNow){
+        F.markT=0;
+        floodMarked=waterFloodMark(F,completing?F.maxFront:F.front);
+      }
+      if(floodMarked){
         marked=true;
+        includeFloodRect(F);
         if(typeof waterFxImpact==='function'){
           const ang=Math.atan2(F.y-F.hy,F.x-F.hx);
           waterFxImpact(F.hx+Math.cos(ang)*F.front*0.82, F.hy+Math.sin(ang)*F.front*0.82,
@@ -559,27 +641,19 @@ function waterFloodTick(dt){
         F.fxT=0;
         waterFxCrater(F.x,F.y,Math.max(22,F.r*0.62),0.035,F.hx,F.hy);
       }
-      if(F.front>=F.maxFront-0.05||F.age>3.6){
-        if(waterFloodMark(F,F.maxFront)) marked=true;
+      if(completing){
         waterFloods.splice(i,1);
       }
     }
     if(marked){
       waterDirty=true;
-      if(waterRebuildT>0.12) waterRebuildT=0.12;
-      const k=TS/MAP;
-      for(let i=0;i<waterFloods.length;i++){
-        const F=waterFloods[i];
-        const cr=Math.max(6,F.r*k), reach=cr+F.front*k+4;
-        waterFloodRelight(
-          clamp(Math.floor(F.x*k-reach),0,TS-1),
-          clamp(Math.floor(F.y*k-reach),0,TS-1),
-          clamp(Math.ceil(F.x*k+reach),0,TS-1),
-          clamp(Math.ceil(F.y*k+reach),0,TS-1));
-      }
+      if(waterRebuildT>0.5) waterRebuildT=0.5;
+      /* One unioned shade/upload per simulation beat replaces one upload per
+         active flood, including the final region of a flood removed above. */
+      if(dirtyX1>=dirtyX0&&dirtyY1>=dirtyY0)
+        waterFloodRelight(dirtyX0,dirtyY0,dirtyX1,dirtyY1);
     }
   }
-  waterMaintain(dt);
 }
 /* True when the live water mesh still misses a wet (authored or lip) cell
    in this crater window. Inland dry bowls stay false — only a flood that
@@ -671,6 +745,7 @@ function waterFloodCommit(ix,iy){
       }
     }
   }
+  if(typeof mfNavInvalidate==='function') mfNavInvalidate('water-flood');
   return true;
 }
 function waterFloodRelight(x0,y0,x1,y1){
@@ -830,6 +905,10 @@ function waterFxReset(){
   wfxWake.fill(0); wfxRipple.fill(0); wfxCrater.fill(0);
   wfxWakeN=0; wfxRippleN=0; wfxCraterN=0;
   wfxRipLife.fill(0); wfxCratLife.fill(0); wfxRipSlot=0; wfxFxEpoch=-1;
+  if(typeof FX!=='undefined'){ FX.wake=null; FX.ripple=null; }
+}
+function waterFxGLReset(){
+  wfxFxEpoch=-1;
   if(typeof FX!=='undefined'){ FX.wake=null; FX.ripple=null; }
 }
 function waterCraterPull(wx,wy){
@@ -1191,7 +1270,7 @@ uniform vec3 uSun; uniform vec3 uSunC;
 uniform vec3 uAmbSky; uniform vec3 uAmbGnd; uniform vec3 uFogC;
 uniform vec3 uEye; uniform vec3 uDeepC; uniform vec3 uShalC; uniform vec3 uFoamC;
 uniform float uTime; uniform float uKind; uniform float uNight;
-uniform float uAmp; uniform float uDetail; uniform vec2 uFlow;
+  uniform float uAmp; uniform float uDetail; uniform float uZoomDetail; uniform vec2 uFlow;
 /* Wakes / impact rings live IN the water sheet so they cannot z-fight the
    swell. Eight of each is a mobile budget, not a particle solver. */
 uniform vec4 uWake[8];
@@ -1251,12 +1330,27 @@ void main(){
   ));
   n=mix(n, nRiver, river);
   n=normalize(mix(vec3(0.0,1.0,0.0), n, mix(0.50+0.50*deep, 0.28+0.22*deep, lake)));
+  /* Fine normals are a CAMERA-FOOTPRINT decision, not an eye-distance one.
+     The orthographic eye stays 3000 units away at every zoom, so CAM_HEIGHT
+     cannot gate detail. uZoomDetail comes from orthoSpan: capillary structure
+     appears as the camera closes and vanishes before it can alias at command
+     altitude. Three incommensurate directions avoid a stripe or dot lattice. */
+  float microQ=uZoomDetail*min(1.0,uDetail);
+  vec2 microGrad=
+      vec2(0.84,0.31)*cos(dot(wxz,vec2(0.84,0.31))*0.105+t*0.83)*0.070
+    + vec2(-0.27,0.96)*cos(dot(wxz,vec2(-0.27,0.96))*0.083-t*0.61)*0.058
+    + vec2(0.58,-0.81)*cos(dot(wxz,vec2(0.58,-0.81))*0.137+t*0.47)*0.036;
+  n=normalize(n+vec3(-microGrad.x*microQ,0.0,-microGrad.y*microQ));
   vec3 V=normalize(uEye-vWorld);
   float ndv=max(dot(n,V),0.0);
   float lava=step(0.5,uKind)*step(uKind,1.5);
   float ice=step(1.5,uKind)*step(uKind,2.5);
   float dusk=step(2.5,uKind);
-  vec3 body=mix(uShalC*1.04, uDeepC*1.08, pow(deep,0.85));
+  /* A saturated opaque shallow tile is the cyan shelf that exposes every
+     10 m shoreline cell. The edge is mostly transmitted seabed; colour and
+     opacity accumulate with optical depth instead of starting fully painted. */
+  vec3 shallow=mix(uDeepC,uShalC,0.56);
+  vec3 body=mix(shallow, uDeepC*1.08, pow(deep,0.72));
   body=mix(body,vCol,0.06);
   /* Fake volume. Optical depth thickens at grazing angles so the sheet
      reads as a body, not a painted plane. Beer-Lambert toward a darker
@@ -1286,12 +1380,23 @@ void main(){
   lit+=vec3(0.09,0.24,0.22)*sss*(1.0-lava)*(1.0-ice*0.55);
   lit=mix(lit, skyRefl, clamp(0.12+fres*0.30,0.0,0.40));
   lit+=uSunC*spec*(0.62+0.55*ice);
-  float sp=sin(wxz.x*0.33+t*0.78)*sin(wxz.y*0.29-t*0.64);
-  float caus=pow(max(0.0, sp*0.62+0.22), 4.8)*mix(0.14,0.24,deep)*mix(1.0,0.45,ice);
+  /* Two decorrelated wave trains, not a separable product (see note below). */
+  /* ~50 world-unit swells, well away from Nyquist at command zoom. */
+  float sp=sin(dot(wxz,vec2(0.061,0.098))+t*0.37)*0.60
+          +sin(dot(wxz,vec2(-0.115,0.043))+t*0.26)*0.40;
+  /* Exponent 2.2, not 4.8: broad light variation, not hard bars. Shallower
+     water carries the brighter caustic - it was 71% stronger in DEEP water,
+     which is backwards, and 1.33.39's absorption then darkened the deep body
+     to near-black so the fixed-brightness caustic became the dominant read. */
+  float caus=pow(max(0.0, sp*0.55+0.30), 2.2)*mix(0.15,0.05,deep)*mix(1.0,0.45,ice);
   /* River: scrolling streaks along the carve axis. This is the read at
      command zoom — vertex travel alone is a sub-pixel. */
-  float streak=pow(0.5+0.5*sin(along*0.11-t*2.4)*sin(across*0.55+t*0.18), mix(3.2,5.5,uDetail));
-  caus=mix(caus, streak*mix(0.18,0.32,deep), river);
+  /* sin(across*0.55) is an 11-unit comb straight across the flow, which reads
+     as corduroy rather than current. Widen it and soften the exponent; the
+     along-flow scroll is what carries the intended read. */
+  float _mA=sin(across*0.055+t*0.13)*1.9, _mB=sin(across*0.021-t*0.07)*1.1;
+  float streak=pow(0.5+0.5*sin(along*0.11-t*2.4+_mA+_mB), mix(2.0,3.0,uDetail));
+  caus=mix(caus, streak*mix(0.13,0.055,deep), river);
   caus=mix(caus, caus*0.45, lake);
   lit+=mix(vec3(0.32,0.55,0.62), vec3(0.55,0.18,0.04), lava)*caus;
   lit+=body*lava*(0.16+0.12*max(0.0,w1))*(0.45+0.55*uNight);
@@ -1368,7 +1473,11 @@ void main(){
   float fow=texture(uFowMap,clamp(vMapUV,0.0,1.0)).a*uFowOn;
   lit=mix(lit, mix(uAmbGnd*0.10,uFogC*0.20,0.5), fow);
   lit=mix(lit,uFogC,vFog*(1.0-fow));
-  float alpha=mix(0.80,0.97,pow(deep,0.58));
+  /* Let the actual terrain remain visible beneath the first shallow cells.
+     A high base alpha turned the 10 wu water tessellation into an opaque cyan
+     shelf at low camera angles even though the depth colour was continuous. */
+  float alpha=mix(0.14,0.97,pow(deep,0.70));
+  alpha=mix(alpha,max(alpha,0.76),foam);
   alpha=mix(alpha,0.94,lava);
   alpha=mix(alpha,0.78,ice);
   alpha=mix(alpha,0.88,foam*0.75);
@@ -1387,11 +1496,12 @@ function ensureWaterProg(){
   waterProgEpoch=(typeof glEpoch!=='undefined')?glEpoch:0;
   if(typeof mkProg!=='function') return null;
   waterProg=mkProg(VSW,FSW,'water');
-  if(!waterProg) return null;
+  /* mkProg() defers link validation (mesh.js) — ask explicitly. */
+  if(!mfProgOk(waterProg)) return null;
   UW={};
   for(const k of ['uVP','uEye','uSun','uSunC','uAmbSky','uAmbGnd','uFogC',
                   'uTime','uKind','uLift','uMap','uNight','uFowOn',
-                  'uAmp','uDetail','uFlow',
+                  'uAmp','uDetail','uZoomDetail','uFlow',
                   'uHeight','uFowMap','uDeepC','uShalC','uFoamC'])
     UW[k]=gl.getUniformLocation(waterProg,k);
   UW.uWake=gl.getUniformLocation(waterProg,'uWake[0]');
@@ -1470,8 +1580,7 @@ function terrainSelfHeal(){
     /* Drop the dead handles FIRST or buildTerrainMesh takes its update branch
        and pours vertices into buffers that no longer exist. */
     terrainGLReset();
-    buildTerrainMesh(typeof curTheme!=='undefined'?curTheme:undefined);
-    if(terrVAO){
+    if(terrainGLRebuild()){
       terrEpoch=(typeof glEpoch!=='undefined')?glEpoch:0;
       console.warn('terrain: rebuilt after the mesh went stale'); terrHealTries=0; return true; }
   }catch(e){ console.warn('terrain: self-heal failed',e); }
@@ -1556,13 +1665,16 @@ function drawTerrainEdge(){
   drawCalls++; triCount+=terrEdgeIdxCount/3;
 }
 function drawWater(){
-  const now=(typeof performance!=='undefined'?performance.now():0)*0.001;
-  const dt=waterTickAt<0?0.016:Math.min(0.05,now-waterTickAt);
-  waterTickAt=now;
-  waterFloodTick(dt);
+  /* Rendering is observational. Flood authority and mesh maintenance run on
+     the fixed simulation clock so refresh rate cannot change world state. */
   if(!waterVAO||!waterIdxCount) return;
   const dummy=(typeof terrainTex!=='undefined'&&terrainTex)||null;
-  const ht=(typeof heightTex!=='undefined'&&heightTex)||dummy;
+  /* uHeight is an R16F world-height field. Do not substitute the painted
+     terrain albedo when it is temporarily unavailable: its red channel is
+     not terrain elevation, and makes the depth-aware shore path manufacture
+     false water depth/foam after a partial context recovery. The ordinary
+     model fallback below is deliberately less detailed but always truthful. */
+  const ht=(typeof heightTex!=='undefined'&&heightTex)||null;
   const ft=(typeof fogTex!=='undefined'&&fogTex)||dummy;
   const prog=ensureWaterProg();
   if(prog&&ht&&dummy){
@@ -1603,6 +1715,11 @@ function drawWater(){
     /* LOW keeps the draw and the 5-tap shore; HIGH adds the 8-neighborhood.
        Never 0 — a skipped water pass is a missing lake, not a budget win. */
     gl.uniform1f(UW.uDetail, amp>=0.85?2:amp>=0.55?1:0);
+    /* Orthographic zoom is orthoSpan. eyeY/CAM_HEIGHT stays near 3000 at every
+       scale and previously made a distance gate suppress both detail octaves
+       even at the closest legal camera. */
+    const zoomDetail=Math.max(0,Math.min(1,(1500-(typeof orthoSpan==='number'?orthoSpan:1500))/1100));
+    if(UW.uZoomDetail) gl.uniform1f(UW.uZoomDetail,zoomDetail);
     const fl=typeof battlefieldWaterFlow==='function'?battlefieldWaterFlow():[1,0];
     if(UW.uFlow) gl.uniform2f(UW.uFlow,fl[0],fl[1]);
     if(UW.uWake) gl.uniform4fv(UW.uWake,wfxWake);
@@ -1746,7 +1863,7 @@ function mfCombatDeformPlan(x,y,r,depth,kind){
   }
   mfDeformT[i]=now;
   mfDeformD[i]=Math.min(budget,mfDeformD[i]+depth);
-  return {x,y,r,d:depth,civic,pock};
+  return {x,y,r,d:depth,civic,pock,k:kind||'shell'};
 }
 function mfCoalesceDeformQ(){
   if(deformQ.length<3) return;
@@ -1766,7 +1883,8 @@ function mfCoalesceDeformQ(){
       const wA=Math.max(0.001,A.d*A.r), wB=Math.max(0.001,B.d*B.r), w=wA+wB;
       A={x:(A.x*wA+B.x*wB)/w, y:(A.y*wA+B.y*wB)/w,
          r:Math.min(160,Math.max(A.r,B.r)+Math.min(d*0.4,22)),
-         d:Math.min(0.24,A.d+B.d*0.52), k:A.k};
+         d:Math.min(0.24,A.d+B.d*0.52),
+         k:(A.k==='blast'||B.k==='blast')?'blast':(A.k||B.k||'shell')};
     }
     out.push(A);
   }
@@ -1785,15 +1903,17 @@ if(typeof deformTerrain==='function'){
         else return;
       } else return;
     }
-    deformQ.push({x:plan.x,y:plan.y,r:plan.r,d:plan.d});
+    deformQ.push({x:plan.x,y:plan.y,r:plan.r,d:plan.d,k:plan.k});
   };
 }
 function mfNoteShadePend(D){
   const k=TS/MAP, cr=Math.max(5,D.r*k);
-  const x0=clamp(Math.floor(D.x*k-cr*1.4)-3,0,TS-1);
-  const y0=clamp(Math.floor(D.y*k-cr*1.4)-3,0,TS-1);
-  const x1=clamp(Math.ceil(D.x*k+cr*1.4)+4,0,TS);
-  const y1=clamp(Math.ceil(D.y*k+cr*1.4)+4,0,TS);
+  /* Match gl.js' full ejecta footprint; a deferred MEDIUM shade must not
+     leave the newly raised outer fingers using stale albedo/normal data. */
+  const x0=clamp(Math.floor(D.x*k-cr*1.62)-3,0,TS-1);
+  const y0=clamp(Math.floor(D.y*k-cr*1.62)-3,0,TS-1);
+  const x1=clamp(Math.ceil(D.x*k+cr*1.62)+4,0,TS);
+  const y1=clamp(Math.ceil(D.y*k+cr*1.62)+4,0,TS);
   if(!mfShadePend){ mfShadePend={x0,y0,x1,y1,t:0}; return; }
   const nx0=Math.min(mfShadePend.x0,x0), ny0=Math.min(mfShadePend.y0,y0);
   const nx1=Math.max(mfShadePend.x1,x1), ny1=Math.max(mfShadePend.y1,y1);
@@ -1861,4 +1981,3 @@ if(typeof deformMaintain==='function'){
     _mfDeformMaintain(dt);
   };
 }
-

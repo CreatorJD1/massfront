@@ -26,7 +26,8 @@
    ============================================================================ */
 
 const MOVE_FX_MAX=3;                 // newest orders win; older ones keep fading
-const MOVE_FX_LIFE=2600, MOVE_FX_FADE=750;
+const MOVE_FX_LIFE=3600, MOVE_FX_FADE=900;
+const MOVE_FX_MARCH_PX=28, MOVE_FX_DEST_RATE=.75;
 const moveFxList=[];
 
 /* Follow the field cell-by-cell from the army's centroid. k===8 marks the goal
@@ -96,6 +97,21 @@ function moveFxAt(fx,s,out,hint){
 }
 
 const moveFxP={x:0,y:0,ang:0};
+/* The old 58-world-unit march became 69 px/s at the captured 412x900 command
+   view and more than 100 px/s close in. Its separate travelling brightness
+   wave crossed the same route at roughly 160 world units/s, so arrow position
+   and luminance reported two conflicting velocities. Keep one slow,
+   screen-constant motion; a gentle whole-ribbon breathe preserves salience
+   without looking like the path is skipping forward. */
+function moveFxMotion(k,t){
+  const span=typeof orthoSpan!=='undefined'?orthoSpan:520;
+  const viewport=typeof VH!=='undefined'?VH:900;
+  const worldPerPx=Math.max(.24,span/Math.max(1,viewport));
+  const spacing=Math.max(46,34*k);
+  return {spacing,drift:(t*MOVE_FX_MARCH_PX*worldPerPx)%spacing,
+          flash:.86+.14*Math.sin(t*3),destination:(t*MOVE_FX_DEST_RATE)%1,
+          screenSpeed:MOVE_FX_MARCH_PX};
+}
 function moveFxDraw(vis,t){
   if(!moveFxList.length) return;
   if(META&&META.settings&&META.settings.orderPaths===false){ moveFxList.length=0; return; }
@@ -127,18 +143,15 @@ function moveFxDraw(vis,t){
       px=moveFxP.x; py=moveFxP.y;
     }
 
-    /* Chevrons march toward the destination. The flash ripples ALONG the path
-       (phase offset by arc position) so the route pulses in sequence toward
-       the destination — a directional cue that survives at any zoom. The
-       flash floor stays high; a cue that spends half its cycle invisible is
-       half a cue. */
-    const SP=Math.max(46,34*k), drift=(t*58)%SP;
+    /* Arrow shape plus one measured march velocity says "toward the goal".
+       Brightness breathes as one ribbon instead of racing a second wave over
+       the chevrons, and its floor stays high throughout the cue. */
+    const motion=moveFxMotion(k,t),SP=motion.spacing,drift=motion.drift;
     hint=1;
     for(let s=drift;s<fx.len-6;s+=SP){
       hint=moveFxAt(fx,s,moveFxP,hint);
       if(!vis(moveFxP.x,moveFxP.y,14*k)) continue;
-      const flash=0.74+0.26*Math.sin(t*7.2-s*0.045);
-      const a=225*fade*flash;
+      const a=225*fade*motion.flash;
       for(const side of [-1,1]){
         const aa=moveFxP.ang+Math.PI+side*0.46;
         const mx=moveFxP.x+Math.cos(aa)*4.4*k, my=moveFxP.y+Math.sin(aa)*4.4*k;
@@ -151,7 +164,7 @@ function moveFxDraw(vis,t){
     const last=fx.pts[fx.pts.length-1], prev=fx.pts[Math.max(0,fx.pts.length-2)];
     const fa=Math.atan2(last.y-prev.y,last.x-prev.x);
     if(vis(last.x,last.y,60*k)){
-      const pulse=((t*1.8)%1);
+      const pulse=motion.destination;
       for(let q=0;q<3;q++){
         const ph=(pulse+q/3)%1;
         const dBack=34*k*(1-ph), a=235*fade*ph*ph;
@@ -167,4 +180,3 @@ function moveFxDraw(vis,t){
     }
   }
 }
-

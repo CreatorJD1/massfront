@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "indexId": "massfront_base_game_planet_location_spline_prompts_v1",
+  "createdDate": "2026-08-25",
+  "status": "SOURCE_AUTHORING_PROMPTS_ONLY",
+  "runtimeReady": false,
+  "sourceManifest": "../../ground-sites/ground-site-authoring-manifest.json",
+  "sourceLibraryPath": "baseGamePresetLibrary.presets",
+  "identityResolution": {
+    "mode": "authoritative_lookup_by_exact_preset_id",
+    "fields": [
+      "identity",
+      "originality.uniqueGeometry",
+      "originality.uniqueMaterialResponse",
+      "originality.uniqueDecalLanguage"
+    ],
+    "rule": "The source manifest remains authoritative. The prompt blocks translate these four fields into Spline instructions without permitting identity substitution, palette-only variants, or generic recolors."
+  },
+  "copyPasteBlockSelfContained": true,
+  "referencePolicy": "C&C3 Tiberium Wars, Supreme Commander 2, XCOM 2, and StarCraft II are visual-language references only. No protected mesh, texture, layout, logo, icon, unit, building, character, screenshot, symbol, or faction design may be copied, traced, extracted, recreated, or shipped.",
+  "contractsPresentInEveryPrompt": [
+    "combined-arms metric scale and clearance",
+    "exact modular model-family output count",
+    "exact 2048 PBR family and decal-entry counts",
+    "lighting-neutral base color, tangent normal, ORM packing, seam proof",
+    "pivots, transforms, UV0, tangents, collision/nav/LOS separation",
+    "LOD1 and LOD2 ceilings",
+    "deterministic destruction states",
+    "Brood inclusion or explicit exclusion",
+    "412x915 phone-portrait RTS readability gate",
+    "source/runtime-candidate deliverables and provenance",
+    "explicit no-copy reference policy"
+  ],
+  "expected": {
+    "planetCount": 4,
+    "presetCount": 32,
+    "modelFamilies": 220,
+    "pbrFamilies2k": 64,
+    "decalEntries": 384,
+    "promptsPerPlanet": 8
+  },
+  "guides": [
+    {
+      "planetId": "aelos",
+      "file": "aelos.md",
+      "promptCount": 8
+    },
+    {
+      "planetId": "pyraeth",
+      "file": "pyraeth.md",
+      "promptCount": 8
+    },
+    {
+      "planetId": "nordhall",
+      "file": "nordhall.md",
+      "promptCount": 8
+    },
+    {
+      "planetId": "vespera",
+      "file": "vespera.md",
+      "promptCount": 8
+    }
+  ],
+  "presets": [
+    {"id":"aelos_north_capital_ward","planetId":"aelos","regionId":"aelos_north","locationClass":"city_colony","file":"aelos.md","anchor":"aelos_north_capital_ward","models":7,"pbrFamilies2k":2,"decalEntries":12,"broodVariants":"excluded"},
+    {"id":"aelos_north_circumference_bastion","planetId":"aelos","regionId":"aelos_north","locationClass":"military_base","file":"aelos.md","anchor":"aelos_north_circumference_bastion","models":8,"pbrFamilies2k":2,"decalEntries":14,"broodVariants":"excluded"},
+    {"id":"aelos_basin_heartland_refinery","planetId":"aelos","regionId":"aelos_basin","locationClass":"refinery","file":"aelos.md","anchor":"aelos_basin_heartland_refinery","models":8,"pbrFamilies2k":2,"decalEntries":14,"broodVariants":"excluded"},
+    {"id":"aelos_basin_greenbelt_outpost","planetId":"aelos","regionId":"aelos_basin","locationClass":"outpost","file":"aelos.md","anchor":"aelos_basin_greenbelt_outpost","models":4,"pbrFamilies2k":1,"decalEntries":8,"broodVariants":"excluded"},
+    {"id":"aelos_coast_admiralty_spaceport","planetId":"aelos","regionId":"aelos_coast","locationClass":"spaceport","file":"aelos.md","anchor":"aelos_coast_admiralty_spaceport","models":7,"pbrFamilies2k":2,"decalEntries":12,"broodVariants":"excluded"},
+    {"id":"aelos_coast_pelagic_dome","planetId":"aelos","regionId":"aelos_coast","locationClass":"pressure_dome","file":"aelos.md","anchor":"aelos_coast_pelagic_dome","models":6,"pbrFamilies2k":2,"decalEntries":10,"broodVariants":"excluded"},
+    {"id":"aelos_ridge_divide_relic","planetId":"aelos","regionId":"aelos_ridge","locationClass":"relic_ruin","file":"aelos.md","anchor":"aelos_ridge_divide_relic","models":6,"pbrFamilies2k":2,"decalEntries":10,"broodVariants":"excluded"},
+    {"id":"aelos_ridge_shelf_megastructure","planetId":"aelos","regionId":"aelos_ridge","locationClass":"derelict_megastructure","file":"aelos.md","anchor":"aelos_ridge_shelf_megastructure","models":9,"pbrFamilies2k":3,"decalEntries":16,"broodVariants":"excluded"},
+
+    {"id":"pyraeth_crater_buried_court_dome","planetId":"pyraeth","regionId":"pyraeth_crater","locationClass":"pressure_dome","file":"pyraeth.md","anchor":"pyraeth_crater_buried_court_dome","models":6,"pbrFamilies2k":2,"decalEntries":10,"broodVariants":"excluded"},
+    {"id":"pyraeth_crater_court_of_iron_ruin","planetId":"pyraeth","regionId":"pyraeth_crater","locationClass":"relic_ruin","file":"pyraeth.md","anchor":"pyraeth_crater_court_of_iron_ruin","models":6,"pbrFamilies2k":2,"decalEntries":10,"broodVariants":"excluded"},
+    {"id":"pyraeth_belt_promethean_base","planetId":"pyraeth","regionId":"pyraeth_belt","locationClass":"military_base","file":"pyraeth.md","anchor":"pyraeth_belt_promethean_base","models":8,"pbrFamilies2k":2,"decalEntries":14,"broodVariants":"excluded"},
+    {"id":"pyraeth_belt_iron_pyre_refinery","planetId":"pyraeth","regionId":"pyraeth_belt","locationClass":"refinery","file":"pyraeth.md","anchor":"pyraeth_belt_iron_pyre_refinery","models":8,"pbrFamilies2k":2,"decalEntries":14,"broodVariants":"excluded"},
+    {"id":"pyraeth_caldera_ignis_arcology","planetId":"pyraeth","regionId":"pyraeth_caldera","locationClass":"city_colony","file":"pyraeth.md","anchor":"pyraeth_caldera_ignis_arcology","models":7,"pbrFamilies2k":2,"decalEntries":12,"broodVariants":"excluded"},
+    {"id":"pyraeth_caldera_crucible_megastructure","planetId":"pyraeth","regionId":"pyraeth_caldera","locationClass":"derelict_megastructure","file":"pyraeth.md","anchor":"pyraeth_caldera_crucible_megastructure","models":9,"pbrFamilies2k":3,"decalEntries":16,"broodVariants":"excluded"},
+    {"id":"pyraeth_flats_hub_delta_spaceport","planetId":"pyraeth","regionId":"pyraeth_flats","locationClass":"spaceport","file":"pyraeth.md","anchor":"pyraeth_flats_hub_delta_spaceport","models":7,"pbrFamilies2k":2,"decalEntries":12,"broodVariants":"excluded"},
+    {"id":"pyraeth_flats_blackwind_outpost","planetId":"pyraeth","regionId":"pyraeth_flats","locationClass":"outpost","file":"pyraeth.md","anchor":"pyraeth_flats_blackwind_outpost","models":4,"pbrFamilies2k":1,"decalEntries":8,"broodVariants":"excluded"},
+
+    {"id":"nordhall_isles_frostwake_spaceport","planetId":"nordhall","regionId":"nordhall_isles","locationClass":"spaceport","file":"nordhall.md","anchor":"nordhall_isles_frostwake_spaceport","models":7,"pbrFamilies2k":2,"decalEntries":12,"broodVariants":"excluded"},
+    {"id":"nordhall_isles_core_vault_outpost","planetId":"nordhall","regionId":"nordhall_isles","locationClass":"outpost","file":"nordhall.md","anchor":"nordhall_isles_core_vault_outpost","models":4,"pbrFamilies2k":1,"decalEntries":8,"broodVariants":"excluded"},
+    {"id":"nordhall_cliff_citadel_base","planetId":"nordhall","regionId":"nordhall_cliff","locationClass":"military_base","file":"nordhall.md","anchor":"nordhall_cliff_citadel_base","models":8,"pbrFamilies2k":2,"decalEntries":14,"broodVariants":"excluded"},
+    {"id":"nordhall_cliff_arcology_steps_colony","planetId":"nordhall","regionId":"nordhall_cliff","locationClass":"city_colony","file":"nordhall.md","anchor":"nordhall_cliff_arcology_steps_colony","models":7,"pbrFamilies2k":2,"decalEntries":12,"broodVariants":"excluded"},
+    {"id":"nordhall_frost_pale_trench_refinery","planetId":"nordhall","regionId":"nordhall_frost","locationClass":"refinery","file":"nordhall.md","anchor":"nordhall_frost_pale_trench_refinery","models":8,"pbrFamilies2k":2,"decalEntries":14,"broodVariants":"excluded"},
+    {"id":"nordhall_frost_reactor_megastructure","planetId":"nordhall","regionId":"nordhall_frost","locationClass":"derelict_megastructure","file":"nordhall.md","anchor":"nordhall_frost_reactor_megastructure","models":9,"pbrFamilies2k":3,"decalEntries":16,"broodVariants":"excluded"},
+    {"id":"nordhall_peaks_skyshield_dome","planetId":"nordhall","regionId":"nordhall_peaks","locationClass":"pressure_dome","file":"nordhall.md","anchor":"nordhall_peaks_skyshield_dome","models":6,"pbrFamilies2k":2,"decalEntries":10,"broodVariants":"excluded"},
+    {"id":"nordhall_peaks_valkyrie_relic","planetId":"nordhall","regionId":"nordhall_peaks","locationClass":"relic_ruin","file":"nordhall.md","anchor":"nordhall_peaks_valkyrie_relic","models":6,"pbrFamilies2k":2,"decalEntries":10,"broodVariants":"excluded"},
+
+    {"id":"vespera_spire_caldera_colony_shell","planetId":"vespera","regionId":"vespera_spire","locationClass":"city_colony","file":"vespera.md","anchor":"vespera_spire_caldera_colony_shell","models":7,"pbrFamilies2k":2,"decalEntries":12,"broodVariants":"B0-B4"},
+    {"id":"vespera_spire_infested_pressure_dome","planetId":"vespera","regionId":"vespera_spire","locationClass":"pressure_dome","file":"vespera.md","anchor":"vespera_spire_infested_pressure_dome","models":6,"pbrFamilies2k":2,"decalEntries":10,"broodVariants":"B0-B4"},
+    {"id":"vespera_dunes_tide_relay_outpost","planetId":"vespera","regionId":"vespera_dunes","locationClass":"outpost","file":"vespera.md","anchor":"vespera_dunes_tide_relay_outpost","models":4,"pbrFamilies2k":1,"decalEntries":8,"broodVariants":"B0-B4"},
+    {"id":"vespera_dunes_ichor_relic","planetId":"vespera","regionId":"vespera_dunes","locationClass":"relic_ruin","file":"vespera.md","anchor":"vespera_dunes_ichor_relic","models":6,"pbrFamilies2k":2,"decalEntries":10,"broodVariants":"B0-B4"},
+    {"id":"vespera_refinery_megaforge_refinery","planetId":"vespera","regionId":"vespera_refinery","locationClass":"refinery","file":"vespera.md","anchor":"vespera_refinery_megaforge_refinery","models":8,"pbrFamilies2k":2,"decalEntries":14,"broodVariants":"B0-B4"},
+    {"id":"vespera_refinery_silent_megaforge","planetId":"vespera","regionId":"vespera_refinery","locationClass":"derelict_megastructure","file":"vespera.md","anchor":"vespera_refinery_silent_megaforge","models":9,"pbrFamilies2k":3,"decalEntries":16,"broodVariants":"B0-B4"},
+    {"id":"vespera_plateau_quarantine_bastion","planetId":"vespera","regionId":"vespera_plateau","locationClass":"military_base","file":"vespera.md","anchor":"vespera_plateau_quarantine_bastion","models":8,"pbrFamilies2k":2,"decalEntries":14,"broodVariants":"B0-B4"},
+    {"id":"vespera_plateau_evac_spaceport","planetId":"vespera","regionId":"vespera_plateau","locationClass":"spaceport","file":"vespera.md","anchor":"vespera_plateau_evac_spaceport","models":7,"pbrFamilies2k":2,"decalEntries":12,"broodVariants":"B0-B4"}
+  ]
+}

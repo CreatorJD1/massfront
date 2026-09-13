@@ -1,0 +1,2558 @@
+/* MASSFRONT UGA command overlay. The central transparency is intentional: the
+   authored Three.js cutaway remains the only representation of the ship. */
+
+.uga-return-services { display: flex; flex-direction: column; gap: 12px; }
+.uga-return-services > .uga-primary-button { flex: 0 0 auto; width: 100%; min-height: 44px; }
+.uga-return-services > p { margin: 0; font-size: 12px; line-height: 1.5; color: #b5cad5; }
+
+.uga-command-shell {
+  --uga-cyan: #42ddff;
+  --uga-blue: #159bd5;
+  --uga-amber: #ffb54a;
+  --uga-green: #74e0a2;
+  --uga-red: #ff5e62;
+  --uga-text: #e8f4ff;
+  --uga-muted: #7995aa;
+  --uga-line: rgba(92, 196, 232, .3);
+  --uga-panel: rgba(5, 15, 24, .86);
+  --uga-panel-soft: rgba(6, 19, 30, .67);
+  position: absolute;
+  inset: 0;
+  z-index: 80;
+  color: var(--uga-text);
+  font-family: "Arial Narrow", "Roboto Condensed", "Segoe UI", sans-serif;
+  font-size: 12px;
+  letter-spacing: .035em;
+  pointer-events: none;
+  isolation: isolate;
+}
+
+/* Galactic Command reads the front before it offers anything else. The mode
+   cards that used to open this block belonged to a duplicate terminal no
+   route reached; BASIC ACCESS is the one mode picker now. */
+.uga-command-front {
+  position: relative;
+  isolation: isolate;
+  min-height: 70px;
+  padding: 9px 10px;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  gap: 4px 8px;
+  align-items: center;
+  border: 1px solid var(--uga-line);
+  border-radius: 8px;
+  background: rgba(3, 18, 28, .88);
+}
+/* No second frame. The PLATED SURFACES rule below gives this card the same
+   panel_player_info plate the objective above it wears, so the older context
+   overlay would draw a frame inside a frame on the one card a player reads
+   first. The plate is the frame. */
+.uga-command-front > span { grid-row: 1 / 3; width: 32px; height: 32px; display: grid; place-items: center; color: var(--uga-green); }
+.uga-command-front.is-warning > span { color: var(--uga-amber); }
+.uga-command-front.is-danger > span { color: #ff665e; }
+.uga-command-front > span .uga-svg { width: 21px; height: 21px; }
+.uga-command-front > div { min-width: 0; }
+.uga-command-front > div small,
+.uga-command-front > div strong,
+.uga-command-front > div p { overflow: hidden; display: block; text-overflow: ellipsis; white-space: nowrap; }
+.uga-command-front > div small { color: #718f9c; font: 6px/1 Consolas, monospace; letter-spacing: .1em; }
+.uga-command-front > div strong { margin-top: 3px; color: #e3f1f7; font-size: 12px; }
+.uga-command-front > div p { margin: 3px 0 0; color: var(--uga-green); font: 7px/1 Consolas, monospace; letter-spacing: .06em; }
+.uga-command-front.is-warning > div p { color: var(--uga-amber); }
+.uga-command-front.is-danger > div p { color: #ff7770; }
+.uga-command-front dl { grid-column: 2; display: flex; gap: 10px; margin: 0; }
+.uga-command-front dl div { display: flex; align-items: baseline; gap: 4px; }
+.uga-command-front dt { color: #617e8a; font: 6px/1 Consolas, monospace; }
+.uga-command-front dd { margin: 0; color: #bcd3dc; font: 700 7px/1 Consolas, monospace; }
+.uga-command-front > button {
+  grid-column: 3;
+  grid-row: 1 / 3;
+  min-width: 88px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 1px solid rgba(61, 199, 235, .3);
+  border-radius: 7px;
+  background: rgba(12, 61, 81, .4);
+  color: #b5ddea;
+  font: 700 7px/1 Consolas, monospace;
+  letter-spacing: .05em;
+  cursor: pointer;
+}
+.uga-command-front > button .uga-svg { width: 12px; height: 12px; }
+.uga-command-quick { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
+.uga-command-quick button {
+  position: relative;
+  isolation: isolate;
+  min-width: 0;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 1px solid var(--uga-line);
+  border-radius: 7px;
+  background: rgba(4, 23, 34, .72);
+  color: #86a2ae;
+  cursor: pointer;
+}
+/* Fourth and last place the tab plate was repeated. The quick row is a row of
+   small passive shortcuts; it keeps the border-radius and line it already has
+   above, and gains its cyan edge on hover/focus below. */
+.uga-command-quick button:hover,
+.uga-command-quick button:focus-visible { color: var(--uga-cyan); border-color: rgba(57, 215, 255, .5); }
+.uga-command-quick button:disabled { color: #5f717a; cursor: not-allowed; }
+.uga-command-quick .uga-svg { width: 15px; height: 15px; }
+.uga-command-quick span { overflow: hidden; font-size: 8px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (max-width: 480px) and (orientation: portrait) {
+  .uga-command-front { min-height: 68px; padding: 7px 8px; grid-template-columns: 27px minmax(0, 1fr) 82px; gap: 3px 6px; }
+  .uga-command-front > span { width: 27px; height: 27px; }
+  .uga-command-front > span .uga-svg { width: 18px; height: 18px; }
+  .uga-command-front > div strong { font-size: 11px; }
+  .uga-command-front dl { gap: 7px; }
+  .uga-command-front > button { min-width: 82px; padding: 0 5px; font-size: 7px; }
+  .uga-command-quick { gap: 3px; }
+  .uga-command-quick button { min-height: 44px; flex-direction: column; gap: 2px; }
+  .uga-command-quick .uga-svg { width: 14px; height: 14px; }
+  .uga-command-quick span { font-size: 7px; }
+}
+
+.uga-command-shell[hidden] { display: none !important; }
+.uga-command-shell *, .uga-command-shell *::before, .uga-command-shell *::after { box-sizing: border-box; }
+.uga-command-shell button, .uga-command-shell select { font: inherit; }
+.uga-command-shell button { color: inherit; }
+.uga-command-shell button:focus-visible, .uga-command-shell select:focus-visible { outline: 1px solid var(--uga-cyan); outline-offset: 2px; }
+.uga-command-shell button:disabled { cursor: not-allowed; opacity: .55; }
+.uga-command-shell.is-busy { cursor: progress; }
+
+/* The host leaves the UGA scene layer click-through so the shared WebGL canvas
+   can receive district picks. These authored scene controls opt back in. */
+.uga-scene-controls, .uga-scene-controls button { pointer-events: auto; }
+
+.uga-svg { width: 20px; height: 20px; flex: 0 0 auto; }
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.uga-command-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  min-height: 70px;
+  padding: max(10px, env(safe-area-inset-top)) 62px 9px 18px;
+  display: grid;
+  grid-template-columns: minmax(238px, 1fr) auto;
+  align-items: center;
+  gap: 22px;
+  pointer-events: auto;
+  background: linear-gradient(180deg, rgba(2, 10, 17, .97) 0%, rgba(3, 14, 23, .9) 74%, rgba(3, 14, 23, .18) 100%);
+  border-bottom: 1px solid rgba(82, 185, 225, .28);
+}
+
+.uga-command-header::after {
+  content: "";
+  position: absolute;
+  left: 18px;
+  bottom: -1px;
+  width: 132px;
+  height: 2px;
+  background: var(--uga-cyan);
+  box-shadow: 0 0 16px rgba(66, 221, 255, .75);
+}
+
+.uga-command-identity { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.uga-command-crest {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  color: var(--uga-cyan);
+  border: 1px solid rgba(83, 211, 248, .5);
+  background: rgba(20, 87, 117, .18);
+  clip-path: polygon(18% 0, 82% 0, 100% 18%, 100% 82%, 82% 100%, 18% 100%, 0 82%, 0 18%);
+  filter: drop-shadow(0 0 8px rgba(66, 221, 255, .25));
+}
+.uga-command-crest .uga-svg { width: 24px; height: 24px; }
+.uga-command-identity div { min-width: 0; }
+.uga-command-identity strong {
+  display: block;
+  font-size: 14px;
+  line-height: 1.05;
+  letter-spacing: .13em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.uga-command-identity span:not(.uga-command-crest) {
+  display: block;
+  margin-top: 5px;
+  color: var(--uga-cyan);
+  font: 8px/1.1 Consolas, monospace;
+  letter-spacing: .14em;
+}
+
+.uga-resource-ribbon { display: flex; align-items: stretch; justify-content: flex-end; min-width: 0; }
+.uga-resource-ribbon:focus-visible { outline: 1px solid var(--uga-cyan); outline-offset: 2px; }
+.uga-scroll-cue { display: none; }
+.uga-resource {
+  position: relative;
+  min-width: 62px;
+  height: 43px;
+  padding: 4px 7px 3px 29px;
+  display: grid;
+  align-content: center;
+  border-left: 1px solid rgba(92, 196, 232, .18);
+  background: rgba(14, 39, 54, .2);
+}
+.uga-resource:first-child { border-left-color: rgba(92, 196, 232, .38); }
+.uga-resource > span { position: absolute; left: 7px; top: 9px; color: var(--uga-cyan); }
+.uga-resource > span .uga-svg { width: 15px; height: 15px; }
+.uga-resource b { font: 700 12px/1 Consolas, monospace; letter-spacing: 0; color: #fff; }
+.uga-resource small { margin-top: 3px; font-size: 6px; line-height: 1; color: var(--uga-muted); text-transform: uppercase; white-space: nowrap; }
+
+.uga-icon-button {
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(92, 196, 232, .36);
+  background: rgba(8, 26, 39, .76);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  clip-path: polygon(7px 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%, 0 7px);
+}
+.uga-icon-button:hover { border-color: var(--uga-cyan); color: var(--uga-cyan); background: rgba(20, 74, 96, .68); }
+.uga-icon-button .uga-svg { width: 18px; height: 18px; }
+.uga-command-exit { position: absolute; right: 16px; top: max(15px, env(safe-area-inset-top)); }
+
+.uga-command-stage { position: absolute; inset: 70px 0 112px; }
+
+.uga-district-rail {
+  position: absolute;
+  top: 16px;
+  bottom: 8px;
+  left: 14px;
+  width: 224px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  pointer-events: auto;
+}
+
+.uga-overview-button {
+  position: relative;
+  min-height: 44px;
+  flex: 0 0 44px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 12px;
+  border: 1px solid var(--uga-line);
+  border-bottom: none;
+  color: var(--uga-cyan);
+  background: rgba(5, 18, 29, .78);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .16em;
+  cursor: pointer;
+  text-align: left;
+}
+.uga-overview-button::after { content: ""; width: 26px; height: 1px; margin-left: auto; background: currentColor; opacity: .5; }
+.uga-overview-button .uga-svg { width: 15px; height: 15px; }
+.uga-overview-button:hover { background: rgba(18, 60, 80, .8); }
+
+.uga-district-list {
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(66, 221, 255, .44) rgba(4, 17, 26, .4);
+  border: 1px solid var(--uga-line);
+  background: linear-gradient(90deg, rgba(3, 13, 22, .94), rgba(3, 14, 23, .67));
+  box-shadow: 12px 14px 32px rgba(0, 0, 0, .2);
+}
+.uga-district-button {
+  position: relative;
+  width: 100%;
+  min-height: 52px;
+  padding: 5px 7px 5px 3px;
+  border: 0;
+  border-bottom: 1px solid rgba(92, 196, 232, .12);
+  background: transparent;
+  display: grid;
+  grid-template-columns: 22px 31px 1fr 13px;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  text-align: left;
+  transition: background .16s ease, color .16s ease;
+}
+.uga-district-button::before {
+  content: "";
+  position: absolute;
+  inset: 5px auto 5px 0;
+  width: 2px;
+  background: transparent;
+}
+.uga-district-button:hover { background: rgba(43, 126, 160, .18); }
+.uga-district-button.is-active { background: linear-gradient(90deg, rgba(28, 138, 183, .34), rgba(15, 63, 84, .06)); color: #fff; }
+.uga-district-button.is-active::before { background: var(--uga-cyan); box-shadow: 0 0 10px var(--uga-cyan); }
+.uga-district-index { color: #486679; font: 7px/1 Consolas, monospace; transform: rotate(-90deg); }
+.uga-district-icon { width: 30px; height: 30px; display: grid; place-items: center; color: #7da6bc; border: 1px solid rgba(96, 169, 198, .18); }
+.uga-district-icon .uga-svg { width: 17px; height: 17px; }
+.uga-district-button.is-active .uga-district-icon { color: var(--uga-cyan); border-color: rgba(66, 221, 255, .46); filter: drop-shadow(0 0 7px rgba(66, 221, 255, .38)); }
+.uga-district-copy { min-width: 0; }
+.uga-district-copy b { display: block; font-size: 9px; letter-spacing: .06em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.uga-district-copy small { display: block; margin-top: 4px; color: var(--uga-muted); font: 6px/1 Consolas, monospace; letter-spacing: .11em; }
+.uga-row-chevron { width: 11px; height: 11px; color: #466779; }
+.uga-district-button.is-active .uga-row-chevron { color: var(--uga-cyan); }
+
+.uga-scene-overlay { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.uga-scene-title { position: absolute; left: 260px; top: 18px; display: flex; flex-direction: column; text-shadow: 0 2px 10px #000; }
+.uga-scene-title span { color: var(--uga-cyan); font: 7px/1 Consolas, monospace; letter-spacing: .2em; }
+.uga-scene-title strong { margin-top: 5px; font-size: 17px; font-weight: 500; letter-spacing: .09em; }
+.uga-camera-readout { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; color: rgba(163, 212, 231, .78); font: 7px/1 Consolas, monospace; letter-spacing: .16em; white-space: nowrap; text-shadow: 0 1px 8px #000; }
+.uga-camera-readout i { display: block; width: 20px; height: 1px; background: rgba(83, 211, 248, .65); }
+
+.uga-context-panel {
+  position: absolute;
+  top: 16px;
+  right: 14px;
+  bottom: 8px;
+  width: min(390px, 31vw);
+  min-width: 316px;
+  pointer-events: auto;
+  border: 1px solid var(--uga-line);
+  background: linear-gradient(155deg, rgba(5, 17, 27, .93), rgba(5, 17, 27, .78));
+  box-shadow: -18px 20px 48px rgba(0, 0, 0, .25);
+  clip-path: polygon(13px 0, 100% 0, 100% calc(100% - 13px), calc(100% - 13px) 100%, 0 100%, 0 13px);
+}
+.uga-context-panel::before { content: ""; position: absolute; top: 0; left: 13px; width: 78px; height: 2px; background: var(--uga-cyan); z-index: 2; box-shadow: 0 0 13px rgba(66, 221, 255, .5); }
+.uga-context-body { position: absolute; inset: 0; }
+.uga-sheet-toggle { display: none; }
+.uga-deployment-toolbar { display: none; }
+.uga-sheet-toggle[hidden], .uga-deployment-toolbar[hidden] { display: none !important; }
+.uga-context-scroll { position: absolute; inset: 0; padding: 16px 15px 18px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(66, 221, 255, .4) transparent; }
+
+/* Preparation keeps a compact route back to the authored ship sections.
+   The detailed management chrome is restored by that route, not duplicated
+   over the hangar while the commander is arranging an expedition. */
+.uga-command-shell.is-deployment-mode .uga-command-header,
+.uga-command-shell.is-deployment-mode .uga-district-rail,
+.uga-command-shell.is-deployment-mode .uga-scene-overlay,
+.uga-command-shell.is-deployment-mode .uga-command-nav,
+.uga-command-shell.is-deployment-mode .uga-quick-actions { display: none; }
+.uga-command-shell.is-deployment-mode .uga-command-stage { inset: 0; }
+.uga-command-shell.is-deployment-mode .uga-deployment-toolbar {
+  position: absolute;
+  inset: 0 0 auto;
+  min-height: 48px;
+  padding: 0 10px 0 6px;
+  display: grid;
+  grid-template-columns: minmax(132px, auto) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid rgba(92, 196, 232, .3);
+  background: linear-gradient(90deg, rgba(3, 24, 35, .99), rgba(6, 35, 47, .97));
+  z-index: 4;
+}
+.uga-command-shell.is-deployment-mode .uga-deployment-toolbar > button {
+  min-height: 44px;
+  padding: 0 9px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  border-right: 1px solid rgba(92, 196, 232, .2);
+  background: transparent;
+  color: #9dc4d3;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .06em;
+}
+.uga-command-shell.is-deployment-mode .uga-deployment-toolbar > button .uga-svg { width: 13px; height: 13px; transform: rotate(180deg); }
+.uga-command-shell.is-deployment-mode .uga-deployment-toolbar > b { min-width: 0; overflow: hidden; color: #d8edf4; font-size: 10px; letter-spacing: .12em; text-overflow: ellipsis; white-space: nowrap; }
+.uga-command-shell.is-deployment-mode .uga-deployment-toolbar > small { padding: 4px 5px; color: var(--uga-green); border: 1px solid rgba(114, 229, 178, .36); font: 7px/1 Consolas, monospace; }
+.uga-command-shell.is-deployment-mode .uga-context-body { inset: 48px 0 0; }
+.uga-command-shell.is-deployment-mode .uga-deployment-readiness { position: sticky; bottom: 0; z-index: 5; box-shadow: 0 -8px 20px rgba(0, 0, 0, .42); }
+
+.uga-context-heading { display: grid; grid-template-columns: 42px 1fr auto; align-items: center; gap: 10px; padding-bottom: 12px; border-bottom: 1px solid rgba(92, 196, 232, .18); }
+.uga-heading-icon { width: 40px; height: 40px; display: grid; place-items: center; color: var(--uga-cyan); border: 1px solid rgba(66, 221, 255, .34); background: rgba(31, 106, 137, .14); }
+.uga-heading-icon .uga-svg { width: 22px; height: 22px; }
+.uga-context-heading small, .uga-section-title > small { display: block; color: var(--uga-cyan); font: 6px/1 Consolas, monospace; letter-spacing: .16em; }
+.uga-context-heading h2, .uga-section-title h2 { margin: 5px 0 0; font-size: 17px; line-height: 1; letter-spacing: .05em; font-weight: 650; }
+.uga-tier-badge { padding: 6px 7px; color: var(--uga-amber); border: 1px solid rgba(255, 181, 74, .42); background: rgba(111, 63, 8, .18); font: 7px/1 Consolas, monospace; letter-spacing: .12em; }
+
+.uga-tier-rail { height: 29px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; margin: 12px 0 10px; }
+.uga-tier-rail span { position: relative; display: flex; align-items: center; padding: 0 7px; gap: 6px; color: #6f8fa3; border: 1px solid rgba(98, 151, 175, .14); background: rgba(26, 55, 69, .14); }
+.uga-tier-rail span i { width: 5px; height: 5px; border: 1px solid currentColor; transform: rotate(45deg); }
+.uga-tier-rail span b { font: 7px/1 Consolas, monospace; }
+.uga-tier-rail span.is-on { color: var(--uga-cyan); border-color: rgba(66, 221, 255, .3); background: rgba(19, 98, 126, .22); }
+.uga-tier-rail span.is-on i { background: currentColor; box-shadow: 0 0 7px currentColor; }
+
+.uga-district-description, .uga-section-title p { margin: 0; color: #9bb2c2; font-size: 9px; line-height: 1.55; letter-spacing: .02em; }
+.uga-activity-line { margin: 10px 0 12px; min-height: 27px; padding: 6px 8px; display: flex; align-items: center; gap: 7px; background: rgba(38, 88, 67, .18); border-left: 2px solid var(--uga-green); color: #aee4c1; font: 7px/1.25 Consolas, monospace; }
+.uga-activity-line i { width: 5px; height: 5px; border-radius: 50%; background: var(--uga-green); box-shadow: 0 0 8px var(--uga-green); animation: uga-pulse 2.2s ease-in-out infinite; }
+.uga-activity-line b { margin-left: auto; color: var(--uga-green); font-size: 6px; }
+@keyframes uga-pulse { 50% { opacity: .35; } }
+
+.uga-panel-section { margin-top: 12px; }
+.uga-panel-section > header { min-height: 44px; display: flex; align-items: center; justify-content: space-between; color: #9db8ca; border-bottom: 1px solid rgba(92, 196, 232, .18); }
+.uga-panel-section > header span { font-size: 7px; font-weight: 800; letter-spacing: .13em; }
+.uga-panel-section > header small { color: #6f8fa3; font: 9px/1 Consolas, monospace; }
+
+.uga-feature { min-height: 44px; display: flex; align-items: center; gap: 8px; padding: 5px 3px; color: #6f8fa3; border-bottom: 1px solid rgba(92, 196, 232, .08); }
+.uga-feature .uga-svg { width: 13px; height: 13px; }
+.uga-feature span { display: grid; grid-template-columns: 48px 1fr; align-items: center; gap: 7px; font-size: 8px; }
+.uga-feature span b { color: #6f8fa3; font: 7px/1 Consolas, monospace; }
+.uga-feature.is-unlocked { color: #c4dbe9; }
+.uga-feature.is-unlocked .uga-svg, .uga-feature.is-unlocked span b { color: var(--uga-green); }
+
+.uga-socket-list { margin-top: 3px; }
+.uga-socket { min-height: 46px; display: grid; grid-template-columns: 31px minmax(75px, 1fr) minmax(84px, .8fr) auto; align-items: center; gap: 7px; border-bottom: 1px solid rgba(92, 196, 232, .1); }
+.uga-socket.is-locked { color: #7b9cb0; }
+.uga-socket-mark { position: relative; width: 28px; height: 28px; display: grid; place-items: center; color: var(--uga-cyan); border: 1px solid rgba(66, 221, 255, .26); }
+.uga-socket-mark .uga-svg { width: 13px; height: 13px; }
+.uga-socket-mark span { position: absolute; top: -4px; right: -4px; padding: 1px 2px; color: #7696a8; background: #07131d; font: 5px/1 Consolas, monospace; }
+.uga-socket-copy { min-width: 0; }
+.uga-socket-copy small { display: block; color: #6e8b9d; font-size: 6px; line-height: 1; text-transform: uppercase; }
+.uga-socket-copy b { display: block; margin-top: 4px; font-size: 7px; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* What an installed module does, under its name. constructionEffectMarkup
+   emits bare <span>s meant for a flex row, so without this they inherit the
+   <em> italic and butt straight into one another — "survey intelligence10 MW
+   draw" on one line at body size. Small, upright, and spaced apart. */
+.uga-socket-effects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  margin-top: 3px;
+  font-style: normal;
+  font-size: 6px;
+  line-height: 1.25;
+  color: #6e8b9d;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.uga-socket-effects span { display: inline-flex; gap: 3px; white-space: nowrap; }
+.uga-socket-effects b { color: #8fd8ff; font-size: 6px; font-weight: 700; }
+
+.uga-module-picker select, .uga-deployment-planner select {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 20px 0 6px;
+  color: #c7dfeb;
+  border: 1px solid rgba(82, 172, 205, .27);
+  border-radius: 0;
+  background: #0a1b28;
+  font-size: 7px;
+  text-transform: uppercase;
+}
+
+.uga-mini-button {
+  min-height: 44px;
+  padding: 0 8px;
+  border: 1px solid rgba(66, 221, 255, .36);
+  background: rgba(15, 71, 94, .26);
+  color: var(--uga-cyan);
+  font-size: 6px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  cursor: pointer;
+}
+.uga-mini-button:hover:not(:disabled) { background: rgba(25, 119, 155, .4); border-color: var(--uga-cyan); }
+.uga-empty-state { margin: 9px 0; padding: 14px; color: #718da0; border: 1px dashed rgba(92, 196, 232, .18); font-size: 8px; line-height: 1.55; text-align: center; }
+
+.uga-upgrade-block { margin-top: 14px; padding: 11px; border: 1px solid rgba(255, 181, 74, .3); background: linear-gradient(115deg, rgba(82, 47, 9, .25), rgba(18, 32, 41, .12)); }
+.uga-upgrade-block > div:first-child small { display: block; color: var(--uga-amber); font: 11px/1.3 Consolas, monospace; letter-spacing: .04em; }
+.uga-upgrade-block > div:first-child b { display: block; margin-top: 5px; font-size: 14px; }
+.uga-upgrade-block p { font-size: 12px; line-height: 1.4; }
+.uga-upgrade-cost { display: flex; gap: 7px; margin: 10px 0; }
+.uga-upgrade-cost > span { flex: 1; min-width: 0; padding: 4px; display: grid; grid-template-columns: 15px 1fr; grid-template-rows: 1fr 1fr; align-items: center; column-gap: 4px; background: rgba(0, 0, 0, .18); }
+.uga-upgrade-cost .uga-svg { width: 13px; height: 13px; grid-row: span 2; color: var(--uga-amber); }
+.uga-upgrade-cost b { font: 8px/1 Consolas, monospace; }
+.uga-upgrade-cost small { color: #748b99; font-size: 5px; text-transform: uppercase; }
+.uga-primary-button {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 10px 0 13px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid rgba(66, 221, 255, .62);
+  background: linear-gradient(90deg, rgba(17, 111, 145, .46), rgba(7, 48, 67, .42));
+  color: #eafbff;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  cursor: pointer;
+  clip-path: polygon(0 0, calc(100% - 9px) 0, 100% 9px, 100% 100%, 9px 100%, 0 calc(100% - 9px));
+}
+.uga-primary-button:hover { background: rgba(25, 132, 170, .62); box-shadow: inset 0 0 20px rgba(66, 221, 255, .12); }
+.uga-primary-button .uga-svg { width: 13px; height: 13px; }
+.uga-max-tier { margin-top: 13px; padding: 10px; color: var(--uga-green); border: 1px solid rgba(116, 224, 162, .25); text-align: center; font: 7px/1 Consolas, monospace; letter-spacing: .13em; }
+
+.uga-classic-terminal { margin-top: 14px; padding: 10px; border: 1px solid rgba(255, 181, 74, .31); background: rgba(25, 19, 10, .36); box-shadow: inset 0 0 28px rgba(255, 181, 74, .04); }
+.uga-terminal-heading { display: grid; grid-template-columns: 28px 1fr auto; gap: 8px; align-items: center; }
+.uga-terminal-heading > .uga-svg { width: 23px; height: 23px; color: var(--uga-amber); }
+.uga-terminal-heading small { display: block; color: #9d7b4c; font: 5px/1 Consolas, monospace; letter-spacing: .13em; }
+.uga-terminal-heading b { display: block; margin-top: 4px; font-size: 10px; letter-spacing: .12em; }
+.uga-terminal-live { padding: 4px; color: var(--uga-green); border: 1px solid rgba(116, 224, 162, .3); font: 5px/1 Consolas, monospace; }
+.uga-classic-terminal > p { margin: 8px 0; color: #8e9eaa; font-size: 7px; line-height: 1.45; }
+.uga-mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.uga-mode-grid button { min-height: 48px; padding: 5px 24px 5px 7px; position: relative; border: 1px solid rgba(255, 181, 74, .18); background: rgba(76, 47, 13, .12); text-align: left; cursor: pointer; }
+.uga-mode-grid button:hover { border-color: rgba(255, 181, 74, .56); background: rgba(105, 60, 9, .28); }
+.uga-mode-grid button:disabled { color: #6b7780; border-color: rgba(109, 132, 147, .2); background: rgba(41, 52, 60, .2); cursor: not-allowed; }
+.uga-mode-grid button:disabled:hover { border-color: rgba(109, 132, 147, .2); background: rgba(41, 52, 60, .2); }
+.uga-mode-grid button span { display: block; font-size: 8px; font-weight: 700; }
+.uga-mode-grid button small { display: block; margin-top: 3px; color: #806d55; font-size: 5px; }
+.uga-mode-grid button .uga-svg { position: absolute; right: 6px; top: 12px; width: 12px; height: 12px; color: var(--uga-amber); }
+.uga-mode-support { margin-top: 9px; padding-top: 8px; border-top: 1px solid rgba(255, 181, 74, .15); }
+.uga-mode-support > small { display: block; margin-bottom: 6px; color: #8b7557; font: 5px/1 Consolas, monospace; letter-spacing: .12em; }
+
+.uga-section-title { padding: 1px 0 13px; border-bottom: 1px solid rgba(92, 196, 232, .18); }
+.uga-section-title p { margin-top: 8px; }
+.uga-record-list { display: grid; gap: 7px; margin-top: 10px; }
+.uga-record-card { min-height: 89px; padding: 9px; display: grid; grid-template-columns: 35px 1fr auto; gap: 9px; align-items: start; border: 1px solid rgba(92, 196, 232, .16); background: rgba(14, 40, 53, .18); }
+.uga-record-sigil { width: 34px; height: 34px; display: grid; place-items: center; color: var(--uga-cyan); border: 1px solid rgba(66, 221, 255, .24); }
+.uga-record-sigil .uga-svg { width: 19px; height: 19px; }
+.uga-record-card small, .uga-intel-card small { color: var(--uga-cyan); font: 5px/1 Consolas, monospace; letter-spacing: .12em; }
+.uga-record-card h3, .uga-mission-card h3, .uga-research-card h3, .uga-intel-card h3 { margin: 4px 0 0; font-size: 10px; letter-spacing: .06em; }
+.uga-record-card p, .uga-mission-card p, .uga-research-card p, .uga-intel-card p { margin: 5px 0; color: #829baa; font-size: 7px; line-height: 1.4; }
+.uga-reputation { position: relative; height: 10px; margin-top: 7px; background: rgba(0, 0, 0, .28); overflow: hidden; }
+.uga-reputation span { position: absolute; inset: 0 auto 0 0; width: var(--value); background: linear-gradient(90deg, #197e9f, var(--uga-cyan)); opacity: .55; }
+.uga-reputation b { position: absolute; inset: 0 4px auto auto; color: #d9f6ff; font: 5px/10px Consolas, monospace; }
+
+.uga-commander-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; margin-top: 7px; }
+.uga-commander-card { min-height: 69px; padding: 6px; display: grid; grid-template-columns: 43px 1fr; grid-template-rows: 1fr 1fr; align-items: center; column-gap: 7px; border: 1px solid rgba(92, 196, 232, .17); background: rgba(8, 30, 43, .22); text-align: left; cursor: pointer; }
+.uga-personnel-portrait { position: relative; display: block; overflow: hidden; border: 1px solid rgba(92, 196, 232, .32); background: #091823; }
+.uga-personnel-portrait[hidden] { display: none; }
+.uga-personnel-portrait::after { content: ""; position: absolute; inset: 0; border: 1px solid rgba(211, 244, 255, .08); box-shadow: inset 0 -12px 18px rgba(0, 9, 15, .35); pointer-events: none; }
+.uga-personnel-portrait img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 18%; }
+.uga-commander-card > .uga-personnel-portrait { grid-row: span 2; width: 42px; height: 54px; }
+.uga-commander-card b { font-size: 8px; }
+.uga-commander-card small { color: var(--uga-green); font: 5px/1 Consolas, monospace; }
+
+.uga-mission-card { width: 100%; min-height: 105px; padding: 10px; position: relative; border: 1px solid rgba(92, 196, 232, .18); background: rgba(10, 33, 47, .26); text-align: left; cursor: pointer; }
+.uga-mission-card:hover:not(:disabled), .uga-mission-card.is-selected { border-color: rgba(66, 221, 255, .52); background: rgba(17, 67, 89, .3); }
+.uga-mission-card.is-locked { border-color: rgba(124, 94, 85, .2); }
+.uga-mission-code { color: var(--uga-amber); font: 6px/1 Consolas, monospace; letter-spacing: .13em; }
+.uga-mission-card > div { margin-top: 8px; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(92, 196, 232, .1); padding-top: 6px; }
+.uga-mission-card > div small { color: #627f91; font-size: 5px; }
+.uga-mission-card > div b { color: #c6e1ee; font-size: 6px; }
+.uga-mission-card ul { margin: 8px 0 0; padding: 0; list-style: none; }
+.uga-mission-card li { display: flex; align-items: center; gap: 5px; color: #bb7e7e; font-size: 6px; line-height: 1.5; }
+.uga-mission-card li .uga-svg, .uga-mission-ready .uga-svg { width: 10px; height: 10px; }
+.uga-mission-ready { margin-top: 8px; display: flex; align-items: center; gap: 5px; color: var(--uga-green); font: 6px/1 Consolas, monospace; }
+
+.uga-debrief-archive { margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(114, 229, 178, .24); }
+.uga-debrief-archive > header { display: flex; align-items: end; justify-content: space-between; gap: 8px; }
+.uga-debrief-archive > header small { display: block; color: var(--uga-green); font: 5px/1 Consolas, monospace; letter-spacing: .13em; }
+.uga-debrief-archive > header h3 { margin: 4px 0 0; color: #d8edf4; font-size: 11px; letter-spacing: .07em; }
+.uga-debrief-archive > header > b { padding: 4px 6px; color: var(--uga-green); border: 1px solid rgba(114, 229, 178, .3); font: 5px/1 Consolas, monospace; white-space: nowrap; }
+.uga-debrief-archive > p { margin: 7px 0 0; color: #7996a5; font-size: 7px; line-height: 1.45; }
+.uga-debrief-list { display: grid; gap: 6px; margin-top: 8px; }
+.uga-debrief-record { padding: 8px; border: 1px solid rgba(92, 196, 232, .16); border-left: 2px solid #6d8998; background: rgba(7, 27, 39, .46); }
+.uga-debrief-record.is-victory { border-left-color: var(--uga-green); }
+.uga-debrief-record.is-partial { border-left-color: var(--uga-amber); }
+.uga-debrief-record.is-setback { border-left-color: #ff6d72; }
+.uga-debrief-record > div:first-child { min-width: 0; display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.uga-debrief-record > div:first-child small { max-width: 54%; overflow: hidden; color: #628696; font: 5px/1 Consolas, monospace; text-overflow: ellipsis; white-space: nowrap; }
+.uga-debrief-record > div:first-child strong { min-width: 0; overflow: hidden; color: #cbe6ef; font-size: 8px; letter-spacing: .04em; text-overflow: ellipsis; white-space: nowrap; }
+.uga-debrief-record dl { margin: 7px 0 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+.uga-debrief-record dl div { min-width: 0; padding: 5px; border: 1px solid rgba(92, 196, 232, .1); background: rgba(1, 13, 20, .36); }
+.uga-debrief-record dt { color: #58798a; font: 5px/1 Consolas, monospace; }
+.uga-debrief-record dd { margin: 3px 0 0; overflow: hidden; color: #b8d3dd; font: 6px/1.2 Consolas, monospace; text-overflow: ellipsis; white-space: nowrap; }
+.uga-debrief-record > p { margin: 7px 0 0; color: #88a998; font: 5px/1.4 Consolas, monospace; }
+
+.operation-modal[data-operation-state="debrief"] .operation-card { border-top-color: var(--uga-green); }
+.operation-modal[data-operation-state="debrief"] .operation-payload { white-space: normal; }
+.operation-modal[data-operation-state="launch-rejected"] .operation-card { border-top-color: #ff6d72; }
+.operation-debrief-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+.operation-debrief-section { min-width: 0; padding: 8px; border: 1px solid rgba(92, 196, 232, .14); background: rgba(8, 27, 38, .42); }
+.operation-debrief-section:last-child { grid-column: 1 / -1; border-color: rgba(114, 229, 178, .3); }
+.operation-debrief-section h3 { margin: 0 0 6px; color: var(--uga-cyan); font: 7px/1 Consolas, monospace; letter-spacing: .12em; }
+.operation-debrief-section dl { margin: 0; display: grid; gap: 4px; }
+.operation-debrief-section dl div { min-width: 0; display: grid; grid-template-columns: minmax(90px, .8fr) minmax(0, 1.2fr); gap: 6px; }
+.operation-debrief-section dt { color: #628292; }
+.operation-debrief-section dd { min-width: 0; margin: 0; overflow-wrap: anywhere; color: #c1dbe5; text-align: right; }
+
+.uga-deployment-planner { margin-top: 12px; padding: 11px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; border: 1px solid rgba(255, 181, 74, .25); background: rgba(55, 36, 12, .15); }
+.uga-deployment-planner.is-invalid { border-color: rgba(255, 94, 98, .68); box-shadow: inset 0 0 24px rgba(255, 94, 98, .08); }
+.uga-deployment-planner header { grid-column: 1 / -1; }
+.uga-deployment-planner header small { color: var(--uga-amber); font: 6px/1 Consolas, monospace; }
+.uga-deployment-planner header h3 { margin: 4px 0 2px; font-size: 12px; }
+.uga-deployment-planner > header p { margin: 5px 0 0; color: #7d98a7; font-size: 8px; line-height: 1.45; }
+.uga-deployment-identity { grid-column: 1 / -1; min-width: 0; display: grid; grid-template-columns: minmax(120px, .7fr) minmax(180px, 1.3fr); gap: 7px; align-items: end; }
+.uga-deployment-identity > label { min-width: 0; }
+.uga-ground-route {
+  grid-column: 1 / -1;
+  min-width: 0;
+  min-height: 54px;
+  padding: 6px 8px;
+  display: grid;
+  grid-template-columns: minmax(104px, .8fr) minmax(154px, 1.2fr);
+  align-items: end;
+  gap: 8px;
+  border: 1px solid var(--uga-line);
+  border-radius: 7px;
+  background: rgba(6, 27, 39, .76);
+}
+.uga-ground-route > div { min-width: 0; align-self: center; }
+.uga-ground-route > div small,
+.uga-ground-route > div strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.uga-ground-route > div small { color: var(--uga-cyan); font: 8px/1 Consolas, monospace; letter-spacing: .08em; }
+.uga-ground-route > div strong { margin-top: 4px; color: #dceff6; font-size: 11px; }
+.uga-ground-route > label { min-width: 0; }
+.uga-ground-route > label > span { display: block; margin-bottom: 3px; color: #8fa9b5; font-size: 9px; }
+.uga-ground-route select { width: 100%; min-height: 44px; color: #dceff6; border: 1px solid rgba(92, 196, 232, .28); background: #071c28; }
+.uga-portrait-unavailable { width: 100%; height: 100%; min-height: 32px; display: grid; place-items: center; color: var(--uga-muted); background: rgba(12, 33, 44, .85); }
+.uga-portrait-unavailable .uga-svg { width: 24px; height: 24px; }
+.uga-deployment-identity .uga-personnel-select { grid-template-columns: 32px minmax(0, 1fr); }
+.uga-deployment-identity .uga-deployment-portrait { width: 31px; height: 42px; }
+.uga-deployment-stations { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+.uga-deployment-station { min-width: 0; min-height: 48px; padding: 6px; display: grid; grid-template-columns: 24px minmax(0, 1fr); grid-template-rows: auto auto; align-items: center; column-gap: 7px; border: 1px solid rgba(92, 196, 232, .18); background: rgba(5, 23, 34, .66); color: #bfd8e3; text-align: left; cursor: pointer; }
+.uga-deployment-station > span { grid-row: 1 / 3; width: 24px; height: 24px; display: grid; place-items: center; border: 1px solid rgba(66, 221, 255, .24); color: var(--uga-cyan); }
+.uga-deployment-station .uga-svg { width: 14px; height: 14px; }
+.uga-deployment-station b { min-width: 0; color: #d8edf4; font-size: 11px; line-height: 1.2; white-space: normal; overflow-wrap: anywhere; }
+.uga-deployment-station small { min-width: 0; color: #9abac9; font: 10px/1.3 Consolas, monospace; white-space: normal; overflow-wrap: anywhere; }
+.uga-deployment-station.is-active { border-color: rgba(66, 221, 255, .75); background: linear-gradient(135deg, rgba(20, 91, 119, .46), rgba(7, 26, 37, .7)); box-shadow: inset 0 -2px 0 rgba(66, 221, 255, .74), 0 0 15px rgba(30, 193, 230, .08); }
+.uga-deployment-station.is-active small { color: var(--uga-green); }
+.uga-deployment-readiness { grid-column: 1 / -1; min-height: 50px; padding: 4px 4px 4px 9px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(150px, .85fr); align-items: center; gap: 8px; border: 1px solid rgba(92, 196, 232, .24); background: linear-gradient(90deg, rgba(4, 20, 29, .88), rgba(7, 31, 42, .64)); }
+.uga-deployment-readiness > span { min-width: 0; display: grid; gap: 4px; }
+.uga-deployment-readiness small { color: #6f91a2; font: 6px/1 Consolas, monospace; letter-spacing: .08em; }
+.uga-deployment-readiness b { color: #cbeaf2; font: 700 10px/1 Consolas, monospace; letter-spacing: .08em; }
+.uga-deployment-readiness.is-ready { border-color: rgba(114, 229, 178, .54); box-shadow: inset 3px 0 0 rgba(114, 229, 178, .82); }
+.uga-deployment-readiness.is-ready b { color: var(--uga-green); }
+.uga-deployment-readiness.is-blocked { border-color: rgba(255, 94, 98, .52); }
+.uga-deployment-readiness .uga-primary-button { grid-column: auto; min-height: 44px; margin: 0; }
+.uga-deployment-planner label { display: grid; gap: 4px; }
+.uga-deployment-planner label > span, .uga-deployment-planner legend { color: #748e9e; font-size: 6px; text-transform: uppercase; }
+.uga-deployment-planner fieldset { grid-column: 1 / -1; margin: 0; padding: 7px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; border: 1px solid rgba(92, 196, 232, .16); }
+.uga-deployment-planner fieldset legend { padding: 0 3px; }
+.uga-personnel-field { min-width: 0; }
+.uga-personnel-select { min-width: 0; display: grid; grid-template-columns: 37px minmax(0, 1fr); gap: 5px; align-items: center; }
+.uga-personnel-select.is-unavailable { grid-template-columns: minmax(0, 1fr); }
+.uga-deployment-portrait { width: 36px; height: 45px; }
+.uga-personnel-select select { min-width: 0; }
+.uga-personnel-lock { grid-column: 1 / -1; min-height: 30px; padding: 6px 8px; display: flex; align-items: center; gap: 7px; color: #b8968b; border-left: 2px solid rgba(255, 181, 74, .55); background: rgba(78, 43, 17, .18); font-size: 6px; line-height: 1.35; }
+.uga-personnel-lock[hidden] { display: none; }
+.uga-personnel-lock .uga-svg { width: 13px; height: 13px; flex: 0 0 auto; }
+.uga-deployment-planner .uga-primary-button { grid-column: 1 / -1; margin-top: 3px; }
+.uga-deployment-manifest { grid-column: 1 / -1; padding: 8px; border: 1px solid rgba(92, 196, 232, .18); background: rgba(2, 15, 24, .42); }
+.uga-deployment-manifest.is-over-capacity { border-color: rgba(255, 94, 98, .65); }
+.uga-manifest-heading { min-height: 30px; display: flex; align-items: center; justify-content: space-between; gap: 8px; border-bottom: 1px solid rgba(92, 196, 232, .12); }
+.uga-manifest-heading span { color: var(--uga-amber); font: 700 7px/1 Consolas, monospace; letter-spacing: .1em; }
+.uga-manifest-heading b { color: var(--uga-green); font: 700 10px/1 Consolas, monospace; }
+.uga-manifest-groups { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.uga-manifest-groups fieldset, .uga-mod-picker { min-width: 0; margin: 8px 0 0; padding: 6px; border: 1px solid rgba(92, 196, 232, .14); }
+.uga-manifest-groups legend, .uga-mod-picker legend { padding: 0 4px; color: #7895a8; font-size: 7px; }
+.uga-manifest-control { min-height: 48px; display: grid; grid-template-columns: minmax(0, 1fr) 58px; align-items: center; gap: 8px; border-bottom: 1px solid rgba(92, 196, 232, .08); }
+.uga-manifest-control span { min-width: 0; }
+.uga-manifest-control b, .uga-mod-control b { display: block; font-size: 8px; }
+.uga-manifest-control small, .uga-mod-control small { display: block; margin-top: 3px; color: var(--uga-muted); font-size: 6px; line-height: 1.25; }
+.uga-manifest-control select { min-width: 52px; }
+.uga-mod-picker { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
+.uga-mod-picker legend { grid-column: 1 / -1; }
+.uga-mod-control { position: relative; min-height: 48px; padding: 6px 6px 6px 38px; display: grid; align-content: center; border: 1px solid rgba(92, 196, 232, .12); cursor: pointer; }
+.uga-mod-control input { position: absolute; left: 10px; top: 13px; width: 20px; height: 20px; accent-color: var(--uga-cyan); }
+.uga-slot-warning { min-height: 38px; margin-top: 7px; padding: 6px 8px; display: flex; align-items: center; gap: 7px; color: #ffc1c1; border-left: 2px solid var(--uga-red); background: rgba(91, 20, 24, .3); font-size: 7px; }
+.uga-slot-warning[hidden] { display: none; }
+.uga-slot-warning .uga-svg { width: 16px; height: 16px; color: var(--uga-red); }
+
+.uga-research-bank { margin-top: 10px; height: 49px; padding: 8px; display: grid; grid-template-columns: 31px 1fr auto; grid-template-rows: 1fr 1fr; align-items: center; color: var(--uga-cyan); border: 1px solid rgba(189, 113, 255, .3); background: rgba(78, 31, 100, .16); }
+.uga-research-bank .uga-svg { grid-row: span 2; width: 23px; height: 23px; color: #d283ff; }
+.uga-research-bank span { color: #b891c9; font-size: 6px; }
+.uga-research-bank b { grid-row: span 2; font: 17px/1 Consolas, monospace; color: #e7c6ff; }
+.uga-research-card { position: relative; min-height: 90px; padding: 10px 84px 10px 10px; border: 1px solid rgba(187, 111, 237, .18); background: rgba(52, 22, 68, .12); }
+.uga-research-card > span { color: #d283ff; font: 6px/1 Consolas, monospace; text-transform: uppercase; }
+.uga-research-card > .uga-mini-button { position: absolute; right: 8px; bottom: 8px; }
+.uga-progress { position: relative; height: 11px; margin-top: 7px; background: rgba(0, 0, 0, .3); }
+.uga-progress i { display: block; height: 100%; width: var(--value); background: linear-gradient(90deg, #7739a0, #d283ff); opacity: .72; }
+.uga-progress b { position: absolute; inset: 0 4px auto auto; font: 5px/11px Consolas, monospace; }
+
+.uga-intel-card { min-height: 75px; padding: 9px; display: grid; grid-template-columns: 31px 1fr; gap: 9px; border: 1px solid rgba(92, 196, 232, .16); }
+.uga-intel-card > span { width: 30px; height: 30px; display: grid; place-items: center; color: var(--uga-cyan); border: 1px solid rgba(66, 221, 255, .23); }
+.uga-intel-card .uga-svg { width: 16px; height: 16px; }
+
+.uga-logistics-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; margin-top: 10px; }
+.uga-logistics-grid article { min-height: 45px; padding: 6px 8px; display: grid; grid-template-columns: 24px 1fr auto; grid-template-rows: 1fr 1fr; align-items: center; border: 1px solid rgba(92, 196, 232, .13); background: rgba(12, 37, 50, .2); }
+.uga-logistics-grid .uga-svg { grid-row: span 2; width: 17px; height: 17px; color: var(--uga-cyan); }
+.uga-logistics-grid span { color: #728b9b; font-size: 6px; text-transform: uppercase; }
+.uga-logistics-grid b { grid-row: span 2; font: 11px/1 Consolas, monospace; }
+.uga-manifest-row { min-height: 39px; display: grid; grid-template-columns: 28px 1fr auto; gap: 7px; align-items: center; border-bottom: 1px solid rgba(92, 196, 232, .1); }
+.uga-manifest-row > span { width: 26px; height: 26px; display: grid; place-items: center; color: var(--uga-cyan); border: 1px solid rgba(66, 221, 255, .2); }
+.uga-manifest-row .uga-svg { width: 13px; height: 13px; }
+.uga-manifest-row b { display: block; font-size: 7px; }
+.uga-manifest-row small { display: block; margin-top: 3px; color: #6a8494; font-size: 5px; }
+.uga-manifest-row strong { font: 9px/1 Consolas, monospace; color: var(--uga-green); }
+
+.uga-campaign-hub { overscroll-behavior: contain; }
+.uga-campaign-depart {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 10px;
+  padding: 7px 12px;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
+  border: 1px solid rgba(66, 221, 255, .46);
+  background: linear-gradient(110deg, rgba(9, 68, 89, .72), rgba(4, 24, 36, .9));
+  color: var(--uga-cyan);
+  text-align: left;
+  cursor: pointer;
+}
+.uga-campaign-depart:hover, .uga-campaign-depart:focus-visible { border-color: var(--uga-cyan); background: rgba(20, 82, 105, .82); }
+.uga-campaign-depart .uga-svg { width: 20px; height: 20px; transform: rotate(180deg); }
+.uga-campaign-depart span, .uga-campaign-depart small, .uga-campaign-depart b { min-width: 0; display: block; }
+.uga-campaign-depart small { color: #7ea4b3; font: 7px/1 Consolas, monospace; letter-spacing: .11em; }
+.uga-campaign-depart b { margin-top: 4px; color: #e7f7ff; font-size: 10px; letter-spacing: .08em; }
+.uga-basic-access { margin-top: 12px; }
+.uga-basic-access > header { padding-bottom: 6px; border-bottom: 1px solid rgba(92, 196, 232, .16); }
+.uga-basic-access > header small { color: #b7d5e0; font: 7px/1 Consolas, monospace; letter-spacing: .12em; }
+.uga-basic-access-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; margin-top: 8px; }
+.uga-basic-access-grid button {
+  position: relative;
+  isolation: isolate;
+  min-width: 0;
+  min-height: 50px;
+  padding: 5px 10px;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) 13px;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--uga-line);
+  border-radius: 7px;
+  background: var(--uga-panel-soft);
+  color: #d9edf4;
+  cursor: pointer;
+  text-align: left;
+}
+/* No frame plate on a passive Basic Access entry. These four cards are a plain
+   list of doors, not a selected state, and the tab frame was painted on all of
+   them at once: a 17px border-image band top AND bottom on a 50px button covers
+   34px of its 50px height, so the art crossed the label — that is what bisected
+   "War Table" in landscape — and repeating it four times is what made the whole
+   surface read as ornament rather than hierarchy. The button already carries
+   1px solid var(--uga-line) with a radius; that is the border it should have.
+   Selection art stays reserved for a real selected state (see .uga-command-nav
+   button.is-active), per docs/UGA_PLAYER_FLOW.md. */
+.uga-basic-access-grid button:not(:disabled):hover,
+.uga-basic-access-grid button:not(:disabled):focus-visible { border-color: rgba(66, 221, 255, .62); color: var(--uga-cyan); background: rgba(17, 87, 113, .3); }
+.uga-basic-access-grid button:focus-visible { outline: 2px solid var(--uga-cyan); outline-offset: -2px; }
+.uga-basic-access-grid button:disabled { color: #617987; cursor: not-allowed; }
+.uga-basic-access-grid button > .uga-svg { width: 17px; height: 17px; }
+.uga-basic-access-grid button > .uga-svg:last-child { width: 12px; height: 12px; justify-self: end; }
+.uga-basic-access-grid button > span { min-width: 0; overflow: hidden; font-size: 10px; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+.uga-campaign-services { overscroll-behavior: contain; }
+.uga-strategic-layer-model { margin-top: 12px; padding: 10px; border: 1px solid rgba(66, 221, 255, .28); background: linear-gradient(135deg, rgba(7, 45, 62, .8), rgba(4, 18, 29, .9)); box-shadow: inset 0 0 28px rgba(66, 221, 255, .04); }
+.uga-strategic-layer-model > header { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 9px; align-items: center; }
+.uga-strategic-layer-model > header > span { width: 34px; height: 34px; display: grid; place-items: center; color: var(--uga-cyan); border: 1px solid rgba(66, 221, 255, .3); background: rgba(24, 99, 126, .18); }
+.uga-strategic-layer-model > header .uga-svg { width: 19px; height: 19px; }
+.uga-strategic-layer-model > header small { display: block; color: #6c9db1; font: 6px/1 Consolas, monospace; letter-spacing: .11em; }
+.uga-strategic-layer-model > header b { display: block; margin-top: 4px; color: #e4f7ff; font-size: 11px; letter-spacing: .1em; }
+.uga-strategic-horizons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; margin-top: 10px; }
+.uga-strategic-horizons article { min-width: 0; padding: 8px; border: 1px solid rgba(92, 196, 232, .16); background: rgba(4, 21, 31, .62); }
+.uga-strategic-horizons article.is-live { border-left: 2px solid var(--uga-green); }
+.uga-strategic-horizons article.is-future { border-left: 2px solid #607589; }
+.uga-strategic-horizons small, .uga-strategic-horizons b, .uga-strategic-horizons span { display: block; }
+.uga-strategic-horizons small { color: #718b9a; font: 5px/1 Consolas, monospace; letter-spacing: .12em; }
+.uga-strategic-horizons b { margin-top: 5px; color: #dceff7; font-size: 9px; letter-spacing: .07em; }
+.uga-strategic-horizons span { margin-top: 4px; color: #7993a1; font-size: 7px; line-height: 1.35; }
+.uga-session-types, .uga-hub-services { margin-top: 12px; }
+.uga-session-types > header, .uga-hub-services > header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-bottom: 6px; border-bottom: 1px solid rgba(92, 196, 232, .16); }
+.uga-session-types > header small, .uga-hub-services > header small { color: #b7d5e0; font: 7px/1 Consolas, monospace; letter-spacing: .12em; }
+.uga-session-types > header span, .uga-hub-services > header span { color: #668696; font: 5px/1 Consolas, monospace; letter-spacing: .1em; }
+.uga-session-type-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; margin-top: 8px; }
+.uga-session-type { min-width: 0; display: grid; grid-template-columns: 32px minmax(0, 1fr); grid-template-rows: 1fr auto; gap: 8px; padding: 9px; border: 1px solid rgba(92, 196, 232, .2); background: linear-gradient(145deg, rgba(8, 35, 48, .88), rgba(4, 17, 26, .92)); }
+.uga-session-type.is-offline-ready { border-top: 2px solid var(--uga-green); }
+.uga-session-type.is-network-unavailable { border-top: 2px solid #607589; background: rgba(7, 20, 30, .7); }
+.uga-session-type-icon { width: 32px; height: 32px; display: grid; place-items: center; color: var(--uga-cyan); border: 1px solid rgba(66, 221, 255, .22); }
+.uga-session-type-icon .uga-svg { width: 17px; height: 17px; }
+.uga-session-type > div { min-width: 0; }
+.uga-session-type > div > small { color: var(--uga-green); font: 5px/1.2 Consolas, monospace; letter-spacing: .07em; }
+.uga-session-type.is-network-unavailable > div > small { color: #7d91a0; }
+.uga-session-type h3 { margin: 4px 0 0; color: #e7f7ff; font-size: 10px; line-height: 1.2; }
+.uga-session-type p { margin: 5px 0; color: #8fa8b6; font-size: 7px; line-height: 1.4; }
+.uga-session-type > div > b { display: block; color: #5f8191; font: 5px/1.3 Consolas, monospace; letter-spacing: .06em; }
+.uga-session-type > button { grid-column: 1 / -1; min-height: 44px; color: var(--uga-cyan); border: 1px solid rgba(66, 221, 255, .38); background: rgba(22, 80, 104, .24); font: 700 7px/1 Consolas, monospace; letter-spacing: .08em; cursor: pointer; }
+.uga-session-type > button:disabled { color: #627887; border-color: rgba(109, 132, 147, .24); background: rgba(41, 52, 60, .28); cursor: not-allowed; }
+.uga-hub-route-list { display: grid; gap: 8px; margin-top: 12px; padding-bottom: 4px; }
+.uga-hub-route {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 82px;
+  gap: 9px;
+  align-items: center;
+  padding: 9px;
+  border: 1px solid rgba(92, 196, 232, .18);
+  background: linear-gradient(135deg, rgba(9, 31, 44, .88), rgba(4, 16, 25, .92));
+}
+.uga-hub-route.is-implemented { border-left: 2px solid var(--uga-green); }
+.uga-hub-route.is-local-preview { border-left: 2px solid var(--uga-amber); }
+.uga-hub-route.is-host-required { border-left: 2px solid #607589; background: rgba(7, 20, 30, .7); }
+.uga-hub-route.is-selected { box-shadow: inset 0 0 0 1px rgba(66, 221, 255, .28); }
+.uga-hub-route-icon { width: 40px; height: 40px; display: grid; place-items: center; color: var(--uga-cyan); border: 1px solid rgba(66, 221, 255, .25); background: rgba(26, 94, 119, .18); }
+.uga-hub-route-icon .uga-svg { width: 20px; height: 20px; }
+.uga-hub-route-copy { min-width: 0; }
+.uga-hub-route-copy > div { display: flex; align-items: center; justify-content: space-between; gap: 7px; }
+.uga-hub-route-copy h3 { margin: 0; color: #e7f7ff; font-size: 10px; line-height: 1.25; letter-spacing: .04em; }
+.uga-hub-route-copy > div > span { flex: 0 0 auto; color: var(--uga-green); font: 6px/1 Consolas, monospace; letter-spacing: .08em; }
+.uga-hub-route.is-local-preview .uga-hub-route-copy > div > span { color: var(--uga-amber); }
+.uga-hub-route.is-host-required .uga-hub-route-copy > div > span { color: #7d91a0; }
+.uga-hub-route-copy p { margin: 4px 0; color: #91a9b8; font-size: 8px; line-height: 1.4; overflow-wrap: anywhere; }
+.uga-hub-route-copy small { display: block; color: #88a9bd; font: 8px/1.2 Consolas, monospace; letter-spacing: .08em; }
+.uga-hub-route > button {
+  min-width: 82px;
+  min-height: 44px;
+  padding: 0 8px;
+  color: var(--uga-cyan);
+  border: 1px solid rgba(66, 221, 255, .42);
+  background: rgba(22, 80, 104, .27);
+  font: 700 7px/1 Consolas, monospace;
+  letter-spacing: .08em;
+  cursor: pointer;
+}
+.uga-hub-route > button:disabled { color: #627887; border-color: rgba(109, 132, 147, .24); background: rgba(41, 52, 60, .28); cursor: not-allowed; }
+.uga-crew-summary { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 12px; }
+.uga-crew-summary article { min-height: 54px; padding: 8px 10px; display: flex; align-items: center; justify-content: space-between; border: 1px solid rgba(92, 196, 232, .18); background: rgba(12, 37, 50, .28); }
+.uga-crew-summary span { color: #7e9aaa; font-size: 7px; letter-spacing: .1em; }
+.uga-crew-summary b { color: var(--uga-cyan); font: 14px/1 Consolas, monospace; }
+
+.uga-quick-actions {
+  position: absolute;
+  left: 50%;
+  bottom: calc(61px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  min-height: 54px;
+  display: flex;
+  align-items: stretch;
+  padding: 4px;
+  pointer-events: auto;
+  border: 1px solid rgba(92, 196, 232, .24);
+  background: rgba(4, 15, 24, .75);
+}
+.uga-quick-actions button { min-width: 70px; min-height: 44px; padding: 2px 10px; display: flex; align-items: center; justify-content: center; gap: 6px; border: 0; border-right: 1px solid rgba(92, 196, 232, .13); background: transparent; color: #7796a8; cursor: pointer; }
+.uga-quick-actions button:last-child { border-right: 0; }
+.uga-quick-actions button:hover, .uga-quick-actions button.is-active { color: var(--uga-cyan); background: rgba(24, 92, 118, .23); }
+.uga-quick-actions .uga-svg { width: 16px; height: 16px; }
+.uga-quick-actions span { font-size: 7px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; }
+
+.uga-command-nav {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  min-height: calc(61px + env(safe-area-inset-bottom));
+  padding: 0 max(12px, env(safe-area-inset-right)) env(safe-area-inset-bottom) max(12px, env(safe-area-inset-left));
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  pointer-events: auto;
+  border-top: 1px solid rgba(92, 196, 232, .28);
+  background: linear-gradient(0deg, rgba(2, 10, 17, .98), rgba(4, 16, 25, .91));
+}
+.uga-command-nav button { position: relative; min-width: clamp(74px, 10vw, 112px); min-height: 44px; padding: 7px clamp(6px, 1vw, 18px) 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; border: 0; border-right: 1px solid rgba(92, 196, 232, .09); background: transparent; color: #617d90; cursor: pointer; }
+.uga-command-nav button:first-child { border-left: 1px solid rgba(92, 196, 232, .09); }
+.uga-command-nav button::before { content: ""; position: absolute; top: -1px; left: 26%; right: 26%; height: 2px; background: transparent; }
+.uga-command-nav button:hover { color: #9fc0d0; }
+.uga-command-nav button.is-active { color: var(--uga-cyan); background: linear-gradient(180deg, rgba(28, 105, 135, .23), transparent); }
+.uga-command-nav button.is-active::before { background: var(--uga-cyan); box-shadow: 0 0 12px rgba(66, 221, 255, .8); }
+.uga-command-nav .uga-svg { width: 20px; height: 20px; }
+.uga-command-nav span { font-size: 7px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+
+.uga-rail-top {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.uga-deck-summary {
+  min-height: 56px;
+  margin: 0 0 8px;
+  padding: 8px 10px;
+  display: grid;
+  gap: 3px;
+  border-left: 2px solid var(--uga-cyan);
+  background: linear-gradient(90deg, rgba(13, 58, 78, .48), rgba(4, 18, 28, .7));
+}
+.uga-deck-summary small { color: var(--uga-cyan); font: 700 7px/1 Consolas, monospace; letter-spacing: .13em; }
+.uga-deck-summary b { color: #edfaff; font-size: 10px; letter-spacing: .08em; }
+.uga-deck-summary span { color: var(--uga-muted); font-size: 7px; line-height: 1.3; }
+
+.uga-ship-telemetry-badge {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  min-width: 0;
+  gap: 6px;
+  padding: 8px 10px;
+  background: rgba(3, 16, 26, .92);
+  border: 1px solid rgba(66, 221, 255, .25);
+  border-radius: 4px;
+}
+
+.uga-telemetry-rating, .uga-telemetry-power {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.uga-telemetry-rating small, .uga-telemetry-power small {
+  font-size: 8px;
+  color: var(--uga-muted);
+  letter-spacing: .08em;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.uga-telemetry-rating b {
+  font-size: 11px;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.uga-telemetry-rating span {
+  font-size: 9px;
+  color: var(--uga-amber);
+  font-weight: 700;
+}
+
+.uga-telemetry-power b {
+  font-size: 11px;
+  color: var(--uga-cyan);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.uga-telemetry-power span {
+  font-size: 9px;
+  color: var(--uga-green);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.uga-telemetry-power.is-brownout b, .uga-telemetry-power.is-brownout span {
+  color: var(--uga-red);
+}
+
+.uga-sector-filter-bar {
+  display: flex;
+  gap: 4px;
+}
+
+.uga-filter-chip {
+  flex: 1;
+  min-height: 44px;
+  padding: 5px 6px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  background: rgba(6, 22, 34, .8);
+  border: 1px solid rgba(66, 221, 255, .2);
+  color: var(--uga-muted);
+  border-radius: 3px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: all .15s ease;
+}
+
+.uga-filter-chip:hover {
+  color: #fff;
+  border-color: rgba(66, 221, 255, .5);
+}
+
+.uga-filter-chip.is-active {
+  background: rgba(20, 87, 117, .5);
+  color: #fff;
+  border-color: var(--uga-cyan);
+  box-shadow: 0 0 10px rgba(66, 221, 255, .3);
+}
+
+.uga-filter-chip.func.is-active {
+  border-color: var(--uga-cyan);
+  color: var(--uga-cyan);
+}
+
+.uga-filter-chip.civil.is-active {
+  border-color: var(--uga-green);
+  color: var(--uga-green);
+  background: rgba(20, 90, 60, .4);
+}
+
+.uga-sector-tag {
+  font-style: normal;
+  font-size: 8px;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.uga-sector-tag.function {
+  background: rgba(66, 221, 255, .15);
+  color: var(--uga-cyan);
+}
+
+.uga-sector-tag.civil {
+  background: rgba(116, 224, 162, .15);
+  color: var(--uga-green);
+}
+
+.uga-sector-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  border-radius: 3px;
+  margin-bottom: 4px;
+}
+
+.uga-sector-pill.is-function {
+  background: rgba(66, 221, 255, .15);
+  color: var(--uga-cyan);
+  border: 1px solid rgba(66, 221, 255, .3);
+}
+
+.uga-sector-pill.is-civil {
+  background: rgba(116, 224, 162, .15);
+  color: var(--uga-green);
+  border: 1px solid rgba(116, 224, 162, .3);
+}
+
+.uga-power-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 7px;
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(3, 16, 26, .9);
+  color: var(--uga-amber);
+  border: 1px solid rgba(255, 181, 74, .4);
+  border-radius: 3px;
+}
+
+.uga-power-pill .uga-svg {
+  width: 14px;
+  height: 14px;
+}
+
+.uga-heading-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.uga-synergy-banner {
+  margin: 6px 0 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.uga-synergy-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: linear-gradient(90deg, rgba(20, 87, 117, .3) 0%, rgba(6, 25, 38, .6) 100%);
+  border: 1px solid rgba(66, 221, 255, .4);
+  border-left: 3px solid var(--uga-cyan);
+  border-radius: 3px;
+}
+
+.uga-synergy-item small {
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--uga-cyan);
+  letter-spacing: .08em;
+  display: block;
+}
+
+.uga-synergy-item p {
+  margin: 2px 0 0;
+  font-size: 10px;
+  color: #fff;
+}
+
+.uga-synergy-icon {
+  color: var(--uga-cyan);
+  width: 22px;
+  height: 22px;
+}
+
+.uga-staff-list, .uga-visual-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.uga-staff-card {
+  background: rgba(4, 18, 28, .8);
+  border: 1px solid rgba(66, 221, 255, .2);
+  border-radius: 4px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.uga-staff-card.is-locked {
+  opacity: .5;
+  border-style: dashed;
+}
+
+.uga-staff-card.is-assigned {
+  border-color: rgba(116, 224, 162, .4);
+  background: linear-gradient(135deg, rgba(6, 28, 22, .7) 0%, rgba(4, 18, 28, .85) 100%);
+}
+
+.uga-staff-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.uga-staff-mark {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  background: rgba(20, 87, 117, .3);
+  border-radius: 3px;
+  color: var(--uga-cyan);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.uga-staff-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.uga-staff-title small {
+  font-size: 8px;
+  color: var(--uga-muted);
+  display: block;
+}
+
+.uga-staff-title b {
+  font-size: 11px;
+  color: #fff;
+}
+
+.uga-staff-assigned-body {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 6px;
+  background: rgba(0, 0, 0, .25);
+  border-radius: 3px;
+}
+
+.uga-staff-portrait {
+  width: 38px;
+  height: 38px;
+  border-radius: 3px;
+  overflow: hidden;
+  border: 1px solid var(--uga-green);
+  flex: 0 0 38px;
+}
+
+.uga-staff-portrait img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.uga-staff-perk-copy small {
+  font-size: 8px;
+  font-weight: 700;
+  color: var(--uga-green);
+  text-transform: uppercase;
+}
+
+.uga-staff-perk-copy p {
+  margin: 2px 0 0;
+  font-size: 10px;
+  color: var(--uga-text);
+  line-height: 1.3;
+}
+
+.uga-staff-assign-box {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.uga-staff-picker {
+  flex: 1;
+}
+
+.uga-staff-picker select {
+  width: 100%;
+  min-height: 44px;
+  padding: 5px 8px;
+  background: rgba(2, 10, 16, .9);
+  color: #fff;
+  border: 1px solid rgba(66, 221, 255, .3);
+  border-radius: 3px;
+  font-size: 10px;
+}
+
+.uga-visual-upgrade-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 10px;
+  background: rgba(4, 18, 28, .6);
+  border: 1px solid rgba(66, 221, 255, .15);
+  border-radius: 4px;
+}
+
+.uga-visual-upgrade-row.is-active {
+  border-color: rgba(66, 221, 255, .4);
+  background: rgba(6, 25, 38, .75);
+}
+
+.uga-visual-badge {
+  font-size: 9px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 2px;
+  background: rgba(20, 87, 117, .4);
+  color: var(--uga-cyan);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.uga-visual-upgrade-row.is-active .uga-visual-badge {
+  background: var(--uga-cyan);
+  color: #020a10;
+}
+
+.uga-visual-copy b {
+  font-size: 11px;
+  color: #fff;
+  display: block;
+}
+
+.uga-visual-copy p {
+  margin: 2px 0 0;
+  font-size: 10px;
+  color: var(--uga-muted);
+  line-height: 1.35;
+}
+
+.uga-visual-upgrade-row.is-active .uga-visual-copy p {
+  color: var(--uga-text);
+}
+
+@supports (backdrop-filter: blur(8px)) {
+  .uga-district-list, .uga-context-panel, .uga-quick-actions { backdrop-filter: blur(11px) saturate(120%); }
+}
+
+@media (max-width: 900px), (max-height: 620px) and (max-width: 1024px) {
+  .uga-command-header { min-height: 56px; padding: max(6px, env(safe-area-inset-top)) 44px 6px 10px; grid-template-columns: 1fr; gap: 4px; }
+  .uga-command-identity { padding-right: 4px; gap: 8px; }
+  .uga-command-crest { width: 30px; height: 30px; }
+  .uga-command-crest .uga-svg { width: 16px; height: 16px; }
+  .uga-command-identity strong { font-size: 13px; font-weight: 800; letter-spacing: .08em; }
+  .uga-command-identity span:not(.uga-command-crest) { display: none; }
+  .uga-command-exit { right: 6px; top: max(6px, env(safe-area-inset-top)); width: 44px; height: 44px; }
+
+  /* Smooth horizontal scrolling resource ribbon with edge mask */
+  .uga-resource-ribbon {
+    justify-content: flex-start;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    touch-action: pan-x;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: 4px;
+    padding: 0 4px;
+    -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent 100%);
+    mask-image: linear-gradient(90deg, #000 88%, transparent 100%);
+  }
+  .uga-resource-ribbon::-webkit-scrollbar { display: none; }
+  .uga-resource { flex: 0 0 auto; min-width: 52px; height: 28px; padding: 2px 6px 2px 18px; border-radius: 3px; }
+  .uga-resource > span { left: 4px; top: 6px; }
+  .uga-resource > span .uga-svg { width: 11px; height: 11px; }
+  .uga-resource b { font-size: 11px; font-weight: 700; }
+  .uga-resource small { font-size: 8px; font-weight: 600; letter-spacing: .04em; }
+  .uga-command-stage { inset: 58px 0 54px; }
+
+  /* Compact 1-Row Telemetry & Sector Filter */
+  .uga-rail-top {
+    position: absolute;
+    top: 60px;
+    left: 8px;
+    right: 8px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    z-index: 10;
+    pointer-events: auto;
+  }
+  .uga-ship-telemetry-badge {
+    padding: 3px 8px;
+    gap: 6px;
+    height: 30px;
+    flex: 1 1 auto;
+    min-width: 118px;
+    max-width: 180px;
+    grid-template-columns: 1fr;
+    border-radius: 4px;
+    background: rgba(3, 14, 23, .9);
+  }
+  .uga-telemetry-rating { display: none; }
+  /* Three inline labels wrapped unpredictably inside the 118px mobile badge and
+     painted over the ship/deck controls. Keep the actual power values on two
+     deterministic rows; the lightning icon already identifies this telemetry. */
+  .uga-telemetry-power { display: grid; grid-template-columns: 1fr; gap: 1px; align-content: center; }
+  .uga-telemetry-power small { display: none; }
+  .uga-telemetry-power b, .uga-telemetry-power span { white-space: nowrap; line-height: 1; }
+  .uga-telemetry-power b { font-size: 9px; font-weight: 800; }
+  .uga-telemetry-power span { font-size: 8px; }
+  .uga-sector-filter-bar {
+    padding: 2px;
+    gap: 3px;
+    min-height: 44px;
+    flex: 0 0 150px;
+    min-width: 126px;
+    justify-content: flex-end;
+    background: rgba(3, 14, 23, .9);
+    border-radius: 4px;
+  }
+  .uga-filter-chip { min-height: 44px; font-size: 9px; font-weight: 800; padding: 0 8px; border-radius: 2px; }
+
+  /* Mobile District Rail */
+  .uga-district-rail {
+    /* The stage already starts below the identity header. Leave just the
+       resource-row clearance instead of reserving that header twice. */
+    top: 40px;
+    left: 8px;
+    right: 8px;
+    bottom: auto;
+    width: auto;
+    height: 48px;
+    flex-direction: row;
+    gap: 4px;
+    z-index: 10;
+  }
+  .uga-overview-button {
+    width: 48px;
+    height: 48px;
+    flex: 0 0 48px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--uga-line);
+    border-radius: 4px;
+    background: rgba(3, 14, 23, .9);
+  }
+  .uga-overview-button span, .uga-overview-button::after { display: none; }
+  .uga-overview-button .uga-svg { width: 18px; height: 18px; }
+  .uga-district-list {
+    flex: 1;
+    display: flex;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    touch-action: pan-x;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    border-radius: 4px;
+    gap: 4px;
+    padding: 2px;
+    background: rgba(3, 14, 23, .9);
+  }
+  .uga-district-list::-webkit-scrollbar { display: none; }
+  .uga-district-button {
+    flex: 0 0 144px;
+    width: 144px;
+    min-height: 44px;
+    padding: 2px;
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr);
+    place-items: center;
+    border: 1px solid rgba(92, 196, 232, .15);
+    border-radius: 4px;
+  }
+  .uga-district-button::before { inset: auto 2px 0; width: auto; height: 2.5px; }
+  .uga-district-index, .uga-row-chevron { display: none; }
+  /* Labels stay in the existing 48px rail; widening scrollable choices costs
+     no additional ship viewport and avoids an unexplained row of icons. */
+  .uga-district-copy { display: block; min-width: 0; text-align: left; }
+  .uga-district-copy b { display: block; font-size: 11px; line-height: 1.2; white-space: normal; overflow-wrap: anywhere; }
+  .uga-district-copy small { display: none; }
+  .uga-district-icon { width: 28px; height: 28px; }
+  .uga-district-icon .uga-svg { width: 16px; height: 16px; }
+
+  .uga-scene-title { display: none; }
+  .uga-camera-readout { display: none; }
+
+  /* Mobile Bottom Sheet Inspector */
+  .uga-context-panel {
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 4px;
+    width: 100%;
+    min-width: 0;
+    height: 44px;
+    border-radius: 14px 14px 0 0;
+    clip-path: none;
+    border: 1px solid var(--uga-cyan);
+    border-bottom: none;
+    box-shadow: 0 -12px 36px rgba(0, 0, 0, .92);
+    z-index: 20;
+    background: rgba(2, 12, 20, .96);
+  }
+  .uga-command-shell.is-sheet-expanded .uga-context-panel { height: min(40%, 360px); }
+  .uga-context-panel::before { display: none; }
+  .uga-sheet-toggle { position: absolute; inset: 0 0 auto; width: 100%; min-height: 44px; padding: 0 14px; display: grid; grid-template-columns: 38px 1fr 22px; align-items: center; gap: 8px; border: 0; border-bottom: 1px solid rgba(92, 196, 232, .2); background: rgba(4, 19, 30, .97); color: var(--uga-muted); cursor: pointer; z-index: 3; }
+  .uga-sheet-toggle > span { width: 38px; height: 4px; background: rgba(66, 221, 255, .5); border-radius: 2px; }
+  .uga-sheet-toggle b { text-align: left; font-size: 9px; letter-spacing: .12em; }
+  .uga-sheet-toggle .uga-svg { width: 16px; height: 16px; transform: rotate(-90deg); transition: transform .16s ease; }
+  .uga-command-shell.is-sheet-expanded .uga-sheet-toggle .uga-svg { transform: rotate(90deg); }
+  .uga-deployment-toolbar { position: absolute; inset: 0 0 auto; min-height: 48px; padding: 0 10px 0 6px; grid-template-columns: minmax(132px, auto) 1fr auto; align-items: center; gap: 8px; border-bottom: 1px solid rgba(92, 196, 232, .3); background: linear-gradient(90deg, rgba(3, 24, 35, .99), rgba(6, 35, 47, .97)); z-index: 4; }
+  .uga-command-shell.is-deployment-mode .uga-deployment-toolbar { display: grid; }
+  .uga-deployment-toolbar > button { min-height: 44px; padding: 0 9px; display: flex; align-items: center; gap: 6px; border: 0; border-right: 1px solid rgba(92, 196, 232, .2); background: transparent; color: #9dc4d3; font-size: 8px; font-weight: 800; letter-spacing: .06em; }
+  .uga-deployment-toolbar > button .uga-svg { width: 13px; height: 13px; transform: rotate(180deg); }
+  .uga-deployment-toolbar > b { color: #d8edf4; font-size: 10px; letter-spacing: .12em; }
+  .uga-deployment-toolbar > small { padding: 4px 5px; color: var(--uga-green); border: 1px solid rgba(114, 229, 178, .36); font: 7px/1 Consolas, monospace; }
+  .uga-context-body { inset: 44px 0 0; overflow: hidden; }
+  .uga-command-shell.is-deployment-mode .uga-context-body { inset: 48px 0 0; }
+  .uga-command-shell:not(.is-sheet-expanded) .uga-context-body { display: none; }
+  .uga-context-scroll { padding: 8px 12px 14px; }
+  .uga-campaign-hub { padding-bottom: max(16px, env(safe-area-inset-bottom)); }
+  .uga-strategic-horizons, .uga-session-type-grid { grid-template-columns: 1fr; }
+  .uga-hub-route { grid-template-columns: 36px minmax(0, 1fr) 76px; gap: 7px; padding: 7px; }
+  .uga-hub-route-icon { width: 36px; height: 36px; }
+  .uga-hub-route > button { min-width: 76px; }
+  .uga-hub-route-copy > div { align-items: flex-start; flex-direction: column; gap: 2px; }
+  .uga-hub-route-copy h3 { font-size: 11px; }
+  .uga-hub-route-copy p { font-size: 9px; }
+  .uga-context-heading { grid-template-columns: 32px 1fr auto; gap: 8px; padding-bottom: 6px; }
+  .uga-heading-icon { width: 30px; height: 30px; border-radius: 4px; }
+  .uga-heading-icon .uga-svg { width: 18px; height: 18px; }
+  .uga-context-heading h2, .uga-section-title h2 { font-size: 14px; font-weight: 800; }
+  .uga-tier-rail { margin: 6px 0; height: 26px; gap: 4px; }
+  .uga-tier-pill { font-size: 10px; font-weight: 700; }
+  .uga-activity-line { margin: 4px 0 6px; font-size: 10px; }
+  .uga-panel-section { margin-top: 8px; }
+  .uga-socket { grid-template-columns: 28px minmax(70px, 1fr) minmax(80px, .8fr) auto; min-height: 48px; border-radius: 4px; }
+
+  /* Mobile Bottom Nav */
+  .uga-command-nav { min-height: calc(54px + env(safe-area-inset-bottom)); padding-right: max(4px, env(safe-area-inset-right)); padding-bottom: env(safe-area-inset-bottom); padding-left: max(4px, env(safe-area-inset-left)); display: grid; grid-auto-flow: column; grid-auto-columns: minmax(44px, 1fr); justify-content: stretch; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; background: rgba(3, 14, 23, .98); z-index: 25; }
+  .uga-command-nav::-webkit-scrollbar { display: none; }
+  .uga-command-nav button { width: 100%; min-width: 44px; padding: 4px 1px; gap: 2px; min-height: 46px; }
+  .uga-command-nav .uga-svg { width: 18px; height: 18px; }
+  .uga-command-nav span { max-width: 100%; overflow: hidden; font-size: clamp(8px, 2.35vw, 10px); font-weight: 700; letter-spacing: .02em; text-overflow: ellipsis; white-space: nowrap; }
+
+  .uga-quick-actions { display: none; }
+  .uga-deployment-planner { grid-template-columns: 1fr; }
+  .uga-deployment-planner header, .uga-deployment-identity, .uga-deployment-stations, .uga-deployment-readiness, .uga-deployment-planner fieldset, .uga-deployment-planner > .uga-primary-button { grid-column: 1; }
+  .uga-deployment-stations { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .uga-deployment-station { padding: 4px; grid-template-columns: 19px minmax(0, 1fr); column-gap: 4px; }
+  .uga-deployment-station > span { width: 19px; height: 24px; }
+  .uga-deployment-station .uga-svg { width: 12px; height: 12px; }
+  .uga-deployment-station b { font-size: 11px; letter-spacing: 0; overflow-wrap: anywhere; }
+  .uga-deployment-station small { font-size: 10px; overflow-wrap: anywhere; }
+  .uga-deployment-planner fieldset { grid-template-columns: 1fr; }
+  .uga-manifest-groups, .uga-mod-picker { grid-template-columns: 1fr; }
+  .uga-deck-summary { display: none; }
+}
+
+/* A 360-412px phone cannot show seven resources and every room in one row.
+   Preserve the 44px controls, expose a real swipe lane, and leave a labelled
+   continuation edge instead of making the remaining content look absent. The
+   eight primary destinations do fit at this width when their full labels use
+   compact command typography, so none of those labels are ellipsized. */
+@media (max-width: 480px) {
+  .uga-resource-ribbon {
+    padding-right: 62px;
+    scroll-padding-inline: 4px 62px;
+  }
+  .uga-resource-scroll-cue,
+  .uga-district-scroll-cue {
+    position: absolute;
+    z-index: 12;
+    width: 58px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 5px;
+    padding-right: 7px;
+    pointer-events: none;
+    color: #b9eefe;
+    background: linear-gradient(90deg, rgba(3, 14, 23, 0), rgba(3, 14, 23, .93) 34%, #030e17 100%);
+    font: 800 7px/1 Consolas, monospace;
+    letter-spacing: .08em;
+    text-shadow: 0 0 8px rgba(66, 221, 255, .65);
+  }
+  .uga-resource-scroll-cue { right: 4px; bottom: 6px; height: 28px; }
+  .uga-resource-scroll-cue b,
+  .uga-district-scroll-cue b { color: var(--uga-cyan); font-size: 17px; line-height: 1; }
+
+  .uga-district-list {
+    padding-right: 58px;
+    scroll-padding-inline: 2px 58px;
+    scroll-snap-type: x proximity;
+  }
+  .uga-district-button {
+    flex-basis: 122px;
+    width: 122px;
+    scroll-snap-align: start;
+  }
+  .uga-district-copy b { overflow-wrap: normal; word-break: normal; }
+  .uga-district-scroll-cue { top: 0; right: 0; height: 48px; }
+
+  .uga-command-nav {
+    grid-template-columns: repeat(8, minmax(44px, 1fr));
+    grid-auto-columns: unset;
+    touch-action: pan-x;
+    -webkit-overflow-scrolling: touch;
+  }
+  .uga-command-nav span {
+    overflow: visible;
+    font-size: clamp(7px, 1.95vw, 8px);
+    letter-spacing: 0;
+    text-overflow: clip;
+  }
+}
+
+@media (max-height: 620px) and (orientation: landscape) {
+  .uga-command-header { min-height: 54px; padding-top: 4px; padding-bottom: 4px; }
+  .uga-command-stage { inset: 54px 0 54px; }
+  .uga-district-rail { top: 8px; left: 8px; right: 8px; }
+  .uga-district-button { min-height: 44px; }
+  .uga-resource { height: 34px; }
+  .uga-command-nav { min-height: 48px; }
+  .uga-context-panel { left: auto; right: 8px; bottom: 0; width: min(36%, 340px); height: 44px; border: 1px solid var(--uga-cyan); border-radius: 10px 10px 0 0; }
+  .uga-command-shell.is-sheet-expanded .uga-context-panel { top: 120px; height: auto; }
+  .uga-campaign-hub .uga-hub-route-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .uga-campaign-hub .uga-hub-route { grid-template-columns: 34px minmax(0, 1fr); }
+  .uga-campaign-hub .uga-hub-route > button { grid-column: 1 / -1; width: 100%; }
+  .uga-quick-actions { bottom: 48px; min-height: 44px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .uga-command-shell *, .uga-command-shell *::before, .uga-command-shell *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+
+/* NEXUS-VII authored interior construction */
+.uga-construction-view { display: grid; gap: 12px; }
+.uga-construction-queue,
+.uga-district-plots,
+.uga-facility-choices,
+.uga-commission-card {
+  border: 1px solid rgba(92, 196, 232, .2);
+  background: linear-gradient(135deg, rgba(6, 29, 43, .92), rgba(3, 14, 23, .95));
+  box-shadow: inset 0 1px rgba(255, 255, 255, .025);
+}
+.uga-construction-queue > header,
+.uga-district-plots > header,
+.uga-facility-choices > header {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  padding: 12px 14px; border-bottom: 1px solid rgba(92, 196, 232, .14);
+}
+.uga-construction-queue header small,
+.uga-district-plots header small,
+.uga-facility-choices header small { display: block; color: var(--uga-cyan); font-size: 8px; letter-spacing: .15em; }
+.uga-construction-queue h3,
+.uga-district-plots h3,
+.uga-facility-choices h3,
+.uga-commission-card h3 { margin: 3px 0 0; color: #d9f5ff; font-size: 14px; }
+.uga-construction-queue > header > span,
+.uga-district-plots > header > span { color: #85a9ba; font: 700 9px/1.3 inherit; letter-spacing: .08em; text-align: right; }
+.uga-construction-power { margin: 10px 12px 0; min-height: 44px; padding: 7px 10px; display: flex; align-items: center; gap: 10px; border: 1px solid rgba(85, 226, 164, .22); background: rgba(20, 83, 69, .14); color: #75e3b0; }
+.uga-construction-power.is-deficit { border-color: rgba(255, 126, 76, .42); background: rgba(107, 36, 19, .2); color: #ff9d70; }
+.uga-construction-power .uga-svg { width: 18px; height: 18px; }
+.uga-construction-power div { display: grid; gap: 2px; }
+.uga-construction-power b { font-size: 10px; }
+.uga-construction-power small { color: #7193a4; font-size: 8px; letter-spacing: .08em; }
+.uga-job-list { display: grid; gap: 7px; padding: 10px 12px 12px; }
+.uga-job-card { min-height: 72px; display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 8px; border: 1px solid rgba(92, 196, 232, .15); background: rgba(4, 17, 27, .8); }
+.uga-job-card.is-active { border-color: rgba(66, 221, 255, .42); }
+.uga-job-card.is-paused_power { border-color: rgba(255, 158, 76, .42); }
+.uga-job-order { align-self: stretch; display: grid; place-content: center; text-align: center; border-right: 1px solid rgba(92, 196, 232, .12); }
+.uga-job-order b { color: var(--uga-cyan); font-size: 16px; }
+.uga-job-order span { max-width: 48px; color: #9abac9; font-size: 10px; overflow-wrap: anywhere; }
+.uga-job-copy { min-width: 0; display: grid; gap: 3px; }
+.uga-job-copy > small { color: #9abac9; font-size: 11px; }
+.uga-job-copy > b { overflow: hidden; color: #d9f5ff; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.uga-job-progress { position: relative; height: 17px; overflow: hidden; border: 1px solid rgba(92, 196, 232, .13); background: rgba(0, 0, 0, .35); }
+.uga-job-progress i { position: absolute; inset: 0 auto 0 0; width: var(--value); background: linear-gradient(90deg, rgba(16, 114, 145, .45), rgba(66, 221, 255, .55)); }
+.uga-job-progress span { position: relative; z-index: 1; display: block; padding: 2px 5px; color: #c8e4ef; font-size: 11px; }
+.uga-job-controls { display: grid; grid-template-columns: 44px 44px; gap: 4px; }
+.uga-job-controls button { min-width: 44px; min-height: 44px; padding: 5px; border: 1px solid rgba(92, 196, 232, .2); background: rgba(7, 34, 48, .8); color: #9bcddd; font-size: 8px; font-weight: 800; cursor: pointer; }
+.uga-job-controls button:nth-child(1) .uga-svg { transform: rotate(-90deg); }
+.uga-job-controls button:nth-child(2) .uga-svg { transform: rotate(90deg); }
+.uga-job-controls button.is-danger { grid-column: 1 / -1; color: #ff9b83; border-color: rgba(255, 105, 75, .28); }
+.uga-job-controls button.is-confirming,
+.uga-primary-button.is-confirming { color: #081217; background: #ffbb56; border-color: #ffe09c; }
+.uga-job-controls button:disabled { opacity: .3; cursor: default; }
+.uga-build-plot-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 10px 12px 12px; }
+.uga-build-plot { min-height: 70px; padding: 8px; display: grid; grid-template-columns: 32px 1fr; grid-template-rows: 1fr auto; gap: 4px 8px; text-align: left; border: 1px solid rgba(92, 196, 232, .17); background: rgba(3, 17, 27, .83); color: #789aa9; cursor: pointer; }
+.uga-build-plot:hover,
+.uga-build-plot.is-selected { border-color: var(--uga-cyan); background: rgba(14, 69, 88, .38); color: #d9f5ff; }
+.uga-build-plot.is-complete { border-color: rgba(75, 215, 157, .28); }
+.uga-build-plot.is-building { border-color: rgba(245, 184, 76, .48); }
+.uga-build-plot:disabled { opacity: .48; cursor: default; }
+.uga-build-plot-tier { grid-row: 1 / -1; width: 32px; height: 32px; display: grid; place-items: center; align-self: center; border: 1px solid currentColor; color: var(--uga-cyan); font-size: 10px; font-weight: 900; }
+.uga-build-plot-copy { min-width: 0; display: grid; align-content: center; }
+.uga-build-plot-copy small { color: #688999; font-size: 7px; letter-spacing: .08em; }
+.uga-build-plot-copy b { overflow: hidden; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.uga-build-plot-state { grid-column: 2; color: #6fcba6; font-size: 7px; font-weight: 800; letter-spacing: .08em; }
+.uga-facility-choices > header { display: block; }
+.uga-facility-choices > header p { margin: 5px 0 0; color: #7894a2; font-size: 10px; }
+.uga-facility-choice { display: grid; grid-template-columns: 74px minmax(0, 1fr) 160px; gap: 12px; align-items: stretch; padding: 12px; border-bottom: 1px solid rgba(92, 196, 232, .13); }
+.uga-facility-choice:last-child { border-bottom: 0; }
+.uga-facility-choice.is-installed { background: rgba(29, 93, 75, .12); }
+.uga-facility-choice.is-unavailable { opacity: .76; }
+.uga-facility-preview { position: relative; min-height: 94px; display: grid; place-items: center; overflow: hidden; border: 1px solid rgba(92, 196, 232, .2); background: radial-gradient(circle, rgba(40, 168, 199, .22), rgba(3, 14, 23, .9) 65%); }
+.uga-facility-preview::before,
+.uga-facility-preview::after { content: ''; position: absolute; inset: 12px; border: 1px solid rgba(66, 221, 255, .13); transform: rotate(45deg); }
+.uga-facility-preview::after { inset: 24px; }
+.uga-facility-preview > i { position: absolute; left: 12%; right: 12%; bottom: 12%; height: 18%; background: rgba(66, 221, 255, .2); clip-path: polygon(0 100%, 15% 25%, 35% 50%, 50% 0, 70% 45%, 86% 18%, 100% 100%); }
+.uga-facility-preview .uga-svg { position: relative; z-index: 1; width: 27px; height: 27px; color: var(--uga-cyan); }
+.uga-facility-preview b { position: absolute; top: 5px; right: 6px; color: #8ab1c0; font-size: 8px; }
+.uga-facility-copy { min-width: 0; }
+.uga-facility-copy > small { color: var(--uga-cyan); font-size: 7px; letter-spacing: .12em; }
+.uga-facility-copy h3 { margin: 4px 0; color: #e0f7ff; font-size: 13px; }
+.uga-facility-copy p { margin: 0; color: #86a3af; font-size: 10px; line-height: 1.45; }
+.uga-facility-effects { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 7px; }
+.uga-facility-effects span { padding: 4px 6px; border: 1px solid rgba(83, 210, 159, .2); background: rgba(19, 88, 69, .13); color: #a7dcc8; font-size: 11px; }
+.uga-facility-effects b { color: #65e0ab; margin-right: 2px; }
+.uga-facility-authorization { min-width: 0; display: grid; align-content: center; gap: 7px; }
+.uga-facility-cost { display: flex; flex-wrap: wrap; gap: 5px; }
+.uga-facility-cost > span { min-width: 44px; padding: 4px; display: grid; grid-template-columns: 12px 1fr; align-items: center; border: 1px solid rgba(92, 196, 232, .13); color: #b9dae6; }
+.uga-facility-cost .uga-svg { width: 11px; height: 11px; color: var(--uga-cyan); }
+.uga-facility-cost b { font-size: 12px; }
+.uga-facility-cost small { grid-column: 1 / -1; font-size: 11px; color: #a1bdca; }
+.uga-facility-authorization dl { margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+.uga-facility-authorization dl div { padding: 4px; border: 1px solid rgba(92, 196, 232, .11); }
+.uga-facility-authorization dt { color: #a1bdca; font-size: 11px; }
+.uga-facility-authorization dd { margin: 2px 0 0; color: #c6e5ef; font-size: 12px; }
+.uga-construction-issue { margin: 0; display: flex; align-items: flex-start; gap: 5px; color: #ffb08f; font-size: 12px; line-height: 1.4; }
+.uga-construction-issue .uga-svg { flex: 0 0 12px; width: 12px; height: 12px; }
+.uga-commission-card { padding: 14px; display: grid; grid-template-columns: 1fr minmax(170px, auto); align-items: end; gap: 14px; }
+.uga-commission-card small { color: var(--uga-cyan); font-size: 8px; letter-spacing: .13em; }
+.uga-commission-card p { margin: 5px 0 10px; color: #7e9aa7; font-size: 10px; line-height: 1.45; }
+.uga-commission-card.is-complete { border-color: rgba(75, 215, 157, .25); }
+/* The desktop inspector is narrow even on a wide display. Stacking only in
+   that surface avoids squeezing the explanation beside a 170px action. */
+.uga-context-panel .uga-commission-card { grid-template-columns: minmax(0, 1fr); align-items: start; }
+.uga-context-panel .uga-commission-card > button { width: 100%; white-space: normal; }
+.uga-context-panel .uga-commission-card p { font-size: 12px; line-height: 1.45; }
+
+@media (max-width: 760px) {
+  /* Keep the selected compartment visible while its details are open.  The
+     later construction override used to replace the mobile bottom sheet's
+     40% contract with 66%, covering the room on real phone portrait screens. */
+  .uga-command-shell.is-sheet-expanded .uga-context-panel { height: min(40%, 360px); }
+  .uga-construction-view { gap: 8px; }
+  .uga-build-plot-grid { grid-template-columns: 1fr; }
+  .uga-build-plot { min-height: 48px; }
+  .uga-facility-choice { grid-template-columns: 58px minmax(0, 1fr); }
+  .uga-facility-preview { min-height: 84px; }
+  .uga-facility-authorization { grid-column: 1 / -1; grid-template-columns: 1fr; }
+  .uga-commission-card { grid-template-columns: 1fr; }
+  .uga-job-card { grid-template-columns: 42px minmax(0, 1fr); }
+  .uga-job-controls { grid-column: 1 / -1; grid-template-columns: 44px 44px 1fr; }
+  .uga-job-controls button.is-danger { grid-column: auto; }
+  .uga-construction-queue > header,
+  .uga-district-plots > header { align-items: flex-start; }
+  .operation-debrief-grid { grid-template-columns: 1fr; }
+  .operation-debrief-section:last-child { grid-column: 1; }
+  .operation-debrief-section dl div { grid-template-columns: minmax(84px, .85fr) minmax(0, 1.15fr); }
+}
+
+@media (max-width: 760px) and (orientation: portrait) {
+  /* Keep the scrollable resource row below the fixed 44px exit target. */
+  .uga-command-header { gap: 15px; }
+  .uga-command-shell.is-deployment-mode .uga-command-header,
+  .uga-command-shell.is-deployment-mode .uga-district-rail,
+  .uga-command-shell.is-deployment-mode .uga-scene-overlay,
+  .uga-command-shell.is-deployment-mode .uga-command-nav,
+  .uga-command-shell.is-deployment-mode .uga-quick-actions { display: none; }
+  .uga-command-shell.is-deployment-mode .uga-command-stage { inset: 0; }
+  .uga-command-shell.is-deployment-mode .uga-context-panel { bottom: 0; }
+  /* Strike Bay remains a 3D-first preparation space. Even with the planner
+     expanded, the cutaway keeps more than the required 45% of usable height. */
+  .uga-command-shell[data-district="hangar"].is-sheet-expanded .uga-context-panel { height: min(40%, 360px); }
+  .uga-command-shell[data-district="hangar"] .uga-deployment-planner { margin-top: 6px; padding: 7px; gap: 5px; }
+  .uga-command-shell[data-district="hangar"] .uga-deployment-planner > header p { display: none; }
+  .uga-command-shell[data-district="hangar"] .uga-deployment-planner > header { min-height: 18px; display: flex; align-items: center; gap: 8px; }
+  .uga-command-shell[data-district="hangar"] .uga-deployment-planner > header small { flex: 0 0 auto; }
+  .uga-command-shell[data-district="hangar"] .uga-deployment-planner > header h3 { margin: 0; font-size: 11px; }
+  .uga-command-shell[data-district="hangar"] .uga-deployment-identity { grid-template-columns: minmax(116px, .72fr) minmax(0, 1.28fr); gap: 5px; }
+  .uga-command-shell[data-district="hangar"] .uga-deployment-identity .uga-personnel-select { grid-template-columns: 28px minmax(0, 1fr); gap: 4px; }
+  .uga-command-shell[data-district="hangar"] .uga-deployment-identity .uga-deployment-portrait { width: 27px; height: 38px; }
+  .uga-command-shell[data-district="hangar"] .uga-deployment-identity select { min-height: 44px; }
+  .uga-command-shell[data-district="hangar"] .uga-deployment-readiness { min-height: 48px; grid-template-columns: minmax(0, 1fr) minmax(154px, .95fr); }
+  .uga-command-shell.is-deployment-mode .uga-deployment-readiness { position: sticky; bottom: 0; z-index: 5; box-shadow: 0 -8px 20px rgba(0, 0, 0, .42); }
+  .uga-command-shell[data-district="hangar"] .uga-deployment-station { min-height: 48px; }
+}
+
+@media (max-height: 620px) and (orientation: landscape) {
+  .uga-command-shell.is-sheet-expanded .uga-context-panel { top: 120px; height: auto; }
+  .uga-facility-choice { grid-template-columns: 54px minmax(0, 1fr) 142px; padding: 8px; }
+  .uga-facility-preview { min-height: 72px; }
+  .uga-build-plot { min-height: 54px; }
+}
+
+/* Deployment is its own preparation route on compact screens. Keep the
+   hangar and its dedicated loadout controls, but remove management chrome. */
+@media (max-width: 900px), (max-height: 620px) and (max-width: 1024px) {
+  .uga-command-shell.is-deployment-mode .uga-command-header,
+  .uga-command-shell.is-deployment-mode .uga-district-rail,
+  .uga-command-shell.is-deployment-mode .uga-scene-overlay,
+  .uga-command-shell.is-deployment-mode .uga-command-nav,
+  .uga-command-shell.is-deployment-mode .uga-quick-actions { display: none; }
+  .uga-command-shell.is-deployment-mode .uga-command-stage { inset: 0; }
+}
+
+@media (max-height: 620px) and (orientation: landscape) and (max-width: 1024px) {
+  .uga-command-shell.is-deployment-mode .uga-context-panel,
+  .uga-command-shell.is-deployment-mode.is-sheet-expanded .uga-context-panel {
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(40%, 360px);
+    height: auto;
+    border-radius: 0;
+  }
+}
+
+/* The deployment inspector stays narrow even on a landscape monitor. Do not
+   squeeze long station names and a commander picker into desktop columns. */
+.uga-command-shell.is-deployment-mode .uga-deployment-identity { grid-template-columns: minmax(0, 1fr); }
+.uga-command-shell.is-deployment-mode .uga-deployment-stations { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.uga-command-shell.is-deployment-mode .uga-deployment-station { grid-template-columns: 20px minmax(0, 1fr); }
+.uga-command-shell.is-deployment-mode .uga-deployment-station b,
+.uga-command-shell.is-deployment-mode .uga-deployment-station small { overflow-wrap: normal; word-break: normal; }
+
+/* Give the action its own grid row, rather than painting a sticky button over
+   stations and loadout controls. All fields scroll inside the remaining row. */
+.uga-command-shell.is-deployment-mode .uga-deployment-view { overflow: hidden; }
+.uga-command-shell.is-deployment-mode .uga-deployment-planner { height: 100%; min-height: 0; margin-top: 0; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
+.uga-deployment-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; min-width: 0; }
+.uga-command-shell.is-deployment-mode .uga-deployment-fields { min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; grid-template-columns: minmax(0, 1fr); padding-right: 3px; }
+.uga-command-shell.is-deployment-mode .uga-deployment-readiness { position: static; background: #071c28; box-shadow: none; }
+.uga-command-shell.is-deployment-mode .uga-deployment-readiness .uga-primary-button { grid-column: auto; min-width: 0; min-height: 44px; margin: 0; }
+.uga-deployment-fields > header p { margin: 5px 0 0; color: #7d98a7; font-size: 8px; line-height: 1.45; }
+@media (max-width: 760px) and (orientation: portrait) {
+  .uga-command-shell[data-district="hangar"] .uga-deployment-fields > header p { display: none; }
+  .uga-command-shell[data-district="hangar"] .uga-deployment-fields > header { min-height: 18px; display: flex; align-items: center; gap: 8px; }
+  .uga-command-shell[data-district="hangar"] .uga-deployment-fields > header h3 { margin: 0; font-size: 11px; }
+}
+@media (max-height: 620px) and (orientation: landscape) and (max-width: 1024px) {
+  /* Identity + resource captions occupy two real rows (30 + 4 + 34px),
+     so the rail cannot start at the old single-row 54px offset. */
+  .uga-command-header { min-height: 80px; }
+  .uga-command-stage { top: 80px; }
+  .uga-command-shell.is-deployment-mode .uga-command-stage { top: 0; }
+}
+
+/* The ship is an object inside a large bay, not a menu-filling portrait.
+   Keep its first view open; the existing real form expands without resetting
+   its draft, and the renderer fits these actual panel bounds. */
+.uga-deployment-context[hidden] { display: none !important; }
+.uga-deployment-context {
+  position: absolute;
+  top: max(8px, env(safe-area-inset-top));
+  left: max(8px, env(safe-area-inset-left));
+  max-width: calc(100% - 16px);
+  min-height: 48px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 0 14px 0 0;
+  border: 1px solid rgba(92, 196, 232, .3);
+  background: rgba(3, 18, 28, .92);
+  pointer-events: auto;
+  z-index: 22;
+}
+.uga-deployment-context > button { min-height: 46px; min-width: 138px; padding: 0 10px; display: flex; align-items: center; justify-content: center; gap: 6px; border: 0; border-right: 1px solid rgba(92, 196, 232, .25); background: rgba(17, 50, 67, .5); cursor: pointer; }
+.uga-deployment-context > button .uga-svg { width: 14px; height: 14px; transform: rotate(180deg); }
+.uga-deployment-context > button span { font-size: 10px; font-weight: 700; }
+.uga-deployment-context > div { min-width: 0; display: grid; gap: 4px; }
+.uga-deployment-context small { color: #92b4c3; font: 9px/1.15 Consolas, monospace; }
+.uga-deployment-context strong { color: #d7eef5; font-size: 12px; letter-spacing: .12em; }
+.uga-command-shell.is-deployment-mode .uga-context-panel {
+  top: auto;
+  right: max(12px, env(safe-area-inset-right));
+  bottom: max(12px, env(safe-area-inset-bottom));
+  left: auto;
+  width: min(390px, 40vw);
+  min-width: 0;
+  height: 204px;
+  border-radius: 8px;
+  clip-path: none;
+}
+.uga-command-shell.is-deployment-mode.is-loadout-expanded .uga-context-panel { top: 76px; height: auto; }
+.uga-command-shell.is-deployment-mode .uga-context-body { display: block; }
+.uga-command-shell.is-deployment-mode .uga-deployment-toolbar { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0; padding: 0 4px; }
+.uga-command-shell.is-deployment-mode .uga-deployment-toolbar > button { justify-content: center; font-size: 10px; padding: 0 6px; }
+.uga-command-shell.is-deployment-mode .uga-deployment-toolbar > .uga-deployment-toggle { border-right: 0; color: var(--uga-cyan); }
+.uga-command-shell.is-deployment-mode .uga-deployment-toggle .uga-svg { transform: rotate(-90deg); }
+.uga-command-shell.is-deployment-mode.is-loadout-expanded .uga-deployment-toggle .uga-svg { transform: rotate(90deg); }
+.uga-deployment-summary { display: none; }
+.uga-command-shell.is-deployment-mode:not(.is-loadout-expanded) .uga-deployment-fields { display: none; }
+.uga-command-shell.is-deployment-mode:not(.is-loadout-expanded) .uga-deployment-summary { display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 9px; align-items: center; min-height: 55px; }
+.uga-deployment-summary > span { height: 32px; display: grid; place-items: center; color: var(--uga-cyan); border: 1px solid rgba(66, 221, 255, .3); }
+.uga-deployment-summary > div { min-width: 0; }
+.uga-deployment-summary small { display: block; color: #89aab9; font: 9px/1.2 Consolas, monospace; }
+.uga-deployment-summary strong { display: block; margin-top: 3px; color: #e1f2f8; font-size: 13px; line-height: 1.2; }
+.uga-deployment-summary p { margin: 4px 0 0; color: #a9c7d4; font-size: 10px; line-height: 1.3; }
+.uga-command-shell.is-deployment-mode .uga-deployment-view { padding: 8px; }
+.uga-command-shell.is-deployment-mode .uga-deployment-planner { padding: 7px; gap: 7px; }
+.uga-command-shell.is-deployment-mode .uga-deployment-readiness { grid-template-columns: minmax(0, 1fr) minmax(144px, .9fr); }
+.uga-command-shell.is-deployment-mode .uga-deployment-readiness small { font-size: 8px; line-height: 1.2; }
+.uga-command-shell.is-deployment-mode .uga-deployment-readiness .uga-primary-button { font-size: 11px; }
+.uga-command-shell.is-deployment-mode .uga-deployment-planner label > span,
+.uga-command-shell.is-deployment-mode .uga-deployment-planner legend { font-size: 10px; line-height: 1.3; }
+.uga-command-shell.is-deployment-mode .uga-deployment-planner select { min-height: 44px; font-size: 11px; }
+@media (max-width: 760px) and (orientation: portrait) {
+  .uga-command-shell.is-deployment-mode .uga-context-panel,
+  .uga-command-shell.is-deployment-mode.is-sheet-expanded .uga-context-panel { top: auto; right: 0; left: 0; bottom: 0; width: 100%; height: calc(204px + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom); border-radius: 12px 12px 0 0; }
+  .uga-command-shell.is-deployment-mode.is-loadout-expanded .uga-context-panel { height: min(44%, 396px); }
+  .uga-command-shell.is-deployment-mode .uga-context-body { bottom: env(safe-area-inset-bottom); }
+}
+@media (max-height: 620px) and (orientation: landscape) and (max-width: 1024px) {
+  .uga-command-shell.is-deployment-mode .uga-context-panel,
+  .uga-command-shell.is-deployment-mode.is-sheet-expanded .uga-context-panel { top: auto; right: max(8px, env(safe-area-inset-right)); bottom: max(8px, env(safe-area-inset-bottom)); width: min(40%, 360px); height: 204px; }
+  .uga-command-shell.is-deployment-mode.is-loadout-expanded .uga-context-panel { top: max(8px, env(safe-area-inset-top)); height: auto; }
+}
+
+/* Reserve authored frame art for the primary action role. Repeating those
+   surrounds on every room, resource rail, inspector and record read as a
+   selected-state overlay and covered the live labels on a phone. */
+.uga-primary-button { position: relative; min-height: 54px; }
+/* The primary action keeps its plate — docs/CLAUDE_HANDOFF.md §4 names primary
+   actions as a sanctioned frame surface — but not at 23px. A 23px band top AND
+   bottom on a 44-48px control is 46px of frame around one line of text, so the
+   ornament crossed its own label and the corner brackets closed over the ends.
+   Trimmed to 12px so it frames the action instead of wearing it, and dropped
+   below the label so a band can never sit on top of the text again. */
+.uga-primary-button::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border: 12px solid transparent;
+  border-image-source: var(--mf-gui-primary);
+  border-image-slice: 41.0714% 7.5658%;
+  border-image-width: 12px;
+}
+.uga-primary-button { position: relative; isolation: isolate; }
+.uga-primary-button > * { position: relative; z-index: 1; }
+
+/* Prevent the original microtype from defeating the now-available page zoom. */
+.uga-record-card small, .uga-intel-card small, .uga-commander-card small,
+.uga-mission-card > div small, .uga-mission-card > div b,
+.uga-mission-card li, .uga-manifest-row small { font-size: 10px; line-height: 1.3; }
+.uga-record-card p, .uga-mission-card p, .uga-research-card p, .uga-intel-card p,
+.uga-manifest-control small, .uga-mod-control small { font-size: 11px; line-height: 1.4; }
+.uga-commander-card b, .uga-manifest-control b, .uga-mod-control b,
+.uga-manifest-row b { font-size: 11px; }
+
+/* Phone command chrome has three measured structural bands: the two-row
+   identity header, the scene, and the fixed navigation dock. Keeping those
+   dimensions in variables prevents the inspector and room controls from
+   inheriting the old single-row offsets when safe-area insets are present. */
+@media (max-width: 480px) and (orientation: portrait) {
+  .uga-command-shell {
+    --uga-mobile-header: calc(86px + max(6px, env(safe-area-inset-top)));
+    --uga-mobile-dock: calc(56px + env(safe-area-inset-bottom));
+  }
+  .uga-command-header {
+    height: var(--uga-mobile-header);
+    min-height: var(--uga-mobile-header);
+    padding: max(6px, env(safe-area-inset-top)) 52px 6px 10px;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 44px 30px;
+    align-content: start;
+    gap: 4px;
+  }
+  .uga-command-identity { min-width: 0; align-self: center; }
+  .uga-command-identity strong { min-width: 0; font-size: 14px; }
+  .uga-resource-ribbon {
+    width: 100%;
+    min-width: 0;
+    padding: 0 28px 0 0;
+    gap: 0;
+    border-top: 1px solid rgba(92, 196, 232, .14);
+    border-bottom: 1px solid rgba(92, 196, 232, .2);
+    border-radius: 0;
+    background: rgba(3, 14, 23, .76);
+    -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 20px), transparent 100%);
+    mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 20px), transparent 100%);
+  }
+  .uga-resource { height: 28px; min-width: 58px; padding-right: 7px; }
+  .uga-resource-scroll-cue { display: none; }
+  .uga-command-stage { inset: var(--uga-mobile-header) 0 var(--uga-mobile-dock); }
+
+  .uga-district-rail { top: 6px; height: 48px; }
+  .uga-district-list { padding-right: 28px; scroll-padding-inline: 2px 28px; }
+  .uga-district-button { flex-basis: 96px; width: 96px; min-width: 96px; }
+  .uga-district-copy b { font-size: 10px; }
+  .uga-district-scroll-cue {
+    top: 0;
+    right: 0;
+    width: 28px;
+    height: 48px;
+    padding: 0 5px 0 0;
+    font-size: 0;
+  }
+  .uga-district-scroll-cue b { font-size: 18px; }
+
+  .uga-rail-top {
+    top: 58px;
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr);
+    align-items: stretch;
+    gap: 6px;
+  }
+  .uga-overview-button { grid-column: 1; grid-row: 1; }
+  .uga-ship-telemetry-badge {
+    grid-column: 2;
+    grid-row: 1;
+    width: auto;
+    max-width: none;
+    min-width: 0;
+    height: 48px;
+  }
+  .uga-sector-filter-bar {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    justify-content: stretch;
+  }
+  .uga-filter-chip { min-width: 0; min-height: 44px; padding: 0 4px; white-space: nowrap; }
+
+  .uga-context-panel { bottom: 0; }
+  .uga-command-shell.is-sheet-expanded .uga-context-panel { height: min(42%, 320px); }
+  .uga-sheet-toggle { min-height: 44px; padding-inline: 12px; }
+  .uga-context-scroll { padding: 10px 14px max(20px, env(safe-area-inset-bottom)); overscroll-behavior: contain; }
+
+  .uga-command-nav {
+    min-height: var(--uga-mobile-dock);
+    padding: 0 max(4px, env(safe-area-inset-right)) env(safe-area-inset-bottom) max(4px, env(safe-area-inset-left));
+    grid-template-columns: none;
+    grid-auto-columns: 44px;
+    justify-content: start;
+    scroll-padding-inline: 4px;
+    scroll-snap-type: x proximity;
+  }
+  .uga-command-nav button { width: 44px; min-width: 44px; min-height: 54px; scroll-snap-align: nearest; }
+  .uga-command-nav span { max-width: 42px; overflow: visible; font-size: 7px; line-height: 1; text-overflow: clip; }
+}
+
+/* The isolated UGA document shares the War Table's structural cadence through
+   a small token bridge. Authored neutral frame rasters supply chrome; live CSS
+   alone communicates active, locked, enemy, and consequential states. */
+.uga-command-shell {
+  --uga-edge: 12px;
+  --uga-gap: 8px;
+  --uga-touch: 44px;
+  --uga-radius: 10px;
+  --uga-panel: var(--mf-ui-surface, rgba(3, 14, 23, .92));
+  --uga-panel-soft: var(--mf-ui-surface-soft, rgba(6, 23, 34, .78));
+  --uga-line: var(--mf-ui-line, rgba(103, 183, 207, .22));
+  --uga-muted: var(--mf-ui-muted, #7893a1);
+  font-family: var(--font, "Bahnschrift"), "Arial Narrow", "Segoe UI", sans-serif;
+  letter-spacing: .025em;
+}
+.uga-command-header {
+  border-bottom-color: var(--uga-line);
+  background: linear-gradient(180deg, rgba(2, 10, 17, .97), rgba(3, 14, 23, .9));
+}
+.uga-command-header::after,
+.uga-context-panel::before { display: none; }
+.uga-resource-ribbon {
+  position: relative;
+  isolation: isolate;
+  /* 252px fitted five unlabelled values in portrait, but the rail actually holds
+     seven — landscape adds word labels and CREDITS…RESEARCH, FUEL and PROBES were
+     simply clipped away, so the player lost stockpiles by rotating the phone.
+     Take the width that is there and scroll rather than silently truncate: a
+     resource the player cannot see is a resource they cannot plan with. */
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  /* Clear the frame's own bands. The plate below draws inside the box, so without
+     this the bottom band lands exactly on the CREDITS/ALLOYS/COMPONENTS/BIO
+     baseline and shears the labels in half. */
+  padding-block: 5px;
+  border: 0;
+  background: rgba(3, 15, 24, .78);
+}
+/* The resource rail keeps its plate: docs/CLAUDE_HANDOFF.md §4 names resources as
+   a sanctioned frame surface, and it is the one HUD element the art was drawn
+   for. Trimmed from 17px to 11px so it reads as a border rather than a housing. */
+.uga-resource-ribbon::-webkit-scrollbar { display: none; }
+.uga-resource-ribbon::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  border: 11px solid transparent;
+  border-image-source: var(--mf-gui-resource);
+  border-image-slice: 35.4167% 6.7460%;
+  border-image-width: 11px;
+}
+.uga-resource { border-left-color: rgba(101, 180, 204, .13); background: transparent; }
+.uga-resource:first-child { border-left-color: transparent; }
+.uga-resource > span { color: #80b8ca; }
+.uga-resource small { color: var(--uga-muted); }
+.uga-icon-button,
+.uga-more-shortcuts button { position: relative; border: 0; border-radius: 7px; background: rgba(5, 22, 33, .88); }
+.uga-icon-button.uga-command-exit { position: absolute; }
+/* No frame plate on small controls. A 44px icon button given a 15px border-image
+   band on every side is 30px of frame around a 18px glyph, at full opacity — the
+   plate became the button. It already has a 1px cyan border and a chamfered
+   clip-path, which is the whole shape language; the frame only muddied it.
+   Same for the three More shortcuts: they are a passive row of links, so they
+   take a line, not a machined plate. */
+.uga-more-shortcuts button { border: 1px solid var(--uga-line); }
+.uga-district-list,
+.uga-overview-button,
+.uga-ship-telemetry-badge,
+.uga-sector-filter-bar,
+.uga-context-panel,
+.uga-session-type,
+.uga-hub-route,
+.uga-quick-actions {
+  border-color: var(--uga-line);
+  border-radius: var(--uga-radius);
+  background: var(--uga-panel);
+  box-shadow: none;
+  clip-path: none;
+}
+.uga-district-button,
+.uga-filter-chip,
+.uga-session-type > button,
+.uga-hub-route > button { border-radius: 7px; }
+.uga-district-button.is-active,
+.uga-filter-chip.is-active {
+  color: var(--uga-cyan);
+  background: rgba(17, 87, 113, .32);
+  box-shadow: inset 0 -2px var(--uga-cyan);
+}
+.uga-district-button.is-active::before { background: var(--uga-cyan); box-shadow: none; }
+.uga-context-panel { isolation: isolate; }
+/* The inspector does not get a machined plate. This painted a 27px submenu frame
+   on all four sides of the whole context panel at z-index:5 — ABOVE its own
+   content, not behind it — so the bottom band cut straight through whatever the
+   panel was scrolling: "War Table" in the landscape hub, and the second row of
+   COMMAND SYSTEMS & SERVICES in More. Reserving padding would not have helped,
+   because at z-index:5 the band overlays regardless. It is also the exact case
+   docs/UGA_PLAYER_FLOW.md rules out — selection art "is not a generic border for
+   top bars, inspectors, or passive panels" — and an expanded sheet is a layout
+   state, not a selection. The panel keeps its own line, radius and background
+   from the shared .uga-context-panel rule above. */
+.uga-activity-line { border: 0; border-radius: 7px; background: rgba(6, 28, 26, .64); }
+.uga-primary-button {
+  border-color: rgba(255, 181, 74, .52);
+  border-radius: 8px;
+  color: #ffe0a3;
+  background: linear-gradient(115deg, rgba(104, 59, 9, .72), rgba(25, 25, 23, .9));
+}
+.uga-primary-button:hover { border-color: var(--uga-amber); background: rgba(118, 69, 11, .82); box-shadow: none; }
+.uga-primary-button:disabled { color: #657987; border-color: rgba(107, 133, 146, .2); background: rgba(32, 42, 48, .58); }
+.uga-primary-button:disabled::after { opacity: .35; }
+.uga-command-nav { border-top-color: var(--uga-line); background: rgba(2, 10, 17, .98); }
+.uga-command-nav button { position: relative; isolation: isolate; border: 0; background: transparent; color: #708b99; }
+/* The dock says "selected" in its own language and does not borrow the tab
+   plate to do it. The active destination already carries three cues — cyan icon
+   and label, a background tint, and the 2px cyan rule along its top edge — so
+   the machined frame was a redundant fourth, and it was the same tab_frame
+   asset used by the quick row, the shortcuts and the access cards. Reusing one
+   piece of border art on every tab-shaped thing is what made the interface read
+   as ornament; the plate is worth more where it appears once. */
+.uga-command-nav button.is-active { color: var(--uga-cyan); background: rgba(17, 87, 113, .22); }
+.uga-command-nav button.is-active::before { background: var(--uga-cyan); box-shadow: 0 0 10px rgba(66, 221, 255, .45); }
+.uga-command-nav button[data-nav-primary="true"]:not(.is-active) { color: #d6a95f; }
+.uga-more-shortcuts { display: none; }
+.uga-progress-grid { display: grid; gap: 8px; margin-top: 12px; }
+.uga-progress-route {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  min-height: 84px;
+  padding: 10px 15px;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--uga-line);
+  border-radius: 8px;
+  background: var(--uga-panel-soft);
+  color: #d9edf4;
+  text-align: left;
+  cursor: pointer;
+}
+.uga-progress-route::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  border: 23px solid transparent;
+  border-image-source: var(--mf-gui-entry);
+  border-image-slice: 27.380952% 7.565789%;
+  border-image-width: 23px;
+}
+.uga-progress-route > span { width: 34px; height: 34px; display: grid; place-items: center; color: #83a9b8; }
+.uga-progress-route > div { min-width: 0; }
+.uga-progress-route small,
+.uga-progress-route strong,
+.uga-progress-route p { display: block; }
+.uga-progress-route small { color: var(--uga-green); font: 8px/1 Consolas, monospace; letter-spacing: .1em; }
+.uga-progress-route strong { margin-top: 4px; font-size: 14px; }
+.uga-progress-route p { margin: 3px 0 0; overflow: hidden; color: var(--uga-muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.uga-progress-route > .uga-svg { width: 16px; height: 16px; color: var(--uga-cyan); }
+.uga-progress-route.is-locked small,
+.uga-progress-route.is-locked > .uga-svg,
+.uga-progress-route.is-objective-locked small { color: var(--uga-amber); }
+
+@media (max-width: 480px) and (orientation: portrait) {
+  .uga-command-shell {
+    --uga-edge: 10px;
+    --uga-gap: 7px;
+    --uga-mobile-header: calc(94px + max(6px, env(safe-area-inset-top)));
+  }
+  .uga-command-header { padding-right: 54px; padding-left: var(--uga-edge); grid-template-rows: 42px 36px; gap: 4px; }
+  .uga-command-crest { width: 34px; height: 34px; border-color: var(--uga-line); background: rgba(10, 45, 61, .46); filter: none; }
+  .uga-command-identity strong { font-size: 15px; letter-spacing: .08em; }
+  .uga-resource-ribbon {
+    width: min(100%, 252px);
+    height: 36px;
+    padding: 4px 18px 4px 12px;
+    scroll-padding-inline: 12px 18px;
+    gap: 0;
+    border: 0;
+    border-radius: 7px;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+  .uga-resource { min-width: 48px; height: 28px; padding: 2px 5px 2px 17px; }
+  .uga-resource > span { left: 4px; top: 7px; }
+  .uga-resource b { font-size: 11px; }
+  .uga-resource small { display: none; }
+  .uga-command-stage { inset: var(--uga-mobile-header) 0 var(--uga-mobile-dock); }
+  .uga-district-rail { left: var(--uga-edge); right: var(--uga-edge); gap: var(--uga-gap); }
+  .uga-district-list { gap: 5px; padding: 2px 24px 2px 2px; scroll-padding-inline: 2px 24px; }
+  .uga-district-button {
+    flex-basis: calc((100vw - 58px) / 3);
+    width: calc((100vw - 58px) / 3);
+    min-width: calc((100vw - 58px) / 3);
+    border-color: rgba(101, 180, 204, .14);
+  }
+  .uga-district-copy b { font-size: 10px; line-height: 1.15; }
+  .uga-district-scroll-cue { width: 24px; padding: 0 4px 0 0; background: linear-gradient(90deg, transparent, rgba(3, 14, 23, .96)); }
+  .uga-district-scroll-cue b { font-size: 17px; }
+  .uga-rail-top { left: var(--uga-edge); right: var(--uga-edge); gap: var(--uga-gap); }
+  .uga-ship-telemetry-badge { border-color: var(--uga-line); }
+  .uga-telemetry-power span { display: none; }
+  .uga-sector-filter-bar { gap: 4px; padding: 2px; }
+  .uga-filter-chip { font-size: 10px; letter-spacing: .04em; }
+  .uga-context-panel { border-color: var(--uga-line); border-radius: 12px 12px 0 0; box-shadow: 0 -12px 32px rgba(0, 0, 0, .72); }
+  .uga-command-shell.is-sheet-expanded .uga-context-panel { height: min(38%, 304px); }
+  .uga-sheet-toggle { border-bottom-color: var(--uga-line); background: rgba(3, 16, 25, .97); }
+  .uga-sheet-toggle > span { width: 30px; height: 3px; background: rgba(111, 154, 170, .55); }
+  .uga-sheet-toggle b { font-size: 10px; letter-spacing: .08em; }
+  .uga-context-scroll { padding: 10px 16px max(18px, env(safe-area-inset-bottom)); }
+  .uga-context-heading { gap: var(--uga-gap); }
+  .uga-context-heading h2,
+  .uga-section-title h2 { overflow: hidden; font-size: 15px; line-height: 1.15; text-overflow: ellipsis; white-space: nowrap; }
+  .uga-context-heading small,
+  .uga-section-title > small { font-size: 8px; letter-spacing: .1em; }
+  .uga-district-description,
+  .uga-section-title p { display: -webkit-box; overflow: hidden; font-size: 10px; line-height: 1.35; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+  .uga-tier-rail { height: 24px; margin: 5px 0; }
+  .uga-activity-line { min-height: 36px; margin: 5px 0 7px; font-size: 9px; }
+
+  .uga-command-nav {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-auto-columns: unset;
+    overflow: visible;
+    padding-right: max(4px, env(safe-area-inset-right));
+    padding-left: max(4px, env(safe-area-inset-left));
+  }
+  .uga-command-nav [data-nav="galaxy"],
+  .uga-command-nav [data-nav="settings"],
+  .uga-command-nav [data-nav="crew"] { display: none; }
+  .uga-command-nav button { width: 100%; min-width: 0; min-height: 54px; gap: 3px; }
+  .uga-command-nav button::after { width: min(calc(100% - 2px), 74px); }
+  .uga-command-nav .uga-svg { width: 18px; height: 18px; }
+  .uga-command-nav span { max-width: 100%; overflow: hidden; font-size: 8px; line-height: 1; letter-spacing: .015em; text-overflow: ellipsis; white-space: nowrap; }
+
+  .uga-campaign-hub > .uga-section-title > small,
+  .uga-campaign-hub > .uga-section-title > p,
+  .uga-strategic-layer-model { display: none; }
+  .uga-more-shortcuts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--uga-gap); margin: 9px 0 12px; }
+  .uga-more-shortcuts button { min-width: 0; min-height: var(--uga-touch); display: flex; align-items: center; justify-content: center; gap: 6px; color: #8ca6b2; }
+  .uga-more-shortcuts .uga-svg { width: 16px; height: 16px; }
+  .uga-more-shortcuts span { overflow: hidden; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+  .uga-progress-grid { gap: var(--uga-gap); margin-top: 9px; }
+  .uga-progress-route { min-height: 76px; padding: 8px 13px; grid-template-columns: 30px minmax(0, 1fr) 16px; gap: 8px; }
+  .uga-progress-route > span { width: 30px; height: 30px; }
+  .uga-progress-route strong { font-size: 13px; }
+  .uga-progress-route p { font-size: 9px; }
+  .uga-session-types,
+  .uga-hub-services { margin-top: 10px; }
+  .uga-campaign-hub > .uga-session-types { display: none; }
+  .uga-session-types > header span,
+  .uga-hub-services > header span { display: none; }
+  .uga-session-types > header small,
+  .uga-hub-services > header small { font-size: 9px; }
+  .uga-session-type-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--uga-gap); margin-top: var(--uga-gap); }
+  .uga-session-type { grid-template-columns: 28px minmax(0, 1fr); gap: 6px; padding: 7px; }
+  .uga-session-type-icon { width: 28px; height: 28px; }
+  .uga-session-type > div > small { font-size: 7px; }
+  .uga-session-type h3 { margin-top: 3px; font-size: 11px; }
+  .uga-session-type p,
+  .uga-session-type > div > b { display: none; }
+  .uga-session-type > button { min-height: var(--uga-touch); font-size: 9px; }
+  .uga-session-type.is-network-unavailable { border-color: rgba(255, 181, 74, .2); }
+  .uga-session-type.is-network-unavailable > div > small { color: var(--uga-amber); }
+  .uga-hub-route-list { gap: 6px; margin-top: var(--uga-gap); }
+  .uga-hub-route { grid-template-columns: 32px minmax(0, 1fr) 64px; gap: 7px; min-height: 54px; padding: 5px 7px; }
+  .uga-hub-route:has(> button[data-hub-route="crew"]),
+  .uga-hub-route:has(> button[data-hub-route="settings"]) { display: none; }
+  .uga-hub-route-icon { width: 32px; height: 32px; border-color: var(--uga-line); background: rgba(12, 48, 62, .38); }
+  .uga-hub-route-copy > div { align-items: center; flex-direction: row; gap: 5px; }
+  .uga-hub-route-copy h3 { overflow: hidden; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+  .uga-hub-route-copy > div > span { font-size: 7px; }
+  .uga-hub-route-copy p,
+  .uga-hub-route-copy small { display: none; }
+  .uga-hub-route > button { min-width: 64px; min-height: var(--uga-touch); padding: 0 5px; font-size: 8px; }
+}
+
+/* Campaign Hub is the compact strategic home, not another ship-room view.
+   Its single Depart action replaces the header close control, while the
+   Play dock remains the persistent route back from the rest of UGA Command. */
+.uga-command-shell[data-view="campaign_hub"] .uga-command-exit,
+.uga-command-shell[data-view="campaign_hub"] .uga-district-rail,
+.uga-command-shell[data-view="campaign_hub"] .uga-scene-overlay,
+.uga-command-shell[data-view="campaign_hub"] .uga-quick-actions,
+.uga-command-shell[data-view="campaign_hub"] .uga-sheet-toggle { display: none !important; }
+.uga-command-shell[data-view="campaign_hub"] .uga-context-body { inset: 0; }
+.uga-basic-access-grid button::after,
+.uga-more-shortcuts button::after,
+.uga-command-nav button:not(.is-active)::after { display: none; }
+
+@media (max-width: 900px), (max-height: 620px) and (max-width: 1024px) {
+  .uga-command-shell[data-view="campaign_hub"] .uga-command-header { padding-right: var(--uga-edge); }
+  /* The hub takes the full frame in BOTH sheet states, and the toggle above is
+     hidden, so the panel cannot be collapsed. That is deliberate: the hub view
+     never mounts the scene - its canvas measures 0x0 - so collapsing would
+     reveal an empty black viewport rather than NEXUS-VII. test-galactic-
+     campaign-product-model.mjs holds this as "must use the available compact
+     stage instead of leaving an empty ship viewport". Unseal this only in the
+     change that makes the scene actually render here; doing it first is how you
+     ship a hole. */
+  .uga-command-shell[data-view="campaign_hub"] .uga-context-panel,
+  .uga-command-shell[data-view="campaign_hub"].is-sheet-expanded .uga-context-panel {
+    top: var(--uga-gap);
+    right: var(--uga-edge);
+    bottom: var(--uga-gap);
+    left: var(--uga-edge);
+    width: auto;
+    height: auto;
+    border-radius: var(--uga-radius);
+  }
+}
+
+/* Account ledger vs expedition materials.
+   The first two rail entries are Cores and XP, read from the classic account
+   record, and the rest are UGA expedition materials. Without a break the player
+   sees nine equal numbers and cannot tell which ones the main menu also spends.
+   A tint plus one divider after the group is enough; a second frame here would
+   just be more of the ornament we removed elsewhere. */
+.uga-resource.is-account b { color: #ffe0a3; }
+.uga-resource.is-account .uga-svg { color: var(--uga-amber, #ffb54a); }
+.uga-resource.is-account + .uga-resource:not(.is-account) {
+  margin-left: 6px;
+  border-left: 1px solid rgba(255, 181, 74, .32);
+  padding-left: 10px;
+}
+
+/* Current objective — the hub's answer to "what do I do next".
+   It sits above Depart because it is the instruction; Depart is one of the ways
+   to carry it out. Amber marks it as the live directive, matching the primary
+   action language used elsewhere, and it is the only emphasised block on the
+   home so there is never a question about where to look first. */
+.uga-objective {
+  position: relative;
+  margin-top: 10px;
+  padding: 13px 15px;
+  display: grid;
+  gap: 7px;
+  border: 1px solid rgba(255, 181, 74, .42);
+  border-radius: 9px;
+  background: linear-gradient(135deg, rgba(74, 46, 8, .5), rgba(6, 20, 30, .92));
+}
+.uga-objective > header > small { color: var(--uga-amber, #ffb54a); font: 700 7px/1 Consolas, monospace; letter-spacing: .16em; }
+.uga-objective > header > h3 { margin: 4px 0 0; color: #fff3dc; font-size: 15px; line-height: 1.18; }
+.uga-objective > p { margin: 0; color: #b6c9d4; font-size: 10px; line-height: 1.45; }
+.uga-objective-progress { display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+  padding-top: 7px; border-top: 1px solid rgba(255, 181, 74, .2); }
+.uga-objective-progress span { color: #97b0bd; font: 700 7px/1 Consolas, monospace; letter-spacing: .14em; }
+.uga-objective-progress b { color: #ffe0a3; font-size: 12px; }
+.uga-objective .uga-primary-button { width: 100%; min-height: var(--uga-touch, 44px); margin-top: 2px; }
+/* A cleared frontier is information, not a command; drop the urgency. */
+.uga-objective.is-scan { border-color: rgba(92, 196, 232, .38); background: linear-gradient(135deg, rgba(9, 48, 66, .5), rgba(6, 20, 30, .92)); }
+.uga-objective.is-scan > header > small { color: var(--uga-cyan, #42ddff); }
+/* Territory readout: two label/value pairs on one row. */
+.uga-objective-progress { display: grid; grid-template-columns: auto 1fr auto 1fr; align-items: baseline; gap: 4px 8px; }
+.uga-objective-progress b:not(:last-child) { justify-self: start; }
+.uga-objective-progress b:last-child { justify-self: end; }
+
+/* COMMAND JOURNEY RAIL
+   The hub used to show only the step the player was standing on, so the path
+   ahead was invisible and the screen read as a dead end with one button. The
+   rail shows all five, which is the same device the expedition directive
+   already uses successfully - the player can see where COMMISSION leads before
+   they commit to it.
+
+   Steps stagger in off --uga-journey-index rather than a keyframe per child, so
+   the count can change without touching this file. Only transform and opacity
+   animate; both are compositor-only, which matters because a 3D renderer is
+   running behind this panel. */
+.uga-journey { display: flex; flex-direction: column; gap: 8px; margin: 0 0 10px; }
+.uga-journey-rail {
+  display: flex; align-items: stretch; gap: 4px;
+  margin: 0; padding: 0; list-style: none;
+}
+.uga-journey-step {
+  flex: 1 1 0; min-width: 0;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 6px 2px 7px; border-radius: 7px;
+  border: 1px solid var(--uga-line, rgba(120,170,200,.22));
+  background: rgba(9, 20, 30, .55);
+  animation: ugaJourneyIn .32s cubic-bezier(.22,.61,.36,1) both;
+  animation-delay: calc(var(--uga-journey-index, 0) * 45ms);
+  transition: border-color .22s ease, background-color .22s ease, transform .22s ease;
+}
+.uga-journey-step > b {
+  color: var(--uga-muted, #7f9cb0); font: 800 9px/1 Consolas, monospace; letter-spacing: .1em;
+  transition: color .22s ease;
+}
+.uga-journey-step > span {
+  color: var(--uga-muted, #7f9cb0); font: 700 6.5px/1.1 Consolas, monospace; letter-spacing: .09em;
+  text-align: center; overflow-wrap: anywhere;
+  transition: color .22s ease;
+}
+.uga-journey-step.is-done { border-color: rgba(96, 200, 140, .34); background: rgba(12, 30, 24, .5); }
+.uga-journey-step.is-done > b { color: var(--uga-green, #5fd39a); }
+.uga-journey-step.is-current {
+  border-color: var(--uga-cyan, #4fd8ff); background: rgba(10, 38, 52, .72);
+  transform: translateZ(0) scale(1.03);
+}
+.uga-journey-step.is-current > b,
+.uga-journey-step.is-current > span { color: #dff6ff; }
+/* Ahead is legible, not hidden. Greying it to invisibility would recreate the
+   original problem of a player not knowing what comes next. */
+.uga-journey-step.is-ahead { opacity: .5; }
+
+.uga-journey-keel {
+  margin: 0; padding: 7px 9px; border-radius: 7px;
+  border: 1px solid rgba(120, 170, 200, .18);
+  border-left: 2px solid var(--uga-cyan, #4fd8ff);
+  background: rgba(8, 18, 27, .6);
+  color: #b6c9d4; font-size: 9.5px; line-height: 1.45;
+  animation: ugaJourneyIn .34s cubic-bezier(.22,.61,.36,1) both;
+  animation-delay: 250ms;
+}
+.uga-journey-keel > small {
+  display: block; margin-bottom: 2px;
+  color: var(--uga-cyan, #4fd8ff); font: 800 7px/1 Consolas, monospace; letter-spacing: .18em;
+}
+
+@keyframes ugaJourneyIn {
+  from { opacity: 0; transform: translate3d(0, 6px, 0); }
+  to { opacity: 1; transform: none; }
+}
+/* is-current keeps its scale when reduced motion removes the entrance, or the
+   active step would visibly shrink for those users. */
+@media (prefers-reduced-motion: reduce) {
+  .uga-journey-step, .uga-journey-keel { animation: none; }
+  .uga-journey-step { transition: none; }
+}
+
+/* AUTHORED PLATE ON THE DIRECTIVE CARD
+   The module drew every surface with CSS gradients while the main menu ran on
+   the authored UI Production V3 pack, so the two halves of the game did not
+   look like the same product. It was not a choice: the OTA inliner only
+   resolved '../../assets/...', and this stylesheet sits four levels deep, so
+   any authored reference here would have shipped as a corrupt data URL.
+   bundle-update.mjs now resolves the module depth, so the pack is reachable.
+
+   Slice comes from ASSET_MANIFEST.json, not from measuring the PNG:
+   borders_logical [24,24,24,24] x (png_2x 768 / logical 384) = 48. The border
+   box stays at the logical 24px so the plate's chamfers land at authored size
+   rather than being stretched to whatever the card happens to be. */
+.uga-objective {
+  border: 24px solid transparent;
+  border-image: url('../../../../assets/textures/ui/mf-ui-v3/panel_player_info.png') 48 fill / 24px / 0 stretch;
+  background: none;
+  padding: 2px 6px 10px;
+}
+/* The plate supplies the frame, so the amber rule that used to stand in for one
+   would now read as a second border drawn over authored art. */
+.uga-objective.is-commission,
+.uga-objective[data-objective] { box-shadow: none; }
+
+/* FOLDABLE CATEGORIES
+   Header carries the affordance so the whole bar is the target - a 12px
+   chevron is not a touch target, and the header already spans the panel. */
+.uga-panel-section > header { cursor: pointer; position: relative; padding-right: 26px; user-select: none; }
+.uga-panel-section > header::after {
+  content: ""; position: absolute; right: 9px; top: 50%;
+  width: 7px; height: 7px; margin-top: -5px;
+  border-right: 1.5px solid var(--uga-cyan, #4fd8ff);
+  border-bottom: 1.5px solid var(--uga-cyan, #4fd8ff);
+  transform: rotate(45deg);
+  transition: transform .2s ease;
+}
+.uga-panel-section.is-collapsed > header::after { transform: rotate(-45deg); margin-top: -2px; }
+.uga-panel-section.is-collapsed > *:not(header) { display: none; }
+/* A folded section still reports what it is hiding, so folding does not mean
+   forgetting. */
+.uga-panel-section.is-collapsed > header { opacity: .72; }
+.uga-panel-section > header:focus-visible { outline: 2px solid var(--uga-cyan, #4fd8ff); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .uga-panel-section > header::after { transition: none; }
+}
+
+/* PLATED SURFACES
+   panel_player_info carries modest 24px borders, which survives being stretched
+   to containers of very different heights. The heavier families - frame_viewport
+   at 92 logical, panel_statistics with its 108px header band - are authored for
+   fixed-size surfaces and would swallow a short card, so they stay unused until
+   there is a surface shaped for them. Restraint here is deliberate: plating
+   every box would trade "no art" for "ornament everywhere", which reads as
+   noisier, not richer. */
+.uga-basic-access,
+.uga-panel-section,
+.uga-command-front {
+  border: 24px solid transparent;
+  border-image: url('../../../../assets/textures/ui/mf-ui-v3/panel_player_info.png') 48 fill / 24px / 0 stretch;
+  background: none;
+  padding: 2px 8px 10px;
+}
+/* The plate already draws an edge; the old rules would sit inside it as a
+   second, competing border. */
+.uga-basic-access > header,
+.uga-panel-section > header { border-bottom: none; }
+.uga-basic-access { margin-top: 10px; }
+
+/* The hub's own top-level blocks fold too, not just district sections. */
+.uga-basic-access > header { cursor: pointer; position: relative; padding-right: 26px; user-select: none; }
+.uga-basic-access > header::after {
+  content: ""; position: absolute; right: 9px; top: 50%;
+  width: 7px; height: 7px; margin-top: -5px;
+  border-right: 1.5px solid var(--uga-cyan, #4fd8ff);
+  border-bottom: 1.5px solid var(--uga-cyan, #4fd8ff);
+  transform: rotate(45deg); transition: transform .2s ease;
+}
+.uga-basic-access.is-collapsed > header::after { transform: rotate(-45deg); margin-top: -2px; }
+.uga-basic-access.is-collapsed > *:not(header) { display: none; }
+@media (prefers-reduced-motion: reduce) { .uga-basic-access > header::after { transition: none; } }
+
+/* THE AMBER SIGNAL
+   One shared class for the two things a commander must not miss: the single
+   action that advances the journey, and the construction job whose completion
+   is the next unlock. It is a slow pulse rather than a fast one because this
+   is a strategic screen - a blink at UI speed reads as an error state, and
+   everything it lands on is already a legitimate control the player can take
+   their time over.
+
+   Scope is the whole point. The moment a third and fourth surface wear this,
+   it stops meaning "here" and becomes decoration, so the rule is: exactly one
+   action-level attention at a time plus any genuinely active job. Reduced
+   motion keeps the amber ring and drops only the movement - the signal is
+   information, not an effect, so it must survive the preference. */
+.uga-attention {
+  position: relative;
+  animation: ugaAttention 2600ms ease-in-out infinite;
+}
+@keyframes ugaAttention {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 181, 74, 0); }
+  50% { box-shadow: 0 0 0 3px rgba(255, 181, 74, .34), 0 0 20px rgba(255, 181, 74, .26); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .uga-attention { animation: none; box-shadow: 0 0 0 2px rgba(255, 181, 74, .44); }
+}
+
+/* FULL STAGE FOR THE VIEWS THAT ARE NOT A PLACE.
+   The campaign_hub rules above do this for the strategic home by naming that
+   one view. data-stage says the same thing about a category instead, so
+   Services, Progress, Inventory and the debrief stop reserving a room
+   viewport they never fill - and the next directory view inherits it rather
+   than shipping with a black band nobody notices until a screenshot. The exit
+   control stays: unlike the hub, these are places you have navigated into. */
+.uga-command-shell[data-stage="full"] .uga-district-rail,
+.uga-command-shell[data-stage="full"] .uga-scene-overlay,
+.uga-command-shell[data-stage="full"] .uga-quick-actions,
+.uga-command-shell[data-stage="full"] .uga-sheet-toggle { display: none !important; }
+.uga-command-shell[data-stage="full"] .uga-context-body { inset: 0; }
+.uga-command-shell[data-stage="full"] .uga-context-panel,
+.uga-command-shell[data-stage="full"].is-sheet-expanded .uga-context-panel {
+  top: var(--uga-gap);
+  height: auto;
+}
+
+/* AUDIT FLOOR
+   Measured on 2026-09-11 across eleven compartments and five menus at 412x900
+   and 915x412: 66 controls under the 44px minimum and 183 text runs under the
+   WCAG AA floor, the worst at 2.88:1 in 7px type. Both had a single cause -
+   captions that became controls without being resized, and a 6-7px monospace
+   scale inherited from a desktop mock.
+
+   Only the tap floor is set globally, because that one is unconditional: a
+   thing you press is at least 44px regardless of what it says. The type fixes
+   above are deliberately per-rule instead - a blanket minimum font-size would
+   reflow components this audit never measured, and guessing at a hundred
+   surfaces is how you trade a contrast problem for a layout one. The rest of
+   the 6-7px scale is logged in the audit and gets measured before it moves. */
+.uga-panel-section > header,
+.uga-basic-access > header { min-height: 44px; }

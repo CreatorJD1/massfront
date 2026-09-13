@@ -124,6 +124,7 @@ const ORDERS=[
  {id:'wcTitan', nm:'Titan Rush detail',      ds:'Win a match with Titan Rush active',        goal:1, stat:'wc_titan', rw:{cores:320, boost:['cores','1h']}},
  {id:'wcWild',  nm:'Rampant Wildlife detail',ds:'Win a match with Rampant Wildlife active',  goal:1, stat:'wc_wild',  rw:{cores:320, boost:['build','1h']}},
 ];
+const DAILY_STARTER_IDS=Object.freeze(['win1','play2','build12']);
 function dailyState(){
   META.daily=META.daily||{day:0,prog:{},claimed:{},streak:0,lastDay:0};
   const d=dayKey();
@@ -140,8 +141,10 @@ function dailyState(){
 function todaysOrders(){
   const d=dailyState().day;
   const r=dayRand(d);
-  const pool=ORDERS.slice();
-  const out=[];
+  const starters=DAILY_STARTER_IDS.map(id=>ORDERS.find(o=>o.id===id)).filter(Boolean);
+  const starter=starters[(r()*starters.length)|0];
+  const pool=ORDERS.filter(o=>o!==starter);
+  const out=starter?[starter]:[];
   while(out.length<3&&pool.length) out.push(pool.splice((r()*pool.length)|0,1)[0]);
   return out;
 }
@@ -212,7 +215,7 @@ function claimOrder(o,quiet){
      one number to understand, and it grows where the player already looks. */
   const sb=1+Math.min(0.5,(st.streak||0)*0.05);
   const cores=Math.round(o.rw.cores*sb);
-  META.cores+=cores;
+  metaGrantCores(cores,'daily_order','daily:'+st.day+':'+o.id);
   if(o.rw.boost){
     const [k,dk]=o.rw.boost;
     const dur=BOOST_DUR.find(d=>d.k===dk);
@@ -229,6 +232,16 @@ function renderDailyDot(){
   const any=todaysOrders().some(o=>orderDone(o)&&!orderClaimed(o));
   dot.classList.toggle('on',any);
 }
+/* The one-second clock below must not replace a live order card between a
+   finger's pointerdown and pointerup. Track only state that changes the cards;
+   countdown and booster text can still repaint independently every tick. */
+function dailyOrderRenderSig(orders,st){
+  return st.day+'|'+orders.map(o=>[
+    o.id,
+    Math.min(o.goal,st.prog[o.stat]||0),
+    st.claimed[o.id]?1:0
+  ].join(':')).join('|');
+}
 function renderDaily(){
   renderDailyDot();
   const b2=document.getElementById('boostRow2');
@@ -241,34 +254,41 @@ function renderDaily(){
   }
   const g=document.getElementById('dailyList'); if(!g) return;
   const st=dailyState();
+  const orders=todaysOrders();
   const hd=document.getElementById('dailyHead');
   if(hd){
     const ms=new Date(); ms.setHours(24,0,0,0);
     hd.innerHTML='<div style="font-size:11px;color:#7fa8c6;font-weight:700;letter-spacing:.02em;margin-bottom:5px">🛰 SITREP — '+dailySitrep()+'</div>'
       +'<div>Resets in '+fmtLeft((ms-Date.now())/1000)
-      +(st.streak?'  ·  🔥 '+st.streak+'-day streak (+'+Math.round(Math.min(50,st.streak*5))+'%)':'')+'</div>';
+      +(st.streak?'  ·  🔥 '+st.streak+'-day streak (+'+Math.round(Math.min(50,st.streak*5))+'%)':'')+'</div>'
+      +'<div class="dailyScopeNote"><span>ORDER PROGRESS records completed matches. Timed boosters use their own visible expiry and are not ONE MATCH supplies.</span></div>';
   }
-  let h='';
-  for(const o of todaysOrders()){
-    const p=Math.min(o.goal,st.prog[o.stat]||0);
-    const done=p>=o.goal, claimed=orderClaimed(o);
-    const bk=o.rw.boost?o.rw.boost[0]:null;
-    h+='<div class="ordItem'+(claimed?' claimed':done?' done':'')+'" data-id="'+o.id+'">'
-      +'<div class="ordTx"><b>'+o.nm+'</b><span>'+o.ds+'</span>'
-      +'<div class="ordBarO"><div class="ordBarF" style="width:'+(p/o.goal*100)+'%"></div></div>'
-      +'<div class="ordRw">⬡ '+o.rw.cores+(bk?'   ·   '+
-          (typeof itemArt==='function'?itemArt('bst_'+bk,BOOSTS[bk].em,14):BOOSTS[bk].em)+' '+BOOSTS[bk].nm+' '+
-          (BOOST_DUR.find(d=>d.k===o.rw.boost[1])||{nm:''}).nm:'')+'</div></div>'
-      +'<div class="ordAct">'+(claimed?'✓':done?'CLAIM':p+'/'+o.goal)+'</div></div>';
+  const sig=dailyOrderRenderSig(orders,st);
+  const liveCards=g.querySelectorAll('.ordItem');
+  if(g._mfDailyOrderSig!==sig||liveCards.length!==orders.length){
+    let h='';
+    for(const o of orders){
+      const p=Math.min(o.goal,st.prog[o.stat]||0);
+      const done=p>=o.goal, claimed=orderClaimed(o);
+      const bk=o.rw.boost?o.rw.boost[0]:null;
+      h+='<div class="ordItem'+(claimed?' claimed':done?' done':'')+'" data-id="'+o.id+'">'
+        +'<div class="ordTx"><b>'+o.nm+'</b><span>'+o.ds+'</span>'
+        +'<div class="ordBarO"><div class="ordBarF" style="width:'+(p/o.goal*100)+'%"></div></div>'
+        +'<div class="ordRw">⬡ '+o.rw.cores+(bk?'   ·   '+
+            (typeof itemArt==='function'?itemArt('bst_'+bk,BOOSTS[bk].em,14):BOOSTS[bk].em)+' '+BOOSTS[bk].nm+' '+
+            (BOOST_DUR.find(d=>d.k===o.rw.boost[1])||{nm:''}).nm:'')+'</div></div>'
+        +'<div class="ordAct">'+(claimed?'✓':done?'CLAIM':p+'/'+o.goal)+'</div></div>';
+    }
+    g.innerHTML=h;
+    g.querySelectorAll('.ordItem').forEach(el=>{
+      const claim=()=>{
+        const o=todaysOrders().find(x=>x.id===el.dataset.id);
+        if(o) claimOrder(o);
+      };
+      if(typeof mfBindTap==='function') mfBindTap(el,claim); else el.addEventListener('click',claim);
+    });
+    g._mfDailyOrderSig=sig;
   }
-  g.innerHTML=h;
-  g.querySelectorAll('.ordItem').forEach(el=>{
-    const claim=()=>{
-      const o=todaysOrders().find(x=>x.id===el.dataset.id);
-      if(o) claimOrder(o);
-    };
-    if(typeof mfBindTap==='function') mfBindTap(el,claim); else el.addEventListener('click',claim);
-  });
   renderBoosts();
   if(typeof mfBindTabs==='function') mfBindTabs(document.getElementById('dailyScr'),'orders');
 }
@@ -283,4 +303,3 @@ function initDaily(){
     renderBoosts(); renderDailyDot();
   },1000);
 }
-

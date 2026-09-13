@@ -1,0 +1,12 @@
+{
+  "schema": "MassfrontDiscardedStage10SplineExclusionsV1",
+  "discardedDate": "2026-08-31",
+  "reason": "Creator rejected the last three Stage 10 pipeline exclusions from source: metadata-blocked CityTower 02 and both withdrawn Caldris Spline dumps.",
+  "runtimeAllowed": false,
+  "sourceAllowed": false,
+  "ids": [
+    "spline/MF_STRUCT_CITYTOWER_02",
+    "spline/gsite-aelos-caldris-customs-depot-spline-v1",
+    "spline/gsite-aelos-caldris-hero-spline-v1"
+  ]
+}

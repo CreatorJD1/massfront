@@ -102,9 +102,9 @@ try{
   await page.waitForFunction(()=>{
     const d=window.__tutDebug();return d.MATCH.scoutIdx>=0&&ualive[d.MATCH.scoutIdx];
   },null,{timeout:10000});
-  /* First-selection intelligence is intentionally transient. Let its 6.5 s
-     teaching card clear before checking the next lesson so the screenshot
-     represents a player's settled HUD, not an accelerated test overlap. */
+  /* Unit selection no longer opens intelligence automatically. Assert the card
+     stays absent before checking the next lesson so tutorial automation cannot
+     silently reintroduce a battlefield-obscuring selection side effect. */
   await page.waitForFunction(()=>getComputedStyle(document.querySelector('#unitCard')).display==='none',null,{timeout:10000});
   await page.waitForFunction(()=>document.querySelector('#keelStepTag').textContent.includes('STEP 15 / 19'),null,{timeout:15000});
   const fogUi=await page.evaluate(()=>{

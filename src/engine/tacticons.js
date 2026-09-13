@@ -580,17 +580,15 @@ function mfIconInk(team){
 }
 
 /* ---------------------------------------------------------------------------
-   AUTHORED SHEET OVERRIDE
-   The procedural cells above are PLACEHOLDERS. When an authored sheet exists at
-   assets/textures/ui/tacticons.png it replaces them wholesale — same 8x8 / 128px
-   grid, same cell order (MF_ICON_ORDER), so no code changes when the art lands.
-   The load is async and non-blocking: the placeholder sheet renders until the
-   real one decodes, then one flag swap re-uploads. A missing or broken file is
-   not an error, it just means placeholders stay.
-   Contract for the artist: docs/TACTICON_ART_SPEC.md
-   --------------------------------------------------------------------------- */
-const MF_ICON_SHEET_URL='assets/textures/ui/tacticons.png';
-let mfIcoAuthored=null, mfIcoAuthoredTried=false;
+   LEFT-HALF BASELINE
+   ---------------------------------------------------------------------------
+   The left 1024px half is the procedural strategic-icon baseline built above.
+   An old optional `tacticons.png` probe used to request an intentionally absent
+   legacy override on every icon-atlas initialisation, producing a guaranteed
+   browser 404 despite never changing the visible fallback.  The shipped
+   authored contribution is the validated faction sheet on the right half;
+   keeping the left half procedural avoids that dead request and leaves its
+   exact current appearance intact. */
 /* Drop the uploaded texture so the next icon frame rebuilds it with whatever
    has decoded since. Deletes rather than orphans: two sheets arrive
    asynchronously, so without this a session could leak two 8 MB textures. */
@@ -598,23 +596,6 @@ function mfIconInvalidate(){
   try{ if(mfIcoTex&&typeof gl!=='undefined'&&gl) gl.deleteTexture(mfIcoTex); }catch(e){}
   mfIcoTex=null;
 }
-function mfIconLoadAuthored(){
-  if(mfIcoAuthoredTried) return; mfIcoAuthoredTried=true;
-  try{
-    const img=new Image();
-    img.onload=()=>{
-      /* Same trap as the faction half: a valid PNG of the wrong size decodes
-         and never hits onerror. texSubImage2D would then write the image's
-         native pixels into the left 1024² of a 2048x1024 texture — overflow
-         or a smeared atlas, both worse than keeping the procedural cells. */
-      if(img.naturalWidth!==MF_ICON_ATLAS||img.naturalHeight!==MF_ICON_ATLAS) return;
-      mfIcoAuthored=img; mfIconInvalidate();
-    };
-    img.onerror=()=>{};                                        // placeholders stand
-    img.src=(typeof mf2AssetURL==='function')?mf2AssetURL(MF_ICON_SHEET_URL):('./'+MF_ICON_SHEET_URL);
-  }catch(e){}
-}
-
 /* LAZY. Rasterising a 1024 sheet, uploading it and generating mipmaps is real
    work, and the tier that needs it only engages past ~1800 span. FAR zoom now
    reaches that band on every theatre (Compact used to stop short). Doing it
@@ -625,7 +606,6 @@ function mfIconLoadAuthored(){
 function mfIconEnsure(){
   if(mfIcoTex) return true;
   if(typeof gl==='undefined'||!gl) return false;
-  mfIconLoadAuthored();
   mfIconFacLoad();
   if(!mfIcoCanvas) buildIconAtlas();
   const t=gl.createTexture();
@@ -644,7 +624,7 @@ function mfIconEnsure(){
      held for one frame, and drawImage of a 1024 source into it would resample
      art that is already the right size. Both halves go up at native 1:1. */
   gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA8,MF_ICON_TEX_W,MF_ICON_TEX_H,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
-  gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,gl.RGBA,gl.UNSIGNED_BYTE,mfIcoAuthored||mfIcoCanvas);
+  gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,gl.RGBA,gl.UNSIGNED_BYTE,mfIcoCanvas);
   /* Absent, undecodable or unreadable: the right half stays transparent and
      mfIcoFacHas stays null, so every role resolves procedural. Nothing here is
      allowed to be fatal. */
@@ -715,7 +695,7 @@ function mfIconStackGrow(n){
   _stkLead=new Int32Array(n); _stkNext=new Int32Array(n);
   _stkCnt=new Uint16Array(n); _stkSel=new Uint8Array(n);
 }
-function mfIconStackRebuild(vis,isCmd){
+function mfIconStackRebuild(vis,isCmd,renderIndices,renderCount,renderFogVisible){
   _stkQ=_mfIcoQ();
   _stkOn=mfIconStackOn(); _stkHN=0; _stkCell=mfIconStackCell();
   _stkMap.clear();
@@ -723,11 +703,16 @@ function mfIconStackRebuild(vis,isCmd){
   const n=unitHigh; mfIconStackGrow(n);
   _stkLead.fill(-1,0,n); _stkNext.fill(-1,0,n); _stkCnt.fill(0,0,n); _stkSel.fill(0,0,n);
   const cell=_stkCell;
-  for(let i=0;i<n;i++){
+  /* renderIndices is the renderer's one-per-frame camera candidate cache. The
+     fallback keeps this subsystem valid for diagnostics that invoke it alone. */
+  const cached=renderIndices&&Number.isFinite(renderCount),walkN=cached?renderCount:n;
+  for(let k=0;k<walkN;k++){
+    const i=cached?renderIndices[k]:k;
     if(!ualive[i]) continue;
     if(isCmd&&isCmd(i)) continue;
     if(vis&&!vis(ux[i],uy[i],40)) continue;
-    if(typeof fogEntityVisible==='function'&&!fogEntityVisible(uteam[i],ux[i],uy[i])) continue;
+    if(cached&&renderFogVisible){if(!renderFogVisible(i))continue;}
+    else if(typeof fogEntityVisible==='function'&&!fogEntityVisible(uteam[i],ux[i],uy[i])) continue;
     /* Numeric key, not 't,x,y' — that string was one alloc per visible unit
        every frame and the Map itself was new each rebuild. */
     const key=(uteam[i]<<22)|((((ux[i]/cell)|0)&0x7ff)<<11)|(((uy[i]/cell)|0)&0x7ff);

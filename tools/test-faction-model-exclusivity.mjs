@@ -51,8 +51,25 @@ const airliftSrc=fs.readFileSync(path.join(root,'src/airlift.js'),'utf8');
 const airliftFacSrc=fs.readFileSync(path.join(root,'src/airlift-factions.js'),'utf8');
 if(!renderSrc.includes('factionUnitMeshFor(utype[i],unitKit)')||renderSrc.includes('let M=UNIT_MESH[utype[i]]'))
   throw new Error('battlefield renderer can still enter through the mixed global registry');
-if(!hudSrc.includes('!factionUnitModelAllowed(tIdx,kit)'))
-  throw new Error('thumbnail fallback does not enforce faction ownership');
+/* Ownership enforcement moved OUT of an inline check in hud.js and INTO
+   factionUnitGeo, which now returns null rather than falling back to the base
+   registry — its own comment names that fallback as the leak that let Blue
+   slots resolve to a Ravager or a Brood Sovereign. So check the contract where
+   it now lives, and check that the thumbnail path asks for it. */
+const modelsSrc=fs.readFileSync(path.join(root,'src/engine/models.js'),'utf8');
+{
+  const at=modelsSrc.indexOf('function factionUnitGeo(');
+  if(at<0)throw new Error('factionUnitGeo is missing');
+  const body=modelsSrc.slice(at,modelsSrc.indexOf('\nfunction ',at+10));
+  if(/return\s+UNIT_MDL\b|UNIT_MDL\[ty\]/.test(body))
+    throw new Error('factionUnitGeo falls back to the mixed global registry — missing faction art must read as missing');
+  if(!/return null;\s*\}\s*$/.test(body.trimEnd()))
+    throw new Error('factionUnitGeo no longer ends by refusing unowned models');
+}
+if(!hudSrc.includes('factionUnitGeo(id,kit,true)'))
+  throw new Error('unit thumbnails do not request the strict, faction-owned model');
+if(!hudSrc.includes('factionBldMdlSet(kit,true)'))
+  throw new Error('structure thumbnails do not request the strict, faction-owned kit');
 for(const marker of ['FAC_KIT.horde[MF_UT_MASSFLESH]','FAC_KIT.horde[MF_UT_MASSFLESH_AIR]'])
   if(!airliftSrc.includes(marker))throw new Error(`Brood transport ownership missing ${marker}`);
 for(const marker of ['FAC_KIT.nova[MF_UT_AIRLIFT]','FAC_KIT.syndicate[MF_UT_AIRLIFT]'])

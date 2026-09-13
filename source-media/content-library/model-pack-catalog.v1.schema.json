@@ -1,0 +1,198 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://massfront.local/schemas/model-pack-catalog.v1.schema.json",
+  "title": "MASSFRONT World Model Pack Catalog V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "catalogId", "packs"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": 1 },
+    "catalogId": { "const": "massfront-world-model-packs-v1" },
+    "packs": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/pack" }
+    }
+  },
+  "$defs": {
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "not": { "pattern": "^(?:[A-Za-z]:|/|\\\\|file:)" }
+    },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "socket": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "profile", "edge", "snapMeters"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "profile": { "type": "string", "minLength": 1 },
+        "edge": { "enum": ["north", "east", "south", "west", "vertical", "building"] },
+        "snapMeters": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "member": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["assetId", "category", "status", "footprintMeters", "sockets"],
+      "properties": {
+        "assetId": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+        "category": {
+          "enum": [
+            "hero_objective",
+            "hero_landmark",
+            "structural_module",
+            "portal_connector",
+            "transit_route",
+            "functional_machine",
+            "terrain_contact",
+            "cover_prop",
+            "set_dressing",
+            "hazard_state",
+            "gameplay_proxy"
+          ]
+        },
+        "status": { "enum": ["PLANNED", "CONCEPT_READY", "SOURCE_CANDIDATE", "RUNTIME_CANDIDATE", "APPROVED"] },
+        "conceptCell": { "type": ["integer", "null"], "minimum": 1 },
+        "footprintMeters": {
+          "type": "array",
+          "prefixItems": [{ "type": "number", "exclusiveMinimum": 0 }, { "type": "number", "exclusiveMinimum": 0 }],
+          "items": false
+        },
+        "heightMeters": { "type": ["number", "null"], "exclusiveMinimum": 0 },
+        "repeatable": { "type": "boolean" },
+        "allowedRotations": {
+          "type": "array",
+          "items": { "enum": [0, 90, 180, 270] },
+          "uniqueItems": true
+        },
+        "sockets": { "type": "array", "items": { "$ref": "#/$defs/socket" } },
+        "source": { "$ref": "#/$defs/source" },
+        "runtime": { "$ref": "#/$defs/runtime" }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "format", "sha256", "rootName", "measuredTriangles", "measuredBounds", "targetBoundsMeters", "normalizationScale"],
+      "properties": {
+        "path": { "$ref": "#/$defs/path" },
+        "format": { "const": "glb" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "rootName": { "type": "string", "minLength": 1 },
+        "sceneObjectId": { "type": "string" },
+        "measuredTriangles": { "type": "integer", "minimum": 0 },
+        "measuredBounds": { "type": "array", "items": { "type": "number", "exclusiveMinimum": 0 }, "minItems": 3, "maxItems": 3 },
+        "targetBoundsMeters": { "type": "array", "items": { "type": "number", "exclusiveMinimum": 0 }, "minItems": 3, "maxItems": 3 },
+        "normalizationScale": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runtimeReady", "base", "exploration"],
+      "properties": {
+        "runtimeReady": { "type": "boolean" },
+        "base": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["runtimeReady", "provider"],
+          "properties": {
+            "runtimeReady": { "type": "boolean" },
+            "provider": { "enum": ["compiled-world-model", "world-kit", "none"] },
+            "key": { "type": ["string", "null"] },
+            "generatedSource": { "type": ["string", "null"] }
+          }
+        },
+        "exploration": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["runtimeReady", "provider"],
+          "properties": {
+            "runtimeReady": { "type": "boolean" },
+            "provider": { "enum": ["glb-pack", "none"] },
+            "runtimePath": { "type": ["string", "null"] },
+            "rootName": { "type": ["string", "null"] },
+            "loadGroup": { "type": ["string", "null"] }
+          }
+        }
+      }
+    },
+    "pack": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["packId", "version", "status", "runtimeReady", "classification", "concept", "gridContract", "identityContract", "members", "evidence"],
+      "properties": {
+        "packId": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+        "version": { "type": "integer", "minimum": 1 },
+        "status": { "enum": ["PLANNED", "AUTHORING", "SOURCE_CANDIDATE", "RUNTIME_CANDIDATE", "APPROVED"] },
+        "runtimeReady": { "type": "boolean" },
+        "classification": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["factions", "biomes", "locationClasses", "consumers"],
+          "properties": {
+            "factions": { "type": "array", "items": { "type": "string" } },
+            "biomes": { "type": "array", "items": { "type": "string" } },
+            "locationClasses": { "type": "array", "items": { "type": "string" } },
+            "consumers": { "type": "array", "items": { "enum": ["base-map", "exploration-ground-site", "map-editor", "concept-library"] } }
+          }
+        },
+        "concept": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["path", "sha256", "approvalStatus", "pixelUsage", "generationSystem"],
+          "properties": {
+            "path": { "$ref": "#/$defs/path" },
+            "sha256": { "$ref": "#/$defs/sha256" },
+            "approvalStatus": { "enum": ["CANDIDATE_REVIEW", "APPROVED", "REJECTED"] },
+            "pixelUsage": { "const": "concept-reference-only" },
+            "generationSystem": { "type": "string", "minLength": 1 }
+          }
+        },
+        "gridContract": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["detailSnapMeters", "moduleSnapMeters", "cityBlockMeters", "roadClearWidthMeters", "curbHeightMeters", "podiumFootprintsMeters"],
+          "properties": {
+            "detailSnapMeters": { "type": "number", "exclusiveMinimum": 0 },
+            "moduleSnapMeters": { "type": "number", "exclusiveMinimum": 0 },
+            "cityBlockMeters": { "type": "number", "exclusiveMinimum": 0 },
+            "roadClearWidthMeters": { "type": "number", "exclusiveMinimum": 0 },
+            "curbHeightMeters": { "type": "number", "minimum": 0 },
+            "podiumFootprintsMeters": {
+              "type": "array",
+              "items": { "type": "array", "items": { "type": "number", "exclusiveMinimum": 0 }, "minItems": 2, "maxItems": 2 }
+            }
+          }
+        },
+        "identityContract": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["heroSilhouette", "materialLanguage", "decalLanguage", "minimumDistinctAxes", "paletteSwapCountsAsVariant"],
+          "properties": {
+            "heroSilhouette": { "type": "array", "items": { "type": "string" }, "minItems": 3 },
+            "materialLanguage": { "type": "array", "items": { "type": "string" }, "minItems": 3 },
+            "decalLanguage": { "type": "array", "items": { "type": "string" }, "minItems": 3 },
+            "minimumDistinctAxes": { "type": "integer", "minimum": 6 },
+            "paletteSwapCountsAsVariant": { "const": false }
+          }
+        },
+        "members": { "type": "array", "items": { "$ref": "#/$defs/member" }, "minItems": 1 },
+        "evidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["sourceInventory", "lodComparison", "socketAssembly", "mobileCaptures", "runtimeFingerprint"],
+          "properties": {
+            "sourceInventory": { "type": ["string", "null"] },
+            "lodComparison": { "type": ["string", "null"] },
+            "socketAssembly": { "type": ["string", "null"] },
+            "mobileCaptures": { "type": "array", "items": { "type": "string" } },
+            "runtimeFingerprint": { "type": ["string", "null"] }
+          }
+        }
+      }
+    }
+  }
+}

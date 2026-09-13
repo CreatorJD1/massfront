@@ -45,14 +45,13 @@ try{
     updateSelInfo();
   });
   const card=page.locator('#unitCard');
-  assert(await card.isVisible(),'selecting a new chassis did not reveal its purpose card');
-  /* Pin immediately through the real affordance. Live WebGL preview creation
-     can take several seconds on SwiftShader; waiting until after every content
-     assertion let the intentionally temporary 6.5s coach card expire and made
-     its perfectly valid close button appear to have no bounding box. */
+  assert(!(await card.isVisible()),'selecting a unit opened its info card instead of only selecting it');
+  /* Inspection is explicit: the selected-unit info target opens and pins the
+     card, while an ordinary battlefield selection stays unobstructed. */
   const info=page.locator('#selInfo .selIntelBtn');
   await info.dispatchEvent('pointerdown');
-  assert(await card.evaluate(el=>el.classList.contains('pinned')),'selection info target did not pin/reopen the card');
+  assert(await card.isVisible(),'selection info target did not open the card');
+  assert(await card.evaluate(el=>el.classList.contains('pinned')),'selection info target did not pin the card');
   const unitText=await card.textContent();
   assert(/RHINO/i.test(unitText)&&/WEAPON VS/i.test(unitText)&&/YOUR ARMOR FEARS/i.test(unitText),
     'unit card lacks live matchup information: '+unitText);

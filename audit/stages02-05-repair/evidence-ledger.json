@@ -1,0 +1,74 @@
+{
+  "schema": "MassfrontStages0205RepairEvidenceV1",
+  "localDate": "2026-08-30",
+  "timezone": "America/Los_Angeles",
+  "gitHead": "0ea4e1ed9d99df55b4088e812736400cca8bff69",
+  "gpu": "ANGLE (AMD, AMD Radeon(TM) 610M, Direct3D11 vs_5_0 ps_5_0, D3D11)",
+  "scope": {
+    "runtimeSourceEditedByThisRepair": false,
+    "probeDefectsRepaired": true,
+    "beamVisualReviewPerformed": true,
+    "physicalDeviceApproval": false
+  },
+  "classifications": [
+    {
+      "finding": "naval post-arrival heading twitch",
+      "classification": "PROBE_DEFECT",
+      "basis": "The alleged reversal was a sub-degree quantized correction. All eight ships settled, with zero arrival exits, zero radial reversals, zero late travel and zero travel-direction instability."
+    },
+    {
+      "finding": "movement dirty-fingerprint failure",
+      "classification": "PROBE_PROVENANCE_DEFECT",
+      "basis": "Unrelated shared-tree writes changed the broad dirty fingerprint while source-runtime, tested-runtime, package and served-runtime fingerprints all remained stable and matched."
+    },
+    {
+      "finding": "air-trail active/history mismatch",
+      "classification": "PROBE_DEFECT",
+      "basis": "Runtime keys air trails by unit slot plus generation. The old probe queried only the slot and therefore inspected the wrong lifecycle key."
+    },
+    {
+      "finding": "artillery IntelContact consumer missing",
+      "classification": "STALE_PROBE_ASSUMPTION",
+      "basis": "The existing beginArtilleryBarrageContact consumer accepts a decayed radar record, retains source/confidence/age, produces deterministic confidence scatter and rejects once the record is cleared."
+    },
+    {
+      "finding": "duplicate mfGameplayStateHash page error",
+      "classification": "RESOLVED_EXTERNALLY",
+      "basis": "The current runtime booted the intel probe without a page error. This lane did not edit statehash or social UI files."
+    },
+    {
+      "finding": "Horde and barrel articulation coverage",
+      "classification": "GENUINE_RUNTIME_ART_GAP",
+      "basis": "The current articulation audit remains 6 PASS / 1 FAIL / 1 UNSUPPORTED. Five Horde authoritative types have no articulated turret model and 15 mechanical mappings lack independent barrel articulation. Locked model files were not changed."
+    }
+  ],
+  "runs": [
+    {"stage": 2, "command": "node tools/probe-navigation-blockers.mjs", "result": "PASS", "checks": "17/17", "reportSha256": "168baf73b316d1b7c2cdc64dea09e4bb4e78561bbd47572315cb88af5c3377ac", "note": "Includes new strategic-sector-routing proof: distance 22 -> 21 through a passable adjacent-sector portal."},
+    {"stage": 2, "command": "node tools/probe-movement-blockers.mjs --repetitions 2", "result": "PASS", "checks": "20 acceptance checks pass; broad dirtyFingerprintStable diagnostic false", "reportSha256": "e48b4c6b6fde8d1551fa520f224cc7be0560f7a22842c21b6823cf6d6d703ad1"},
+    {"stage": 2, "command": "node tools/probe-naval-rally.mjs", "result": "PASS", "checks": "16 acceptance checks pass; broad dirtyFingerprintStable diagnostic false", "reportSha256": "21ce0e4f721c8461ac619b4dee9795c4e20597f256c1301cd319bd5736e00f9a"},
+    {"stage": 2, "command": "node tools/probe-population-cap.mjs", "result": "PASS", "checks": "16/16", "reportSha256": "d3ea134b48521bb6068b94af3a9489593506acfb2ebe5a08f89274f8112a7761"},
+    {"stage": 3, "command": "node tools/probe-turret-articulation.mjs", "result": "FAIL", "checks": "6 PASS / 1 FAIL / 1 UNSUPPORTED", "reportSha256": "1b76d506d417d75454a810c391de0600de80c7d8d264dfea937644eb179949cd"},
+    {"stage": 4, "command": "node tools/probe-intel-contacts.mjs", "result": "PASS", "checks": "13/13", "note": "No page errors; artillery accepts radar confidence 0.44 at age 7 and rejects without the contact."},
+    {"stage": 4, "command": "node tools/test-raymarched-artillery-trails.mjs", "result": "PASS", "checks": "all temporal, distance, lifecycle, pause, renderer and driver assertions", "reportSha256": "a548688c399c9aac6a5d7585e6f0ced29850b1a0fe34c7fbca4395e14e296dd9"},
+    {"stage": 4, "command": "node tools/verify-runtime-fx-contracts.mjs", "result": "PASS", "checks": "36/36", "reportSha256": "d3acc75b45a360799e30ba07a6ec983cbd999d72fb139220c82d2cc8493271d1", "visual": "missilesBeams pass-art on fresh 1800x1800 hardware-GPU capture"},
+    {"stage": 5, "command": "node tools/probe-air-warfare.mjs", "result": "PASS", "checks": "22/22", "reportSha256": "0da2f3b0cdd51effae6a227ed8777e085056e78a384b1df3cb5144061a99a03a"},
+    {"stage": 5, "command": "node tools/probe-air-propulsion.mjs", "result": "PASS", "checks": "19/19", "reportSha256": "0ea8d59da9eb197d31be496955599e0a5c5a3a606bc3147eb1a77733dfac9a58"},
+    {"stage": "global", "command": "node tools/bundle.mjs", "result": "PASS", "checks": "106 sources; 26.57 MB"},
+    {"stage": "global", "command": "node tools/verify-global-scope.mjs", "result": "PASS", "checks": "106 scripts; 3131 top-level function/var names; zero collisions"}
+  ],
+  "endingIdentity": {
+    "src/game/sim.js": "ce4cdf71ecafef10fcdf5ec75b6b1ba99df211a4cc135843e628a212dd0b6a48",
+    "src/intel.js": "1ef9bb5c28723bd39e5b279307ccba5accf67b85f043a9908f4438558682b54e",
+    "src/game/commander.js": "2dfa3dcdfff60ff1437f96477fb469db0101d45968d12e21cecc3ecb3dd3bee3",
+    "src/game/airwarfare.js": "f1eadf76530d45a43d5f28314138e26ceabf107bd6133a7fb706f0eee46434fa",
+    "src/engine/ordnancetrails.js": "d695c7bf8a524e0f1c3049aa9d56c9104e1e4f0b0bb2f9f07a257f1b0a7b89af",
+    "boot.js": "a6ec2282721227596c4c017dcc010e290be0a605ea70ac14d674319bfb9b83a9",
+    "assets/data/manifest.json": "af6dd89e4955b8d571a734c0f9420a1aa44515773702cde01ac77beaec59ce95"
+  },
+  "unresolved": [
+    "Independent Horde turret and mechanical barrel articulation remains a real model-authoring gap; model files are locked and were left untouched.",
+    "Weapon/radar/minimum-range/HQ/repair/construction overlay coverage and every keyed utility-beam ownership path still lack one consolidated current acceptance probe.",
+    "Terrain, organic-hit, damaged-aircraft and air-destruction art remain marked fail-art or needs-art by the fresh runtime-FX report.",
+    "Android and iOS physical-device approval was not available in this browser/GPU lane."
+  ]
+}

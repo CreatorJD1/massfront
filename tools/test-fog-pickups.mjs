@@ -39,7 +39,13 @@ try{
     eh.seen=true;
     spawnState.rememberedVisible=fogEntityVisible(1,ex,ey);
     spawnState.rememberedPick=pickBld(ex,ey);
-    const gates={render:render.toString().includes('fogFxVisible'),legacy:renderLegacySprites.toString().includes('fogFxVisible'),
+    /* `legacy` used to assert that renderLegacySprites also honoured fog. That
+       function was deleted: it had not been called from anywhere in a long time,
+       and this test — inspecting it via .toString() — was its only remaining
+       reference in the tree. Reporting it as null keeps the gate shape stable
+       for anything reading this output, without asserting on code that no
+       longer exists. Fog in the live renderer is still covered by `render`. */
+    const gates={render:render.toString().includes('fogFxVisible'),legacy:null,
       minimap:renderMinimap.toString().includes('fogEntityVisible'),shadow:drawShadows.toString().includes('fogEntityVisible'),
       aiPing:aiTick.toString().includes('setWaveWarning')&&!aiTick.toString().includes('mmPing(AI.base.x')&&
         !setWaveWarning.toString().includes('fromX:')&&!setWaveWarning.toString().includes('fromY:')};

@@ -1,0 +1,1010 @@
+{
+  "schema": "MassfrontHunyuanRoadJunctionsV1",
+  "status": "SOURCE_AUTHORING_ONLY",
+  "runtimeAccepted": false,
+  "visualAccepted": false,
+  "generatorScript": {
+    "path": "tools/blender/hf-road-cleanup/build-hf-road-junctions.py",
+    "sha256": "5A11DC04ACAB13EBF4887B30BF254156A7109E2BA141C08D0042B12CB9FA249D",
+    "bytes": 68955
+  },
+  "straightSource": {
+    "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-straight-hunyuan-clean-v1/review-exports/mf-road-straight-hunyuan-clean-v1-lod0-review.glb",
+    "sha256": "21905B1C35A3F7C13FEBC390067FE9C08A51518413BCAC4CBD851A109C8B1779",
+    "bytes": 6324732
+  },
+  "straightSourceReport": {
+    "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-straight-hunyuan-clean-v1/mf-road-straight-hunyuan-clean-v1.provenance.json",
+    "sha256": "CF1F1B821E09A0F4EB36458592668F5EF6ADA5AE92849883446FCFB8509D210A",
+    "bytes": 77148
+  },
+  "contract": {
+    "gridM": 40.0,
+    "primaryWidthM": 20.0,
+    "localWidthM": 12.0,
+    "surfaceElevationM": 1.9162261486053467,
+    "socketPolicy": "cardinal boundary sockets at +/-20 m; adapter N is 12 m local road"
+  },
+  "conceptDeltaChecklist": [
+    {
+      "requirement": "two readable carriageways at every primary socket",
+      "implemented": true,
+      "accepted": false
+    },
+    {
+      "requirement": "continuous lane grammar through corner and intersection approaches",
+      "implemented": true,
+      "accepted": false
+    },
+    {
+      "requirement": "central service median continues from the cleaned straight",
+      "implemented": true,
+      "accepted": false
+    },
+    {
+      "requirement": "raised curb, shoulder, barrier, drain, hatch and repair-detail hierarchy",
+      "implemented": true,
+      "accepted": false
+    },
+    {
+      "requirement": "no floating crosswalk bars or unrelated central octagon",
+      "implemented": true,
+      "accepted": false
+    },
+    {
+      "requirement": "vehicle-scale checkpoint endcap rather than an empty landing plate",
+      "implemented": true,
+      "accepted": false
+    },
+    {
+      "requirement": "solid symmetric four-to-two-lane adapter without a black void",
+      "implemented": true,
+      "accepted": false
+    },
+    {
+      "requirement": "restrained rather than dominant cyan guidance",
+      "implemented": true,
+      "accepted": false
+    },
+    {
+      "requirement": "same-camera individual and straight-adjacency evidence",
+      "implemented": true,
+      "accepted": false
+    },
+    {
+      "requirement": "deployable PBR parity with the Hunyuan straight",
+      "implemented": false,
+      "accepted": false
+    },
+    {
+      "requirement": "real phone tactical and command-zoom integration proof",
+      "implemented": false,
+      "accepted": false
+    }
+  ],
+  "materials": [
+    {
+      "name": "MF_HF_JUNCTION_V1_MAT_ROAD_SURFACE",
+      "role": "road_surface",
+      "runtimeAccepted": false
+    },
+    {
+      "name": "MF_HF_JUNCTION_V1_MAT_ROAD_REPAIR_PATCH",
+      "role": "road_repair_patch",
+      "runtimeAccepted": false
+    },
+    {
+      "name": "MF_HF_JUNCTION_V1_MAT_CURB_SERVICE_SHOULDER",
+      "role": "curb_service_shoulder",
+      "runtimeAccepted": false
+    },
+    {
+      "name": "MF_HF_JUNCTION_V1_MAT_CURB_INSET",
+      "role": "curb_inset",
+      "runtimeAccepted": false
+    },
+    {
+      "name": "MF_HF_JUNCTION_V1_MAT_STRUCTURAL_METAL",
+      "role": "structural_metal",
+      "runtimeAccepted": false
+    },
+    {
+      "name": "MF_HF_JUNCTION_V1_MAT_SERVICE_MEDIAN",
+      "role": "service_median",
+      "runtimeAccepted": false
+    },
+    {
+      "name": "MF_HF_JUNCTION_V1_MAT_PLAZA_PAVING",
+      "role": "plaza_paving",
+      "runtimeAccepted": false
+    },
+    {
+      "name": "MF_HF_JUNCTION_V1_MAT_JUNCTION_SERVICE_PANEL",
+      "role": "junction_service_panel",
+      "runtimeAccepted": false
+    },
+    {
+      "name": "MF_HF_JUNCTION_V1_MAT_LANE_MARKING",
+      "role": "lane_marking",
+      "runtimeAccepted": false
+    },
+    {
+      "name": "MF_HF_JUNCTION_V1_MAT_RESTRAINED_CYAN_GUIDANCE",
+      "role": "restrained_cyan_guidance",
+      "runtimeAccepted": false
+    },
+    {
+      "name": "MF_HF_JUNCTION_V1_MAT_HAZARD_MARKER",
+      "role": "hazard_marker",
+      "runtimeAccepted": false
+    },
+    {
+      "name": "MF_HF_JUNCTION_V1_MAT_DRAINAGE_GRATE",
+      "role": "drainage_grate",
+      "runtimeAccepted": false
+    },
+    {
+      "name": "MF_HF_JUNCTION_V1_MAT_REVIEW_COLLISION",
+      "role": "review_collision",
+      "runtimeAccepted": false
+    },
+    {
+      "name": "MF_HF_JUNCTION_V1_MAT_REVIEW_NAVIGATION",
+      "role": "review_navigation",
+      "runtimeAccepted": false
+    }
+  ],
+  "pieces": [
+    {
+      "id": "corner_90",
+      "connections": [
+        "S",
+        "E"
+      ],
+      "gridM": 40.0,
+      "primaryWidthM": 20.0,
+      "surfaceElevationM": 1.9162261486053467,
+      "sockets": [
+        {
+          "name": "SOCKET_CORNER_90_S",
+          "direction": "S",
+          "socketType": "primary_road_20m",
+          "widthM": 20.0,
+          "lanes": 4,
+          "position": [
+            0.0,
+            -20.0,
+            1.916226
+          ]
+        },
+        {
+          "name": "SOCKET_CORNER_90_E",
+          "direction": "E",
+          "socketType": "primary_road_20m",
+          "widthM": 20.0,
+          "lanes": 4,
+          "position": [
+            20.0,
+            0.0,
+            1.916226
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 24724,
+          "objects": 131,
+          "intersectionAccounting": {
+            "testedObjects": 131,
+            "unexpectedIntersections": 0,
+            "records": []
+          }
+        },
+        {
+          "lod": 1,
+          "triangles": 8804,
+          "objects": 81,
+          "intersectionAccounting": {
+            "testedObjects": 81,
+            "unexpectedIntersections": 0,
+            "records": []
+          }
+        },
+        {
+          "lod": 2,
+          "triangles": 2312,
+          "objects": 52,
+          "intersectionAccounting": {
+            "testedObjects": 52,
+            "unexpectedIntersections": 0,
+            "records": []
+          }
+        }
+      ],
+      "collisionTriangles": 36,
+      "navTriangles": 36,
+      "clearanceClasses": "infantry,light,heavy,superheavy"
+    },
+    {
+      "id": "t_junction",
+      "connections": [
+        "S",
+        "E",
+        "W"
+      ],
+      "gridM": 40.0,
+      "primaryWidthM": 20.0,
+      "surfaceElevationM": 1.9162261486053467,
+      "sockets": [
+        {
+          "name": "SOCKET_T_JUNCTION_S",
+          "direction": "S",
+          "socketType": "primary_road_20m",
+          "widthM": 20.0,
+          "lanes": 4,
+          "position": [
+            0.0,
+            -20.0,
+            1.916226
+          ]
+        },
+        {
+          "name": "SOCKET_T_JUNCTION_E",
+          "direction": "E",
+          "socketType": "primary_road_20m",
+          "widthM": 20.0,
+          "lanes": 4,
+          "position": [
+            20.0,
+            0.0,
+            1.916226
+          ]
+        },
+        {
+          "name": "SOCKET_T_JUNCTION_W",
+          "direction": "W",
+          "socketType": "primary_road_20m",
+          "widthM": 20.0,
+          "lanes": 4,
+          "position": [
+            -20.0,
+            0.0,
+            1.916226
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 31208,
+          "objects": 166,
+          "intersectionAccounting": {
+            "testedObjects": 166,
+            "unexpectedIntersections": 0,
+            "records": []
+          }
+        },
+        {
+          "lod": 1,
+          "triangles": 11232,
+          "objects": 104,
+          "intersectionAccounting": {
+            "testedObjects": 104,
+            "unexpectedIntersections": 0,
+            "records": []
+          }
+        },
+        {
+          "lod": 2,
+          "triangles": 2904,
+          "objects": 66,
+          "intersectionAccounting": {
+            "testedObjects": 66,
+            "unexpectedIntersections": 0,
+            "records": []
+          }
+        }
+      ],
+      "collisionTriangles": 48,
+      "navTriangles": 48,
+      "clearanceClasses": "infantry,light,heavy,superheavy"
+    },
+    {
+      "id": "x_plaza",
+      "connections": [
+        "N",
+        "E",
+        "S",
+        "W"
+      ],
+      "gridM": 40.0,
+      "primaryWidthM": 20.0,
+      "surfaceElevationM": 1.9162261486053467,
+      "sockets": [
+        {
+          "name": "SOCKET_X_PLAZA_N",
+          "direction": "N",
+          "socketType": "primary_road_20m",
+          "widthM": 20.0,
+          "lanes": 4,
+          "position": [
+            0.0,
+            20.0,
+            1.916226
+          ]
+        },
+        {
+          "name": "SOCKET_X_PLAZA_E",
+          "direction": "E",
+          "socketType": "primary_road_20m",
+          "widthM": 20.0,
+          "lanes": 4,
+          "position": [
+            20.0,
+            0.0,
+            1.916226
+          ]
+        },
+        {
+          "name": "SOCKET_X_PLAZA_S",
+          "direction": "S",
+          "socketType": "primary_road_20m",
+          "widthM": 20.0,
+          "lanes": 4,
+          "position": [
+            0.0,
+            -20.0,
+            1.916226
+          ]
+        },
+        {
+          "name": "SOCKET_X_PLAZA_W",
+          "direction": "W",
+          "socketType": "primary_road_20m",
+          "widthM": 20.0,
+          "lanes": 4,
+          "position": [
+            -20.0,
+            0.0,
+            1.916226
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 39856,
+          "objects": 212,
+          "intersectionAccounting": {
+            "testedObjects": 212,
+            "unexpectedIntersections": 0,
+            "records": []
+          }
+        },
+        {
+          "lod": 1,
+          "triangles": 14472,
+          "objects": 134,
+          "intersectionAccounting": {
+            "testedObjects": 134,
+            "unexpectedIntersections": 0,
+            "records": []
+          }
+        },
+        {
+          "lod": 2,
+          "triangles": 3784,
+          "objects": 86,
+          "intersectionAccounting": {
+            "testedObjects": 86,
+            "unexpectedIntersections": 0,
+            "records": []
+          }
+        }
+      ],
+      "collisionTriangles": 60,
+      "navTriangles": 60,
+      "clearanceClasses": "infantry,light,heavy,superheavy"
+    },
+    {
+      "id": "straight_endcap",
+      "connections": [
+        "S"
+      ],
+      "gridM": 40.0,
+      "primaryWidthM": 20.0,
+      "surfaceElevationM": 1.9162261486053467,
+      "sockets": [
+        {
+          "name": "SOCKET_STRAIGHT_ENDCAP_S",
+          "direction": "S",
+          "socketType": "primary_road_20m",
+          "widthM": 20.0,
+          "lanes": 4,
+          "position": [
+            0.0,
+            -20.0,
+            1.916226
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 16920,
+          "objects": 90,
+          "intersectionAccounting": {
+            "testedObjects": 90,
+            "unexpectedIntersections": 0,
+            "records": []
+          }
+        },
+        {
+          "lod": 1,
+          "triangles": 6480,
+          "objects": 60,
+          "intersectionAccounting": {
+            "testedObjects": 60,
+            "unexpectedIntersections": 0,
+            "records": []
+          }
+        },
+        {
+          "lod": 2,
+          "triangles": 1672,
+          "objects": 38,
+          "intersectionAccounting": {
+            "testedObjects": 38,
+            "unexpectedIntersections": 0,
+            "records": []
+          }
+        }
+      ],
+      "collisionTriangles": 24,
+      "navTriangles": 24,
+      "clearanceClasses": "infantry,light,heavy,superheavy"
+    },
+    {
+      "id": "primary_local_adapter",
+      "connections": [
+        "S",
+        "N"
+      ],
+      "gridM": 40.0,
+      "primaryWidthM": 20.0,
+      "surfaceElevationM": 1.9162261486053467,
+      "sockets": [
+        {
+          "name": "SOCKET_PRIMARY_LOCAL_ADAPTER_S",
+          "direction": "S",
+          "socketType": "primary_road_20m",
+          "widthM": 20.0,
+          "lanes": 4,
+          "position": [
+            0.0,
+            -20.0,
+            1.916226
+          ]
+        },
+        {
+          "name": "SOCKET_PRIMARY_LOCAL_ADAPTER_N",
+          "direction": "N",
+          "socketType": "local_road_12m",
+          "widthM": 12.0,
+          "lanes": 2,
+          "position": [
+            0.0,
+            20.0,
+            1.916226
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 6580,
+          "objects": 35,
+          "intersectionAccounting": {
+            "testedObjects": 35,
+            "unexpectedIntersections": 0,
+            "records": []
+          }
+        },
+        {
+          "lod": 1,
+          "triangles": 3024,
+          "objects": 28,
+          "intersectionAccounting": {
+            "testedObjects": 28,
+            "unexpectedIntersections": 0,
+            "records": []
+          }
+        },
+        {
+          "lod": 2,
+          "triangles": 924,
+          "objects": 21,
+          "intersectionAccounting": {
+            "testedObjects": 21,
+            "unexpectedIntersections": 0,
+            "records": []
+          }
+        }
+      ],
+      "collisionTriangles": 12,
+      "navTriangles": 12,
+      "clearanceClasses": "infantry,light,heavy,superheavy"
+    }
+  ],
+  "exports": {
+    "corner_90": {
+      "lods": [
+        {
+          "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/review-exports/corner_90-lod0-review.glb",
+          "sha256": "9A7EBBB7028FCDD92312732EC0F5742986954D9C7A42102D2C476BF1AD7E9194",
+          "bytes": 980324,
+          "lod": 0,
+          "triangles": 24724
+        },
+        {
+          "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/review-exports/corner_90-lod1-review.glb",
+          "sha256": "D82CDD5F099CDF28AB55CBD3797AD9B29837DBEA8962947D36AB3E9B255C469F",
+          "bytes": 433692,
+          "lod": 1,
+          "triangles": 8804
+        },
+        {
+          "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/review-exports/corner_90-lod2-review.glb",
+          "sha256": "080A59FEEE65B845599EF75EF10F0182FEA333F14171E38516633A449E1CF9A4",
+          "bytes": 181440,
+          "lod": 2,
+          "triangles": 2312
+        }
+      ],
+      "collision": {
+        "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/review-exports/corner_90-collision-review.glb",
+        "sha256": "63B3FD8D64BF52E7D848FA80EF244CEB97105CF43001A2ED086992F0A91E32AD",
+        "bytes": 3528
+      },
+      "nav": {
+        "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/review-exports/corner_90-nav-review.glb",
+        "sha256": "2BEA8C4A97115BE536CB45CB24338A658654A89042D7224A036F47160E9A5E89",
+        "bytes": 4292
+      }
+    },
+    "t_junction": {
+      "lods": [
+        {
+          "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/review-exports/t_junction-lod0-review.glb",
+          "sha256": "A2FD21BAD7619E741AF0ACFC1465BE5DC8077F926FC45E1F20CD5D350C3B7464",
+          "bytes": 1218252,
+          "lod": 0,
+          "triangles": 31208
+        },
+        {
+          "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/review-exports/t_junction-lod1-review.glb",
+          "sha256": "21F6B3B80C5D8EF523002710C91563112B8F987AB4E958C88685F2C53432D8A0",
+          "bytes": 531308,
+          "lod": 1,
+          "triangles": 11232
+        },
+        {
+          "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/review-exports/t_junction-lod2-review.glb",
+          "sha256": "3DA929B4992652506E7DE7FEEDCC3401EB5644F4AD7246D7C51A6B9341DF40F0",
+          "bytes": 225484,
+          "lod": 2,
+          "triangles": 2904
+        }
+      ],
+      "collision": {
+        "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/review-exports/t_junction-collision-review.glb",
+        "sha256": "495C629C25B8D3ACDD94DB502145704CD747D9856F2FEBB7DD841EDEEC0DEFB3",
+        "bytes": 4180
+      },
+      "nav": {
+        "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/review-exports/t_junction-nav-review.glb",
+        "sha256": "9905CDF8BBF489EF06C4BCD9E8CAB547B358E61C86B809A188C38DA40849D152",
+        "bytes": 5344
+      }
+    },
+    "x_plaza": {
+      "lods": [
+        {
+          "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/review-exports/x_plaza-lod0-review.glb",
+          "sha256": "6F93A4018F4551C379FC27E053E43978054BCFA62BAB2A520ED16851D5A0FE8C",
+          "bytes": 1537696,
+          "lod": 0,
+          "triangles": 39856
+        },
+        {
+          "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/review-exports/x_plaza-lod1-review.glb",
+          "sha256": "BA09832E9779642E000C3267155691AF50298D74A215B19B60B1A7178BB63267",
+          "bytes": 682112,
+          "lod": 1,
+          "triangles": 14472
+        },
+        {
+          "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/review-exports/x_plaza-lod2-review.glb",
+          "sha256": "8F0456916821546929B6AB4CC9F4D32DBC2DC3D08B245DF49BC1C7D161049E14",
+          "bytes": 291456,
+          "lod": 2,
+          "triangles": 3784
+        }
+      ],
+      "collision": {
+        "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/review-exports/x_plaza-collision-review.glb",
+        "sha256": "8E4BCF61C9A6E16539A5BDB082051847F7FAB4730E47068DC33A3FA3592DF2C1",
+        "bytes": 4824
+      },
+      "nav": {
+        "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/review-exports/x_plaza-nav-review.glb",
+        "sha256": "C3248E890DEABB3FFD3F4D17EA3F047A2C7BE2E8846D8BEE50F8716972408C28",
+        "bytes": 6320
+      }
+    },
+    "straight_endcap": {
+      "lods": [
+        {
+          "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/review-exports/straight_endcap-lod0-review.glb",
+          "sha256": "C8C9253E6EB76B7537C8F2B4EDD84A1B0991461B40E5B75E52B46B3F23621908",
+          "bytes": 663236,
+          "lod": 0,
+          "triangles": 16920
+        },
+        {
+          "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/review-exports/straight_endcap-lod1-review.glb",
+          "sha256": "D4E71220F984B1EEFFD1FB868B2F241A18A1C3D026A4980FE985B0AB38086036",
+          "bytes": 322576,
+          "lod": 1,
+          "triangles": 6480
+        },
+        {
+          "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/review-exports/straight_endcap-lod2-review.glb",
+          "sha256": "56912AA7C7887722FA6CC5326B29D92A0D29E14E288A18FB1089CD8D0584DA54",
+          "bytes": 133080,
+          "lod": 2,
+          "triangles": 1672
+        }
+      ],
+      "collision": {
+        "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/review-exports/straight_endcap-collision-review.glb",
+        "sha256": "3CD0D7B159DB7DFA18033790530F8388988B7602853E018919FE9EB871F7FF5F",
+        "bytes": 2892
+      },
+      "nav": {
+        "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/review-exports/straight_endcap-nav-review.glb",
+        "sha256": "A04404CC0EA5A5D02C7399503B2DE1E5B8035A368BFB44157F9B8935EBD88C0F",
+        "bytes": 3264
+      }
+    },
+    "primary_local_adapter": {
+      "lods": [
+        {
+          "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/review-exports/primary_local_adapter-lod0-review.glb",
+          "sha256": "331B5F35052277B39AFF8CEDFCEAA082374AB1E64A973783A66C58F7D5330683",
+          "bytes": 273652,
+          "lod": 0,
+          "triangles": 6580
+        },
+        {
+          "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/review-exports/primary_local_adapter-lod1-review.glb",
+          "sha256": "FBB74F9439563C841629F05477F67C7D03C299DD01440F3B013E3612F5C25C72",
+          "bytes": 160220,
+          "lod": 1,
+          "triangles": 3024
+        },
+        {
+          "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/review-exports/primary_local_adapter-lod2-review.glb",
+          "sha256": "8677E0A6D4FF9DDABB8E93C6789D086DDDDA95D13DDC2DD0BB82FCC92F7A3866",
+          "bytes": 76488,
+          "lod": 2,
+          "triangles": 924
+        }
+      ],
+      "collision": {
+        "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/review-exports/primary_local_adapter-collision-review.glb",
+        "sha256": "A699EBD10A194D7213060EA11095D08C27B0468EB0A5BA61388CB11C5C05F446",
+        "bytes": 2252
+      },
+      "nav": {
+        "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/review-exports/primary_local_adapter-nav-review.glb",
+        "sha256": "3618A01BCF056938D6C148BB2C61B10F854737A022F9AF58CB73E5107D623447",
+        "bytes": 2980
+      }
+    }
+  },
+  "evidence": {
+    "resolution": [
+      1024,
+      1024
+    ],
+    "individualViews": [
+      "top",
+      "iso",
+      "edge"
+    ],
+    "straightAdjacencyViews": [
+      "seam_top",
+      "seam_iso"
+    ],
+    "renders": [
+      {
+        "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/evidence/corner_90-top-1024.png",
+        "sha256": "50913503EBEDDE13A0E14247E717EC988050EBD3FFD4B6DA561D335041EAB071",
+        "bytes": 932452,
+        "piece": "corner_90",
+        "view": "top",
+        "kind": "individual",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/evidence/corner_90-iso-1024.png",
+        "sha256": "3DE22803206AB3F903170090861F9CD1E630ADE668FC3EE9650C0A4732AE5395",
+        "bytes": 982548,
+        "piece": "corner_90",
+        "view": "iso",
+        "kind": "individual",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/evidence/corner_90-edge-1024.png",
+        "sha256": "7515B43B581142AFE5E2D69853D5B69FE8BF915C7C94199DCCC43BE1550EED76",
+        "bytes": 962057,
+        "piece": "corner_90",
+        "view": "edge",
+        "kind": "individual",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/evidence/corner_90-seam_top-1024.png",
+        "sha256": "FD062DA0D291582B9D5DD7CF288EC0C598CE3A4E9B0A9C4388905CF9CF6A1E7E",
+        "bytes": 1069162,
+        "piece": "corner_90",
+        "view": "seam_top",
+        "kind": "straight_adjacency",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/evidence/corner_90-seam_iso-1024.png",
+        "sha256": "BE613173F903EFC44E986D4B68BDAA9B0B7DA3B57C673FF13180C6F9E6A4077E",
+        "bytes": 1061768,
+        "piece": "corner_90",
+        "view": "seam_iso",
+        "kind": "straight_adjacency",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/evidence/t_junction-top-1024.png",
+        "sha256": "164C2CE812A4CB5E8F892ECE3E77F84C96065FE37463BCC947B1A747AA370511",
+        "bytes": 923666,
+        "piece": "t_junction",
+        "view": "top",
+        "kind": "individual",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/evidence/t_junction-iso-1024.png",
+        "sha256": "BFA643F43F6729E09DE2D503B4C6959D259BE47150ECDC060640F7FA291502FF",
+        "bytes": 1002258,
+        "piece": "t_junction",
+        "view": "iso",
+        "kind": "individual",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/evidence/t_junction-edge-1024.png",
+        "sha256": "7B6AC85FA457D85C5CEC72DC19B78F12C2172D1C7349E74FB9B275B7375A210C",
+        "bytes": 959371,
+        "piece": "t_junction",
+        "view": "edge",
+        "kind": "individual",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/evidence/t_junction-seam_top-1024.png",
+        "sha256": "7DD470A071612616CA11EB0981FA3B4DC0BE946B4AD025149A16295172AC6E51",
+        "bytes": 1064151,
+        "piece": "t_junction",
+        "view": "seam_top",
+        "kind": "straight_adjacency",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/evidence/t_junction-seam_iso-1024.png",
+        "sha256": "96AE6DE23726F93A6E6D0CB152B1077561560140EC5DB380B046FCE535F41CF7",
+        "bytes": 1071082,
+        "piece": "t_junction",
+        "view": "seam_iso",
+        "kind": "straight_adjacency",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/evidence/x_plaza-top-1024.png",
+        "sha256": "BAAB30BEAE9A2302E4AD3B9741F495146D4529D26C77555422C318FA329C6DC9",
+        "bytes": 950673,
+        "piece": "x_plaza",
+        "view": "top",
+        "kind": "individual",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/evidence/x_plaza-iso-1024.png",
+        "sha256": "D3F955367A95F39BD5D2BB7780114012C75A23805C85EAC1A88E174C3319FAFA",
+        "bytes": 1017422,
+        "piece": "x_plaza",
+        "view": "iso",
+        "kind": "individual",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/evidence/x_plaza-edge-1024.png",
+        "sha256": "40488172F6A4F58F101B49B151B62971474FCB67CF0E5931A13F5A35F68D8309",
+        "bytes": 967590,
+        "piece": "x_plaza",
+        "view": "edge",
+        "kind": "individual",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/evidence/x_plaza-seam_top-1024.png",
+        "sha256": "30D8A978112154CAD249EBF5BD8CB0FDACAD182AA09A98047F8B1011D2B3941D",
+        "bytes": 1075517,
+        "piece": "x_plaza",
+        "view": "seam_top",
+        "kind": "straight_adjacency",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/evidence/x_plaza-seam_iso-1024.png",
+        "sha256": "8CAFE2AA6B39E0EC89A78B62ADD4B59B5CBC02403DB8FCD3A7963314222C595D",
+        "bytes": 1078201,
+        "piece": "x_plaza",
+        "view": "seam_iso",
+        "kind": "straight_adjacency",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/evidence/straight_endcap-top-1024.png",
+        "sha256": "7C1CD00F6D1A7BFA0C9CCB08BF4F8BA5A9FFF23484FF9347782CDC0D4230DEF0",
+        "bytes": 892817,
+        "piece": "straight_endcap",
+        "view": "top",
+        "kind": "individual",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/evidence/straight_endcap-iso-1024.png",
+        "sha256": "98922DF55E1AC1B115E4228FB4D92E5BE2D79E282E0EE08779F0A8C0809134C7",
+        "bytes": 987045,
+        "piece": "straight_endcap",
+        "view": "iso",
+        "kind": "individual",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/evidence/straight_endcap-edge-1024.png",
+        "sha256": "4B166259F1BA48293AE4669B5FA5E05A5CEF6CB801717F7FA83A7C78D19D8C56",
+        "bytes": 955112,
+        "piece": "straight_endcap",
+        "view": "edge",
+        "kind": "individual",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/evidence/straight_endcap-seam_top-1024.png",
+        "sha256": "35A8233C556507DE21135970E9E10263163604E0CCC9E6C06FB669E447EA3D8D",
+        "bytes": 1050780,
+        "piece": "straight_endcap",
+        "view": "seam_top",
+        "kind": "straight_adjacency",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/evidence/straight_endcap-seam_iso-1024.png",
+        "sha256": "51238C6824B7B7E2FF344BE7CB445BD638F62C56D278F3B005ACEB1E75291872",
+        "bytes": 1062518,
+        "piece": "straight_endcap",
+        "view": "seam_iso",
+        "kind": "straight_adjacency",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/evidence/primary_local_adapter-top-1024.png",
+        "sha256": "50E96C82563F6473CB89DBC7492535B6D29CF70AE6169BA934DAEA5F09D9580D",
+        "bytes": 950207,
+        "piece": "primary_local_adapter",
+        "view": "top",
+        "kind": "individual",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/evidence/primary_local_adapter-iso-1024.png",
+        "sha256": "D6150E3175BF6C803E43395A8D4253B3D3B6EA4D2C852B091FB74F38E7F2CAB1",
+        "bytes": 994414,
+        "piece": "primary_local_adapter",
+        "view": "iso",
+        "kind": "individual",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/evidence/primary_local_adapter-edge-1024.png",
+        "sha256": "446B16E80EBFF22B7B5027DF9DDDB0F2A5856FFB142C0BA3C66B1B59FA37E9F7",
+        "bytes": 972375,
+        "piece": "primary_local_adapter",
+        "view": "edge",
+        "kind": "individual",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/evidence/primary_local_adapter-seam_top-1024.png",
+        "sha256": "46A9CFA53E81145FD28A8D221CBF768E1473A3F7A8149DD50C5900FF45B465DB",
+        "bytes": 1078336,
+        "piece": "primary_local_adapter",
+        "view": "seam_top",
+        "kind": "straight_adjacency",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/evidence/primary_local_adapter-seam_iso-1024.png",
+        "sha256": "76E6BFEEEA2D9A53EAA494A888225FAB6C7898104185DF580E481C233DD3850C",
+        "bytes": 1062860,
+        "piece": "primary_local_adapter",
+        "view": "seam_iso",
+        "kind": "straight_adjacency",
+        "width": 1024,
+        "height": 1024
+      }
+    ],
+    "reviewIntent": {
+      "top": "phone-command-like orthographic silhouette and traffic grammar",
+      "iso": "close structural, curb, height and material review",
+      "edge": "vertical profile and gate clearance review",
+      "seam": "edge-to-edge source-straight adjacency; no runtime claim"
+    }
+  },
+  "blend": {
+    "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/mf-road-junctions-v1.blend",
+    "sha256": "CF7743DC4E4DA12B6DFFCB05FA6A3DFFC7095B561AB31ACB5464705A1779BC75",
+    "bytes": 8342800
+  },
+  "knownLimitations": [
+    "source candidates are not runtime registered",
+    "procedural Blender noise/bump is not a baked deployable PBR texture set",
+    "no verified normal, AO, or authored roughness texture pack exists for the junction family",
+    "collision and navigation are authoring proxies, not runtime planner integration",
+    "no phone tactical/command-zoom or heavy-mech traversal evidence exists",
+    "human visual approval is still required for every individual and seam render"
+  ],
+  "requiredNextSteps": [
+    "Codex review of all real Blender renders",
+    "author/bake deployable PBR texture set",
+    "runtime planner socket and traversal integration",
+    "phone evidence with units crossing every seam and junction",
+    "explicit lifecycle promotion decision"
+  ]
+}

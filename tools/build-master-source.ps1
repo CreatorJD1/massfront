@@ -42,24 +42,35 @@ Assert-ChildPath $archive $outRoot 'Archive path'
 # were run. The manifest may be local before the remote channel switch, but its
 # payload must already be pinned to an immutable, verified commit.
 $manifestPath = Join-Path $repo 'update.json'
-$payloadPath = Join-Path $repo "releases/MASSFRONT-v$Version-update.js"
+$stagePath = Join-Path $repo "releases/staging-v$Version"
 if(-not (Test-Path -LiteralPath $manifestPath)){ throw 'update.json is missing' }
-if(-not (Test-Path -LiteralPath $payloadPath)){ throw "Missing v$Version OTA payload" }
+if(-not (Test-Path -LiteralPath $stagePath)){ throw "Missing v$Version OTA staging folder" }
 $publishedManifest = Get-Content -Raw -LiteralPath $manifestPath | ConvertFrom-Json
 if($publishedManifest.version -ne $Version){ throw "Manifest version $($publishedManifest.version) does not match $Version" }
-if($publishedManifest.files.Count -ne 1){ throw 'Release manifest must contain exactly one atomic OTA payload' }
-$manifestFile = $publishedManifest.files[0]
-$expectedPayloadName = "MASSFRONT-v$Version-update.js"
-if($manifestFile.path -ne $expectedPayloadName){ throw "Manifest payload path does not match $expectedPayloadName" }
-if($manifestFile.url -notmatch '/resolve/([0-9a-f]{40})/' -or $manifestFile.url -match '/resolve/main/'){
-  throw 'Manifest payload URL is not pinned to an immutable 40-character commit'
+# The payload is per-file now, so "exactly one atomic entry" is the wrong
+# invariant. What still has to hold is stronger, and holds for EVERY entry:
+# each is pinned to an immutable commit, and each matches the bytes staged
+# locally. A handoff that claims a release it cannot reproduce is the thing
+# these assertions exist to prevent.
+if($publishedManifest.files.Count -lt 1){ throw 'Release manifest contains no files' }
+$immutableCommit = $null
+foreach($manifestFile in @($publishedManifest.files)){
+  $localPath = Join-Path $stagePath $manifestFile.path
+  if(-not (Test-Path -LiteralPath $localPath)){ throw "Manifest names an artifact that is not staged locally: $($manifestFile.path)" }
+  if($manifestFile.url -notmatch '/resolve/([0-9a-f]{40})/' -or $manifestFile.url -match '/resolve/main/'){
+    throw "Manifest url for $($manifestFile.path) is not pinned to an immutable 40-character commit"
+  }
+  # One release, one commit. Mixed commits mean the manifest describes a
+  # build that never existed as a single upload.
+  if($null -eq $immutableCommit){ $immutableCommit = $Matches[1] }
+  elseif($Matches[1] -ne $immutableCommit){ throw "Manifest mixes commits: $($manifestFile.path) is pinned to a different upload" }
+  $item = Get-Item -LiteralPath $localPath
+  $hash = (Get-FileHash -LiteralPath $localPath -Algorithm SHA256).Hash.ToLowerInvariant()
+  if([int64]$manifestFile.size -ne $item.Length -or $manifestFile.sha256.ToLowerInvariant() -ne $hash){
+    throw "Manifest size/hash does not match the staged artifact for $($manifestFile.path)"
+  }
 }
-$immutableCommit = $Matches[1]
-$payloadItem = Get-Item -LiteralPath $payloadPath
-$payloadHash = (Get-FileHash -LiteralPath $payloadPath -Algorithm SHA256).Hash.ToLowerInvariant()
-if([int64]$manifestFile.size -ne $payloadItem.Length -or $manifestFile.sha256.ToLowerInvariant() -ne $payloadHash){
-  throw 'Manifest size/hash does not match the local OTA payload'
-}
+if($null -eq $immutableCommit){ throw 'Could not determine the immutable commit for this release' }
 
 $updaterText = Get-Content -Raw -LiteralPath (Join-Path $repo 'src/updater.js')
 $bootText = Get-Content -Raw -LiteralPath (Join-Path $repo 'boot.js')
@@ -96,6 +107,7 @@ $rootFiles = @(
 )
 $rootDirs = @(
   '.github','src','assets','source-media','tools','docs','design',
+  # Retained only as frozen historical source; native iOS is not a release channel.
   'audit','cloudflare','android','ios'
 )
 
@@ -154,7 +166,12 @@ function Copy-Required([string]$From,[string]$To){
 Copy-Required "releases/MASSFRONT-v$Version-mobile.apk" "deliverables/android/MASSFRONT-v$Version-mobile.apk"
 Copy-Required "releases/MASSFRONT-v$Version-playable.html" 'deliverables/web/massfront.html'
 Copy-Required "releases/MASSFRONT-v$Version-web.zip" "deliverables/web/MASSFRONT-v$Version-web.zip"
-Copy-Required "releases/MASSFRONT-v$Version-update.js" "deliverables/ota/MASSFRONT-v$Version-update.js"
+# The OTA is a folder of artifacts now, not one file. Copy every staged
+# artifact so the handoff can reproduce the exact release it describes.
+Get-ChildItem -LiteralPath $stagePath -Recurse -File -Force | ForEach-Object {
+  $rel = Get-RelativePath $stagePath $_.FullName
+  Copy-Required (Get-RelativePath $repo $_.FullName) "deliverables/ota/payload/$rel"
+}
 Copy-Required 'update.json' 'deliverables/ota/update.json'
 Copy-Required (Get-RelativePath $repo $evidenceSource) "release-evidence/MASSFRONT-v$Version-test-evidence.json"
 
@@ -171,7 +188,10 @@ Get-ChildItem -LiteralPath $wwwSource -Recurse -File -Force | ForEach-Object {
 $apkRel = "deliverables/android/MASSFRONT-v$Version-mobile.apk"
 $htmlRel = 'deliverables/web/massfront.html'
 $webZipRel = "deliverables/web/MASSFRONT-v$Version-web.zip"
-$otaRel = "deliverables/ota/MASSFRONT-v$Version-update.js"
+# No single payload file to hash any more. The manifest already carries a
+# per-artifact sha256 and build-master asserts every one of them above, so
+# the honest summary here is the artifact COUNT plus the pinned commit.
+$otaArtifactCount = @($publishedManifest.files).Count
 function Hash-At([string]$Relative){ (Get-FileHash -LiteralPath (Join-Path $stage $Relative) -Algorithm SHA256).Hash.ToLowerInvariant() }
 $releaseBase = 'https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main'
 $apkPublic = "$releaseBase/MASSFRONT-v$Version-mobile.apk?download=true"
@@ -193,11 +213,14 @@ $buildRecord = [ordered]@{
     versionName="$Version-mobile"; sha256=(Hash-At $apkRel)
     signerSha256='D61AAF77C171F0F1E7841394EB0ADAED196E146AD90226A0F07854C29EE073F0'
   }
-  ota = [ordered]@{ payload=$otaRel; payloadSha256=(Hash-At $otaRel); immutableCommit=$immutableCommit }
-  ios = [ordered]@{ wrapperIncluded=$true; signedIpaIncluded=$false }
+  ota = [ordered]@{ payload="deliverables/ota/payload"; payloadSha256=($null); immutableCommit=$immutableCommit }
+  retiredNativeIos = [ordered]@{
+    historicalSourceRetained=$true
+    releaseChannel=$false
+    buildSyncVersionAndPublishGates=$false
+  }
   tests = @($testEvidence.tests)
   knownIssues = @(
-    'No signed IPA is included; Apple signing still requires an authenticated macOS/cloud build.',
     'Nova, Legion and Syndicate still retain shared base chassis in part of the unit roster; see design/faction-production-matrix.md.'
   )
 }
@@ -219,7 +242,7 @@ Public downloads:
 - Android APK: $apkPublic
 - Complete web ZIP: $webZipPublic
 - Single-file HTML: $htmlPublic
-- Live iPhone/browser playtest: $liveWeb
+- Live Safari PWA/browser playtest: $liveWeb
 
 Canonical factions: Terran Frontline Command = Nova; Crimson Dominion =
 Legion/Ascendancy; Emerald Triad = Syndicate Coalition/Machine Ascendancy;
@@ -227,8 +250,8 @@ Void Swarm = Brood/Infestation Swarm. Brood technology is biological, while
 Syndicate identity is advanced precision energy technology.
 
 The Android APK uses `com.creatorjd.massfront.mobile` and the established test
-certificate. iOS wrapper source is included, but there is no signed IPA because
-Apple requires an authenticated macOS/cloud signing workflow.
+certificate. Apple devices install the Safari PWA. The retained iOS wrapper is
+historical source only and is not versioned, synced, built, signed, or published.
 
 Rebuild from `source/` with locked npm dependencies, Node, Java 21, the Android
 SDK, and Capacitor. Toolchains and caches are intentionally excluded. See
@@ -237,7 +260,8 @@ packaging the game.
 
 Remote-chat attachment caches and historical release binaries are excluded for
 privacy and to avoid duplicating generated files. All canonical game assets,
-source media, design art, native wrappers, and current deliverables are included.
+source media, design art, the Android wrapper, the retired historical iOS
+wrapper, and current deliverables are included.
 "@
 $readme | Set-Content -LiteralPath (Join-Path $stage 'README-FIRST.md') -Encoding utf8
 

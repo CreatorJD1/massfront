@@ -1,0 +1,111 @@
+{
+  "schema": "massfront.source-model-alpha-equivalence.v1",
+  "createdAt": "2026-08-26T09:37:57.615Z",
+  "status": "SOURCE_AUTHORING_ONLY",
+  "runtimeReady": false,
+  "oldSource": {
+    "path": "modules/space_exploration/assets/source/spline/hunyuan/city_outpost_layout_kits/outpost_operations_block/mf_city_outpost_operations_block_source.glb",
+    "bytes": 14847976,
+    "sha256": "97AB64422048E86CA231C4DC8C1D8B176890A224C7D388208978B74DB600F0BA",
+    "scenes": 1,
+    "nodes": 1,
+    "nodeNames": [
+      "MF_CITY_OUTPOST_OPERATIONS_BLOCK_LOD0_SOURCE_MESH"
+    ],
+    "meshes": 1,
+    "meshNames": [
+      "Mesh_0"
+    ],
+    "primitives": 1,
+    "vertices": 263626,
+    "triangles": 374298,
+    "materials": 1,
+    "materialAlphaModes": [
+      "BLEND"
+    ],
+    "textures": 1,
+    "images": [
+      {
+        "index": 0,
+        "mimeType": "image/png",
+        "bytes": 1918984,
+        "sha256": "EFBB964E0117ACA839F9F6C60467CC1247AC6D3E00CA41B0E4C12D10C40852D5"
+      }
+    ]
+  },
+  "newSource": {
+    "path": "modules/space_exploration/assets/source/spline/hunyuan/city_outpost_layout_kits/outpost_operations_block/mf_city_outpost_operations_block_source-opaque-fixed-v2.glb",
+    "bytes": 14847976,
+    "sha256": "58A78ED446757DBC3D67BE9099147701E0AE177AB6C44C5F04FD16CEF53E1CB3",
+    "scenes": 1,
+    "nodes": 1,
+    "nodeNames": [
+      "MF_CITY_OUTPOST_OPERATIONS_BLOCK_LOD0_SOURCE_MESH"
+    ],
+    "meshes": 1,
+    "meshNames": [
+      "Mesh_0"
+    ],
+    "primitives": 1,
+    "vertices": 263626,
+    "triangles": 374298,
+    "materials": 1,
+    "materialAlphaModes": [
+      "OPAQUE"
+    ],
+    "textures": 1,
+    "images": [
+      {
+        "index": 0,
+        "mimeType": "image/png",
+        "bytes": 1918984,
+        "sha256": "EFBB964E0117ACA839F9F6C60467CC1247AC6D3E00CA41B0E4C12D10C40852D5"
+      }
+    ]
+  },
+  "intakeReport": {
+    "path": "modules/space_exploration/assets/source/spline/hunyuan/city_outpost_layout_kits/outpost_operations_block/mf_city_outpost_operations_block_source-opaque-fixed-v2.intake.json",
+    "sha256": "7E4D18D2C82CFAB81490B9E88216C8D739A60DD9038332230738F3EDD8791187"
+  },
+  "checks": {
+    "sameSceneCount": true,
+    "sameNodeCount": true,
+    "sameNodeNames": true,
+    "sameMeshCount": true,
+    "sameMeshNames": true,
+    "samePrimitiveCount": true,
+    "sameVertexCount": true,
+    "sameTriangleCount": true,
+    "sameMaterialCount": true,
+    "sameTextureCount": true,
+    "sameEmbeddedImagePayloads": true,
+    "sameNonJsonChunks": true,
+    "jsonEqualsOldPlusBlendToOpaque": true,
+    "boundsExact32x20x32": true,
+    "floorCenterPivot": true,
+    "alphaDecisionConfirmed": true,
+    "runtimeNotRegistered": true
+  },
+  "nonJsonChunks": {
+    "old": [
+      {
+        "type": 5130562,
+        "bytes": 14846592,
+        "sha256": "AD0C99A4F7E51A4C06BA0117C2258A954E307E18F3BF37F2972BB86346E5F22E"
+      }
+    ],
+    "new": [
+      {
+        "type": 5130562,
+        "bytes": 14846592,
+        "sha256": "AD0C99A4F7E51A4C06BA0117C2258A954E307E18F3BF37F2972BB86346E5F22E"
+      }
+    ]
+  },
+  "allowedDifference": {
+    "materialIndex": 0,
+    "from": "BLEND",
+    "to": "OPAQUE"
+  },
+  "pass": true
+}

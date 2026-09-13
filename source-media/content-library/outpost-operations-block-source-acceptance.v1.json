@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 1,
+  "auditId": "mf-outpost-operations-block-source-acceptance-v1",
+  "auditDate": "2026-08-26",
+  "assetId": "mf_hi_outpost_operations_block_01",
+  "scope": "SOURCE_CANDIDATE_ONLY",
+  "runtimeReady": false,
+  "status": "BLOCKED_CONTRACT_ALIGNMENT",
+  "authorities": [
+    "source-media/content-library/modular-city-colony-kit-contract.v1.json",
+    "source-media/content-library/hunyuan-city-outpost-layout-generation-queue.v1.json",
+    "src/game/sim.js:2933",
+    "src/game/sim.js:2949",
+    "src/game/sim.js:2975"
+  ],
+  "conceptEvidence": {
+    "resolvedPath": "source-media/concepts/hunyuan/city_outpost_layout_kits/outpost_operations_block/mf_outpost_operations_block-concept-v1.png",
+    "sha256": "1C10BBC4BAE58CE421414A1F53897B1F000699E1D71A69ADCF68DA2B90ABF51D",
+    "pixelDimensions": [1402, 1122]
+  },
+  "queueFindings": [
+    "The queue's conceptPath does not exist; the resolved conceptEvidence path above does.",
+    "The queue declares a south 6 m pedestrian concourse, west 8 m service lane, and east 4x4 m utility portal. That does not describe the current concept/prompt intent of a front vehicle gate, rear service socket, and side pedestrian links.",
+    "Do not mark the generated source accepted until the queue socket schedule is deliberately reconciled; do not silently infer sockets from appearance."
+  ],
+  "sourceAcceptanceChecklist": {
+    "boundsAndBasis": [
+      "Normalized candidate bounds are 32 m X by 20 m Y by 32 m Z; raw Hunyuan scale may differ only if a deterministic import transform is recorded.",
+      "Use meters, +Y up, +Z north, +X east, with the root at the 32x32 m podium center and floor contact at Y=0.",
+      "Allow yaw 0/90/180/270 only after normalization; reject non-uniform scale or a tilted ground plane."
+    ],
+    "recommendedCanonicalSockets": [
+      {
+        "socketId": "front_s",
+        "profileId": "road_local_12",
+        "positionMeters": [0, 0, -16],
+        "outward": [0, 0, -1],
+        "clearance": "12 m clear width at grade; if any gate/overhang crosses it, preserve at least 8 m clear height for heavy vehicles"
+      },
+      {
+        "socketId": "rear_n",
+        "profileId": "lane_service_8",
+        "positionMeters": [0, 0, 16],
+        "outward": [0, 0, 1],
+        "clearance": "8 m clear width at grade; if enclosed, preserve at least 4 m clear height for light vehicles"
+      },
+      {
+        "socketId": "public_w",
+        "profileId": "concourse_ped_6",
+        "positionMeters": [-16, 0, 0],
+        "outward": [-1, 0, 0],
+        "clearance": "6 m wide by 3.5 m high; rails and glazing remain outside the opening"
+      },
+      {
+        "socketId": "public_e",
+        "profileId": "concourse_ped_6",
+        "positionMeters": [16, 0, 0],
+        "outward": [1, 0, 0],
+        "clearance": "6 m wide by 3.5 m high; rails and glazing remain outside the opening"
+      }
+    ],
+    "socketAndRoadClearance": [
+      "Socket centers lie exactly on the footprint boundary, on the 4 m detail grid, at surface elevation 0.",
+      "Socket lips meet a mate within 0.01 m and with no vertical step greater than 0.02 m; outward vectors oppose the mate.",
+      "Front road_local_12 mates directly only with road_local_12 or through the authored primary-to-local adapter; it must not be stretched to road_primary_18.",
+      "Front curbs stop 0.75 m before the socket plane; rear bollards, pipes, ramps, doors, debris, collision, and decals remain outside the 8 m service clearance.",
+      "Publish centered NAV_LINK objects for every accepted socket; there must be a continuous internal route from each public entrance to the operations core and from the service lane to the service yard.",
+      "For current city-template placement, the complete 1.18x footprint apron must remain clear of every crossing street. A 32x32 m plot also inherits the 14 m curb-to-frontage strip; socket geometry alone does not bypass roadClear()."
+    ],
+    "mobileRtsSilhouette": [
+      "At phone tactical and command zoom, read as one compact operations core: dominant central mass, two subordinate wings, roof utility deck, and an unmistakable vehicle frontage.",
+      "The 12 m front gate must visibly fit an 8 m light-vehicle reference; doors, stairs, windows, and rails must remain credible against a 1.8 m person.",
+      "Do not depend on antennas, tiny greebles, text, or emissive lines for identity; primary massing and gate remain readable in an LOD2 silhouette.",
+      "Preserve the gate, roofline, entrance, and wing hierarchy when deriving LODs; generated source density alone is never runtime evidence."
+    ],
+    "materialSeparation": [
+      "Required separate semantic regions: MAT_STRUCTURAL, MAT_FACADE, MAT_ROOF, and MAT_CONTACT.",
+      "If present, glazing, light strips/windows, signage, and damage use separately addressable MAT_GLAZING, MAT_EMISSIVE, MAT_DECAL, and MAT_DAMAGE regions.",
+      "Contact/podium material ends cleanly at road and concourse sockets; exterior hull material may not cover the whole building, podium, or road lip.",
+      "Emission is mask-driven and restrained; baked glow, baked directional lighting, and geometry-only glow do not substitute for an emissive input."
+    ],
+    "sourceHygiene": [
+      "One building root only; exclude Spline cameras, lights, studio floor, shadow catcher, terrain, roads beyond socket lips, people, vehicles, weapons, and unrelated props from the GLB.",
+      "Record source hash, raw and normalized bounds, root inventory, triangle count, texture inventory, and deterministic import transform before further processing.",
+      "Keep runtimeReady false until topology, UVs, semantic materials, collision/nav, LODs, package allowlist, and matched phone evidence pass."
+    ]
+  },
+  "rejectConditions": [
+    "WRONG_BOUNDS_AXIS_OR_PIVOT",
+    "FRONT_GATE_NOT_VEHICLE_CLEAR",
+    "REAR_SERVICE_CLEARANCE_BLOCKED",
+    "SIDE_CONCOURSE_CLEARANCE_BLOCKED",
+    "SOCKET_SCHEDULE_NOT_RECONCILED",
+    "SOCKET_OFF_BOUNDARY_OR_GRID",
+    "ROAD_PROFILE_STRETCHED_OR_MISMATCHED",
+    "ROAD_APRON_OR_CROSS_STREET_CLASH",
+    "ENTRANCE_OR_SERVICE_ROUTE_UNREACHABLE",
+    "MOBILE_SILHOUETTE_UNREADABLE",
+    "GENERIC_GREEBLE_MASS_OR_WEAPONIZED_SHAPE",
+    "MATERIAL_REGIONS_FUSED_OR_HULL_SKIN_UNIVERSAL",
+    "SOURCE_CAMERA_LIGHT_OR_STUDIO_GEOMETRY_EXPORTED",
+    "NON_UNIFORM_SCALE",
+    "EVIDENCE_STALE_OR_MISSING"
+  ]
+}

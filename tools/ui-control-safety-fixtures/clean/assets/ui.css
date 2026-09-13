@@ -1,0 +1,2 @@
+:where(button,[role="button"],input,select,textarea){touch-action:manipulation}
+@media (pointer:coarse){:where(button,[role="button"],input,select,textarea){min-width:44px;min-height:44px}}

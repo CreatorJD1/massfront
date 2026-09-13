@@ -43,7 +43,45 @@ const HOT_UTILITIES=[
   {src:'abLance', em:'🛰', nm:'LANCE', ab:3},
   {src:'abEmp',   em:'⚡', nm:'EMP',   ab:4},
 ];
+/* Phone slots use authored call signs, not accidental CSS truncation. The full
+   gameplay name remains the button's accessible name and hover title. */
+const HOT_COMPACT_LABELS={
+  'RAIL REPEATER':'RAIL',
+  'CLUSTER CANNON':'CLUSTER',
+  'SKYBREAKER SALVO':'SKY SALVO',
+  'FIELD WORKSHOP':'WORKSHOP',
+  'SEISMIC DECREE':'SEISMIC',
+  'CRIMSON ADVANCE':'ADVANCE',
+  'IRON REDOUBT':'REDOUBT',
+  'COMBAT LIQUIDATION':'LIQUIDATE',
+  'NANITE RECALL':'RECALL'
+};
 let hotSig='', hotSlots=[], hotRow=null,hotUtilityPanel=null,hotUtilityItems=[];
+/* Presentation takeovers may replace the fallback glyph with validated art.
+   Remember the owner's semantic value separately so the HUD frame mirror does
+   not erase and recreate that art when the weapon/ability has not changed. */
+function hotIconText(el,value){
+  const text=value||'•';if(el&&el._mfHotIconText!==text){el._mfHotIconText=text;el.textContent=text;}
+}
+/* A slot's DOM identity follows its authoritative action, never its visible
+   copy. UNLOAD gains a cargo count and Commander weapons can rename in place;
+   neither is allowed to manufacture a new button (and discard its injected
+   vector art) just because the label changed. */
+function hotDataSource(def){
+  if(!def)return 'action:unknown';
+  if(def.src)return def.src;
+  if(def.hotSrc)return def.hotSrc;
+  if(def.kind==='mode')return 'mode:'+String(def.mode);
+  if(def.kind==='utility')return 'utility:more';
+  return (def.kind||'action')+':'+String(def.nm||'action').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+}
+function hotCompactLabel(value){
+  const full=String(value||'ACTION').trim().toUpperCase();
+  if(HOT_COMPACT_LABELS[full])return HOT_COMPACT_LABELS[full];
+  if(full.length<=9)return full;
+  const words=full.split(/\s+/),fit=words.find(word=>word.length>=4&&word.length<=8);
+  return fit||full.slice(0,8);
+}
 
 function hotSlotRow(){
   if(hotRow&&hotRow.isConnected) return hotRow;
@@ -65,11 +103,16 @@ function hotSrcUsable(id){
 }
 function hotActivateSource(b){
   if(!b) return;
-  /* Ability owners listen for pointerdown, not click. Calling `.click()` here
-     only ran the browser's click default and silently skipped tryAbility(). */
-  /* Use a plain Event: older Android WebViews expose pointer events to the DOM
-     but do not expose the PointerEvent constructor to script. */
+  /* Forward a COMPLETE press. Ability owners normally commit on pointerdown,
+     but mfBindNativePress defers controls inside an overflowing command rail
+     until pointerup so a swipe cannot fire them. Sending only pointerdown left
+     that owner permanently pending; the next battlefield tap then issued a
+     move because no aim mode had been armed. Outside a scroller pointerup is a
+     no-op, so the pair preserves immediate legacy owners without double fire.
+     Plain Events keep older Android WebViews working even when PointerEvent is
+     exposed to the DOM but not constructible from script. */
   b.dispatchEvent(new Event('pointerdown',{bubbles:true,cancelable:true}));
+  b.dispatchEvent(new Event('pointerup',{bubbles:true,cancelable:true}));
 }
 function hotUtilityShell(){
   if(hotUtilityPanel&&hotUtilityPanel.isConnected)return hotUtilityPanel;
@@ -79,27 +122,40 @@ function hotUtilityShell(){
     hotUtilityPanel.setAttribute('role','group');hotUtilityPanel.setAttribute('aria-label','Additional selected unit actions');
     document.body.appendChild(hotUtilityPanel);
   }
+  hotUtilityPanel.setAttribute('data-mf-hud-role','utility-drawer');
   return hotUtilityPanel;
 }
-function hotUtilityClose(){
-  if(hotUtilityPanel)hotUtilityPanel.style.display='none';
+function hotUtilityClose(clear){
+  if(!hotUtilityPanel)hotUtilityPanel=document.getElementById('hotUtilityPanel');
+  document.body.classList.remove('mfHotUtilityOpen');
+  if(hotUtilityPanel){
+    hotUtilityPanel.style.display='none';hotUtilityPanel.setAttribute('aria-hidden','true');
+    /* A closed drawer must not keep focusable, selection-specific commands in
+       document.body. Clearing also prevents a later Commander selection from
+       briefly exposing the previous unit's actions while its row rebuilds. */
+    if(clear!==false)hotUtilityPanel.replaceChildren();
+  }
+  if(clear!==false)hotUtilityItems.length=0;
   const more=hotSlots.find(s=>s.def.kind==='utility');if(more)more.el.classList.remove('on');
 }
 function hotUtilityToggle(items){
-  const p=hotUtilityShell();if(p.style.display==='grid'){hotUtilityClose();return;}
+  const p=hotUtilityShell();if(p.style.display==='grid'){hotUtilityClose(true);return;}
   hotUtilityItems=items.slice();p.innerHTML='';
   for(const s of hotUtilityItems){
-    const b=document.createElement('button');b.type='button';b.className='hotUtility';b.dataset.hotSrc=s.src||'';
+    const b=document.createElement('button');b.type='button';b.className='hotUtility';b.dataset.hotSrc=hotDataSource(s);b._mfHotDef=s;
     b.innerHTML='<span class="hEm"></span><span class="hNm"></span><span class="hCd"></span>';
-    b.querySelector('.hEm').textContent=s.em||'✦';b.querySelector('.hNm').textContent=s.nm||'ACTION';
+    hotIconText(b.querySelector('.hEm'),s.em||'✦');b.querySelector('.hNm').textContent=s.nm||'ACTION';
     b.setAttribute('aria-label',(s.nm||'Action')+(s.ds?' — '+s.ds:''));
-    b.addEventListener('pointerdown',ev=>{ev.preventDefault();ev.stopPropagation();hotUtilityClose();
-      if(s.kind==='mode')hotSetMode(s.mode);
-      else if(s.kind==='local'&&s.fn)s.fn();
-      else hotActivateSource(hotSrc(s.src));});
+    const activate=ev=>{ev.preventDefault();ev.stopPropagation();const def=b._mfHotDef;hotUtilityClose(true);
+      if(def.kind==='mode')hotSetMode(def.mode);
+      else if(def.kind==='local'&&def.fn)def.fn();
+      else hotActivateSource(hotSrc(def.src));};
+    if(typeof mfBindNativePress==='function')mfBindNativePress(b,activate);
+    else b.addEventListener('pointerdown',activate);
     p.appendChild(b);
   }
-  p.style.display='grid';const more=hotSlots.find(s=>s.def.kind==='utility');if(more)more.el.classList.add('on');hotSlotPlace();
+  p.style.display='grid';p.setAttribute('aria-hidden','false');document.body.classList.add('mfHotUtilityOpen');
+  const more=hotSlots.find(s=>s.def.kind==='utility');if(more)more.el.classList.add('on');hotSlotPlace();
 }
 
 /* What is selected, reduced to the shape the bar depends on. Rebuilding the
@@ -225,7 +281,7 @@ function hotBuilderSalvage(){
 
 function hotBuild(){
   const row=hotSlotRow();
-  hotUtilityClose();
+  hotUtilityClose(true);
   hotSlots=[];
   const sel=hotSelectionSig();
   if(!sel){ row.style.display='none'; row.innerHTML=''; hotTabState(false); hotSlotPlace(); return; }
@@ -257,8 +313,8 @@ function hotBuild(){
      field repair, and routing to its faster salvage pass. */
   if(hotSelectedBuilders().length){
     want.push({kind:'ab',src:'buildBtn',em:'🏗',nm:'BUILD',ds:'Open the structure catalogue'});
-    want.push({kind:'local',fn:hotBuilderRepair,em:'🔧',nm:'REPAIR',ds:'Move to the nearest damaged or unfinished friendly structure'});
-    want.push({kind:'local',fn:hotBuilderSalvage,em:'♻',nm:'SALVAGE',ds:'Move to the nearest wreck and reclaim it at 2× rate'});
+    want.push({kind:'local',hotSrc:'local:builder-repair',fn:hotBuilderRepair,em:'🔧',nm:'REPAIR',ds:'Move to the nearest damaged or unfinished friendly structure'});
+    want.push({kind:'local',hotSrc:'local:builder-salvage',fn:hotBuilderSalvage,em:'♻',nm:'SALVAGE',ds:'Move to the nearest wreck and reclaim it at 2× rate'});
   }
   /* Repair-bay MEND is owned by src/repairbay.js. A one-line hook keeps this
      file from duplicating apron rules, and the function is absent until that
@@ -268,7 +324,7 @@ function hotBuild(){
     const sky=mfAirliftSelected();
     if(sky>=0){
       const H=typeof mfAirliftHold==='function'?mfAirliftHold(sky,false):null;
-      want.push({kind:'local',fn:()=>{if(typeof mfAirliftArmUnload==='function')mfAirliftArmUnload(sky);},
+      want.push({kind:'local',hotSrc:'local:airlift-unload',fn:()=>{if(typeof mfAirliftArmUnload==='function')mfAirliftArmUnload(sky);},
         em:'⇩',nm:H&&H.cargo.length?'UNLOAD '+H.cargo.length:'UNLOAD',
         ds:'Set a formation drop zone for Skycrane cargo'});
     }
@@ -277,7 +333,7 @@ function hotBuild(){
     const mass=mfMassSelected();
     if(mass>=0){
       const air=utype[mass]===MF_UT_MASSFLESH_AIR;
-      want.push({kind:'local',fn:()=>{if(typeof mfMassArmSelected==='function')mfMassArmSelected();},
+      want.push({kind:'local',hotSrc:air?'local:mass-birth':'local:mass-flight',fn:()=>{if(typeof mfMassArmSelected==='function')mfMassArmSelected();},
         em:'♒',nm:air?'BIRTH':'TAKE FLIGHT',
         ds:air?'Mark a birth site behind the defensive line':'Ascend for a timed breakthrough flight'});
     }
@@ -303,24 +359,40 @@ function hotBuild(){
   const use=want.slice(0,4);
   if(want.length>4)utility.unshift(...want.slice(4));
   if(utility.length)use.push({kind:'utility',em:'⋯',nm:'UTILITY',items:utility});
-  row.innerHTML='';
+  /* Reconcile by data-hot-src. Reusing an unchanged button preserves the SVG
+     or atlas node a presentation layer injected into .hEm, while the one
+     bound handler reads the current definition and keeps behaviour owned by
+     the original source control. */
+  const old=new Map();
+  for(const b of row.querySelectorAll(':scope > .hotSlot[data-hot-src]'))old.set(b.dataset.hotSrc,b);
+  const next=document.createDocumentFragment();
   for(const s of use){
-    const b=document.createElement('button');
-    b.type='button'; b.className='hotSlot';
-    b.innerHTML='<span class="hEm"></span><span class="hNm"></span><span class="hCd"></span>';
-    b.querySelector('.hEm').textContent=s.em;
-    b.querySelector('.hNm').textContent=s.nm;
-    b.setAttribute('aria-label',s.nm+(s.ds?' — '+s.ds:''));
-    b.addEventListener('pointerdown',ev=>{
-      ev.preventDefault(); ev.stopPropagation();
-      if(s.kind==='mode') hotSetMode(s.mode);
-      else if(s.kind==='local'&&s.fn)s.fn();
-      else if(s.kind==='utility')hotUtilityToggle(s.items||[]);
-      else hotActivateSource(hotSrc(s.src));
-    });
-    row.appendChild(b);
+    const key=hotDataSource(s);let b=old.get(key);old.delete(key);
+    if(!b){
+      b=document.createElement('button');b.type='button';b.className='hotSlot';b.dataset.hotSrc=key;
+      b.innerHTML='<span class="hEm"></span><span class="hNm"></span><span class="hCd"></span>';
+      const activate=ev=>{
+        ev.preventDefault();ev.stopPropagation();const def=b._mfHotDef;if(!def)return;
+        if(def.kind==='utility')hotUtilityToggle(def.items||[]);
+        else{
+          hotUtilityClose(true);
+          if(def.kind==='mode')hotSetMode(def.mode);
+          else if(def.kind==='local'&&def.fn)def.fn();
+          else hotActivateSource(hotSrc(def.src));
+        }
+      };
+      if(typeof mfBindNativePress==='function')mfBindNativePress(b,activate);
+      else b.addEventListener('pointerdown',activate);
+    }
+    b._mfHotDef=s;b.dataset.hotSrc=key;
+    hotIconText(b.querySelector('.hEm'),s.em);
+    const fullLabel=s.nm+(s.ds?' — '+s.ds:'');
+    b.querySelector('.hNm').textContent=hotCompactLabel(s.nm);
+    b.setAttribute('aria-label',fullLabel);b.title=fullLabel;
+    next.appendChild(b);
     hotSlots.push({def:s,el:b});
   }
+  row.replaceChildren(next);
   hotTabState(!!use.length);
   row.style.display=use.length&&typeof hudDeck==='string'&&hudDeck==='abilities'?'flex':'none';
   hotSlotPlace();
@@ -346,16 +418,25 @@ function hotSlotSync(force){
       cd.textContent=busy&&ring?(ring.textContent||''):'';
       if(S.def.src==='abCommander'){
         const em=document.getElementById('cmdAbEm'),nm=document.getElementById('cmdAbNm');
-        if(em)el.querySelector('.hEm').textContent=em.textContent||'✦';
-        if(nm)el.querySelector('.hNm').textContent=nm.textContent||'SIGNATURE';
-        el.setAttribute('aria-label',src.getAttribute('aria-label')||'Commander signature ability');
+        if(em)hotIconText(el.querySelector('.hEm'),em.textContent||'✦');
+        if(nm)el.querySelector('.hNm').textContent=hotCompactLabel(nm.textContent||'SIGNATURE');
+        const fullLabel=src.getAttribute('aria-label')||'Commander signature ability';
+        el.setAttribute('aria-label',fullLabel);el.title=fullLabel;
       }else if(S.def.src==='abPrimary'||S.def.src==='abSecondary'){
         const W=typeof commanderWeaponDef==='function'?commanderWeaponDef(S.def.src==='abSecondary'?1:0):null;
-        if(W){el.querySelector('.hEm').textContent=W.em||'•';el.querySelector('.hNm').textContent=W.nm.toUpperCase();}
+        if(W){
+          const full=W.nm.toUpperCase();
+          hotIconText(el.querySelector('.hEm'),W.em||'•');
+          el.querySelector('.hNm').textContent=hotCompactLabel(full);
+          const fullLabel=src.getAttribute('aria-label')||full;
+          el.setAttribute('aria-label',fullLabel);el.title=fullLabel;
+        }
       }else if(S.def.src==='abClass'){
         const em=document.getElementById('classAbEm'), nm=document.getElementById('classAbNm');
-        if(em) el.querySelector('.hEm').textContent=em.textContent||'✦';
-        if(nm) el.querySelector('.hNm').textContent=nm.textContent||'DOCTRINE';
+        if(em) hotIconText(el.querySelector('.hEm'),em.textContent||'✦');
+        if(nm) el.querySelector('.hNm').textContent=hotCompactLabel(nm.textContent||'DOCTRINE');
+        const fullLabel=src.getAttribute('aria-label')||'Commander doctrine ability';
+        el.setAttribute('aria-label',fullLabel);el.title=fullLabel;
       }
     }else if(S.def.kind==='local'){
       el.classList.remove('cd');cd.textContent='';
@@ -375,7 +456,7 @@ function hotSlotSync(force){
   }
   if(hotUtilityPanel&&hotUtilityPanel.style.display==='grid'){
     hotUtilityPanel.querySelectorAll('[data-hot-src]').forEach(el=>{
-      const src=hotSrc(el.dataset.hotSrc),ring=src&&src.querySelector('.cdring'),cd=el.querySelector('.hCd');
+      const def=el._mfHotDef,src=def&&def.src?hotSrc(def.src):null,ring=src&&src.querySelector('.cdring'),cd=el.querySelector('.hCd');
       const busy=!!(src&&src.classList.contains('cd'));el.classList.toggle('cd',busy);
       if(cd)cd.textContent=busy&&ring?(ring.textContent||''):'';
     });
@@ -410,14 +491,59 @@ function hotSlotPlace(){
 
 /* One extra pass on the existing HUD tick rather than a timer of its own: the
    mirrored state is only written every 10th frame anyway. */
+let hotHudSynced=false;
 if(typeof updateSelInfo==='function'){
   const hotBaseSelInfo=updateSelInfo;
-  updateSelInfo=function(){ hotBaseSelInfo(); hotSlotSync(false); };
+  updateSelInfo=function(){ hotBaseSelInfo(); hotHudSynced=true; hotSlotSync(false); };
 }
+/* THE "EVERY 10th FRAME" ABOVE WAS NOT TRUE OF THIS HOOK.
+   hud.js gates its own body on `(hudFrame++)%10`, and hudflow.js then wraps
+   updateHUD with a second gate that RETURNS BEFORE calling the base. This file
+   loads last, so it wrapped hudflow's wrapper: `hotBaseUpdateHUD(fps)` returned
+   immediately on the nine skipped frames and `hotSlotSync(false)` ran anyway —
+   sixty times a second, not six. Each of those runs calls hotSelectionSig(),
+   which walks `unitHigh`, walks it again inside artBarrageSelected(), and calls
+   getComputedStyle() on #abClass (a forced style recalc, on a HUD that dirties
+   style constantly). main.js absorbs the cost by sliding simDt, so it never
+   looks like a bug: the match just runs slow.
+   `hudFrame` read BEFORE the base call predicts the painting frame under both
+   gates (hud.js paints when the pre-increment value %10 is 0; hudflow only
+   forwards on exactly those frames), so this now matches the comment. */
 if(typeof updateHUD==='function'){
   const hotBaseUpdateHUD=updateHUD;
-  updateHUD=function(fps){ hotBaseUpdateHUD(fps); hotSlotSync(false); };
+  updateHUD=function(fps){
+    const paints=(typeof hudFrame!=='number')||(hudFrame%10===0);
+    hotHudSynced=false;
+    hotBaseUpdateHUD(fps);
+    /* hud.js's painted body already calls the wrapped updateSelInfo above, so
+       the row is in sync by the time we get here on a painting frame. Only run
+       a second pass if that call did not happen. */
+    if(paints&&!hotHudSynced) hotSlotSync(false);
+  };
 }
 addEventListener('resize',()=>hotSlotPlace());
 hotSlotRow();
+/* Deck changes call hotUtilityClose synchronously from main.js. Attribute
+   observation is the safety net for contexts owned elsewhere (a selected
+   Factory opening production, a pause/level overlay, or a front-screen
+   transition). It only does work while the drawer is actually open. */
+function hotUtilityGuard(){
+  if(!hotUtilityPanel||hotUtilityPanel.style.display!=='grid')return;
+  const body=document.body,front=body.classList.contains('mfMenuOpen')||body.classList.contains('menuMode');
+  const context=['buildMenu','prodMenu','bldMenu2','baseFinder'].some(id=>{
+    const el=document.getElementById(id);return !!(el&&!el.hidden&&el.style.display!=='none'&&getComputedStyle(el).display!=='none');
+  });
+  const modal=['pauseOverlay','levelUp','gameOver','loadScr'].some(id=>{
+    const el=document.getElementById(id);return !!(el&&el.style.display!=='none'&&getComputedStyle(el).display!=='none');
+  });
+  const dockHidden=typeof running==='boolean'&&running&&!body.classList.contains('hudTacticalDock');
+  if(typeof hudDeck==='string'&&hudDeck!=='abilities'||typeof paused==='boolean'&&paused||front||context||modal||dockHidden)hotUtilityClose(true);
+}
+if(typeof MutationObserver!=='undefined'){
+  const hotUtilityWatch=new MutationObserver(hotUtilityGuard);
+  hotUtilityWatch.observe(document.body,{attributes:true,attributeFilter:['class']});
+  for(const id of ['cmdbar','hudDeckTabs','buildMenu','prodMenu','bldMenu2','baseFinder','pauseOverlay','levelUp','gameOver','loadScr']){
+    const el=document.getElementById(id);if(el)hotUtilityWatch.observe(el,{attributes:true,attributeFilter:['class','style','hidden']});
+  }
+}
 

@@ -1,0 +1,114 @@
+{
+  "$schema": "https://massfront.invalid/schemas/model-kit-v1.json",
+  "schemaVersion": 1,
+  "kitId": "example_world_model",
+  "displayName": "Example World Model",
+  "status": "SOURCE_CANDIDATE",
+  "classification": {
+    "packId": "example_pack_v1",
+    "catalogEntryId": "example_world_model"
+  },
+  "source": {
+    "glb": "source/example-world-model-source.glb",
+    "expectedSha256": null,
+    "publicSceneUrl": "https://my.spline.design/example/",
+    "documentName": "EXAMPLE_WORLD_MODEL_V1",
+    "documentId": null,
+    "rootObjectId": "replace-with-spline-root-object-id",
+    "meshObjectIds": [
+      "replace-with-spline-mesh-object-id"
+    ],
+    "meshNodeNames": [
+      "SOURCE_example_world_model"
+    ],
+    "generation": {
+      "system": "spline-ai-3d",
+      "generationId": "replace-with-generation-id"
+    },
+    "sceneDigest": "evidence/scene-digest.json",
+    "expectedSceneDigestSha256": null
+  },
+  "concept": {
+    "image": "concept/example-world-model-concept.png",
+    "expectedSha256": null,
+    "pixelsUsedAsTexture": false,
+    "generation": {
+      "system": "imagegen",
+      "generationId": "replace-with-concept-generation-id"
+    }
+  },
+  "normalization": {
+    "sourceUp": "Y",
+    "runtimeUp": "Z",
+    "runtimeForward": "+Y",
+    "scaleMode": "largest-dimension",
+    "targetMeters": 32,
+    "centerXY": true,
+    "groundOrigin": true,
+    "toleranceMeters": 0.02
+  },
+  "lods": [
+    {
+      "name": "LOD0",
+      "targetTriangles": 90000,
+      "maxTriangles": 100000,
+      "output": "derived/example-world-model-lod0.glb"
+    },
+    {
+      "name": "LOD1",
+      "targetTriangles": 36000,
+      "maxTriangles": 42000,
+      "output": "derived/example-world-model-lod1.glb"
+    },
+    {
+      "name": "LOD2",
+      "targetTriangles": 12000,
+      "maxTriangles": 16000,
+      "output": "derived/example-world-model-lod2.glb"
+    }
+  ],
+  "collision": {
+    "mode": "convex-hull",
+    "maxTriangles": 256,
+    "output": "derived/example-world-model-collision.glb"
+  },
+  "textures": {
+    "extract": true,
+    "requireEmbeddedSource": true,
+    "outputDirectory": "derived/textures",
+    "seamPolicy": "uv-atlas-not-tileable",
+    "maxBorderMeanDelta": 0.035,
+    "maxBorderP95Delta": 0.08
+  },
+  "evidence": {
+    "outputDirectory": "evidence",
+    "thumbnailSize": [
+      640,
+      640
+    ],
+    "views": [
+      "iso",
+      "front",
+      "side",
+      "top"
+    ],
+    "contactSheet": "evidence/contact-sheet.png",
+    "buildReport": "evidence/build-report.json",
+    "verificationReport": "evidence/verification-report.json",
+    "artifactIndex": "evidence/artifact-index.json",
+    "sourceLock": "evidence/source-lock.json",
+    "provenance": "provenance.json",
+    "mobileEvidence": "evidence/mobile-evidence.json",
+    "requiredMobileViewports": [
+      "phone-portrait",
+      "phone-landscape"
+    ]
+  },
+  "budgets": {
+    "maxSourceBytes": 67108864,
+    "maxSourceTriangles": 500000,
+    "maxMaterials": 8,
+    "maxTextures": 8,
+    "maxTextureDimension": 2048
+  }
+}

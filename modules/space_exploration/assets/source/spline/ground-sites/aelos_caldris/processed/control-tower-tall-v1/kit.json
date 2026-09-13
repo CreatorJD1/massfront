@@ -1,0 +1,125 @@
+{
+  "$schema": "https://massfront.invalid/schemas/model-kit-v1.json",
+  "schemaVersion": 1,
+  "kitId": "gsite_aelos_caldris_control_tower_tall_v1",
+  "displayName": "Aelos Caldris Control Tower Tall V1",
+  "status": "SOURCE_CANDIDATE",
+  "classification": {
+    "packId": "gsite_aelos_caldris_v1",
+    "catalogEntryId": "gsite_aelos_caldris_control_tower_tall",
+    "planetId": "aelos",
+    "locationId": "aelos_caldris",
+    "category": "hero_landmark",
+    "runtimeReady": false
+  },
+  "source": {
+    "glb": "source/gsite-aelos-caldris-control-tower-tall-source-v1.glb",
+    "expectedSha256": "332ef639646021e499958aa6692634f31af918f12c12d371aab17bf6fe611ff0",
+    "publicSceneUrl": "https://my.spline.design/gsiteaeloscaldriscontroltowertallv1-bk8QmwfvmmOHc0bry9h8syda/",
+    "documentName": "GSITE_AELOS_CALDRIS_CONTROL_TOWER_TALL_V1",
+    "documentId": null,
+    "rootObjectId": "b4651b84-ba85-4d4f-aff2-5c907106171e",
+    "meshObjectIds": [
+      "e60bdcd5-de44-4fee-aea7-6c1b5771b2bc"
+    ],
+    "meshNodeNames": [
+      "MF_AELOS_CALDRIS_CONTROL_TOWER_TALL_LOD0_SOURCE"
+    ],
+    "generation": {
+      "system": "spline-ai-3d",
+      "provider": "Hunyuan3D",
+      "generationId": "b4651b84-ba85-4d4f-aff2-5c907106171e",
+      "sourceImageGenerationId": "cefec610-890c-485d-9ca1-ca640619bdf3",
+      "sourceImageAssetId": "17a897ba-b7e6-41e4-9ad6-12e6376ca76d"
+    },
+    "sceneDigest": "evidence/scene-digest.json",
+    "expectedSceneDigestSha256": "7d286d7af74617c9f737caa1a5650064b917a8dab4c3c104d2b688bd02c85976"
+  },
+  "concept": {
+    "image": "concept/caldris-modular-kit-concept-v1.png",
+    "expectedSha256": "75cb5efbc15ce642533fa67f1c72fbd09a0fd16cd438189e3c73232a16148fab",
+    "pixelsUsedAsTexture": false,
+    "generation": {
+      "system": "imagegen",
+      "generationId": "exec-9afef402-f133-45ff-932d-aa31a637f58f",
+      "role": "approved modular-kit art-direction sheet; tower is concept cell 3",
+      "hunyuanIntermediaryImageGenerationId": "cefec610-890c-485d-9ca1-ca640619bdf3",
+      "hunyuanIntermediaryImageAssetId": "17a897ba-b7e6-41e4-9ad6-12e6376ca76d",
+      "intermediaryExportStatus": "NOT_AVAILABLE_FROM_CURRENT_SPLINE_BRIDGE"
+    }
+  },
+  "normalization": {
+    "sourceUp": "Z",
+    "runtimeUp": "Z",
+    "runtimeForward": "+Y",
+    "scaleMode": "height",
+    "targetMeters": 52,
+    "centerXY": true,
+    "groundOrigin": true,
+    "toleranceMeters": 0.02
+  },
+  "lods": [
+    {
+      "name": "LOD0",
+      "targetTriangles": 140000,
+      "maxTriangles": 150000,
+      "output": "derived/gsite-aelos-caldris-control-tower-tall-v1-lod0.glb"
+    },
+    {
+      "name": "LOD1",
+      "targetTriangles": 60000,
+      "maxTriangles": 65000,
+      "output": "derived/gsite-aelos-caldris-control-tower-tall-v1-lod1.glb"
+    },
+    {
+      "name": "LOD2",
+      "targetTriangles": 24000,
+      "maxTriangles": 28000,
+      "output": "derived/gsite-aelos-caldris-control-tower-tall-v1-lod2.glb"
+    }
+  ],
+  "collision": {
+    "mode": "convex-hull",
+    "maxTriangles": 256,
+    "output": "derived/gsite-aelos-caldris-control-tower-tall-v1-collision.glb"
+  },
+  "textures": {
+    "extract": true,
+    "requireEmbeddedSource": true,
+    "outputDirectory": "derived/textures",
+    "seamPolicy": "uv-atlas-not-tileable",
+    "maxBorderMeanDelta": 0.035,
+    "maxBorderP95Delta": 0.08
+  },
+  "evidence": {
+    "outputDirectory": "evidence",
+    "thumbnailSize": [
+      640,
+      640
+    ],
+    "views": [
+      "iso",
+      "front",
+      "side",
+      "top"
+    ],
+    "contactSheet": "evidence/contact-sheet.png",
+    "buildReport": "evidence/build-report.json",
+    "verificationReport": "evidence/verification-report.json",
+    "artifactIndex": "evidence/artifact-index.json",
+    "sourceLock": "evidence/source-lock.json",
+    "provenance": "provenance.json",
+    "mobileEvidence": "evidence/mobile-evidence.json",
+    "requiredMobileViewports": [
+      "phone-portrait",
+      "phone-landscape"
+    ]
+  },
+  "budgets": {
+    "maxSourceBytes": 67108864,
+    "maxSourceTriangles": 500000,
+    "maxMaterials": 8,
+    "maxTextures": 8,
+    "maxTextureDimension": 2048
+  }
+}

@@ -1,0 +1,1662 @@
+{
+  "schemaRef": "./assets.v1.schema.json#/$defs/conceptCatalog",
+  "schemaVersion": 1,
+  "catalogId": "massfront-concept-reference-library",
+  "vocabularySources": {
+    "faction": [
+      "src/faction-id.js",
+      "modules/space_exploration/src/domain/catalog.js"
+    ],
+    "biomeOrBiodome": [
+      "src/engine/gl.js",
+      "modules/space_exploration/src/ship/procedural_textures.js",
+      "modules/space_exploration/src/domain/catalog.js",
+      "modules/space_exploration/assets/source/concepts/nexus-vii-v1/concept-manifest.json",
+      "modules/space_exploration/assets/source/concepts/characters/uga-anime-human-master-v1/concept-manifest.json",
+      "source-media/concepts/world-environment-v1/concept-manifest.json",
+      "source-media/concepts/biodome-typology-v1/concept-manifest.json",
+      "source-media/concepts/faction-personnel-v1/concept-manifest.json",
+      "source-media/concepts/planetary-landmarks-v1/concept-manifest.json",
+      "source-media/concepts/expedition-manifests-v1/concept-manifest.json",
+      "source-media/concepts/brood-enemy-ecology-v1/concept-manifest.json"
+    ]
+  },
+  "controlledVocabulary": {
+    "contentCategory": [
+      "world",
+      "ship",
+      "faction",
+      "character",
+      "interior",
+      "prop",
+      "planet-location",
+      "vfx-presentation"
+    ],
+    "faction": [
+      "uga",
+      "nova",
+      "dominion",
+      "syndicate",
+      "brood"
+    ],
+    "biomeOrBiodome": [
+      "verdant",
+      "ashland",
+      "arctic",
+      "vespera",
+      "uga_ship_biodome",
+      "uga_ship_interior",
+      "uga_ship_research_industrial",
+      "uga_ship_science_observatory",
+      "uga_ship_expedition_staging",
+      "aelos_north",
+      "aelos_basin",
+      "aelos_coast",
+      "aelos_ridge",
+      "pyraeth_crater",
+      "pyraeth_belt",
+      "pyraeth_caldera",
+      "pyraeth_flats",
+      "nordhall_isles",
+      "nordhall_cliff",
+      "nordhall_frost",
+      "nordhall_peaks",
+      "vespera_spire",
+      "vespera_dunes",
+      "vespera_refinery",
+      "vespera_plateau",
+      "volcanic",
+      "alien_jungle",
+      "cyber_purple",
+      "golden_jade",
+      "terrestrial",
+      "gas",
+      "orbital_arcology",
+      "relay_superstructure",
+      "industrial_station",
+      "derelict_megaframe",
+      "gravitic_observatory",
+      "ancient_subsurface",
+      "abandoned_colony",
+      "subterranean_transit",
+      "brood_hive_depths"
+    ],
+    "intention": [
+      "combat-unit",
+      "production-structure",
+      "civic-exploration-space",
+      "navigation-prop",
+      "world-landmark",
+      "resource-site",
+      "cinematic-character",
+      "damage-state",
+      "ship-layout",
+      "interior-kit",
+      "environment-material-language",
+      "vfx-presentation",
+      "ship-crew",
+      "commander-icon-source",
+      "cliff-rock-kit",
+      "flora-kit",
+      "destructible-cover",
+      "road-bridge-kit",
+      "civic-ruin",
+      "crater-scorch-insert",
+      "ship-resident",
+      "playable-commander",
+      "humanoid-personnel",
+      "strike-team-roster"
+    ],
+    "camera": [
+      "orthographic-multi-view",
+      "isometric-cutaway",
+      "tactical-rts",
+      "tilted-top-down-mobile-rts",
+      "material-board",
+      "character-turnaround",
+      "portrait-three-quarter"
+    ],
+    "scale": [
+      "capital-ship",
+      "room-and-human",
+      "battlefield-region",
+      "human-full-body",
+      "combat-unit",
+      "structure-family",
+      "navigation-prop",
+      "planetary-landmark",
+      "vfx-event"
+    ],
+    "lodProfile": [
+      "ship-hub-static",
+      "interior-modular",
+      "terrain-material-kit",
+      "world-modular-kit",
+      "character-cinematic",
+      "rts-instanced",
+      "prop-standard",
+      "planet-location",
+      "vfx-tiered"
+    ],
+    "runtimeConsumer": [
+      "main-rts",
+      "space-exploration-module",
+      "cinematic-pipeline",
+      "commander-portrait",
+      "content-authoring"
+    ],
+    "productionBiomeOrBiodome": [
+      "ship-civic-biodome",
+      "ship-research-industrial",
+      "ship-expedition-staging",
+      "verdant",
+      "arctic",
+      "ashland",
+      "vespera"
+    ],
+    "productionFaction": [
+      "uga",
+      "nova",
+      "dominion",
+      "syndicate",
+      "brood",
+      "faction-neutral"
+    ],
+    "modelIntention": [
+      "hero-landmark",
+      "modular-kit",
+      "infrastructure",
+      "character",
+      "vehicle-creature",
+      "damage-state",
+      "lod-silhouette",
+      "environment-terrain"
+    ],
+    "forceRelationshipRole": [
+      "uga-institutional",
+      "resident-playable",
+      "faction-neutral",
+      "hostile-ai"
+    ]
+  },
+  "productionCoverage": {
+    "matrixId": "massfront-production-concept-coverage-v1",
+    "reportPath": "source-media/content-library/PRODUCTION_COVERAGE.md",
+    "coverageMeaning": "A covered requirement has an approved source-only modeling reference with explicit biome/biodome, faction, model-intention, scale, camera, runtime-consumer, and LOD declarations; it does not imply a finished runtime asset.",
+    "cells": [
+      {
+        "biomeOrBiodome": "ship-civic-biodome",
+        "faction": "uga",
+        "applicability": "REQUIRED",
+        "requiredModelIntentions": ["hero-landmark", "modular-kit", "infrastructure", "character", "damage-state", "lod-silhouette", "environment-terrain"],
+        "rationale": "The UGA civic district needs coherent landmark architecture, habitat infrastructure, people, damage variants, mobile silhouettes, and interior terrain/material language."
+      },
+      {
+        "biomeOrBiodome": "ship-civic-biodome",
+        "faction": "nova",
+        "applicability": "REQUIRED",
+        "requiredModelIntentions": ["character", "lod-silhouette"],
+        "rationale": "Nova residents and representatives need a readable ship-civic character reference without replacing UGA architecture."
+      },
+      {
+        "biomeOrBiodome": "ship-civic-biodome",
+        "faction": "dominion",
+        "applicability": "REQUIRED",
+        "requiredModelIntentions": ["character", "lod-silhouette"],
+        "rationale": "Dominion residents and representatives need a readable ship-civic character reference without replacing UGA architecture."
+      },
+      {
+        "biomeOrBiodome": "ship-civic-biodome",
+        "faction": "syndicate",
+        "applicability": "REQUIRED",
+        "requiredModelIntentions": ["character", "lod-silhouette"],
+        "rationale": "Syndicate residents and representatives need a readable ship-civic character reference without replacing UGA architecture."
+      },
+      {
+        "biomeOrBiodome": "ship-civic-biodome",
+        "faction": "brood",
+        "applicability": "NOT_APPLICABLE",
+        "requiredModelIntentions": [],
+        "rationale": "Brood is non-playable hostile AI and has no resident, representative, or routine civic role aboard the UGA ship."
+      },
+      {
+        "biomeOrBiodome": "ship-civic-biodome",
+        "faction": "faction-neutral",
+        "applicability": "REQUIRED",
+        "requiredModelIntentions": ["hero-landmark", "modular-kit", "infrastructure", "damage-state", "lod-silhouette", "environment-terrain"],
+        "rationale": "Shared biodome typologies must remain reusable for civilian habitat and exploration spaces without faction-specific surface copying."
+      },
+      {
+        "biomeOrBiodome": "ship-research-industrial",
+        "faction": "uga",
+        "applicability": "REQUIRED",
+        "requiredModelIntentions": ["hero-landmark", "modular-kit", "infrastructure", "character", "damage-state", "lod-silhouette", "environment-terrain"],
+        "rationale": "UGA research, survey, fabrication, and engineering require an authored connected district, role characters, staged construction/damage, and readable LODs."
+      },
+      {
+        "biomeOrBiodome": "ship-research-industrial",
+        "faction": "nova",
+        "applicability": "REQUIRED",
+        "requiredModelIntentions": ["character", "lod-silhouette"],
+        "rationale": "Nova research visitors and technical specialists need readable personnel references while the room architecture remains UGA-owned."
+      },
+      {
+        "biomeOrBiodome": "ship-research-industrial",
+        "faction": "dominion",
+        "applicability": "REQUIRED",
+        "requiredModelIntentions": ["character", "lod-silhouette"],
+        "rationale": "Dominion research visitors and technical specialists need readable personnel references while the room architecture remains UGA-owned."
+      },
+      {
+        "biomeOrBiodome": "ship-research-industrial",
+        "faction": "syndicate",
+        "applicability": "REQUIRED",
+        "requiredModelIntentions": ["character", "lod-silhouette"],
+        "rationale": "Syndicate research visitors and technical specialists need readable personnel references while the room architecture remains UGA-owned."
+      },
+      {
+        "biomeOrBiodome": "ship-research-industrial",
+        "faction": "brood",
+        "applicability": "NOT_APPLICABLE",
+        "requiredModelIntentions": [],
+        "rationale": "Research and industrial architecture remains UGA-owned; visiting-faction content is handled through civic and expedition rosters."
+      },
+      {
+        "biomeOrBiodome": "ship-research-industrial",
+        "faction": "faction-neutral",
+        "applicability": "NOT_APPLICABLE",
+        "requiredModelIntentions": [],
+        "rationale": "These technical rooms are explicitly UGA ship systems rather than a faction-neutral world kit."
+      },
+      {
+        "biomeOrBiodome": "ship-expedition-staging",
+        "faction": "uga",
+        "applicability": "REQUIRED",
+        "requiredModelIntentions": ["hero-landmark", "modular-kit", "infrastructure", "character", "vehicle-creature", "damage-state", "lod-silhouette", "environment-terrain"],
+        "rationale": "The UGA Strike and Expedition Bay must stage commanders, specialists, vehicles, starting structures, support, cargo, and visible facility states."
+      },
+      {
+        "biomeOrBiodome": "ship-expedition-staging",
+        "faction": "nova",
+        "applicability": "REQUIRED",
+        "requiredModelIntentions": ["character", "vehicle-creature", "lod-silhouette"],
+        "rationale": "Nova hired commanders, specialists, and deployment silhouettes must be selectable in the expedition flow."
+      },
+      {
+        "biomeOrBiodome": "ship-expedition-staging",
+        "faction": "dominion",
+        "applicability": "REQUIRED",
+        "requiredModelIntentions": ["character", "vehicle-creature", "lod-silhouette"],
+        "rationale": "Dominion hired commanders, specialists, and deployment silhouettes must be selectable in the expedition flow."
+      },
+      {
+        "biomeOrBiodome": "ship-expedition-staging",
+        "faction": "syndicate",
+        "applicability": "REQUIRED",
+        "requiredModelIntentions": ["character", "vehicle-creature", "lod-silhouette"],
+        "rationale": "Syndicate hired commanders, specialists, and deployment silhouettes must be selectable in the expedition flow."
+      },
+      {
+        "biomeOrBiodome": "ship-expedition-staging",
+        "faction": "brood",
+        "applicability": "NOT_APPLICABLE",
+        "requiredModelIntentions": [],
+        "rationale": "Brood is the hostile AI enemy, never a hired commander, selectable Strike Team member, or routine expedition manifest faction."
+      },
+      {
+        "biomeOrBiodome": "ship-expedition-staging",
+        "faction": "faction-neutral",
+        "applicability": "NOT_APPLICABLE",
+        "requiredModelIntentions": [],
+        "rationale": "Expedition manifests always resolve to UGA or a named resident faction rather than an anonymous faction-neutral force."
+      },
+      {
+        "biomeOrBiodome": "verdant",
+        "faction": "uga",
+        "applicability": "REQUIRED",
+        "requiredModelIntentions": ["hero-landmark", "modular-kit", "infrastructure", "character", "vehicle-creature", "damage-state", "lod-silhouette", "environment-terrain"],
+        "rationale": "UGA expedition content needs a complete Verdant contact and staging language."
+      },
+      {
+        "biomeOrBiodome": "verdant",
+        "faction": "nova",
+        "applicability": "REQUIRED",
+        "requiredModelIntentions": ["modular-kit", "infrastructure", "character", "vehicle-creature", "damage-state", "lod-silhouette", "environment-terrain"],
+        "rationale": "Nova ground content needs Verdant structures, units, terrain contacts, destruction, and mobile LOD readability."
+      },
+      {
+        "biomeOrBiodome": "verdant",
+        "faction": "dominion",
+        "applicability": "REQUIRED",
+        "requiredModelIntentions": ["modular-kit", "infrastructure", "character", "vehicle-creature", "damage-state", "lod-silhouette", "environment-terrain"],
+        "rationale": "Dominion ground content needs Verdant structures, units, terrain contacts, destruction, and mobile LOD readability."
+      },
+      {
+        "biomeOrBiodome": "verdant",
+        "faction": "syndicate",
+        "applicability": "REQUIRED",
+        "requiredModelIntentions": ["modular-kit", "infrastructure", "character", "vehicle-creature", "damage-state", "lod-silhouette", "environment-terrain"],
+        "rationale": "Syndicate ground content needs Verdant structures, units, terrain contacts, destruction, and mobile LOD readability."
+      },
+      {
+        "biomeOrBiodome": "verdant",
+        "faction": "brood",
+        "applicability": "REQUIRED",
+        "requiredModelIntentions": ["modular-kit", "infrastructure", "vehicle-creature", "damage-state", "lod-silhouette", "environment-terrain"],
+        "rationale": "Brood ground content needs Verdant structures, creatures, terrain contacts, destruction, and mobile LOD readability."
+      },
+      {
+        "biomeOrBiodome": "verdant",
+        "faction": "faction-neutral",
+        "applicability": "REQUIRED",
+        "requiredModelIntentions": ["hero-landmark", "modular-kit", "infrastructure", "damage-state", "lod-silhouette", "environment-terrain"],
+        "rationale": "Verdant world composition needs a reusable natural/civic environment kit independent of faction ownership."
+      },
+      {
+        "biomeOrBiodome": "arctic",
+        "faction": "uga",
+        "applicability": "REQUIRED",
+        "requiredModelIntentions": ["hero-landmark", "modular-kit", "infrastructure", "character", "vehicle-creature", "damage-state", "lod-silhouette", "environment-terrain"],
+        "rationale": "UGA expedition content needs a complete Arctic contact and staging language."
+      },
+      {
+        "biomeOrBiodome": "arctic",
+        "faction": "nova",
+        "applicability": "REQUIRED",
+        "requiredModelIntentions": ["modular-kit", "infrastructure", "character", "vehicle-creature", "damage-state", "lod-silhouette", "environment-terrain"],
+        "rationale": "Nova ground content needs Arctic structures, units, terrain contacts, destruction, and mobile LOD readability."
+      },
+      {
+        "biomeOrBiodome": "arctic",
+        "faction": "dominion",
+        "applicability": "REQUIRED",
+        "requiredModelIntentions": ["modular-kit", "infrastructure", "character", "vehicle-creature", "damage-state", "lod-silhouette", "environment-terrain"],
+        "rationale": "Dominion ground content needs Arctic structures, units, terrain contacts, destruction, and mobile LOD readability."
+      },
+      {
+        "biomeOrBiodome": "arctic",
+        "faction": "syndicate",
+        "applicability": "REQUIRED",
+        "requiredModelIntentions": ["modular-kit", "infrastructure", "character", "vehicle-creature", "damage-state", "lod-silhouette", "environment-terrain"],
+        "rationale": "Syndicate ground content needs Arctic structures, units, terrain contacts, destruction, and mobile LOD readability."
+      },
+      {
+        "biomeOrBiodome": "arctic",
+        "faction": "brood",
+        "applicability": "REQUIRED",
+        "requiredModelIntentions": ["modular-kit", "infrastructure", "vehicle-creature", "damage-state", "lod-silhouette", "environment-terrain"],
+        "rationale": "Brood ground content needs Arctic structures, creatures, terrain contacts, destruction, and mobile LOD readability."
+      },
+      {
+        "biomeOrBiodome": "arctic",
+        "faction": "faction-neutral",
+        "applicability": "REQUIRED",
+        "requiredModelIntentions": ["hero-landmark", "modular-kit", "infrastructure", "damage-state", "lod-silhouette", "environment-terrain"],
+        "rationale": "Arctic world composition needs a reusable natural/civic environment kit independent of faction ownership."
+      },
+      {
+        "biomeOrBiodome": "ashland",
+        "faction": "uga",
+        "applicability": "REQUIRED",
+        "requiredModelIntentions": ["hero-landmark", "modular-kit", "infrastructure", "character", "vehicle-creature", "damage-state", "lod-silhouette", "environment-terrain"],
+        "rationale": "UGA expedition content needs a complete Ashland contact and staging language."
+      },
+      {
+        "biomeOrBiodome": "ashland",
+        "faction": "nova",
+        "applicability": "REQUIRED",
+        "requiredModelIntentions": ["modular-kit", "infrastructure", "character", "vehicle-creature", "damage-state", "lod-silhouette", "environment-terrain"],
+        "rationale": "Nova ground content needs Ashland structures, units, terrain contacts, destruction, and mobile LOD readability."
+      },
+      {
+        "biomeOrBiodome": "ashland",
+        "faction": "dominion",
+        "applicability": "REQUIRED",
+        "requiredModelIntentions": ["modular-kit", "infrastructure", "character", "vehicle-creature", "damage-state", "lod-silhouette", "environment-terrain"],
+        "rationale": "Dominion ground content needs Ashland structures, units, terrain contacts, destruction, and mobile LOD readability."
+      },
+      {
+        "biomeOrBiodome": "ashland",
+        "faction": "syndicate",
+        "applicability": "REQUIRED",
+        "requiredModelIntentions": ["modular-kit", "infrastructure", "character", "vehicle-creature", "damage-state", "lod-silhouette", "environment-terrain"],
+        "rationale": "Syndicate ground content needs Ashland structures, units, terrain contacts, destruction, and mobile LOD readability."
+      },
+      {
+        "biomeOrBiodome": "ashland",
+        "faction": "brood",
+        "applicability": "REQUIRED",
+        "requiredModelIntentions": ["modular-kit", "infrastructure", "vehicle-creature", "damage-state", "lod-silhouette", "environment-terrain"],
+        "rationale": "Brood ground content needs Ashland structures, creatures, terrain contacts, destruction, and mobile LOD readability."
+      },
+      {
+        "biomeOrBiodome": "ashland",
+        "faction": "faction-neutral",
+        "applicability": "REQUIRED",
+        "requiredModelIntentions": ["hero-landmark", "modular-kit", "infrastructure", "damage-state", "lod-silhouette", "environment-terrain"],
+        "rationale": "Ashland world composition needs a reusable natural/civic environment kit independent of faction ownership."
+      },
+      {
+        "biomeOrBiodome": "vespera",
+        "faction": "uga",
+        "applicability": "REQUIRED",
+        "requiredModelIntentions": ["hero-landmark", "modular-kit", "infrastructure", "character", "vehicle-creature", "damage-state", "lod-silhouette", "environment-terrain"],
+        "rationale": "UGA expedition content needs a complete Vespera contact and staging language."
+      },
+      {
+        "biomeOrBiodome": "vespera",
+        "faction": "nova",
+        "applicability": "REQUIRED",
+        "requiredModelIntentions": ["modular-kit", "infrastructure", "character", "vehicle-creature", "damage-state", "lod-silhouette", "environment-terrain"],
+        "rationale": "Nova ground content needs Vespera structures, units, terrain contacts, destruction, and mobile LOD readability."
+      },
+      {
+        "biomeOrBiodome": "vespera",
+        "faction": "dominion",
+        "applicability": "REQUIRED",
+        "requiredModelIntentions": ["modular-kit", "infrastructure", "character", "vehicle-creature", "damage-state", "lod-silhouette", "environment-terrain"],
+        "rationale": "Dominion ground content needs Vespera structures, units, terrain contacts, destruction, and mobile LOD readability."
+      },
+      {
+        "biomeOrBiodome": "vespera",
+        "faction": "syndicate",
+        "applicability": "REQUIRED",
+        "requiredModelIntentions": ["modular-kit", "infrastructure", "character", "vehicle-creature", "damage-state", "lod-silhouette", "environment-terrain"],
+        "rationale": "Syndicate ground content needs Vespera structures, units, terrain contacts, destruction, and mobile LOD readability."
+      },
+      {
+        "biomeOrBiodome": "vespera",
+        "faction": "brood",
+        "applicability": "REQUIRED",
+        "requiredModelIntentions": ["modular-kit", "infrastructure", "vehicle-creature", "damage-state", "lod-silhouette", "environment-terrain"],
+        "rationale": "Brood ground content needs Vespera structures, creatures, terrain contacts, destruction, and mobile LOD readability."
+      },
+      {
+        "biomeOrBiodome": "vespera",
+        "faction": "faction-neutral",
+        "applicability": "REQUIRED",
+        "requiredModelIntentions": ["hero-landmark", "modular-kit", "infrastructure", "damage-state", "lod-silhouette", "environment-terrain"],
+        "rationale": "Vespera world composition needs a reusable natural/civic environment kit independent of faction ownership."
+      }
+    ]
+  },
+  "concepts": [
+    {
+      "id": "concept_uga_nexus_vii_ship_cutaway_v1",
+      "title": "NEXUS-VII Exterior and Radial Cutaway",
+      "status": "APPROVED",
+      "contentCategory": "ship",
+      "classification": {
+        "biomeOrBiodome": [],
+        "faction": ["uga"],
+        "intention": ["ship-layout", "civic-exploration-space"]
+      },
+      "forceRelationshipRole": ["uga-institutional"],
+      "coverageScope": "production-matrix",
+      "productionAxes": {
+        "biomeOrBiodome": ["ship-civic-biodome", "ship-research-industrial", "ship-expedition-staging"],
+        "faction": ["uga"],
+        "modelIntention": ["hero-landmark", "infrastructure", "lod-silhouette"]
+      },
+      "brief": "Capital-ship exterior, top cutaway, and longitudinal multi-deck cutaway establishing a central command spine, visible inhabited districts, glass connectors, and consistent human scale.",
+      "evidence": {
+        "sourceOnly": true,
+        "sourcePath": "modules/space_exploration/assets/source/concepts/nexus-vii-v1/nexus-vii-master-concept-v1.png",
+        "plannedPath": "modules/space_exploration/assets/source/concepts/nexus-vii-v1/nexus-vii-master-concept-v1.png",
+        "integrity": {
+          "algorithm": "sha256",
+          "status": "verified",
+          "digest": "d34291dd94d39761d998195e59c76f185cc5956f5b1c7f2b1242865799e6abed"
+        },
+        "approvalStatus": "APPROVED",
+        "pixelUsage": "concept-reference-only",
+        "pixelsUsedAsTexture": false,
+        "generationEvidence": {
+          "system": "imagegen",
+          "executionId": "exec-79309505-28b5-401f-8886-dd04a43246f6"
+        }
+      },
+      "camera": ["orthographic-multi-view"],
+      "scale": {
+        "class": "capital-ship",
+        "reference": "Human-scale rooms, doors, corridors, lifts, and service trunks inside one continuous ship hull."
+      },
+      "lod": {
+        "profile": "ship-hub-static",
+        "requiredLevels": ["LOD0", "LOD1", "LOD2"],
+        "budgetStatus": "MEASURE_BEFORE_AUTHORING"
+      },
+      "runtimeConsumers": ["space-exploration-module", "cinematic-pipeline", "content-authoring"],
+      "modelTargets": ["nexus_vii_ship_hub", "nexus_vii_radial_deck_topology"]
+    },
+    {
+      "id": "concept_uga_command_navigation_ops_kit_v1",
+      "title": "UGA Command, Navigation, and Mission Operations Kit",
+      "status": "APPROVED",
+      "contentCategory": "interior",
+      "classification": {
+        "biomeOrBiodome": [],
+        "faction": ["uga"],
+        "intention": ["civic-exploration-space", "navigation-prop", "interior-kit"]
+      },
+      "forceRelationshipRole": ["uga-institutional"],
+      "coverageScope": "production-matrix",
+      "productionAxes": {
+        "biomeOrBiodome": ["ship-research-industrial"],
+        "faction": ["uga"],
+        "modelIntention": ["modular-kit", "infrastructure", "environment-terrain"]
+      },
+      "brief": "Connected isometric Command Core, Navigation Bridge, Mission Operations, and shared connector-kit reference with distinct floors, walls, light rails, glass corridors, ramps, lift cores, and service trenches.",
+      "evidence": {
+        "sourceOnly": true,
+        "sourcePath": "modules/space_exploration/assets/source/concepts/nexus-vii-v1/command-navigation-mission-ops-concept-v1.png",
+        "plannedPath": "modules/space_exploration/assets/source/concepts/nexus-vii-v1/command-navigation-mission-ops-concept-v1.png",
+        "integrity": {
+          "algorithm": "sha256",
+          "status": "verified",
+          "digest": "7936f0152be10c8b3fb4f19cd46bdeb7c5ef99cf4531a6557ccd9b3d640c7417"
+        },
+        "approvalStatus": "APPROVED",
+        "pixelUsage": "concept-reference-only",
+        "pixelsUsedAsTexture": false,
+        "generationEvidence": {
+          "system": "imagegen",
+          "executionId": "exec-49013fe2-52a7-44e4-a363-15c38b24a7bd"
+        }
+      },
+      "camera": ["isometric-cutaway"],
+      "scale": {
+        "class": "room-and-human",
+        "reference": "A standing human is the authoritative scale reference for doors, consoles, stairs, corridors, and furniture."
+      },
+      "lod": {
+        "profile": "interior-modular",
+        "requiredLevels": ["LOD0", "LOD1", "LOD2"],
+        "budgetStatus": "MEASURE_BEFORE_AUTHORING"
+      },
+      "runtimeConsumers": ["space-exploration-module", "cinematic-pipeline", "content-authoring"],
+      "modelTargets": ["uga_command_core_kit", "uga_navigation_bridge_kit", "uga_mission_operations_kit", "uga_shared_connector_kit"]
+    },
+    {
+      "id": "concept_world_verdant_ashland_language_v1",
+      "title": "Verdant and Ashland Battlefield Material Language",
+      "status": "APPROVED",
+      "contentCategory": "world",
+      "classification": {
+        "biomeOrBiodome": ["verdant", "ashland"],
+        "faction": [],
+        "intention": ["world-landmark", "resource-site", "damage-state", "environment-material-language"]
+      },
+      "forceRelationshipRole": ["faction-neutral"],
+      "coverageScope": "production-matrix",
+      "productionAxes": {
+        "biomeOrBiodome": ["verdant", "ashland"],
+        "faction": ["faction-neutral"],
+        "modelIntention": ["damage-state", "environment-terrain"]
+      },
+      "brief": "Tactical RTS comparison board for readable roads, plateaus, shoreline, resource pads, volcanic fractures, impact craters, scorch states, and close-up ground material families.",
+      "evidence": {
+        "sourceOnly": true,
+        "sourcePath": "source-media/concepts/planet-map-v2/verdant-ashland-map-concept-v1.png",
+        "plannedPath": "source-media/concepts/planet-map-v2/verdant-ashland-map-concept-v1.png",
+        "integrity": {
+          "algorithm": "sha256",
+          "status": "verified",
+          "digest": "4e628cca810a1c4146a9a629e7aac63e6851fc378fea1687d3445f233b2d5d1b"
+        },
+        "approvalStatus": "APPROVED",
+        "pixelUsage": "concept-reference-only",
+        "pixelsUsedAsTexture": false,
+        "generationEvidence": {
+          "system": "imagegen",
+          "executionId": "exec-63664c01-9d41-4f10-ac9c-19c28ee43036"
+        }
+      },
+      "camera": ["tactical-rts", "material-board"],
+      "scale": {
+        "class": "battlefield-region",
+        "reference": "Road width, resource footprint, crater size, and terrain detail must remain readable at tactical and close RTS zoom."
+      },
+      "lod": {
+        "profile": "terrain-material-kit",
+        "requiredLevels": ["MACRO", "MATERIAL", "MICRO"],
+        "budgetStatus": "MEASURE_BEFORE_AUTHORING"
+      },
+      "runtimeConsumers": ["main-rts", "space-exploration-module", "content-authoring"],
+      "modelTargets": ["verdant_world_kit", "ashland_world_kit", "resource_site_kit", "ground_damage_state_kit"]
+    },
+    {
+      "id": "concept_world_environment_modular_kit_v1",
+      "title": "Verdant, Arctic, Ashland, and Vespera Modular World Kit",
+      "status": "APPROVED",
+      "contentCategory": "world",
+      "contentSubtype": "environment.world.modular-kit",
+      "classification": {
+        "biomeOrBiodome": ["verdant", "arctic", "ashland", "vespera"],
+        "faction": [],
+        "intention": [
+          "world-landmark",
+          "cliff-rock-kit",
+          "flora-kit",
+          "destructible-cover",
+          "road-bridge-kit",
+          "civic-ruin",
+          "resource-site",
+          "crater-scorch-insert",
+          "damage-state"
+        ]
+      },
+      "forceRelationshipRole": ["faction-neutral"],
+      "coverageScope": "production-matrix",
+      "productionAxes": {
+        "biomeOrBiodome": ["verdant", "arctic", "ashland", "vespera"],
+        "faction": ["faction-neutral"],
+        "modelIntention": ["hero-landmark", "modular-kit", "infrastructure", "damage-state", "lod-silhouette", "environment-terrain"]
+      },
+      "brief": "Faction-neutral modular environment kit covering Verdant, Arctic, Ashland, and Vespera cliff segments, large and small rocks, flora, staged destructible cover, road and bridge edges, civic ruins, resource foundations, crater and scorch inserts, and hero landmarks on a shared 4 m socket grid.",
+      "evidence": {
+        "sourceOnly": true,
+        "sourcePath": "source-media/concepts/world-environment-v1/verdant-arctic-ashland-vespera-world-kit-v1.png",
+        "plannedPath": "source-media/concepts/world-environment-v1/verdant-arctic-ashland-vespera-world-kit-v1.png",
+        "integrity": {
+          "algorithm": "sha256",
+          "status": "verified",
+          "digest": "f48f802c5a5ad4b3ae36d76e668cda281d27f01989a57c557da49fbf1d9777fd"
+        },
+        "bytes": 2541078,
+        "resolution": [1536, 1024],
+        "approvalStatus": "APPROVED",
+        "pixelUsage": "concept-reference-only",
+        "pixelsUsedAsTexture": false,
+        "generationEvidence": {
+          "system": "imagegen",
+          "executionId": "exec-b8f8d77f-fb82-476c-8595-c27a4f71c65e"
+        }
+      },
+      "camera": ["tilted-top-down-mobile-rts", "orthographic-multi-view", "material-board"],
+      "scale": {
+        "class": "battlefield-region",
+        "reference": "A 4 m modular grid, 2 m height step, 1.8 m human, and 8 m light-tank references govern shared sockets and mobile tactical readability."
+      },
+      "lod": {
+        "profile": "world-modular-kit",
+        "requiredLevels": ["LOD0", "LOD1", "LOD2"],
+        "budgetStatus": "VERIFY_AGAINST_500_1000_UNIT_MOBILE_BATTLE"
+      },
+      "runtimeConsumers": ["main-rts", "space-exploration-module", "content-authoring"],
+      "modelTargets": [
+        "verdant_environment_kit",
+        "arctic_environment_kit",
+        "ashland_environment_kit",
+        "vespera_environment_kit",
+        "shared_cliff_rock_kit",
+        "shared_flora_kit",
+        "shared_destructible_cover_kit",
+        "shared_road_bridge_kit",
+        "shared_civic_ruin_kit",
+        "shared_resource_site_kit",
+        "shared_crater_scorch_insert_kit"
+      ]
+    },
+    {
+      "id": "concept_nexus_vii_deck_c_biodome_civic_v1",
+      "title": "NEXUS-VII Deck C Biodome and Civic District",
+      "status": "APPROVED",
+      "contentCategory": "interior",
+      "classification": {
+        "biomeOrBiodome": ["uga_ship_biodome"],
+        "faction": ["uga"],
+        "intention": ["civic-exploration-space", "interior-kit", "navigation-prop", "world-landmark"]
+      },
+      "forceRelationshipRole": ["uga-institutional"],
+      "coverageScope": "production-matrix",
+      "productionAxes": {
+        "biomeOrBiodome": ["ship-civic-biodome"],
+        "faction": ["uga"],
+        "modelIntention": ["hero-landmark", "modular-kit", "infrastructure", "environment-terrain"]
+      },
+      "brief": "Multi-level inhabited Deck C biodome with habitat towers, medical complex, Coalition Embassy, cargo and logistics floor, civic spine, hydroponics, service roads, glass pressure tunnels, lift towers, and a utility undercroft at consistent human scale.",
+      "evidence": {
+        "sourceOnly": true,
+        "sourcePath": "modules/space_exploration/assets/source/concepts/nexus-vii-v1/deck-c-biodome-civic-concept-v1.png",
+        "plannedPath": "modules/space_exploration/assets/source/concepts/nexus-vii-v1/deck-c-biodome-civic-concept-v1.png",
+        "integrity": {
+          "algorithm": "sha256",
+          "status": "verified",
+          "digest": "b972f4b35ebf196dc7a1f785d3e7ecaad44c909f7a6d636c2eaae601eab9a39b"
+        },
+        "approvalStatus": "APPROVED",
+        "pixelUsage": "concept-reference-only",
+        "pixelsUsedAsTexture": false,
+        "generationEvidence": {
+          "system": "imagegen",
+          "executionId": "exec-84c769f7-0f9c-43bf-ab68-b97c63a6a4ab"
+        }
+      },
+      "camera": ["isometric-cutaway", "orthographic-multi-view", "material-board"],
+      "scale": {
+        "class": "room-and-human",
+        "reference": "The sheet declares a 1.8 m human reference, 2.2 m doors, 1.8 m railings, and vertically separated civic, residential, service, and utility levels."
+      },
+      "lod": {
+        "profile": "interior-modular",
+        "requiredLevels": ["DISTRICT", "ROOM", "PROP"],
+        "budgetStatus": "MEASURE_BEFORE_AUTHORING"
+      },
+      "runtimeConsumers": ["space-exploration-module", "cinematic-pipeline", "content-authoring"],
+      "modelTargets": ["nexus_vii_deck_c_biodome", "uga_habitat_block_kit", "uga_medical_complex", "uga_coalition_embassy", "uga_logistics_cargo", "uga_glass_tunnel_kit", "uga_service_road_kit", "uga_utility_undercroft"]
+    },
+    {
+      "id": "concept_nova_aelos_verdant_arctic_model_sheet_v1",
+      "title": "Nova Aelos Verdant and Arctic Model Sheet",
+      "status": "APPROVED",
+      "contentCategory": "faction",
+      "classification": {
+        "biomeOrBiodome": ["verdant", "arctic", "aelos_north", "aelos_ridge"],
+        "faction": ["nova"],
+        "intention": ["production-structure", "combat-unit", "cinematic-character", "damage-state", "environment-material-language"]
+      },
+      "forceRelationshipRole": ["resident-playable"],
+      "coverageScope": "production-matrix",
+      "productionAxes": {
+        "biomeOrBiodome": ["verdant", "arctic"],
+        "faction": ["nova"],
+        "modelIntention": ["modular-kit", "infrastructure", "character", "vehicle-creature", "damage-state", "lod-silhouette", "environment-terrain"]
+      },
+      "brief": "Nova command and production structure, research outpost, modular roads and foundations, armored ground vehicle, utility drone, sealed-helmet operator, Verdant and Arctic contact variants, damage state, material palette, top-down read, and LOD intent.",
+      "evidence": {
+        "sourceOnly": true,
+        "sourcePath": "source-media/concepts/faction-biome-v1/nova-aelos-verdant-arctic-model-sheet-v1.png",
+        "plannedPath": "source-media/concepts/faction-biome-v1/nova-aelos-verdant-arctic-model-sheet-v1.png",
+        "integrity": {
+          "algorithm": "sha256",
+          "status": "verified",
+          "digest": "cfc49fe3e9ef388682104410a9bf27e6f4c3c593af7b4a11aa90c904faa0bd88"
+        },
+        "approvalStatus": "APPROVED",
+        "pixelUsage": "concept-reference-only",
+        "pixelsUsedAsTexture": false,
+        "generationEvidence": {
+          "system": "imagegen",
+          "executionId": "exec-13e7b8f3-0216-4d42-9276-eccbbe607a64"
+        }
+      },
+      "camera": ["orthographic-multi-view", "character-turnaround", "material-board"],
+      "scale": {
+        "class": "structure-family",
+        "reference": "A shared 1.8 m operator, three-meter scale strip, and top-down comparison bind structures, vehicle, drone, and character to gameplay scale."
+      },
+      "lod": {
+        "profile": "rts-instanced",
+        "requiredLevels": ["LOD0", "LOD1", "LOD2"],
+        "budgetStatus": "USE_ART_V2_BUDGET"
+      },
+      "runtimeConsumers": ["main-rts", "space-exploration-module", "cinematic-pipeline", "content-authoring"],
+      "modelTargets": ["nova_command_production_structure", "nova_field_research_outpost", "nova_road_foundation_kit", "nova_armored_ground_vehicle", "nova_utility_drone", "nova_helmeted_operator", "nova_damage_state"]
+    },
+    {
+      "id": "concept_dominion_pyraeth_ashland_model_sheet_v1",
+      "title": "Dominion Pyraeth Ashland Model Sheet",
+      "status": "APPROVED",
+      "contentCategory": "faction",
+      "classification": {
+        "biomeOrBiodome": ["vespera", "ashland", "pyraeth_belt"],
+        "faction": ["dominion"],
+        "intention": ["production-structure", "combat-unit", "cinematic-character", "damage-state", "environment-material-language"]
+      },
+      "forceRelationshipRole": ["resident-playable"],
+      "coverageScope": "production-matrix",
+      "productionAxes": {
+        "biomeOrBiodome": ["ashland"],
+        "faction": ["dominion"],
+        "modelIntention": ["modular-kit", "infrastructure", "character", "vehicle-creature", "damage-state", "lod-silhouette", "environment-terrain"]
+      },
+      "brief": "Dominion command foundry, artillery annex, industrial road and foundation kit, heavy logistics vehicle, repair drone, sealed-helmet operator, collapsed foundry state, Ashland contact materials, scale comparison, and LOD intent.",
+      "evidence": {
+        "sourceOnly": true,
+        "sourcePath": "source-media/concepts/faction-biome-v1/dominion-pyraeth-ashland-model-sheet-v1.png",
+        "plannedPath": "source-media/concepts/faction-biome-v1/dominion-pyraeth-ashland-model-sheet-v1.png",
+        "integrity": {
+          "algorithm": "sha256",
+          "status": "verified",
+          "digest": "867660efe624659ac50e1ec892758e619d4b1e1f6ca772f9dc8cd7c13becc346"
+        },
+        "approvalStatus": "APPROVED",
+        "pixelUsage": "concept-reference-only",
+        "pixelsUsedAsTexture": false,
+        "generationEvidence": {
+          "system": "imagegen",
+          "executionId": "exec-241d5181-56a8-4148-bc42-d3ae2de09fc1"
+        }
+      },
+      "camera": ["orthographic-multi-view", "character-turnaround", "material-board"],
+      "scale": {
+        "class": "structure-family",
+        "reference": "The sheet uses a 1.8 m human reference and matched front, side, three-quarter, top, readability, and LOD views."
+      },
+      "lod": {
+        "profile": "rts-instanced",
+        "requiredLevels": ["LOD0", "LOD1", "LOD2"],
+        "budgetStatus": "USE_ART_V2_BUDGET"
+      },
+      "runtimeConsumers": ["main-rts", "space-exploration-module", "cinematic-pipeline", "content-authoring"],
+      "modelTargets": ["dominion_command_foundry", "dominion_artillery_annex", "dominion_road_foundation_kit", "dominion_heavy_logistics_vehicle", "dominion_repair_drone", "dominion_helmeted_operator", "dominion_collapsed_foundry"]
+    },
+    {
+      "id": "concept_syndicate_nordhall_arctic_model_sheet_v1",
+      "title": "Syndicate Nordhall Arctic Model Sheet",
+      "status": "APPROVED",
+      "contentCategory": "faction",
+      "classification": {
+        "biomeOrBiodome": ["arctic", "nordhall_isles", "nordhall_cliff"],
+        "faction": ["syndicate"],
+        "intention": ["production-structure", "combat-unit", "cinematic-character", "damage-state", "environment-material-language"]
+      },
+      "forceRelationshipRole": ["resident-playable"],
+      "coverageScope": "production-matrix",
+      "productionAxes": {
+        "biomeOrBiodome": ["arctic"],
+        "faction": ["syndicate"],
+        "modelIntention": ["modular-kit", "infrastructure", "character", "vehicle-creature", "damage-state", "lod-silhouette", "environment-terrain"]
+      },
+      "brief": "Syndicate concealed command node, sensor and drone annex, ice-compatible infrastructure, low-profile hunter vehicle, stealth drone, sealed-helmet field agent, failing hologram state, Arctic contacts, scale, and top-down read.",
+      "evidence": {
+        "sourceOnly": true,
+        "sourcePath": "source-media/concepts/faction-biome-v1/syndicate-nordhall-arctic-model-sheet-v1.png",
+        "plannedPath": "source-media/concepts/faction-biome-v1/syndicate-nordhall-arctic-model-sheet-v1.png",
+        "integrity": {
+          "algorithm": "sha256",
+          "status": "verified",
+          "digest": "8bc081f3ea7d1cca7624584f0a73d791251fc3db4c6d23d7706ca7b1431c8862"
+        },
+        "approvalStatus": "APPROVED",
+        "pixelUsage": "concept-reference-only",
+        "pixelsUsedAsTexture": false,
+        "generationEvidence": {
+          "system": "imagegen",
+          "executionId": "exec-3c039b56-f3e2-4e9c-9360-9de959021cf0"
+        }
+      },
+      "camera": ["orthographic-multi-view", "character-turnaround", "material-board"],
+      "scale": {
+        "class": "structure-family",
+        "reference": "A 1.8 m human and 5/10/20 m scale bar anchor structure, vehicle, drone, and agent size for tactical top-down use."
+      },
+      "lod": {
+        "profile": "rts-instanced",
+        "requiredLevels": ["LOD0", "LOD1", "LOD2"],
+        "budgetStatus": "USE_ART_V2_BUDGET"
+      },
+      "runtimeConsumers": ["main-rts", "space-exploration-module", "cinematic-pipeline", "content-authoring"],
+      "modelTargets": ["syndicate_veil_command_node", "syndicate_sensor_drone_annex", "syndicate_arctic_infrastructure_kit", "syndicate_hunter_vehicle", "syndicate_stealth_drone", "syndicate_helmeted_agent", "syndicate_failing_hologram_state"]
+    },
+    {
+      "id": "concept_brood_vespera_ashland_verdant_model_sheet_v1",
+      "title": "Brood Ashland and Verdant Hostile-AI Model Sheet",
+      "status": "APPROVED",
+      "contentCategory": "faction",
+      "classification": {
+        "biomeOrBiodome": ["ashland", "verdant"],
+        "faction": ["brood"],
+        "intention": ["production-structure", "combat-unit", "damage-state", "environment-material-language"]
+      },
+      "forceRelationshipRole": ["hostile-ai"],
+      "coverageScope": "production-matrix",
+      "productionAxes": {
+        "biomeOrBiodome": ["verdant", "ashland"],
+        "faction": ["brood"],
+        "modelIntention": ["modular-kit", "infrastructure", "vehicle-creature", "damage-state", "lod-silhouette", "environment-terrain"]
+      },
+      "brief": "Non-humanoid hostile-AI Brood primary hive, spawning annex, organic infrastructure, assault creature, scout-worker organism, ruptured burning state, Ashland and Verdant ground contacts, scale, top-down read, and LOD intent. Brood is non-playable, a galactic enemy of all factions, and the primary UGA enemy. Any humanoid-looking sealed figure on the omnibus sheet is a non-canonical scale placeholder and is excluded from modeling targets.",
+      "evidence": {
+        "sourceOnly": true,
+        "sourcePath": "source-media/concepts/faction-biome-v1/brood-vespera-ashland-verdant-model-sheet-v1.png",
+        "plannedPath": "source-media/concepts/faction-biome-v1/brood-vespera-ashland-verdant-model-sheet-v1.png",
+        "integrity": {
+          "algorithm": "sha256",
+          "status": "verified",
+          "digest": "26c907327a0e21e79d57247ada2ce983f4e299f7461aedea0c58411785969c64"
+        },
+        "bytes": 2554664,
+        "resolution": [1536, 1024],
+        "approvalStatus": "APPROVED",
+        "pixelUsage": "concept-reference-only",
+        "pixelsUsedAsTexture": false,
+        "generationEvidence": {
+          "system": "imagegen",
+          "executionId": "exec-8763f7e9-f5a7-4a5f-9b09-9df533f1a6b8",
+          "manifestPath": "source-media/concepts/faction-biome-v1/concept-manifest.json",
+          "manifestConceptId": "brood_vespera_ashland_verdant_model_sheet_v1"
+        }
+      },
+      "camera": ["orthographic-multi-view", "tactical-rts", "material-board"],
+      "scale": {
+        "class": "structure-family",
+        "reference": "Explicit 80 m hive, 45 m annex, 18 m carrier, 3 m stalker, and 1.8 m human references anchor strategic and tactical readability."
+      },
+      "lod": {
+        "profile": "rts-instanced",
+        "requiredLevels": ["LOD0", "LOD1", "LOD2"],
+        "budgetStatus": "USE_ART_V2_BUDGET"
+      },
+      "runtimeConsumers": ["main-rts", "space-exploration-module", "cinematic-pipeline", "content-authoring"],
+      "modelTargets": ["brood_primary_hive", "brood_spawning_annex", "brood_organic_infrastructure_kit", "brood_assault_carrier", "brood_scout_worker", "brood_ruptured_burning_state"]
+    },
+    {
+      "id": "concept_brood_galactic_enemy_ecology_model_sheet_v1",
+      "title": "Brood Galactic Enemy Ecology Model Sheet",
+      "status": "APPROVED",
+      "contentCategory": "faction",
+      "contentSubtype": "faction.hostile-ai.brood-ecology",
+      "classification": {
+        "biomeOrBiodome": ["verdant", "arctic", "ashland", "vespera", "brood_hive_depths"],
+        "faction": ["brood"],
+        "intention": ["combat-unit", "production-structure", "world-landmark", "damage-state", "environment-material-language"]
+      },
+      "forceRelationshipRole": ["hostile-ai"],
+      "coverageScope": "production-matrix",
+      "productionAxes": {
+        "biomeOrBiodome": ["verdant", "arctic", "ashland", "vespera"],
+        "faction": ["brood"],
+        "modelIntention": ["modular-kit", "infrastructure", "vehicle-creature", "damage-state", "lod-silhouette", "environment-terrain"]
+      },
+      "brief": "Canonical non-humanoid Brood enemy ecology for Verdant, Arctic, Ashland, Vespera, and the outside-matrix Hive Depths: hive-heart objectives, spawning annexes and tunnels, worker-scout, assault, heavy carrier/siege, and aerial spore organisms, infestation terrain, active through dead or burning states, and mobile LOD silhouettes. The same source includes outside-matrix UGA containment and decontamination opposition props. Brood is strictly hostile AI, non-playable, non-humanoid, an enemy of UGA, Nova, Dominion, and Syndicate, and the primary UGA enemy; it grants no character, resident, commander, or Strike Team coverage.",
+      "evidence": {
+        "sourceOnly": true,
+        "sourcePath": "source-media/concepts/brood-enemy-ecology-v1/brood-galactic-enemy-ecology-model-sheet-v1.png",
+        "plannedPath": "source-media/concepts/brood-enemy-ecology-v1/brood-galactic-enemy-ecology-model-sheet-v1.png",
+        "integrity": {
+          "algorithm": "sha256",
+          "status": "verified",
+          "digest": "f3ce8661e5239ecfe1419432481a01cea32cecd44c5c5856f00d8ab1ca161fa3"
+        },
+        "bytes": 2457494,
+        "resolution": [1536, 1024],
+        "approvalStatus": "APPROVED",
+        "pixelUsage": "concept-reference-only",
+        "pixelsUsedAsTexture": false,
+        "generationEvidence": {
+          "system": "imagegen",
+          "executionId": "exec-2fab670a-4e3a-4f61-815b-78a424ae98ff",
+          "manifestPath": "source-media/concepts/brood-enemy-ecology-v1/concept-manifest.json",
+          "manifestConceptId": "brood_galactic_enemy_ecology_model_sheet_v1"
+        }
+      },
+      "camera": ["orthographic-multi-view", "tilted-top-down-mobile-rts", "tactical-rts", "material-board"],
+      "scale": {
+        "class": "structure-family",
+        "reference": "Small organisms, combat creatures, heavy carrier/siege organisms, hive landmarks, tunnel modules, terrain infestation, and a human opposition scale bind ecology assets to tactical cells and battlefield regions."
+      },
+      "lod": {
+        "profile": "rts-instanced",
+        "requiredLevels": ["LOD0", "LOD1", "LOD2"],
+        "budgetStatus": "VERIFY_HOSTILE_ECOLOGY_PHONE_AND_TACTICAL_SILHOUETTES"
+      },
+      "runtimeConsumers": ["main-rts", "space-exploration-module", "cinematic-pipeline", "content-authoring"],
+      "modelTargets": ["brood_hive_heart", "brood_spawning_annex_tunnel_kit", "brood_worker_scout_organism", "brood_assault_organism", "brood_heavy_carrier_siege_organism", "brood_aerial_spore_organism", "brood_infestation_terrain_kit", "uga_containment_decontamination_opposition_prop_kit", "brood_active_wounded_ruptured_burning_dead_states", "brood_mobile_lod_silhouettes"]
+    },
+    {
+      "id": "concept_uga_expedition_specialist_turnaround_v1",
+      "title": "UGA Expedition Specialist Full-Body Turnaround",
+      "status": "APPROVED",
+      "contentCategory": "character",
+      "classification": {
+        "biomeOrBiodome": ["uga_ship_interior"],
+        "faction": ["uga"],
+        "intention": ["cinematic-character", "ship-crew", "commander-icon-source", "humanoid-personnel", "strike-team-roster"]
+      },
+      "forceRelationshipRole": ["uga-institutional"],
+      "coverageScope": "production-matrix",
+      "productionAxes": {
+        "biomeOrBiodome": ["ship-expedition-staging"],
+        "faction": ["uga"],
+        "modelIntention": ["character", "lod-silhouette"]
+      },
+      "brief": "Modern anime cel-shaded UGA expedition specialist shown full-body in strict T-pose from front, left side, back, and three-quarter views. The face remains behind an opaque sealed helmet because facial animation is disabled.",
+      "characterContract": {
+        "fullBody": true,
+        "bindPose": "strict-t-pose",
+        "views": ["front", "left-side", "back", "three-quarter"],
+        "presentation": "sealed-helmet",
+        "faceAnimationEnabled": false,
+        "commanderIconSource": true
+      },
+      "evidence": {
+        "sourceOnly": true,
+        "sourcePath": "modules/space_exploration/assets/source/concepts/characters/uga-anime-human-master-v1/uga-expedition-specialist-turnaround-v1.png",
+        "plannedPath": "modules/space_exploration/assets/source/concepts/characters/uga-anime-human-master-v1/uga-expedition-specialist-turnaround-v1.png",
+        "integrity": {
+          "algorithm": "sha256",
+          "status": "verified",
+          "digest": "ab31ed58d2132f42236840a5a33dff6a45b8c5f6841e523e6f304508b9edb75f"
+        },
+        "bytes": 1740217,
+        "resolution": [1632, 963],
+        "approvalStatus": "APPROVED",
+        "pixelUsage": "concept-reference-only",
+        "pixelsUsedAsTexture": false,
+        "generationEvidence": {
+          "system": "imagegen",
+          "executionId": "exec-3b28322a-c295-46fd-a9b2-7372dbcdd92a"
+        }
+      },
+      "camera": ["orthographic-multi-view", "character-turnaround", "portrait-three-quarter"],
+      "scale": {
+        "class": "human-full-body",
+        "reference": "Consistent full-body proportions and foot plane across front, side, back, and three-quarter strict-T-pose views."
+      },
+      "lod": {
+        "profile": "character-cinematic",
+        "requiredLevels": ["LOD0_25000_40000", "LOD1_8000_12000", "LOD2_2500_3000"],
+        "budgetStatus": "CLEAN_REBUILD_REQUIRED"
+      },
+      "runtimeConsumers": ["space-exploration-module", "cinematic-pipeline", "commander-portrait", "content-authoring"],
+      "modelTargets": ["uga_expedition_specialist_clean_rebuild", "uga_commander_icon_source"]
+    },
+    {
+      "id": "concept_nexus_vii_deck_b_research_industrial_v1",
+      "title": "NEXUS-VII Deck B Research, Fabrication, and Engineering",
+      "status": "APPROVED",
+      "contentCategory": "interior",
+      "contentSubtype": "interior.ship.research-industrial",
+      "classification": {
+        "biomeOrBiodome": ["uga_ship_research_industrial"],
+        "faction": ["uga"],
+        "intention": ["civic-exploration-space", "interior-kit", "navigation-prop", "damage-state"]
+      },
+      "forceRelationshipRole": ["uga-institutional"],
+      "coverageScope": "production-matrix",
+      "productionAxes": {
+        "biomeOrBiodome": ["ship-research-industrial"],
+        "faction": ["uga"],
+        "modelIntention": ["modular-kit", "infrastructure", "damage-state", "environment-terrain"]
+      },
+      "brief": "Connected Deck B reference for the Research Directorate, Fabrication and Armory, Engineering and Drive, multi-level work floors, fabrication cells, service trunks, district-specific surface families, and authored construction stages.",
+      "evidence": {
+        "sourceOnly": true,
+        "sourcePath": "modules/space_exploration/assets/source/concepts/nexus-vii-v1/deck-b-research-fabrication-engineering-concept-v1.png",
+        "plannedPath": "modules/space_exploration/assets/source/concepts/nexus-vii-v1/deck-b-research-fabrication-engineering-concept-v1.png",
+        "integrity": {
+          "algorithm": "sha256",
+          "status": "verified",
+          "digest": "1727b8fe949bed148f4d5d9cbab381fc99a82faf19e6752662e11297da20425f"
+        },
+        "bytes": 3038915,
+        "resolution": [1536, 1024],
+        "approvalStatus": "APPROVED",
+        "pixelUsage": "concept-reference-only",
+        "pixelsUsedAsTexture": false,
+        "generationEvidence": {
+          "system": "imagegen",
+          "manifestPath": "modules/space_exploration/assets/source/concepts/nexus-vii-v1/concept-manifest.json",
+          "manifestConceptId": "deck_b_research_fabrication_engineering_concept_v1"
+        }
+      },
+      "camera": ["isometric-cutaway", "orthographic-multi-view", "material-board"],
+      "scale": {
+        "class": "room-and-human",
+        "reference": "A one-meter planning grid and 1.8 m personnel references govern work floors, stairs, railings, machinery clearances, and construction plots."
+      },
+      "lod": {
+        "profile": "interior-modular",
+        "requiredLevels": ["LOD0", "LOD1", "LOD2"],
+        "budgetStatus": "MEASURE_BEFORE_AUTHORING"
+      },
+      "runtimeConsumers": ["space-exploration-module", "cinematic-pipeline", "content-authoring"],
+      "modelTargets": ["uga_research_directorate", "uga_fabrication_armory", "uga_engineering_drive", "uga_research_industrial_connector_kit", "uga_authored_build_plot_stages"]
+    },
+    {
+      "id": "concept_nexus_vii_survey_lab_v1",
+      "title": "NEXUS-VII Survey Lab and Observatory",
+      "status": "APPROVED",
+      "contentCategory": "interior",
+      "contentSubtype": "interior.ship.survey-observatory",
+      "classification": {
+        "biomeOrBiodome": ["uga_ship_science_observatory"],
+        "faction": ["uga"],
+        "intention": ["civic-exploration-space", "interior-kit", "navigation-prop"]
+      },
+      "forceRelationshipRole": ["uga-institutional"],
+      "coverageScope": "production-matrix",
+      "productionAxes": {
+        "biomeOrBiodome": ["ship-research-industrial"],
+        "faction": ["uga"],
+        "modelIntention": ["hero-landmark", "modular-kit", "infrastructure", "lod-silhouette"]
+      },
+      "brief": "Survey and observatory reference with a planetary scan theater, anomaly-analysis platform, probe racks, sample processing, contained anomaly chamber, glass connector, human-scale science props, and LOD-readable instruments.",
+      "evidence": {
+        "sourceOnly": true,
+        "sourcePath": "modules/space_exploration/assets/source/concepts/nexus-vii-v1/survey-lab-concept-v1.png",
+        "plannedPath": "modules/space_exploration/assets/source/concepts/nexus-vii-v1/survey-lab-concept-v1.png",
+        "integrity": {
+          "algorithm": "sha256",
+          "status": "verified",
+          "digest": "3718c60d14b414b62b1cd7ec4a82fcca5e3e0d0dfe636b40c6bbdfcda14d85d5"
+        },
+        "bytes": 2901918,
+        "resolution": [1536, 1024],
+        "approvalStatus": "APPROVED",
+        "pixelUsage": "concept-reference-only",
+        "pixelsUsedAsTexture": false,
+        "generationEvidence": {
+          "system": "imagegen",
+          "manifestPath": "modules/space_exploration/assets/source/concepts/nexus-vii-v1/concept-manifest.json",
+          "manifestConceptId": "survey_lab_concept_v1"
+        }
+      },
+      "camera": ["isometric-cutaway", "orthographic-multi-view", "material-board"],
+      "scale": {
+        "class": "room-and-human",
+        "reference": "A 1.8 m science specialist anchors console ergonomics, probe-rack clearances, chamber guarding, circulation, and readable instrument silhouettes."
+      },
+      "lod": {
+        "profile": "interior-modular",
+        "requiredLevels": ["LOD0", "LOD1", "LOD2"],
+        "budgetStatus": "MEASURE_BEFORE_AUTHORING"
+      },
+      "runtimeConsumers": ["space-exploration-module", "cinematic-pipeline", "content-authoring"],
+      "modelTargets": ["uga_planetary_scan_theater", "uga_anomaly_analysis_platform", "uga_probe_rack_kit", "uga_sample_processing_station", "uga_contained_anomaly_chamber", "uga_survey_connector_kit"]
+    },
+    {
+      "id": "concept_nexus_vii_strike_expedition_bay_v1",
+      "title": "NEXUS-VII Strike and Expedition Bay",
+      "status": "REJECTED",
+      "contentCategory": "interior",
+      "contentSubtype": "interior.ship.expedition-staging",
+      "classification": {
+        "biomeOrBiodome": ["uga_ship_expedition_staging"],
+        "faction": ["uga"],
+        "intention": ["civic-exploration-space", "interior-kit", "navigation-prop", "combat-unit", "damage-state"]
+      },
+      "forceRelationshipRole": ["uga-institutional"],
+      "coverageScope": "outside-production-matrix",
+      "canonicalDisposition": {
+        "status": "SUPERSEDED_REJECTED",
+        "reason": "Superseded as modeling authority by the integrated shared Base Deployer and Striker hangar v2, which fixes the room, deployment manifest, aircraft, HQ transformation, personnel, and cargo relationship in one authored bay.",
+        "replacementConceptId": "concept_nexus_vii_strike_expedition_bay_shared_base_deployer_v2"
+      },
+      "brief": "Superseded XCOM-style mustering and deployment bay reference retained only as hashed source evidence; it is not the current modeling authority.",
+      "evidence": {
+        "sourceOnly": true,
+        "sourcePath": "modules/space_exploration/assets/source/concepts/nexus-vii-v1/strike-expedition-bay-concept-v1.png",
+        "plannedPath": "modules/space_exploration/assets/source/concepts/nexus-vii-v1/strike-expedition-bay-concept-v1.png",
+        "integrity": {
+          "algorithm": "sha256",
+          "status": "verified",
+          "digest": "c70ef578468a5e3146bd69b484c13fa46676c3641df64d902dbee43e7692254b"
+        },
+        "bytes": 2845298,
+        "resolution": [1536, 1024],
+        "approvalStatus": "REJECTED",
+        "pixelUsage": "concept-reference-only",
+        "pixelsUsedAsTexture": false,
+        "generationEvidence": {
+          "system": "imagegen",
+          "manifestPath": "modules/space_exploration/assets/source/concepts/nexus-vii-v1/concept-manifest.json",
+          "manifestConceptId": "strike_expedition_bay_concept_v1"
+        }
+      },
+      "camera": ["isometric-cutaway", "orthographic-multi-view", "tactical-rts"],
+      "scale": {
+        "class": "room-and-human",
+        "reference": "A 1.8 m commander, personnel muster spacing, sized deployment pads, road lanes, and lander clearances bind the bay to actual ground-operation manifests."
+      },
+      "lod": {
+        "profile": "interior-modular",
+        "requiredLevels": ["LOD0", "LOD1", "LOD2"],
+        "budgetStatus": "VERIFY_PHONE_PORTRAIT_SILHOUETTES"
+      },
+      "runtimeConsumers": ["space-exploration-module", "main-rts", "cinematic-pipeline", "content-authoring"],
+      "modelTargets": ["uga_strike_mustering_floor", "uga_mission_manifest_table", "uga_deployment_staging_pad_kit", "uga_ground_lander_transport", "uga_medevac_cradle", "uga_expedition_support_kit", "uga_strike_bay_facility_variants"]
+    },
+    {
+      "id": "concept_nexus_vii_strike_expedition_bay_shared_base_deployer_v2",
+      "title": "NEXUS-VII Shared Base Deployer and Striker Hangar",
+      "status": "APPROVED",
+      "contentCategory": "interior",
+      "contentSubtype": "interior.ship.expedition-staging.shared-base-deployer",
+      "classification": {
+        "biomeOrBiodome": ["uga_ship_expedition_staging"],
+        "faction": ["uga", "nova", "dominion", "syndicate"],
+        "intention": ["civic-exploration-space", "interior-kit", "navigation-prop", "combat-unit", "production-structure", "playable-commander", "humanoid-personnel", "strike-team-roster", "damage-state"]
+      },
+      "forceRelationshipRole": ["uga-institutional", "resident-playable"],
+      "coverageScope": "production-matrix",
+      "productionAxes": {
+        "biomeOrBiodome": ["ship-expedition-staging"],
+        "faction": ["uga"],
+        "modelIntention": ["hero-landmark", "modular-kit", "infrastructure", "character", "vehicle-creature", "damage-state", "lod-silhouette", "environment-terrain"]
+      },
+      "brief": "Canonical integrated Strike and Expedition Bay authority: one UGA-hosted hangar volume joins the transforming orbital Base Deployer air unit, its shared Striker-company lane, commander and specialist ready positions, starting-unit and structure cargo, HQ transformation service rack, aircraft egress, medevac and lockers, glass transit, floor lanes, undercroft, construction tiers, and damage or maintenance states. Nova, Dominion, and Syndicate are resident-playable users; Brood is excluded as hostile AI.",
+      "evidence": {
+        "sourceOnly": true,
+        "sourcePath": "modules/space_exploration/assets/source/concepts/nexus-vii-v1/strike-expedition-bay-shared-base-deployer-concept-v2.png",
+        "plannedPath": "modules/space_exploration/assets/source/concepts/nexus-vii-v1/strike-expedition-bay-shared-base-deployer-concept-v2.png",
+        "integrity": {
+          "algorithm": "sha256",
+          "status": "verified",
+          "digest": "76391c07c3570cd3216fcaf7ed7ad0450650edf2e8288aa727f8c5579ff18a2a"
+        },
+        "bytes": 3033755,
+        "resolution": [1536, 1024],
+        "approvalStatus": "APPROVED",
+        "pixelUsage": "concept-reference-only",
+        "pixelsUsedAsTexture": false,
+        "generationEvidence": {
+          "system": "imagegen",
+          "executionId": "exec-98041eed-5570-4188-8762-9dc89d7baea4",
+          "manifestPath": "modules/space_exploration/assets/source/concepts/nexus-vii-v1/concept-manifest.json",
+          "manifestConceptId": "strike_expedition_bay_shared_base_deployer_concept_v2"
+        }
+      },
+      "camera": ["isometric-cutaway", "orthographic-multi-view", "tactical-rts"],
+      "scale": {
+        "class": "room-and-human",
+        "reference": "A 1.8 m commander, Striker-company muster spacing, measured aircraft clearances, shared deployment lanes, cargo footprints, HQ transformation envelope, ramps, lifts, and egress bind the complete hangar to ground-operation manifests."
+      },
+      "lod": {
+        "profile": "interior-modular",
+        "requiredLevels": ["LOD0", "LOD1", "LOD2"],
+        "budgetStatus": "VERIFY_PHONE_PORTRAIT_AND_TACTICAL_SILHOUETTES"
+      },
+      "runtimeConsumers": ["space-exploration-module", "main-rts", "cinematic-pipeline", "content-authoring"],
+      "modelTargets": ["uga_shared_base_deployer_hangar", "uga_base_deployer_air_unit", "uga_striker_muster_lane", "uga_commander_specialist_ready_area", "uga_hq_transformation_service_rack", "uga_starting_support_cargo_kit", "uga_aircraft_ramp_lift_egress", "uga_strike_bay_medevac_locker_kit", "uga_strike_bay_glass_transit", "uga_strike_bay_floor_lane_kit", "uga_strike_bay_undercroft", "uga_strike_bay_tier_damage_variants"]
+    },
+    {
+      "id": "concept_biodome_habitat_typology_v1",
+      "title": "Biodome and Habitat Typology Model Sheet",
+      "status": "APPROVED",
+      "contentCategory": "interior",
+      "contentSubtype": "interior.biodome.modular-typology",
+      "classification": {
+        "biomeOrBiodome": ["uga_ship_biodome", "verdant", "arctic", "ashland", "vespera"],
+        "faction": ["uga"],
+        "intention": ["civic-exploration-space", "interior-kit", "world-landmark", "damage-state", "environment-material-language"]
+      },
+      "forceRelationshipRole": ["uga-institutional", "faction-neutral"],
+      "coverageScope": "production-matrix",
+      "productionAxes": {
+        "biomeOrBiodome": ["ship-civic-biodome", "verdant", "arctic", "ashland", "vespera"],
+        "faction": ["uga", "faction-neutral"],
+        "modelIntention": ["hero-landmark", "modular-kit", "infrastructure", "damage-state", "lod-silhouette", "environment-terrain"]
+      },
+      "brief": "Five authored biodome families for UGA civic habitat, Verdant agri-survey, Arctic cryo-logistics, Ashland thermal industry, and Vespera xenobiology quarantine, with distinct surface slots, non-flat foundations, roads, bridges, glass tunnels, airlocks, lifts, construction/damage states, and mobile LOD silhouettes.",
+      "evidence": {
+        "sourceOnly": true,
+        "sourcePath": "source-media/concepts/biodome-typology-v1/biodome-habitat-typology-model-sheet-v1.png",
+        "plannedPath": "source-media/concepts/biodome-typology-v1/biodome-habitat-typology-model-sheet-v1.png",
+        "integrity": {
+          "algorithm": "sha256",
+          "status": "verified",
+          "digest": "b6b49f37fc44d13f336be440d143760fe1839dc66d038da40044e3fb74967fa8"
+        },
+        "bytes": 2874235,
+        "resolution": [1536, 1024],
+        "approvalStatus": "APPROVED",
+        "pixelUsage": "concept-reference-only",
+        "pixelsUsedAsTexture": false,
+        "generationEvidence": {
+          "system": "imagegen",
+          "manifestPath": "source-media/concepts/biodome-typology-v1/concept-manifest.json",
+          "manifestConceptId": "biodome_habitat_typology_model_sheet_v1"
+        }
+      },
+      "camera": ["isometric-cutaway", "orthographic-multi-view", "material-board"],
+      "scale": {
+        "class": "room-and-human",
+        "reference": "A one-meter grid, 1.8 m human, district modules, transit clearances, and city-ship context constrain every biodome family."
+      },
+      "lod": {
+        "profile": "interior-modular",
+        "requiredLevels": ["LOD0", "LOD1", "LOD2"],
+        "budgetStatus": "VERIFY_MOBILE_RTS_SILHOUETTES"
+      },
+      "runtimeConsumers": ["space-exploration-module", "main-rts", "cinematic-pipeline", "content-authoring"],
+      "modelTargets": ["uga_ship_civic_biodome_kit", "verdant_agri_survey_biodome_kit", "arctic_cryo_logistics_biodome_kit", "ashland_thermal_industrial_biodome_kit", "vespera_xenobiology_quarantine_biodome_kit"]
+    },
+    {
+      "id": "concept_helmeted_human_faction_personnel_v1",
+      "title": "Helmeted Human Faction Personnel Model Sheet",
+      "status": "APPROVED",
+      "contentCategory": "faction",
+      "contentSubtype": "faction.personnel.helmeted-human",
+      "classification": {
+        "biomeOrBiodome": ["uga_ship_interior", "verdant", "arctic", "ashland", "vespera"],
+        "faction": ["uga", "nova", "dominion", "syndicate"],
+        "intention": ["cinematic-character", "ship-crew", "ship-resident", "playable-commander", "commander-icon-source", "humanoid-personnel", "strike-team-roster", "combat-unit"]
+      },
+      "forceRelationshipRole": ["uga-institutional", "resident-playable"],
+      "coverageScope": "production-matrix",
+      "productionAxes": {
+        "biomeOrBiodome": ["ship-civic-biodome", "ship-research-industrial", "ship-expedition-staging", "verdant", "arctic", "ashland", "vespera"],
+        "faction": ["uga", "nova", "dominion", "syndicate"],
+        "modelIntention": ["character", "lod-silhouette"]
+      },
+      "brief": "Full-body UGA, Nova, Dominion, and Syndicate personnel in strict neutral T-pose with front, left, and back orthographic views, sealed opaque helmets, clean symmetrical rebuild intent, separated rigid equipment, mobile LOD silhouettes, and facial animation explicitly disabled; no rig or animation is claimed.",
+      "evidence": {
+        "sourceOnly": true,
+        "sourcePath": "source-media/concepts/faction-personnel-v1/helmeted-human-faction-personnel-model-sheet-v1.png",
+        "plannedPath": "source-media/concepts/faction-personnel-v1/helmeted-human-faction-personnel-model-sheet-v1.png",
+        "integrity": {
+          "algorithm": "sha256",
+          "status": "verified",
+          "digest": "20cf2fff8968b569a5d60d76c61371d867b4dea99d600058a811bcd6b5683149"
+        },
+        "bytes": 2377980,
+        "resolution": [1536, 1024],
+        "approvalStatus": "APPROVED",
+        "pixelUsage": "concept-reference-only",
+        "pixelsUsedAsTexture": false,
+        "generationEvidence": {
+          "system": "imagegen",
+          "manifestPath": "source-media/concepts/faction-personnel-v1/concept-manifest.json",
+          "manifestConceptId": "helmeted_human_faction_personnel_model_sheet_v1"
+        }
+      },
+      "camera": ["orthographic-multi-view", "character-turnaround"],
+      "scale": {
+        "class": "human-full-body",
+        "reference": "A consistent full-body foot plane and shared 1.8 m human scale govern every faction silhouette; the sheet provides front, left, and back source views only."
+      },
+      "lod": {
+        "profile": "character-cinematic",
+        "requiredLevels": ["LOD0", "LOD1", "LOD2"],
+        "budgetStatus": "CLEAN_REBUILD_AND_FACE_POLICY_REQUIRED"
+      },
+      "runtimeConsumers": ["space-exploration-module", "main-rts", "cinematic-pipeline", "commander-portrait", "content-authoring"],
+      "modelTargets": ["uga_helmeted_personnel_family", "nova_helmeted_personnel_family", "dominion_helmeted_personnel_family", "syndicate_helmeted_personnel_family"]
+    },
+    {
+      "id": "concept_strike_bay_faction_expedition_manifests_v1",
+      "title": "Strike Bay Faction Expedition Vehicle and Creature Manifests",
+      "status": "REJECTED",
+      "contentCategory": "faction",
+      "contentSubtype": "faction.expedition.vehicle-creature-manifest",
+      "classification": {
+        "biomeOrBiodome": ["uga_ship_expedition_staging"],
+        "faction": ["uga", "nova", "dominion", "syndicate", "brood"],
+        "intention": ["combat-unit", "production-structure", "navigation-prop", "damage-state"]
+      },
+      "forceRelationshipRole": ["uga-institutional", "resident-playable", "hostile-ai"],
+      "coverageScope": "outside-production-matrix",
+      "canonicalDisposition": {
+        "status": "SUPERSEDED_REJECTED",
+        "reason": "Rejected for canonical use because the v1 sheet presents hostile-ai Brood as a peer Strike Bay manifest column alongside playable factions.",
+        "replacementConceptId": "concept_base_deployer_striker_hangar_manifests_v2"
+      },
+      "brief": "Shared-scale UGA, Nova, Dominion, Syndicate, and Brood expedition manifests for ground transports, survey vehicles or creatures, logistics/support platforms, and starting-structure sockets, with measured Strike Bay clearance, pristine/loaded/deployed/disabled states, and mobile LOD silhouettes. Personnel figures are scale references only and do not establish Brood character coverage.",
+      "evidence": {
+        "sourceOnly": true,
+        "sourcePath": "source-media/concepts/expedition-manifests-v1/strike-bay-faction-expedition-manifests-v1.png",
+        "plannedPath": "source-media/concepts/expedition-manifests-v1/strike-bay-faction-expedition-manifests-v1.png",
+        "integrity": {
+          "algorithm": "sha256",
+          "status": "verified",
+          "digest": "4b498e9806272269d74a7c92d3a48a55fcf2aaa8b00a8df6cc9483f22b4a16e3"
+        },
+        "bytes": 2474235,
+        "resolution": [1536, 1024],
+        "approvalStatus": "REJECTED",
+        "pixelUsage": "concept-reference-only",
+        "pixelsUsedAsTexture": false,
+        "generationEvidence": {
+          "system": "imagegen",
+          "executionId": "exec-617f8330-6266-4481-9b1d-0be455d64645",
+          "manifestPath": "source-media/concepts/expedition-manifests-v1/concept-manifest.json",
+          "manifestConceptId": "strike_bay_faction_expedition_manifests_v1"
+        }
+      },
+      "camera": ["orthographic-multi-view", "tilted-top-down-mobile-rts", "tactical-rts"],
+      "scale": {
+        "class": "combat-unit",
+        "reference": "Shared personnel, pad, door, ramp, walkway, lift, and staging-lane measurements bind all five faction silhouettes to the authored Strike Bay."
+      },
+      "lod": {
+        "profile": "rts-instanced",
+        "requiredLevels": ["LOD0", "LOD1", "LOD2"],
+        "budgetStatus": "VERIFY_PHONE_PORTRAIT_AND_TACTICAL_SILHOUETTES"
+      },
+      "runtimeConsumers": ["space-exploration-module", "main-rts", "cinematic-pipeline", "content-authoring"],
+      "modelTargets": ["uga_expedition_manifest_vehicle", "nova_expedition_manifest_vehicle", "dominion_expedition_manifest_vehicle", "syndicate_expedition_manifest_vehicle", "brood_expedition_manifest_creature", "strike_bay_starting_structure_socket_kit"]
+    },
+    {
+      "id": "concept_base_deployer_striker_hangar_manifests_v2",
+      "title": "Base Deployer and Striker Hangar Faction Manifests",
+      "status": "APPROVED",
+      "contentCategory": "faction",
+      "contentSubtype": "faction.expedition.base-deployer-striker-manifest",
+      "classification": {
+        "biomeOrBiodome": ["uga_ship_expedition_staging"],
+        "faction": ["uga", "nova", "dominion", "syndicate"],
+        "intention": ["combat-unit", "production-structure", "playable-commander", "humanoid-personnel", "strike-team-roster", "damage-state"]
+      },
+      "forceRelationshipRole": ["uga-institutional", "resident-playable"],
+      "coverageScope": "production-matrix",
+      "productionAxes": {
+        "biomeOrBiodome": ["ship-expedition-staging"],
+        "faction": ["nova", "dominion", "syndicate"],
+        "modelIntention": ["character", "vehicle-creature", "damage-state", "lod-silhouette"]
+      },
+      "brief": "Canonical shared-hangar faction manifest reference: UGA supplies the institutional service architecture while Nova, Dominion, and Syndicate each provide a distinct orbital Base Deployer air unit sharing one measured lane with its Striker company, commander and specialists, starting-unit and structure sockets, HQ transformation envelope, damage states, and LOD silhouettes. Brood appears only in the canon legend as an AI-only enemy and is never modeled as personnel, a resident, or a selectable Strike Team roster.",
+      "evidence": {
+        "sourceOnly": true,
+        "sourcePath": "source-media/concepts/expedition-manifests-v1/base-deployer-striker-hangar-manifests-v2.png",
+        "plannedPath": "source-media/concepts/expedition-manifests-v1/base-deployer-striker-hangar-manifests-v2.png",
+        "integrity": {
+          "algorithm": "sha256",
+          "status": "verified",
+          "digest": "e8822337f855ef6e5ae2c09e456f2dd5d0691ef6dfcb0f42f1fa177fe3dfc445"
+        },
+        "bytes": 2493968,
+        "resolution": [1536, 1024],
+        "approvalStatus": "APPROVED",
+        "pixelUsage": "concept-reference-only",
+        "pixelsUsedAsTexture": false,
+        "generationEvidence": {
+          "system": "imagegen",
+          "executionId": "exec-f7ee1ecb-54c4-47d7-8a8e-0c8579a76617",
+          "manifestPath": "source-media/concepts/expedition-manifests-v1/concept-manifest.json",
+          "manifestConceptId": "base_deployer_striker_hangar_manifests_v2"
+        }
+      },
+      "camera": ["orthographic-multi-view", "tilted-top-down-mobile-rts", "tactical-rts"],
+      "scale": {
+        "class": "combat-unit",
+        "reference": "A shared 1.8 m personnel reference, measured Base Deployer aircraft clearances, Striker-company muster lanes, doors, ramps, lifts, cargo sockets, and HQ transformation envelopes keep all three playable faction manifests compatible with the UGA hangar."
+      },
+      "lod": {
+        "profile": "rts-instanced",
+        "requiredLevels": ["LOD0", "LOD1", "LOD2"],
+        "budgetStatus": "VERIFY_PHONE_PORTRAIT_AND_TACTICAL_SILHOUETTES"
+      },
+      "runtimeConsumers": ["space-exploration-module", "main-rts", "cinematic-pipeline", "content-authoring"],
+      "modelTargets": ["nova_base_deployer_air_unit", "nova_striker_company", "dominion_base_deployer_air_unit", "dominion_striker_company", "syndicate_base_deployer_air_unit", "syndicate_striker_company", "playable_faction_commander_specialist_ready_set", "playable_faction_starting_manifest_socket_kit", "playable_faction_hq_transformation_envelopes"]
+    },
+    {
+      "id": "concept_planetary_landmark_resource_library_v1",
+      "title": "Planetary Landmark and Resource Model Sheet",
+      "status": "APPROVED",
+      "contentCategory": "planet-location",
+      "contentSubtype": "planet-location.landmark-resource.modular-library",
+      "classification": {
+        "biomeOrBiodome": ["volcanic", "alien_jungle", "cyber_purple", "golden_jade", "terrestrial", "gas"],
+        "faction": ["uga", "nova", "dominion", "syndicate", "brood"],
+        "intention": ["world-landmark", "resource-site", "navigation-prop", "damage-state", "environment-material-language"]
+      },
+      "forceRelationshipRole": ["uga-institutional", "resident-playable", "hostile-ai"],
+      "coverageScope": "outside-production-matrix",
+      "brief": "Six exploration planet families covering volcanic calderas, alien jungle organisms, cyber-purple ruins, golden-jade terraces, terrestrial relay sites, and gas/high-atmosphere platforms, with UGA institutional, three resident-playable, faction-neutral, and hostile Brood infestation overlay sockets, survey and mission objectives, resource access, pristine/scanned/exploited/damaged states, and orbit-to-ground silhouettes.",
+      "evidence": {
+        "sourceOnly": true,
+        "sourcePath": "source-media/concepts/planetary-landmarks-v1/planetary-landmark-resource-model-sheet-v1.png",
+        "plannedPath": "source-media/concepts/planetary-landmarks-v1/planetary-landmark-resource-model-sheet-v1.png",
+        "integrity": {
+          "algorithm": "sha256",
+          "status": "verified",
+          "digest": "7ae66f4d14b1f98fb0208689ebbdf4a3c5ff2d1ff68502904e3295a46bac5b88"
+        },
+        "bytes": 2702846,
+        "resolution": [1536, 1024],
+        "approvalStatus": "APPROVED",
+        "pixelUsage": "concept-reference-only",
+        "pixelsUsedAsTexture": false,
+        "generationEvidence": {
+          "system": "imagegen",
+          "manifestPath": "source-media/concepts/planetary-landmarks-v1/concept-manifest.json",
+          "manifestConceptId": "planetary_landmark_resource_model_sheet_v1"
+        }
+      },
+      "camera": ["tilted-top-down-mobile-rts", "tactical-rts", "orthographic-multi-view"],
+      "scale": {
+        "class": "planetary-landmark",
+        "reference": "Each family declares orbit, approach, and ground readability with human and ground-module scale for accessible connectors and faction overlays."
+      },
+      "lod": {
+        "profile": "planet-location",
+        "requiredLevels": ["ORBIT", "APPROACH", "GROUND"],
+        "budgetStatus": "MEASURE_BEFORE_AUTHORING"
+      },
+      "runtimeConsumers": ["space-exploration-module", "main-rts", "cinematic-pipeline", "content-authoring"],
+      "modelTargets": ["volcanic_landmark_family", "alien_jungle_landmark_family", "cyber_purple_landmark_family", "golden_jade_landmark_family", "terrestrial_landmark_family", "gas_high_atmosphere_landmark_family", "planetary_faction_overlay_kit", "planetary_resource_survey_socket_kit"]
+    }
+  ],
+  "plannedBriefs": [
+    {
+      "id": "brief_faction_production_structures",
+      "status": "PLANNED",
+      "contentCategory": "faction",
+      "classification": { "biomeOrBiodome": [], "faction": ["nova", "dominion", "syndicate", "brood"], "intention": ["production-structure"] },
+      "forceRelationshipRole": ["resident-playable", "hostile-ai"],
+      "coverageScope": "outside-production-matrix",
+      "brief": "Four clearly distinct production-structure families: Nova, Dominion, and Syndicate player production plus hostile-AI Brood hive production, each with authored construction, powered, damaged, and destroyed reads.",
+      "camera": ["isometric-cutaway"],
+      "scale": { "class": "structure-family", "reference": "Matches building footprints and unit exit clearance." },
+      "lod": { "profile": "rts-instanced", "requiredLevels": ["AUTHORING", "BATTLE", "WRECK"], "budgetStatus": "USE_ART_V2_BUDGET" },
+      "runtimeConsumers": ["main-rts", "content-authoring"],
+      "modelTargets": ["faction_production_structure_families"]
+    },
+    {
+      "id": "brief_navigation_prop_library",
+      "status": "PLANNED",
+      "contentCategory": "prop",
+      "classification": { "biomeOrBiodome": [], "faction": ["uga"], "intention": ["navigation-prop"] },
+      "forceRelationshipRole": ["uga-institutional"],
+      "coverageScope": "production-matrix",
+      "productionAxes": {
+        "biomeOrBiodome": ["ship-research-industrial"],
+        "faction": ["uga"],
+        "modelIntention": ["modular-kit", "infrastructure", "lod-silhouette"]
+      },
+      "brief": "Reusable route holotables, helm stations, probe racks, observatory displays, lift cores, and glass connector modules.",
+      "camera": ["isometric-cutaway"],
+      "scale": { "class": "navigation-prop", "reference": "Human ergonomic scale and modular ship-grid snapping." },
+      "lod": { "profile": "prop-standard", "requiredLevels": ["LOD0", "LOD1", "LOD2"], "budgetStatus": "MEASURE_BEFORE_AUTHORING" },
+      "runtimeConsumers": ["space-exploration-module", "cinematic-pipeline", "content-authoring"],
+      "modelTargets": ["uga_navigation_prop_library"]
+    },
+    {
+      "id": "brief_combat_vfx_damage_states",
+      "status": "PLANNED",
+      "contentCategory": "vfx-presentation",
+      "classification": { "biomeOrBiodome": [], "faction": ["nova", "dominion", "syndicate", "brood"], "intention": ["vfx-presentation", "damage-state"] },
+      "forceRelationshipRole": ["resident-playable", "hostile-ai"],
+      "coverageScope": "outside-production-matrix",
+      "brief": "Nova, Dominion, and Syndicate player-facing plus hostile-AI Brood impact, explosion, beam, trail, shield, scorch, crater, debris, and persistent damage-state presentation board.",
+      "camera": ["tactical-rts", "material-board"],
+      "scale": { "class": "vfx-event", "reference": "Weapon, unit, building, artillery, and strategic blast scale classes." },
+      "lod": { "profile": "vfx-tiered", "requiredLevels": ["LOW", "MEDIUM", "HIGH", "CINEMATIC"], "budgetStatus": "FOLLOW_MACRO_FX_CONTRACT" },
+      "runtimeConsumers": ["main-rts", "cinematic-pipeline", "content-authoring"],
+      "modelTargets": ["faction_vfx_presentation_library", "world_damage_state_library"]
+    },
+    {
+      "id": "brief_brood_hostile_encounter_containment_v1",
+      "status": "PLANNED",
+      "contentCategory": "faction",
+      "classification": { "biomeOrBiodome": ["brood_hive_depths", "uga_ship_science_observatory"], "faction": ["brood"], "intention": ["combat-unit", "damage-state", "environment-material-language"] },
+      "forceRelationshipRole": ["hostile-ai"],
+      "coverageScope": "outside-production-matrix",
+      "brief": "Non-humanoid hostile Brood encounter and containment reference for scanned organisms, quarantine specimens, breached containment, infestation damage, and enemy silhouettes. It is anomaly/hostile-event content, never resident housing, routine expedition staging, or a playable Strike Team roster.",
+      "camera": ["orthographic-multi-view", "tactical-rts", "material-board"],
+      "scale": { "class": "combat-unit", "reference": "Declares each non-humanoid organism footprint against containment equipment, a 1.8 m UGA observer, and tactical ground cells." },
+      "lod": { "profile": "rts-instanced", "requiredLevels": ["LOD0", "LOD1", "LOD2"], "budgetStatus": "MEASURE_BEFORE_AUTHORING" },
+      "runtimeConsumers": ["space-exploration-module", "main-rts", "cinematic-pipeline", "content-authoring"],
+      "modelTargets": ["brood_hostile_encounter_family", "brood_containment_specimen_kit", "brood_containment_breach_state"]
+    },
+    {
+      "id": "brief_uga_four_biome_expedition_vehicles",
+      "status": "PLANNED",
+      "contentCategory": "faction",
+      "classification": { "biomeOrBiodome": ["verdant", "arctic", "ashland", "vespera"], "faction": ["uga"], "intention": ["combat-unit"] },
+      "forceRelationshipRole": ["uga-institutional"],
+      "coverageScope": "production-matrix",
+      "productionAxes": {
+        "biomeOrBiodome": ["verdant", "arctic", "ashland", "vespera"],
+        "faction": ["uga"],
+        "modelIntention": ["vehicle-creature"]
+      },
+      "brief": "UGA ground-operation lander, survey rover, logistics carrier, and support-drone family with Verdant, Arctic, Ashland, and Vespera contact variants and measured tactical LOD silhouettes.",
+      "camera": ["orthographic-multi-view", "tactical-rts"],
+      "scale": { "class": "combat-unit", "reference": "Matches the Strike Bay pads, eight-meter light vehicle reference, unit selection footprint, and mission deployment capacity." },
+      "lod": { "profile": "rts-instanced", "requiredLevels": ["LOD0", "LOD1", "LOD2"], "budgetStatus": "USE_ART_V2_BUDGET" },
+      "runtimeConsumers": ["space-exploration-module", "main-rts", "cinematic-pipeline", "content-authoring"],
+      "modelTargets": ["uga_ground_lander", "uga_survey_rover", "uga_logistics_carrier", "uga_support_drone"]
+    },
+    {
+      "id": "brief_nova_ashland_vespera_contact_kit",
+      "status": "PLANNED",
+      "contentCategory": "faction",
+      "classification": { "biomeOrBiodome": ["ashland", "vespera"], "faction": ["nova"], "intention": ["production-structure", "combat-unit", "damage-state", "environment-material-language"] },
+      "forceRelationshipRole": ["resident-playable"],
+      "coverageScope": "production-matrix",
+      "productionAxes": {
+        "biomeOrBiodome": ["ashland", "vespera"],
+        "faction": ["nova"],
+        "modelIntention": ["modular-kit", "infrastructure", "vehicle-creature", "damage-state", "environment-terrain"]
+      },
+      "brief": "Nova Ashland and Vespera contact adapters for foundations, roads, production structures, representative vehicles, dust/mineral accumulation, terrain blending, and damaged/wrecked states without duplicating the approved personnel base.",
+      "camera": ["orthographic-multi-view", "tactical-rts", "material-board"],
+      "scale": { "class": "structure-family", "reference": "Uses existing Nova footprints, 1.8 m personnel, road width, and unit exit clearance." },
+      "lod": { "profile": "rts-instanced", "requiredLevels": ["LOD0", "LOD1", "LOD2"], "budgetStatus": "USE_ART_V2_BUDGET" },
+      "runtimeConsumers": ["main-rts", "space-exploration-module", "content-authoring"],
+      "modelTargets": ["nova_ashland_contact_kit", "nova_vespera_contact_kit"]
+    },
+    {
+      "id": "brief_dominion_verdant_arctic_vespera_contact_kit",
+      "status": "PLANNED",
+      "contentCategory": "faction",
+      "classification": { "biomeOrBiodome": ["verdant", "arctic", "vespera"], "faction": ["dominion"], "intention": ["production-structure", "combat-unit", "damage-state", "environment-material-language"] },
+      "forceRelationshipRole": ["resident-playable"],
+      "coverageScope": "production-matrix",
+      "productionAxes": {
+        "biomeOrBiodome": ["verdant", "arctic", "vespera"],
+        "faction": ["dominion"],
+        "modelIntention": ["modular-kit", "infrastructure", "vehicle-creature", "damage-state", "environment-terrain"]
+      },
+      "brief": "Dominion Verdant, Arctic, and Vespera contact adapters for foundry foundations, roads, representative vehicles, vegetation/snow/mineral accumulation, terrain blending, and collapsed industrial states.",
+      "camera": ["orthographic-multi-view", "tactical-rts", "material-board"],
+      "scale": { "class": "structure-family", "reference": "Uses existing Dominion footprints, 1.8 m personnel, heavy-vehicle clearance, and artillery exit lanes." },
+      "lod": { "profile": "rts-instanced", "requiredLevels": ["LOD0", "LOD1", "LOD2"], "budgetStatus": "USE_ART_V2_BUDGET" },
+      "runtimeConsumers": ["main-rts", "space-exploration-module", "content-authoring"],
+      "modelTargets": ["dominion_verdant_contact_kit", "dominion_arctic_contact_kit", "dominion_vespera_contact_kit"]
+    },
+    {
+      "id": "brief_syndicate_verdant_ashland_vespera_contact_kit",
+      "status": "PLANNED",
+      "contentCategory": "faction",
+      "classification": { "biomeOrBiodome": ["verdant", "ashland", "vespera"], "faction": ["syndicate"], "intention": ["production-structure", "combat-unit", "damage-state", "environment-material-language"] },
+      "forceRelationshipRole": ["resident-playable"],
+      "coverageScope": "production-matrix",
+      "productionAxes": {
+        "biomeOrBiodome": ["verdant", "ashland", "vespera"],
+        "faction": ["syndicate"],
+        "modelIntention": ["modular-kit", "infrastructure", "vehicle-creature", "damage-state", "environment-terrain"]
+      },
+      "brief": "Syndicate Verdant, Ashland, and Vespera contact adapters for concealed foundations, roads, representative vehicles/drones, terrain-matching camouflage, environmental deposits, and failing/destroyed states.",
+      "camera": ["orthographic-multi-view", "tactical-rts", "material-board"],
+      "scale": { "class": "structure-family", "reference": "Uses existing Syndicate footprints, 1.8 m agents, stealth-vehicle clearance, and top-down silhouette tests." },
+      "lod": { "profile": "rts-instanced", "requiredLevels": ["LOD0", "LOD1", "LOD2"], "budgetStatus": "USE_ART_V2_BUDGET" },
+      "runtimeConsumers": ["main-rts", "space-exploration-module", "content-authoring"],
+      "modelTargets": ["syndicate_verdant_contact_kit", "syndicate_ashland_contact_kit", "syndicate_vespera_contact_kit"]
+    }
+  ]
+}

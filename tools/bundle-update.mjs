@@ -2,9 +2,12 @@
    the classic scripts so an older installed package is never asked to run new
    controllers against stale menu markup. One payload also keeps the channel
    atomic: shell and behavior can only arrive together. */
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {buildRuntimeCompatibility,canonicalRuntimeArtifacts,BALANCE_AUTHORITY_V1,
+        RUNTIME_COMPATIBILITY_GLOBAL} from './runtime-compatibility.mjs';
 
 const root=join(dirname(fileURLToPath(import.meta.url)),'..');
 const version=process.argv[2];
@@ -28,7 +31,13 @@ for(const need of ['assets/data/unitrows.js','src/engine/organicfx.js','src/rumb
    never delivered. The audio is useless without the list of what the audio is.
    37 KB inlined closes it; the pack still carries the actual sound. */
 const OTA_MIME={png:'image/png',jpg:'image/jpeg',json:'application/json',webp:'image/webp'};
+const explorationDelivery=JSON.parse(readFileSync(join(root,'assets/data/exploration-pack-remote.json'),'utf8'));
+const hasExplorationDelivery=explorationDelivery.schema==='MassfrontExplorationPackRemoteV2';
+if(hasExplorationDelivery&&(!/^[a-f0-9]{64}$/.test(explorationDelivery.manifestSha256||'')
+  ||!Number.isSafeInteger(explorationDelivery.manifestBytes)||explorationDelivery.manifestBytes<=0
+  ||explorationDelivery.version!==version))throw new Error('OTA Galactic delivery descriptor is not bound to this release');
 const otaBinaryAssets=[
+  'assets/data/exploration-pack-remote.json',
   'assets/brand/massfront-title-command-conquer-overwhelm-v1.png',
   'assets/modifiers/modifier-art-atlas-v1.png',
   'assets/factions/cinematic/terran-frontline-command-v1.png',
@@ -44,16 +53,88 @@ const otaBinaryAssets=[
   'assets/factions/commanders/syndicate_renn.jpg',
   'assets/factions/commanders/syndicate_nyx.jpg',
   'assets/factions/commanders/syndicate_voss.jpg',
-  'assets/textures/mat-albedo.png',
-  'assets/textures/mat-normal.png',
-  'assets/textures/mat-orm.png',
+  /* The cinematic command skin is referenced from ui.css. Include it in the
+     atomic shell so OTA-only players do not render an unskinned fallback when
+     their original installer predates the HUD overhaul. */
+  'assets/textures/ui/mf-hud-panel-material-v1.webp',
+  'assets/textures/ui/mf-keel-uga-portrait-v1.webp',
+  'assets/textures/mat-albedo-building-v3.png',
+  'assets/textures/mat-normal-building-v3.png',
+  'assets/textures/mat-orm-building-v3.png',
+  'assets/terrain/ground-albedo.webp',
+  'assets/terrain/ground-normal-rough.webp',
+  'assets/terrain/soil-albedo.webp',
+  'assets/terrain/soil-normal-rough.webp',
+  'assets/terrain/pave-albedo.webp',
+  'assets/terrain/pave-normal-rough.webp',
+  'assets/terrain/grass-albedo.webp',
+  'assets/terrain/grass-normal-rough.webp',
+  'assets/terrain/metal-albedo.webp',
+  'assets/terrain/metal-normal-rough.webp',
+  'assets/terrain/locations/arctic-windpack-albedo-v1.webp',
+  'assets/terrain/locations/arctic-windpack-normal-rough-v1.webp',
+  'assets/terrain/locations/ashland-basalt-albedo-v1.webp',
+  'assets/terrain/locations/ashland-basalt-normal-rough-v1.webp',
+  'assets/terrain/locations/vespera-crust-albedo-v1.webp',
+  'assets/terrain/locations/vespera-crust-normal-rough-v1.webp',
+  'assets/terrain/locations/brood-infested-soil-albedo-v1.webp',
+  'assets/terrain/locations/brood-infested-soil-normal-rough-v1.webp',
+  'assets/textures/vfx/mf-blast-flipbook-v4.png',
+  'assets/textures/vfx/mf-collapse-dust-flipbook-v1.png',
+  'assets/textures/vfx/mf-wreck-fire-flipbook-v1.png',
+  'assets/textures/vfx/mf-fire-plume-v1.png',
+  'assets/textures/vfx/mf-missile-air-smoke-flipbook-v1.png',
+  'assets/textures/vfx/mf-energy-beam-terminus-flipbook-v2.png',
+  'assets/textures/vfx/mf-organic-ichor-flipbook-v1.png',
+  'assets/textures/vfx/mf-air-destruction-flipbook-v1.png',
+  'assets/textures/vfx/mf-raymarch-density-emission-driver-v1.png',
   'assets/audio/voice.json',
   /* Same class as voice.json: audLoadPlaylists fetches
      './assets/audio/music.json' from disk. OTA patches no files, so a 1.33.37
      APK would keep the old vocal playlist and then consult a stale remote
      music.json. Inlining the empty curated list makes packagedHasTracks false
      on every OTA client and blocks that overlay. */
-  'assets/audio/music.json'
+  'assets/audio/music.json',
+  /* MASSFRONT UI Production V3. Every one of these is reached only from a
+     url() in ui.css, so an OTA client took the rebuilt menu markup and its
+     stylesheet while the plates stayed behind in whatever installer it had.
+     The command slices then draw with no authored art and DEPLOY renders as
+     its dark-on-gold label over nothing. Exactly the cinematic command skin
+     case above: referenced from CSS, so it has to travel in the atomic
+     shell. tools/test-menu-slice-geometry.mjs guards the numbers; the guard
+     below is what keeps the bytes from going missing again. */
+  'assets/textures/ui/mf-ui-v3/accent_deploy_chevrons.png',
+  'assets/textures/ui/mf-ui-v3/accent_triple_slash.png',
+  'assets/textures/ui/mf-ui-v3/deploy_normal.png',
+  'assets/textures/ui/mf-ui-v3/deploy_pressed.png',
+  'assets/textures/ui/mf-ui-v3/frame_portrait_empty.png',
+  'assets/textures/ui/mf-ui-v3/icon_contracts.png',
+  'assets/textures/ui/mf-ui-v3/icon_rank_star.png',
+  'assets/textures/ui/mf-ui-v3/icon_settings.png',
+  'assets/textures/ui/mf-ui-v3/icon_social.png',
+  'assets/textures/ui/mf-ui-v3/menu_disabled.png',
+  'assets/textures/ui/mf-ui-v3/menu_normal.png',
+  'assets/textures/ui/mf-ui-v3/menu_pressed.png',
+  'assets/textures/ui/mf-ui-v3/menu_selected.png',
+  'assets/textures/ui/mf-ui-v3/nav_normal.png',
+  'assets/textures/ui/mf-ui-v3/nav_pressed.png',
+  'assets/textures/ui/mf-ui-v3/nav_selected.png',
+  'assets/textures/ui/mf-ui-v3/panel_player_info.png',
+  'assets/textures/ui/mf-ui-v3/progress_fill_cyan.png',
+  'assets/textures/ui/mf-ui-v3/progress_fill_gold.png',
+  'assets/textures/ui/mf-ui-v3/progress_track.png',
+  /* Panel and frame families. Admitted late because the module that needs
+     them could not reference authored art until the inliner learned its
+     path depth; listing them here is what lets that reference survive an
+     OTA rather than arriving as CSS pointing at bytes nobody sent. */
+  'assets/textures/ui/mf-ui-v3/panel_statistics.png',
+  'assets/textures/ui/mf-ui-v3/panel_rank.png',
+  'assets/textures/ui/mf-ui-v3/panel_requisition.png',
+  'assets/textures/ui/mf-ui-v3/panel_unit_description.png',
+  'assets/textures/ui/mf-ui-v3/frame_viewport.png',
+  'assets/textures/ui/mf-ui-v3/frame_faction.png',
+  'assets/textures/ui/mf-ui-v3/frame_unit_thumbnail.png',
+  'assets/textures/ui/mf-ui-v3/footer_base.png'
 ].map(path=>{
   const ext=path.split('.').pop().toLowerCase();
   const mime=OTA_MIME[ext];
@@ -79,9 +160,23 @@ const OTA_RUNTIME_PATHS=[
   'assets/textures/materials/mf-world-structures-v2-baseao.png',
   'assets/textures/materials/mf-world-structures-v2-nre.png',
   'assets/textures/materials/mf-world-structures-v2-masks.png',
+  'assets/textures/materials/mf-worldkit-v4-baseao.png',
+  'assets/textures/materials/mf-worldkit-v4-nre.png',
+  'assets/textures/materials/mf-worldkit-v4-masks.png',
   'assets/textures/materials/mf2-carbon-cracks-v1.png',
   'assets/textures/materials/mf_mechanical_microdetail_v2.webp',
   'assets/textures/ui/tacticons-faction.png',
+  /* The cinematic command dock and faction build cards are runtime-decoded.
+     Older installers do not contain these sheets, and the faction filenames
+     come from icon-index.json rather than complete source string literals, so
+     all six belong in the OTA resolver table instead of relying on CSS/source
+     substitution. */
+  'assets/textures/ui/cmdicons.png',
+  'assets/textures/ui/icon-index.json',
+  'assets/textures/ui/icons-nova.png',
+  'assets/textures/ui/icons-legion.png',
+  'assets/textures/ui/icons-syndicate.png',
+  'assets/textures/ui/icons-horde.png',
   'assets/textures/materials/nova-rhino-v2-baseao.png',
   'assets/textures/materials/nova-rhino-v2-nre.png',
   'assets/textures/materials/nova-rhino-v2-masks.png',
@@ -108,7 +203,16 @@ for(const path of OTA_RUNTIME_PATHS){
 const inlineOtaBinaryRefs=text=>{
   let out=text;
   for(const asset of otaBinaryAssets){
-    const refs=['./'+asset.path,'../../'+asset.path,asset.path];
+    /* Longest first. `./assets/...` is a suffix of `../../assets/...`; doing
+       the short replacement first used to create the invalid `../.data:` URL
+       in every retained OTA stylesheet. */
+    /* Longest first, always. '../../assets/x' contains 'assets/x', so a short
+       replacement run first rewrites the tail and leaves '../../data:...' -
+       the corrupt URL the guard below catches. The four-level form is what
+       modules/space_exploration/src/ui/*.css needs to reach the repo root;
+       without it the module could not reference any authored UI art over OTA,
+       which is why that module was built entirely on CSS gradients. */
+    const refs=['../../../../'+asset.path,'../../'+asset.path,'./'+asset.path,asset.path];
     for(const ref of refs) out=out.split(ref).join(asset.uri);
   }
   return out;
@@ -120,11 +224,20 @@ const shellBody=bodyMatch[1].replace(/\s*<script\s+src=["']\.\/boot\.js["']><\/s
 const stylePaths=Array.from(html.matchAll(/<link\s+rel=["']stylesheet["']\s+href=["']([^"']+)["'][^>]*>/gi),m=>m[1].split('?')[0].replace(/^\.\//,''));
 const shell={version,title:(html.match(/<title>([\s\S]*?)<\/title>/i)||[])[1]||'MASSFRONT',body:shellBody,
   styles:stylePaths.map(path=>({path,css:inlineOtaBinaryRefs(readFileSync(join(root,path),'utf8'))}))};
-const prelude=`(function(){
-  var shell=${JSON.stringify(shell)};
+const shellCss=shell.styles.map(file=>file.css).join('\n');
+if(shellCss.includes('../.data:')) throw new Error('OTA shell contains corrupt ../.data: asset URL');
+const panelAsset=otaBinaryAssets.find(row=>row.path==='assets/textures/ui/mf-hud-panel-material-v1.webp');
+if(!panelAsset||!shellCss.includes(panelAsset.uri)) throw new Error('OTA shell did not inline cinematic HUD panel material');
+const menuPlate=otaBinaryAssets.find(row=>row.path==='assets/textures/ui/mf-ui-v3/deploy_normal.png');
+if(!menuPlate||!shellCss.includes(menuPlate.uri)) throw new Error('OTA shell did not inline the UI Production V3 menu plates');
+const preludeRuntimeBase=`(function(){
+  /* The shell object lives in the shell artifact only. Keeping a copy here
+     too duplicated ~4.5 MB of markup and inlined CSS into an artifact that
+     never reads it, and would have made every stylesheet tweak re-send both. */
   /* Published before any source runs so a loader's first request already
      resolves. Absent in the APK/dev build, where the real files are on disk and
      the loaders fall back to their normal path. */
+  window.__MF_OTA_HAS_GALACTIC_DELIVERY=${JSON.stringify(hasExplorationDelivery)};
   window.__MF_OTA_ASSETS=${JSON.stringify(otaRuntimeAssets)};
   window.mf2AssetURL=function(path){
     var p=String(path||'');
@@ -167,22 +280,128 @@ const prelude=`(function(){
   /* Fail open even if a renderer or optional module crashes before confirmBoot.
      A broken feature may show an error, but it must never brick every control. */
   guardWatchdog=setTimeout(clearGuard,5000);
+})();
+`;
+/* SECOND prelude artifact: everything that touches the visible document.
+   Split from the runtime half above so the asset table and mf2AssetURL are
+   live before ANY source runs - a loader firing during the very first source
+   must already resolve. */
+const preludeShell=`(function(){
+  var shell=${JSON.stringify(shell)};
   document.querySelectorAll('link[rel="stylesheet"],style[data-mf-shell-style]').forEach(function(n){n.remove();});
   shell.styles.forEach(function(file){
     var s=document.createElement('style'); s.setAttribute('data-mf-shell-style',file.path);
     s.textContent=file.css; document.head.appendChild(s);
   });
-  document.body.innerHTML=shell.body; document.title=shell.title;
+  /* NOT document.body.innerHTML=. boot.js injectScripts appends EVERY script
+     tag to document.body in ONE synchronous loop before any of them runs
+     ("Append every tag now"), so by the time this artifact executes all of
+     its siblings are already body children. Assigning innerHTML would delete
+     every source that has not run yet and stop the build dead. That is
+     invisible today only because the payload is a single tag. */
+  (function(){
+    var kill=[],k,n;
+    for(k=0;k<document.body.childNodes.length;k++){
+      n=document.body.childNodes[k];
+      if(n.nodeType===1&&n.tagName==="SCRIPT") continue;
+      kill.push(n);
+    }
+    for(k=0;k<kill.length;k++) kill[k].parentNode.removeChild(kill[k]);
+    var frag=document.createElement("div");
+    frag.innerHTML=shell.body;
+    var first=document.body.firstChild;
+    while(frag.firstChild) document.body.insertBefore(frag.firstChild,first);
+  })();
+  document.title=shell.title;
   shield=document.createElement('div'); shield.setAttribute('aria-hidden','true');
   shield.setAttribute('data-mf-input-shield','');
   shield.style.cssText='position:fixed;inset:0;z-index:2147483647;background:transparent;pointer-events:auto;touch-action:none';
   document.body.appendChild(shield);
   window.__MASSFRONT_SHELL=shell.version;
 })();\n`;
-const sources=order.map(path=>inlineOtaBinaryRefs(readFileSync(join(root,path),'utf8'))+'\n//# sourceURL='+path).join('\n;\n');
-const body=prelude+sources;
+/* PER-FILE PAYLOAD.
+   The OTA used to be one concatenated blob, which made a hotfix a full
+   re-download of everything - the reason the delta work exists. boot.js already
+   runs a manifest as N separate script tags (it does exactly that for the
+   packaged build every launch), so this needs no loader change.
+
+   Each artifact ENDS by incrementing __MF_OTA_RAN, and the first stamps
+   __MF_OTA_EXPECT. src/main.js withholds __bootOk() unless they match, which
+   restores the all-or-nothing property a single blob had for free: separate
+   script tags do not stop one another, so without the count a throw in one
+   artifact would leave a half-booted build promoted to good with its recovery
+   state deleted. The counter is the last statement on purpose - a file that
+   threw halfway must not count itself. */
+const sources=order.map(path=>({path, text:inlineOtaBinaryRefs(readFileSync(join(root,path),'utf8'))}));
+const sourceText=sources.map(row=>row.text).join('\n');
+const keelAsset=otaBinaryAssets.find(row=>row.path==='assets/textures/ui/mf-keel-uga-portrait-v1.webp');
+if(!keelAsset||!sourceText.includes(keelAsset.uri)) throw new Error('OTA source did not inline KEEL portrait');
+const artifactCount=2+sources.length;
+const stampWithCount=(a,i)=>(i===0?'window.__MF_OTA_EXPECT='+artifactCount+';\n':'')
+  +a.text+'\n;window.__MF_OTA_RAN=(window.__MF_OTA_RAN|0)+1;\n';
+
+/* 00-runtime carries the descriptor and is therefore the one artifact that
+   cannot hash itself. Every other leaf is the exact final stamped byte stream
+   that boot executes, including the shell and per-file completion counter. */
+const compatibleArtifacts=[{path:'ota/01-shell.js',text:preludeShell},...sources]
+  .map((a,i)=>({path:a.path,bytes:Buffer.from(stampWithCount(a,i+1),'utf8')}));
+const runtimeCompatibility=buildRuntimeCompatibility({
+  buildVersion:version,
+  channel:'ota',
+  manifestArtifacts:compatibleArtifacts,
+  canonicalArtifacts:canonicalRuntimeArtifacts(root,version),
+  balancePaths:BALANCE_AUTHORITY_V1,
+  excluded:['ota/00-runtime.js (descriptor carrier; self-reference)','artifacts.json (transport index)']
+});
+const preludeRuntime='window.'+RUNTIME_COMPATIBILITY_GLOBAL+'='+JSON.stringify(runtimeCompatibility)+';\n'
+  +preludeRuntimeBase;
+const artifacts=[
+  {path:'ota/00-runtime.js', text:preludeRuntime},
+  {path:'ota/01-shell.js',   text:preludeShell},
+  ...sources,
+];
+const stamp=(a,i)=>stampWithCount(a,i);
+
+/* Syntax gate over the WHOLE payload concatenated in execution order, exactly
+   as the browser will run it. Built in memory and thrown away - the blob is no
+   longer published. A parse error in any artifact fails the release here rather
+   than on a device. */
+const body=artifacts.map(stamp).join('\n;\n');
+if(body.includes('../.data:')) throw new Error('OTA payload contains corrupt ../.data: asset URL');
 new Function(body);
-const out=join(root,'releases',`MASSFRONT-v${version}-update.js`);
-mkdirSync(dirname(out),{recursive:true});
-writeFileSync(out,body);
-console.log(`${order.length} sources -> ${out} (${(Buffer.byteLength(body)/1048576).toFixed(2)} MB)`);
+
+const stage=process.env.MASSFRONT_UPDATE_STAGE_DIR
+  ?join(root,process.env.MASSFRONT_UPDATE_STAGE_DIR)
+  :join(root,'releases','staging-v'+version);
+rmSync(stage,{recursive:true,force:true});
+const index=[];
+/* A release is already split into independently addressable source artifacts.
+   Add a second, bounded layer for unreliable mobile networks: clients can
+   resume a large artifact by HTTP range and prove every retained range before
+   it is trusted. Four MiB keeps one verification allocation well below the
+   largest generated source while avoiding hundreds of requests for a normal
+   full update. The whole-file SHA remains authoritative after reassembly. */
+const OTA_CHUNK_BYTES=4*1024*1024;
+for(let i=0;i<artifacts.length;i++){
+  const text=stamp(artifacts[i],i);
+  const bytes=Buffer.from(text,'utf8');
+  const dest=join(stage,artifacts[i].path);
+  mkdirSync(dirname(dest),{recursive:true});
+  writeFileSync(dest,bytes);
+  const chunks=[];
+  for(let offset=0;offset<bytes.length;offset+=OTA_CHUNK_BYTES){
+    const part=bytes.subarray(offset,Math.min(bytes.length,offset+OTA_CHUNK_BYTES));
+    chunks.push({offset,size:part.length,
+      sha256:createHash('sha256').update(part).digest('hex')});
+  }
+  index.push({path:artifacts[i].path,size:bytes.length,
+              sha256:createHash('sha256').update(bytes).digest('hex'),chunks});
+}
+writeFileSync(join(stage,'artifacts.json'),JSON.stringify(index,null,1));
+writeFileSync(join(stage,'runtime-compatibility.json'),JSON.stringify(runtimeCompatibility,null,2)+'\n');
+const total=index.reduce((n,f)=>n+f.size,0);
+console.log(artifacts.length+' artifacts -> '+stage+' ('+(total/1048576).toFixed(2)+' MB total)');
+console.log('  largest: '+index.slice().sort((a,b)=>b.size-a.size).slice(0,3)
+  .map(f=>f.path+' '+(f.size/1048576).toFixed(2)+'MB').join(', '));
+console.log('  runtime compatibility '+runtimeCompatibility.manifestHash.slice(0,12)
+  +' / balance '+runtimeCompatibility.balanceHash.slice(0,12));

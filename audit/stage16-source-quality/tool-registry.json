@@ -1,0 +1,5251 @@
+{
+  "schema": "MASSFRONT_TOOL_REGISTRY_REPORT_V1",
+  "generatedAt": "2026-08-31T00:34:30.841Z",
+  "policy": "unregistered means UNKNOWN/PRESERVE",
+  "tools": [
+    {
+      "path": "tools/artv2-bake.py",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/artv2.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:8443546963afa397d742c12eebecc17a9673dcbb"
+    },
+    {
+      "path": "tools/artv2-publish.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [
+        "tools/artv2.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:b6a4713f96d4baa0ceb2e57cdcf89f9163e29188"
+    },
+    {
+      "path": "tools/artv2-verify.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/artv2.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:f10472024e92dc5931af0ab92b1a9df1f3b7fcb1"
+    },
+    {
+      "path": "tools/artv2.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/artv2-bake.py",
+        "tools/artv2-publish.mjs",
+        "tools/artv2-verify.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:d8c868912a5371b1ba33d0e2d88bb2f2d5810c67"
+    },
+    {
+      "path": "tools/artv2/mf2_bake.py",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/artv2-bake.py",
+        "tools/bake-asset-maps.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:d7d2c1b73468546f5d9d29c7ad35c7e14b0a83cd"
+    },
+    {
+      "path": "tools/artv2/mf2_manifest.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:0b41fb1e109c64732be7b5d94ebe97c929df7b19"
+    },
+    {
+      "path": "tools/artv2/pnglib.cjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/bake-asset-maps.mjs",
+        "tools/build-cmd-icons.cjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:04435d7434457953e77227cde7046b6100a583c5"
+    },
+    {
+      "path": "tools/audio-library/test-music-catalog.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:76611d208853f3446b9318d748d80191e012b528"
+    },
+    {
+      "path": "tools/audio-library/validate-music-catalog.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [
+        "tools/audio-library/test-music-catalog.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:d55d0266282e928d2600972a7cabac0b52b01800"
+    },
+    {
+      "path": "tools/audit-faction-structure-art.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:434ea1eab5115c0b02815fa9cf24584fdd6ffcd4"
+    },
+    {
+      "path": "tools/audit-material-variety.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/verify-surface-contracts.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:3057b8ea7c1b077d0c6f1b8900201030772fdc5d"
+    },
+    {
+      "path": "tools/audit-ui-control-safety.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:a8d41575371895c52c2eec98e6e10b329ab76414"
+    },
+    {
+      "path": "tools/bake-asset-maps.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/preview-asset-maps.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:0ee6f80550767e8d6b36e1daf56278fc8136b2af"
+    },
+    {
+      "path": "tools/bake-buildmenu-icons.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [
+        "tools/build-icon-sheets.cjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:4146536f6d37d91fabbe59f3b3996b951389f34d"
+    },
+    {
+      "path": "tools/bake-combat-content-fx-v1.py",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:72c739c1d74c4489b720ed2b097f9027e2c1f2ab"
+    },
+    {
+      "path": "tools/bake-compressed-textures.py",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:83fa359044c41ada343fb4a6eefc2da38756b371"
+    },
+    {
+      "path": "tools/bake-location-surfaces-v1.py",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:3f5ec0c0baa9a1bbce1bcf01abbcf523c1c450bf"
+    },
+    {
+      "path": "tools/bake-material-v2-nova-factory.py",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:32881568da32045bcff2f65b4cb8d03424588a55"
+    },
+    {
+      "path": "tools/bake-material-v2-tank.py",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:05743572bea558d246c577d9fda88d11b5e3dc67"
+    },
+    {
+      "path": "tools/bake-raymarch-driver-v1.py",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:0bd259b6bab04bc424a73edcf50801ece433ac82"
+    },
+    {
+      "path": "tools/bake-sc2-vfx-terrain-assets.py",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:29096f522ac26b3863d4c04fc524c01eba042942"
+    },
+    {
+      "path": "tools/bake-wartable-planets.py",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:1af4e9d2095ad5385aa23b3156baf098b6781ef4"
+    },
+    {
+      "path": "tools/bake-worldkit-building-material-v3.py",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:2f74993d5cf9746f210cd303cb613b7ff57b6c08"
+    },
+    {
+      "path": "tools/balance-audit.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:90c4459e0445f28bc76483588944f9322a6c379f"
+    },
+    {
+      "path": "tools/blender_export.py",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/blender_import.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:3774387b570f2457e35e4f0e4a2d282524b97da8"
+    },
+    {
+      "path": "tools/blender_import.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/blender_export.py",
+        "tools/vrm_import.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:e3c6f1eda005f283b84cc431927e19437f479b5a"
+    },
+    {
+      "path": "tools/blender/audit-stage10-z-fighting.py",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "preserve working-copy bytes; no external recovery proven"
+    },
+    {
+      "path": "tools/blender/build-mf-building-hs.py",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:ba114885dc7dce144d558eac3e7acb8d18eb71e0"
+    },
+    {
+      "path": "tools/blender/build-mf-cityforms-kit.py",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:416fdfe463324a66ceda1de6eebcac9c98e27ff0"
+    },
+    {
+      "path": "tools/blender/build-mf-ground-kit.py",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:8f20493f5d9e534f902e2bc5727e581e92c6566b"
+    },
+    {
+      "path": "tools/blender/build-mf-modular-building-kit.py",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/blender/build-mf-cityforms-kit.py",
+        "tools/blender/build-mf-ground-kit.py",
+        "tools/blender/build-mf-superstructure-kit.py",
+        "tools/blender/build-mf-transit-kit.py"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:e5eec37bd88a291bf89eda4ad9d075e4e8fc8cb6"
+    },
+    {
+      "path": "tools/blender/build-mf-modular-road-kit.py",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:6c2ec14ba70e1005a206e295cdcf3e212e6b7028"
+    },
+    {
+      "path": "tools/blender/build-mf-platform-hs.py",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:6ecebfb5d0db913a5ce1c93d284b2962bf1e3e20"
+    },
+    {
+      "path": "tools/blender/build-mf-superstructure-kit.py",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/blender/build-mf-cityforms-kit.py",
+        "tools/blender/build-mf-transit-kit.py"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:a7f1a59c488d7531e37ad9219dcac4da32a8edf5"
+    },
+    {
+      "path": "tools/blender/build-mf-transit-kit.py",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:bf8b04787c5693a3627a1c2900bab9ee3e3d0afd"
+    },
+    {
+      "path": "tools/blender/consolidate-mf-kits.py",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:8a44112c117559c4e09a957d16180f8734c96f77"
+    },
+    {
+      "path": "tools/blender/hf-road-cleanup/build-hf-road-cleanup.py",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:2cf02bdfb6b1d322719fd05f37b0b1348b432ba2"
+    },
+    {
+      "path": "tools/blender/hf-road-cleanup/build-hf-road-junctions.py",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:a526806363fed63ed46981391b10cfe40f0bbebb"
+    },
+    {
+      "path": "tools/blender/hf-road-cleanup/inspect-hf-road-components.py",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:e3ad2c4174c6079d62353eb28da4cdd5d6be5cb7"
+    },
+    {
+      "path": "tools/blender/hf-road-cleanup/static-check-hf-road-junction-build.py",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:aa8395b580f2a5454c1b1c0cfe3fe4d792e37b44"
+    },
+    {
+      "path": "tools/blender/hf-road-cleanup/test-hf-road-junction-fixtures.py",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:23d50c8f67dc414d0d3333d4cef3444de6056735"
+    },
+    {
+      "path": "tools/blender/hf-road-cleanup/verify-cleanup-source.py",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:d214b73b6f8b14cbacd48cb0bd1cdfa0e44ae9e3"
+    },
+    {
+      "path": "tools/blender/hf-road-cleanup/verify-hf-road-junctions.py",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:484d5a6428a9aed15e3a2da98e11a56a36bdbca8"
+    },
+    {
+      "path": "tools/blender/inventory-mf-blends.py",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:bc28b8f5ce9719837195eac3a79de9e2081f05d7"
+    },
+    {
+      "path": "tools/blender/mf_hardsurface.py",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/blender/build-mf-building-hs.py",
+        "tools/blender/build-mf-platform-hs.py"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:a08e36a9bb9e371bdf32a64ac01fe6442ed66885"
+    },
+    {
+      "path": "tools/blender/render-stage10-repaired-model-pack.py",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "preserve working-copy bytes; no external recovery proven"
+    },
+    {
+      "path": "tools/blender/render-tower-lab.py",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:8a78c75d5a17e30f8505e874e5e2bfabc2d3b2e8"
+    },
+    {
+      "path": "tools/blender/repair-stage10-model-pack.py",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "preserve working-copy bytes; no external recovery proven"
+    },
+    {
+      "path": "tools/blender/source-model-intake-alpha-fixture.py",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:dc80a7b53c6a69084159227fe045b0fa94e3addf"
+    },
+    {
+      "path": "tools/blender/source-model-intake-fixture.py",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:8afba667ead108b4124462f1639c77ff4dcfb72e"
+    },
+    {
+      "path": "tools/blender/source-model-intake.py",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:db1853f162d543a334ab62e75f31f40de93d76b0"
+    },
+    {
+      "path": "tools/blender/stage10_raster_cleanup.py",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "preserve working-copy bytes; no external recovery proven"
+    },
+    {
+      "path": "tools/blender/test_mf_kits.py",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:9ba47beee5c1e2011dcff7d54d5b1bfcfc901e45"
+    },
+    {
+      "path": "tools/blender/texture-stage10-model-pack.py",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "preserve working-copy bytes; no external recovery proven"
+    },
+    {
+      "path": "tools/build-audio-pack.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:bf2f7955fc242fca9e667ce4d056d77e909399f3"
+    },
+    {
+      "path": "tools/build-bespoke-v2-textures.py",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:439ffdc864126b51488eac86acff314d8ce4cb40"
+    },
+    {
+      "path": "tools/build-cmd-icons.cjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:b31964e1cb813bfb92cdc8114ff68b52077bc980"
+    },
+    {
+      "path": "tools/build-design-db.py",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:a58864d68423d5550646ceaaf8e08acbfea38515"
+    },
+    {
+      "path": "tools/build-faction-production-matrix.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/test-faction-structure-distinctiveness.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:545116ed6edf7225a055c7501f8102154b5233ed"
+    },
+    {
+      "path": "tools/build-icon-sheets.cjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/make-buildmenu-icon-brief.cjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:23bef929f94c9ee006e710961bc92a75dcee9b1a"
+    },
+    {
+      "path": "tools/build-master-source.ps1",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:79a85a3034bf06df77f144f1cd84cfd93ebfa7cf"
+    },
+    {
+      "path": "tools/build-material-v2-nova-factory.py",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:52d5a1077cea2ad35a9ad97472149adce1fbd903"
+    },
+    {
+      "path": "tools/build-material-v2-tank.py",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:264427f32a38e5423d6e252a79509f408f5dc11d"
+    },
+    {
+      "path": "tools/build-release-source.ps1",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:60e6c495406725b3281f7c2e91c3fe22c5e87d2c"
+    },
+    {
+      "path": "tools/build-stage10-model-review-gallery.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [
+        "tools/verify-stage10-model-review-gallery.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:568e943970334dcf042b5eb200508483c27dfd85"
+    },
+    {
+      "path": "tools/build-stage10-repair-review-gallery.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "preserve working-copy bytes; no external recovery proven"
+    },
+    {
+      "path": "tools/build-tacticon-sheet.cjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:600d64db94db0925b2b6e6d75c8ab9e0a29d27dd"
+    },
+    {
+      "path": "tools/build-voice-pack.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/publish-voice-pack.py"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:c4d96ee1b944bcc837613cdf3703612678c36da6"
+    },
+    {
+      "path": "tools/build-world-structures-v2.py",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:c054f32361f16b4bb527c151f941338182db6985"
+    },
+    {
+      "path": "tools/bundle-space-module.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:70b3c34b6893bc563b3e7b2748abd0630da30894"
+    },
+    {
+      "path": "tools/bundle-update.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/publish-hf-release.ps1",
+        "tools/publish.py",
+        "tools/verify-release-freeze.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:0a23e8ef8ced01acd32c82975d60a8ec63b16ad2"
+    },
+    {
+      "path": "tools/bundle.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/publish-hf-release.ps1",
+        "tools/verify-stage10-layouts.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:e80934777378d9c240eff070e55e89ac7f3834b6"
+    },
+    {
+      "path": "tools/capture-air-warfare.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:c0faec10319c8f4e78e0ea9fb1d5bd736f6b919e"
+    },
+    {
+      "path": "tools/capture-asset-bake-ab.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/bake-asset-maps.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:610cd3eaa8ef13ecc7045be201870b34b199cd75"
+    },
+    {
+      "path": "tools/capture-assetskin-gpu.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:a0e2fbfc98bc13034482a7516d6396dcbf11b826"
+    },
+    {
+      "path": "tools/capture-audio-radio.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:dc5d4b05b227360c49cf0f53ce8ec83e0c2ce0a0"
+    },
+    {
+      "path": "tools/capture-authored-planet-scanners.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:a65d606c3be59826b7460ffb4aa2032ed2aadae7"
+    },
+    {
+      "path": "tools/capture-bespoke-heavy-artillery.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:9d4a405cda291b0dc5402962ce9ccda2f68896f8"
+    },
+    {
+      "path": "tools/capture-brood-silhouettes.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:0bf44b4020e8a7843de46aca90be463c3a070064"
+    },
+    {
+      "path": "tools/capture-brood-translucency.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:df6dca761842279d0fb0d3d1d31072c4386a5f40"
+    },
+    {
+      "path": "tools/capture-cinematic-blast.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:c8cb5eb7147c1686ed14c2aee769584af5dfca7f"
+    },
+    {
+      "path": "tools/capture-codex-buildmenu.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:877f8648cd13ea0161c67dd56961b47f0a3ed677"
+    },
+    {
+      "path": "tools/capture-combat-vfx.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:2fa3cc031b8223ec592108aee9efe46e3860d7bf"
+    },
+    {
+      "path": "tools/capture-commander-icon.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:54b89e223e551016af77b65c0185a861765d603a"
+    },
+    {
+      "path": "tools/capture-commander-kits.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:3f64605c7207d6c7d0e6af5f3e6240b4090cd011"
+    },
+    {
+      "path": "tools/capture-commander-weapons.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:63b47000943ecb28f4db303d15cc390536531708"
+    },
+    {
+      "path": "tools/capture-daytime-fx.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:8177f820cc3bde60980b26146f329d7cecd9cae3"
+    },
+    {
+      "path": "tools/capture-exploration-flag.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:0c4b39dc9c14dd5485c4a98047d40133b122a1cb"
+    },
+    {
+      "path": "tools/capture-faction-commanders-deployers.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:ff6ff1796cddf5a9a25c22e56e1f87960d803ee9"
+    },
+    {
+      "path": "tools/capture-faction-defense-role-splits.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:343e337eef9b90d11618b979393b2b1d73b55c30"
+    },
+    {
+      "path": "tools/capture-faction-icons.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:b9e4af7bdc640eaadcb8a1532a71e5aca733ba31"
+    },
+    {
+      "path": "tools/capture-faction-rhinos-live3d.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:222be5c0e2d28149db35b1d40029976b5198109f"
+    },
+    {
+      "path": "tools/capture-faction-strategic-defense.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:8384fa7a4594f712f92107c4e8c652df8746253e"
+    },
+    {
+      "path": "tools/capture-faction-unit-doctrine.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:2c41cde3ad7584b8bea719e737a1e7046abc38fb"
+    },
+    {
+      "path": "tools/capture-fog-haze.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:663076359a5ba01c575fe5f3a651ca577b06ac38"
+    },
+    {
+      "path": "tools/capture-four-commander-spawn.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:d8866967bdad904effe31a39fea63d34e0c68415"
+    },
+    {
+      "path": "tools/capture-gfx-high-mid.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:7c3baaf02c4e74346a459682b5181125343dcce9"
+    },
+    {
+      "path": "tools/capture-gfx-presets.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:6313c292f96a5e72a4643d4ede9eb07ded72fb6b"
+    },
+    {
+      "path": "tools/capture-hud-stage1.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:d0c442bca80a11933648c93f8795638bb13806f1"
+    },
+    {
+      "path": "tools/capture-ingame.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:b7e077393c0dd8466483bbb09a90101e33a5e5a2"
+    },
+    {
+      "path": "tools/capture-intel-preview-context-leak.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:ba2f5661202ac95410232869e30d215aa7a606f6"
+    },
+    {
+      "path": "tools/capture-interface-matrix.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:355fae415355e48c9e433be571afc27251cc76fe"
+    },
+    {
+      "path": "tools/capture-live-roster.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [
+        "tools/capture-brood-silhouettes.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:f5bf2d9c4e9b783be4ed0751bfb368683b560ddc"
+    },
+    {
+      "path": "tools/capture-mat-atlas.cjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/bake-asset-maps.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:ffe1d0f117a4b0c0e212e6d8bbcc7fd51c568ba7"
+    },
+    {
+      "path": "tools/capture-match-gameplay.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:99b11b516468b424f22bb53f3bf549d91b4bcc51"
+    },
+    {
+      "path": "tools/capture-material-orm-views.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:a5bc96514397a224bb3956571086a32b517a90f7"
+    },
+    {
+      "path": "tools/capture-megacity-materials.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:0c6ed1383556fcbae3fefba3a01461ef13892ceb"
+    },
+    {
+      "path": "tools/capture-mobile-portrait-scenarios.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:8441e4aa54d42765a43c49a49d4c50fd4fc26ba8"
+    },
+    {
+      "path": "tools/capture-mosswatch.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:f361a1ba79465d210b33be6d13e53f491d732a70"
+    },
+    {
+      "path": "tools/capture-nova-art.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:9749dd8d2de3afb1fff3221475cd3ab205e76db5"
+    },
+    {
+      "path": "tools/capture-onboarding-2026-08-14.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:7099e1cf17c713936e25bbfd9c10da3d34686d8a"
+    },
+    {
+      "path": "tools/capture-overhaul-baseline.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [
+        "tools/capture-stage0.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:529922afc6bbe3d215b47f8786bafc809c6d4f78"
+    },
+    {
+      "path": "tools/capture-physics-destruction.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:e1b9d4b941f953e4419419f128aa4276bd6e321d"
+    },
+    {
+      "path": "tools/capture-planet-homeworlds.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:45d008d3369718e366bb38e08a21647700b4119c"
+    },
+    {
+      "path": "tools/capture-qa-stagegate.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:19ac038f68ebb94107c2673894c49d0be023710d"
+    },
+    {
+      "path": "tools/capture-real-ingame-screenshot.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [
+        "tools/capture-codex-buildmenu.mjs",
+        "tools/capture-tacticons.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:e2c3ca04359f1613cafa3469bd0c50aec7ee8755"
+    },
+    {
+      "path": "tools/capture-resource-drop-presentation.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:3c10016d905a614cfefc93a9a9149035f1ee826c"
+    },
+    {
+      "path": "tools/capture-screen-grade-ab.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:990bc3f97a1d42d943dbb70e8236be593c5128f4"
+    },
+    {
+      "path": "tools/capture-screen-grade-setting.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:361463a77085a4d05ed6c876a9cf51145701159b"
+    },
+    {
+      "path": "tools/capture-showcase.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:03cab16cba279914f44302de6ab774ee8ac6d4e1"
+    },
+    {
+      "path": "tools/capture-site-templates.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:6c5f4cf1a9db836ea295690765aa8122fe782e74"
+    },
+    {
+      "path": "tools/capture-space-exploration-overhaul.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:b7d76c741834638fe70748b370bb6cd0a89d06c6"
+    },
+    {
+      "path": "tools/capture-stage0.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:981dbdc588d769a239eb051c145d2ee32526ce71"
+    },
+    {
+      "path": "tools/capture-stage11-space-ux.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "preserve working-copy bytes; no external recovery proven"
+    },
+    {
+      "path": "tools/capture-stage8-team-identification.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [
+        "tools/test-stage8-team-identification.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:d5e04f9c9da1929bce20e9a42107837cc80cf356"
+    },
+    {
+      "path": "tools/capture-stage9-galactic-operations.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:b945b889e6937c212420c6b789153ce8456450dc"
+    },
+    {
+      "path": "tools/capture-stage9-location-visuals.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:961379c35985242d508dde4330f4dba6f5e223be"
+    },
+    {
+      "path": "tools/capture-stagec-fx.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/capture-brood-translucency.mjs",
+        "tools/capture-nova-art.mjs",
+        "tools/measure-billboard-baseline.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:f91aed909eacf7aed0358ef6dbb959a392ff9ab2"
+    },
+    {
+      "path": "tools/capture-strategic-icons.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:95085fdd44d92d073cc262253fd7218198bb23d7"
+    },
+    {
+      "path": "tools/capture-tacticons.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:9ead6554f226d104147c5287c469abdaa2bf40d7"
+    },
+    {
+      "path": "tools/capture-td-screenshots.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:bb5236aa4183b6ecfa647e78eba583037dcaed45"
+    },
+    {
+      "path": "tools/capture-terrain-fixes.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:9bfbf91bb41c44fb6cab1620f80d7f90081bf2f1"
+    },
+    {
+      "path": "tools/capture-tower-hq-fx.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:7da8c9fb91539c5f78cdaadadb9b6e6c40c42a8f"
+    },
+    {
+      "path": "tools/capture-tower-hq-high.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:1380e224c3e7fa598686a7c21160737cd31d75ce"
+    },
+    {
+      "path": "tools/capture-track7-art.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:496fc0ecab649a037ed420ff66f1b1e4e6d4864d"
+    },
+    {
+      "path": "tools/capture-wartable-mobile.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:21e3a3439cbb17b3507bfe63726c7c570ffbbafe"
+    },
+    {
+      "path": "tools/capture-water-shore.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:ecf198913006b6e46acd67ea01be36b90512874e"
+    },
+    {
+      "path": "tools/chrome-gpu.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/capture-air-warfare.mjs",
+        "tools/capture-audio-radio.mjs",
+        "tools/capture-bespoke-heavy-artillery.mjs",
+        "tools/capture-commander-kits.mjs",
+        "tools/capture-commander-weapons.mjs",
+        "tools/capture-faction-commanders-deployers.mjs",
+        "tools/capture-faction-defense-role-splits.mjs",
+        "tools/capture-faction-rhinos-live3d.mjs",
+        "tools/capture-faction-strategic-defense.mjs",
+        "tools/capture-faction-unit-doctrine.mjs",
+        "tools/capture-gfx-high-mid.mjs",
+        "tools/capture-gfx-presets.mjs",
+        "tools/capture-live-roster.mjs",
+        "tools/capture-mat-atlas.cjs",
+        "tools/capture-material-orm-views.mjs",
+        "tools/capture-mosswatch.mjs",
+        "tools/capture-onboarding-2026-08-14.mjs",
+        "tools/capture-planet-homeworlds.mjs",
+        "tools/capture-real-ingame-screenshot.mjs",
+        "tools/capture-stage11-space-ux.mjs",
+        "tools/capture-stage8-team-identification.mjs",
+        "tools/capture-stage9-galactic-operations.mjs",
+        "tools/capture-stage9-location-visuals.mjs",
+        "tools/capture-strategic-icons.mjs",
+        "tools/capture-td-screenshots.mjs",
+        "tools/capture-terrain-fixes.mjs",
+        "tools/capture-tower-hq-fx.mjs",
+        "tools/debug-lab/gl-state-inspector.mjs",
+        "tools/debug-lab/memory-leak-tracer.mjs",
+        "tools/debug-lab/spatial-hash-validator.mjs",
+        "tools/device-harness.mjs",
+        "tools/diagnose-deploy-flow.mjs",
+        "tools/measure-gfx-presets.mjs",
+        "tools/perf-lab/perf-probe-runner.mjs",
+        "tools/planet-map-art/capture-material-ab.mjs",
+        "tools/probe-air-warfare.mjs",
+        "tools/probe-commander-hud.mjs",
+        "tools/probe-exact-template-runtime.mjs",
+        "tools/probe-intel-artillery.mjs",
+        "tools/probe-live-utility-jobs.mjs",
+        "tools/probe-movement-blockers.mjs",
+        "tools/probe-naval-rally.mjs",
+        "tools/probe-navigation-blockers.mjs",
+        "tools/probe-population-cap.mjs",
+        "tools/probe-resource-placement.mjs",
+        "tools/probe-shader-compile.mjs",
+        "tools/probe-stage13-audio-bridge.mjs",
+        "tools/probe-stage3-turret-charge.mjs",
+        "tools/probe-stage7-loadout-summary.mjs",
+        "tools/probe-stage8-accessibility.mjs",
+        "tools/probe-stage8-music-states.mjs",
+        "tools/probe-stage8-save-transfer.mjs",
+        "tools/probe-turret-articulation.mjs",
+        "tools/probe-utility-jobs.mjs",
+        "tools/pw-browser.mjs",
+        "tools/quick-capture.mjs",
+        "tools/render-building-lab.mjs",
+        "tools/render-faction-building-lab.mjs",
+        "tools/render-tower-lab.mjs",
+        "tools/render-unit-lab.mjs",
+        "tools/test-cloud-postfx.mjs",
+        "tools/test-inventory-loadout.mjs",
+        "tools/test-modifier-art-atlas.mjs",
+        "tools/test-progression-rewards.mjs",
+        "tools/test-sandbox-standalone.mjs",
+        "tools/test-space-module.mjs",
+        "tools/test-training-briefing.mjs",
+        "tools/test-world-boundary-content.mjs",
+        "tools/verify-building-input-hotfix.mjs",
+        "tools/verify-mat-orm.mjs",
+        "tools/verify-overhaul.mjs",
+        "tools/verify-perf-terrain-acceptance.mjs",
+        "tools/verify-pw-browser-isolation.mjs",
+        "tools/verify-stage14-pwa-delivery.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:53bfe49ea0dc7495a93e52db30626d7df4041b36"
+    },
+    {
+      "path": "tools/content-library/validate-content-library.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:a68a1945412a7d554593619c7f36d40b9c9d8594"
+    },
+    {
+      "path": "tools/content-library/validate-content-library.selftest.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:70545b0af487535acad63589f39e5536f4d274bf"
+    },
+    {
+      "path": "tools/convert-world-assets.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:dd759db7ba6fb6e56ad2955099968b0a0bbe9a29"
+    },
+    {
+      "path": "tools/debug-lab/gl-state-inspector.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/test-stage8-offline-diagnostics.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:6e4aff9d41a0b4e4c2306b7c3aa20d2038944b77"
+    },
+    {
+      "path": "tools/debug-lab/memory-leak-tracer.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/test-stage8-offline-diagnostics.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:629bc31bc222131eec406089e543fdb4d4f70d97"
+    },
+    {
+      "path": "tools/debug-lab/spatial-hash-validator.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/test-stage8-offline-diagnostics.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:8cf3eee23492f473874c6de0643addd4111a69be"
+    },
+    {
+      "path": "tools/device-harness.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [
+        "tools/test-stage8-offline-diagnostics.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:0ae93ecacda924978677db2a2d54475e20cc7cab"
+    },
+    {
+      "path": "tools/diagnose-deploy-flow.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [
+        "tools/test-stage8-offline-diagnostics.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:4d0940e6360e8d8cfccf03942638f3f4481d10fd"
+    },
+    {
+      "path": "tools/dump-buildmenu-roster.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:1b29554ba57a3a47087029dc30038c90b5bfdfa2"
+    },
+    {
+      "path": "tools/embed-art.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:46f3b70a6f6db01968a12dd25c68a5a0fb368c31"
+    },
+    {
+      "path": "tools/embed-icons.py",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:e0d5a81270e96664a13c01596f771d7e4670ff06"
+    },
+    {
+      "path": "tools/evidence-classification.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [
+        "tools/test-live-preview-faction-regressions.mjs",
+        "tools/test-updater-status.mjs",
+        "tools/verify-resource-drop-presentation.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "preserve working-copy bytes; no external recovery proven"
+    },
+    {
+      "path": "tools/evidence-foundation/contracts.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/evidence-foundation/fixtures/fixture-builder.mjs",
+        "tools/evidence-foundation/validate-evidence.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:2d426a6895ab74f31987176a40bf876f2dd7d51f"
+    },
+    {
+      "path": "tools/evidence-foundation/fingerprints-self-test.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:13679908b12491cbf10361a9426d47ee34216287"
+    },
+    {
+      "path": "tools/evidence-foundation/fingerprints.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [
+        "tools/evidence-foundation/fingerprints-self-test.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:76be7ecdb92dd0a0531aa86c7416c4b3c5d61850"
+    },
+    {
+      "path": "tools/evidence-foundation/fixtures/fixture-builder.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:9383bdc2502fcbc5501975dfd5dc44ba883a8dce"
+    },
+    {
+      "path": "tools/evidence-foundation/ledger.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [
+        "tools/evidence-foundation/validate-evidence.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:e5f692a6d59c4d9171f24af0b499f0e3b0f36f11"
+    },
+    {
+      "path": "tools/evidence-foundation/png-evidence.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [
+        "tools/capture-stage9-location-visuals.mjs",
+        "tools/evidence-foundation/contracts.mjs",
+        "tools/evidence-foundation/fixtures/fixture-builder.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:5b4462a763240f7eee60f16c145222f602836491"
+    },
+    {
+      "path": "tools/evidence-foundation/self-test.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:3c8b33b1e98977f8ebda3e448ef0cabf5319138b"
+    },
+    {
+      "path": "tools/evidence-foundation/validate-evidence.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:f7c553ddd9854ebe39d6eac1ccd7f6779cc54e2d"
+    },
+    {
+      "path": "tools/evidence-foundation/workspace-guard-self-test.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:f1dfc52655da75af00fa81b607838397f8882b06"
+    },
+    {
+      "path": "tools/evidence-foundation/workspace-guard.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/evidence-foundation/workspace-guard-self-test.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:220ab1696504176c5360bb3e3172e671a5a80370"
+    },
+    {
+      "path": "tools/extract-design-db.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:aabd378b1c4a34738b54cfd39600abf40c074d31"
+    },
+    {
+      "path": "tools/extract-tower-panels.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:a8aa6f3a2da1405b7b9990034955f8776b8fbe45"
+    },
+    {
+      "path": "tools/gen-test-image.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:dd2618810cd932179361ac2097d7319489e58eb2"
+    },
+    {
+      "path": "tools/glb_import.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/glb-v2-import.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:a69097a3a4e8e211ec9181f6bc5889b1b001700a"
+    },
+    {
+      "path": "tools/glb-v2-import.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/artv2/mf2_bake.py"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:89080ee80e23659198e05f97c3c0d6a46d5abd60"
+    },
+    {
+      "path": "tools/hf/generate-hunyuan3d21-asset.py",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:102c08100f330d9589e65787cffce08e5685a709"
+    },
+    {
+      "path": "tools/hf/generate-trellis2-asset.py",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:fba08970cb87c5efefff44dbef7f660ba0458173"
+    },
+    {
+      "path": "tools/ingest-music.py",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/audio-library/validate-music-catalog.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:7d771fccca3da15fff8fc98c5f558203d11a5769"
+    },
+    {
+      "path": "tools/ingest-sfx.py",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:67bc8c3712e3b1d1c8a74c0667acf3761deef6db"
+    },
+    {
+      "path": "tools/inspect-drive-folder.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:a830c3fa317cbcd54827e1072392de7ff07a34ca"
+    },
+    {
+      "path": "tools/intake-spline-prefabs.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:1fdea264a1cd0fb891d6a13bfce70ce455737907"
+    },
+    {
+      "path": "tools/interface-audit/audit-interface-matrix.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:ef10f7fa13246e96f7b55f6978ee37c98597f857"
+    },
+    {
+      "path": "tools/interface-audit/test-verifier-fixtures.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:6b586483fc37a0fedb4747cccf38bb9b0edac03a"
+    },
+    {
+      "path": "tools/interface-audit/verify-interface-matrix.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/interface-audit/audit-interface-matrix.mjs",
+        "tools/interface-audit/test-verifier-fixtures.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:bcae43e97acf7caec80de5dc3a3c8218b3ca2dac"
+    },
+    {
+      "path": "tools/legibility-floor.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:2085836c7a853037aa3ad93be349431a139b4cdb"
+    },
+    {
+      "path": "tools/make-ad-art.py",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:5816ec455a6392c81e59514f83fcd561dda4f0bb"
+    },
+    {
+      "path": "tools/make-audio.py",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/audio-library/validate-music-catalog.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:2af7897f5e094df698bd81c66d109ac23ccf6a73"
+    },
+    {
+      "path": "tools/make-buildmenu-icon-brief.cjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:8bc6955db2b98ce773d833a9caa6150b9b76b73e"
+    },
+    {
+      "path": "tools/make-faction-art.py",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:75cec2329cf7dc263a8321e03f5da6f0abc5f7f0"
+    },
+    {
+      "path": "tools/make-icons.py",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/embed-icons.py",
+        "tools/make-ad-art.py"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:3d3dd0e752c4a304cb2f2921298bca30218ecf15"
+    },
+    {
+      "path": "tools/make-manifest.py",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:962d0406805fbead4d70cb0225d18356e7c768ae"
+    },
+    {
+      "path": "tools/make-voices.py",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/build-voice-pack.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:ffdcf6d912c308cd7013a61afc3eb5d6025908b0"
+    },
+    {
+      "path": "tools/mapgen/rules.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:efd3d587e2af746242a4822db988372024fc9360"
+    },
+    {
+      "path": "tools/mapgen/site-maps.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [
+        "tools/probe-exact-template-placement.mjs",
+        "tools/probe-site-template-compat.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:2a23717d9786bf977aabe323aa8a802eca936901"
+    },
+    {
+      "path": "tools/mapgen/stamp-geometry.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [
+        "tools/probe-exact-template-placement.mjs",
+        "tools/probe-site-template-compat.mjs",
+        "tools/verify-stage9-location-plans.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:fa8cfd3b83f809e4c08da8fed0792d474777b150"
+    },
+    {
+      "path": "tools/massfront-atlas/generate.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:085e62871c5d62d7daecee038646b8ec3e900290"
+    },
+    {
+      "path": "tools/material-art/build_source_pbr_v2.py",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:65ef37128cb30191f3a2cb9d713ce02934f6a27a"
+    },
+    {
+      "path": "tools/material-art/build_uga_deck_floor_v2.py",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:02c3bc61415f64d81e99ecfebbe897f8ebf6d9a8"
+    },
+    {
+      "path": "tools/material-art/inspect_glb_images.py",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:4f50b57c59a1c5e7dcefb18d6be18b7212a474a9"
+    },
+    {
+      "path": "tools/material-atlas-io.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [
+        "tools/render-building-lab.mjs",
+        "tools/render-faction-building-lab.mjs",
+        "tools/render-tower-lab.mjs",
+        "tools/render-unit-lab.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:21772b35bf0af9c939fce2fd408006ccdd674164"
+    },
+    {
+      "path": "tools/measure-billboard-baseline.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/measure-billboard-baseline2.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:4af365be68f996d67813a8f84b0aa700c1969776"
+    },
+    {
+      "path": "tools/measure-billboard-baseline2.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:692a5da94f8167b2cb72c263be8b505392ef6ed9"
+    },
+    {
+      "path": "tools/measure-billboard-baseline3.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:e22ad8d3bf0daf8271638eecf1cd8ca194bf9e1b"
+    },
+    {
+      "path": "tools/measure-gfx-presets.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:802d07f750d419e5a83174c8661d6b776903a121"
+    },
+    {
+      "path": "tools/mirror-release-to-cloudflare.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:e502cfe1f7c77c5194cb0b7cf1f13e9fc601b3c8"
+    },
+    {
+      "path": "tools/mobile-device-profile.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [
+        "tools/device-harness.mjs",
+        "tools/diagnose-deploy-flow.mjs",
+        "tools/perf-lab/perf-probe-runner.mjs",
+        "tools/probe-shader-compile.mjs",
+        "tools/test-cloud-postfx.mjs",
+        "tools/test-perf-terrain-evidence-contract.mjs",
+        "tools/verify-perf-terrain-acceptance.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:80a70b44440436dfc54751a3ae438047c8bc96f7"
+    },
+    {
+      "path": "tools/offline-network-isolation.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/capture-stage8-team-identification.mjs",
+        "tools/capture-stage9-galactic-operations.mjs",
+        "tools/capture-stage9-location-visuals.mjs",
+        "tools/perf-lab/perf-probe-runner.mjs",
+        "tools/probe-stage8-accessibility.mjs",
+        "tools/probe-stage8-save-transfer.mjs",
+        "tools/test-gl-probe-recovery-contract.mjs",
+        "tools/test-offline-network-isolation.mjs",
+        "tools/test-stage8-offline-diagnostics.mjs",
+        "tools/test-updater-status.mjs",
+        "tools/verify-gl-probe-recovery.mjs",
+        "tools/verify-perf-terrain-acceptance.mjs",
+        "tools/verify-perfscale-gates.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:40fe4ac91d6063de1c6c1ee363082969ab5e3e9c"
+    },
+    {
+      "path": "tools/pack-www.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/probe-ui-computed-touch-targets.mjs",
+        "tools/publish-cloudflare.mjs",
+        "tools/publish-hf-release.ps1",
+        "tools/render-unit-lab.mjs",
+        "tools/test-runtime-compatibility-build.mjs",
+        "tools/verify-pwa-shell.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:cfd8093a37355140bb53d1126bf10a45f52b6ca6"
+    },
+    {
+      "path": "tools/patch-mesh-brood-sss.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:84df3facef3dba7294f98b1360589b824ad37523"
+    },
+    {
+      "path": "tools/patch-mesh-charcoal.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:e82ccc1ba5d9c6e0289af73c0479561d91532416"
+    },
+    {
+      "path": "tools/perf-lab/benchmark-report-generator.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/perf-lab/perf-lab-self-test.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:0ae96d7339879ad495b064273f3850054d0619f2"
+    },
+    {
+      "path": "tools/perf-lab/evidence-contract.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/perf-lab/benchmark-report-generator.mjs",
+        "tools/perf-lab/fixture-verifier.mjs",
+        "tools/perf-lab/fixtures/evidence-fixtures.mjs",
+        "tools/perf-lab/perf-lab-self-test.mjs",
+        "tools/perf-lab/perf-probe-runner.mjs",
+        "tools/perf-lab/seeded-load-generator.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:3cd9ac56f81f71a90e298401dd1378e9d8ab7320"
+    },
+    {
+      "path": "tools/perf-lab/fixture-verifier.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [
+        "tools/perf-lab/perf-lab-self-test.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:ef411d7204c89df1a41d590a991e4855e3e5d477"
+    },
+    {
+      "path": "tools/perf-lab/fixtures/evidence-fixtures.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:4c4894bf0bf13cc6f79e404eff9bda00a7f3c63e"
+    },
+    {
+      "path": "tools/perf-lab/perf-lab-self-test.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:e912d6fea7746e9518a72767f39cb4d4a2cc7624"
+    },
+    {
+      "path": "tools/perf-lab/perf-probe-runner.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/capture-stage9-location-visuals.mjs",
+        "tools/perf-lab/perf-lab-self-test.mjs",
+        "tools/test-stage8-offline-diagnostics.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:43325693737e8ab366bd6e700718f8356e923c57"
+    },
+    {
+      "path": "tools/perf-lab/png-capture-verifier.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [
+        "tools/capture-stage9-location-visuals.mjs",
+        "tools/perf-lab/benchmark-report-generator.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:b08c8030485323da3de13211b5493b605753cda0"
+    },
+    {
+      "path": "tools/perf-lab/probe-perf-api.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:704f39e0dc77e4ceba1602626029b32279ed4b7d"
+    },
+    {
+      "path": "tools/perf-lab/scenario-manifests.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/perf-lab/perf-lab-self-test.mjs",
+        "tools/perf-lab/perf-probe-runner.mjs",
+        "tools/perf-lab/seeded-load-generator.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:034bdde178e4d0e5579d076575bbb76bc3039fa0"
+    },
+    {
+      "path": "tools/perf-lab/seeded-load-generator.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/perf-lab/perf-lab-self-test.mjs",
+        "tools/perf-lab/perf-probe-runner.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:12e4a60347fa3b6dcf5d61f6a84a62b216c5ebaa"
+    },
+    {
+      "path": "tools/pin-release-manifest.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:df0555eba115e7402e97067af270b3a1bc613d0c"
+    },
+    {
+      "path": "tools/planet-map-art/analyze-capture-ab.py",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:e444ff9229347521bab670fdb53c06f38890cb75"
+    },
+    {
+      "path": "tools/planet-map-art/bake-planet-map-v2.py",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:5a95ec9ca9541c32b5a3460f1628826457fb9f7f"
+    },
+    {
+      "path": "tools/planet-map-art/capture-material-ab.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:5b67cb9da568e8a5aed0fae3102e19f6e0f1012b"
+    },
+    {
+      "path": "tools/planet-map-art/verify-packed-assets.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:9b2f4d66524725011290d2fc116881bd23cd2962"
+    },
+    {
+      "path": "tools/preview-asset-maps.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:3f31905328e67271f6a1965fa1dfce68a24d6ed4"
+    },
+    {
+      "path": "tools/preview-codex-glyphs.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:eb2bae3f6bd078b931053f3714d226abb3dbe84d"
+    },
+    {
+      "path": "tools/probe-air-propulsion.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:c9ca7bfe3ddf81e180cd88070b999bd10d468eec"
+    },
+    {
+      "path": "tools/probe-air-warfare.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:aefb5a4fee7703a629ff307e16c9b3965ab9af37"
+    },
+    {
+      "path": "tools/probe-artillery-obstruction.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:51acbce510ff752346449788465db926b1d6d0be"
+    },
+    {
+      "path": "tools/probe-cloudfx.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:d2e072b864186d97afcf3baa0ea020a6f2304da0"
+    },
+    {
+      "path": "tools/probe-commander-cue-wiring.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:72921302ba067093ec4791fd29b7348dfd4e2c0d"
+    },
+    {
+      "path": "tools/probe-commander-hud.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:4a542974274f3eea12bfd9eda70e501fd7dd6537"
+    },
+    {
+      "path": "tools/probe-commander-voice.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:8cdc64088bde4b9714f794450f668e537f89c44d"
+    },
+    {
+      "path": "tools/probe-debris-pressure.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:a2c9a9db2777b97ffc27d4a671ca8d941a1fc2b4"
+    },
+    {
+      "path": "tools/probe-exact-template-placement.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/probe-exact-template-runtime.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:55b37e9195c1df42e6bdfbed148696f160f50ebb"
+    },
+    {
+      "path": "tools/probe-exact-template-runtime.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:db3b2dc6c61d4f503193d1ad01947917b243994e"
+    },
+    {
+      "path": "tools/probe-instmesh-upload.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:732133202529c0030751239efb6780b6529a6fb2"
+    },
+    {
+      "path": "tools/probe-intel-artillery.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:f658386a044fa54ea9c79d75c2782c44bc2c4b90"
+    },
+    {
+      "path": "tools/probe-intel-contacts.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:6cb06ce5406f96cc3a894157adba7f83841a2350"
+    },
+    {
+      "path": "tools/probe-live-utility-jobs.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:083e0c086513c3c3dcc17d582a3fe844747ded6e"
+    },
+    {
+      "path": "tools/probe-movement-blockers.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:2c533175aace692ce9a19c22fc61ffbc82062374"
+    },
+    {
+      "path": "tools/probe-naval-rally.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:a95134746dc78c13ffa10999f85d2bc2d0f5113b"
+    },
+    {
+      "path": "tools/probe-navigation-blockers.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:261d3a6f508896a3f9f6a3d082a0fcc33f29ab33"
+    },
+    {
+      "path": "tools/probe-nova-plume.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:5310eb9a82f74aebf6d03019e778145d7d6deca9"
+    },
+    {
+      "path": "tools/probe-physics-debris-retirement.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:72f2cf1b965f7d6cd98519e8562e3c442874ac6c"
+    },
+    {
+      "path": "tools/probe-population-cap.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:3ca5075881966e52ea2d7eef32236dc7c45d27dc"
+    },
+    {
+      "path": "tools/probe-resource-placement.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:dc711bcf5c22f8ca2a690d1d64fa83b7cbab0fee"
+    },
+    {
+      "path": "tools/probe-screen-picker.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:11e2cddcfadbf83bd1b5d03b30ead988ac48f7a5"
+    },
+    {
+      "path": "tools/probe-shader-compile.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [
+        "tools/test-stage8-offline-diagnostics.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:a492e160968613408bd439ca6b7563d957a46e1b"
+    },
+    {
+      "path": "tools/probe-singularity-physics.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:1e48b5a73bc2befef0e2a5cb5a9eb8aec6669d75"
+    },
+    {
+      "path": "tools/probe-site-template-compat.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:5bda3e8c0468b0e7db37315faad7b7d5c545f419"
+    },
+    {
+      "path": "tools/probe-social-client.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:ff5285f458ef1eb61e274d143ccce88ec5b3ebee"
+    },
+    {
+      "path": "tools/probe-social-ui.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:bfb99854cb892b367d7974b4cddd3c7d76540ca5"
+    },
+    {
+      "path": "tools/probe-stage13-audio-bridge.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "preserve working-copy bytes; no external recovery proven"
+    },
+    {
+      "path": "tools/probe-stage15-gameplay-hash.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "preserve working-copy bytes; no external recovery proven"
+    },
+    {
+      "path": "tools/probe-stage15-launch-client.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "preserve working-copy bytes; no external recovery proven"
+    },
+    {
+      "path": "tools/probe-stage15-launch-ui.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "preserve working-copy bytes; no external recovery proven"
+    },
+    {
+      "path": "tools/probe-stage15-match-runtime.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "preserve working-copy bytes; no external recovery proven"
+    },
+    {
+      "path": "tools/probe-stage3-turret-charge.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:8beb6496d78bb3e717c22a737b908b267a01ec25"
+    },
+    {
+      "path": "tools/probe-stage7-loadout-summary.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:a016c2dec31e7aceab5c92441a1ef300b55c817b"
+    },
+    {
+      "path": "tools/probe-stage7-production-ui.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/test-stage7-production-contracts.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:4151a7746f73b160c57c951d83a88e0986675a99"
+    },
+    {
+      "path": "tools/probe-stage8-accessibility.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/test-stage8-accessibility-contract.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:dc0d595788e8d671c7277528ee0cd72a44d764b9"
+    },
+    {
+      "path": "tools/probe-stage8-music-states.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:ed575f4d9383836bce90801e7b388cd54cc537d6"
+    },
+    {
+      "path": "tools/probe-stage8-save-transfer.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/test-stage8-offline-diagnostics.mjs",
+        "tools/test-stage8-save-transfer.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:58e68076aab604564d0b0b31b9da0259ccf22c5e"
+    },
+    {
+      "path": "tools/probe-turret-articulation.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:f1a3e656ae7fa2e00750db90ad61280c024273c8"
+    },
+    {
+      "path": "tools/probe-turret-charge.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:18ebb6d7302b05ea8aa192206b5e6cfefc3caeef"
+    },
+    {
+      "path": "tools/probe-turret-traverse.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:9442ab99a68ef4621c3249243cdaf34c26f12651"
+    },
+    {
+      "path": "tools/probe-ui-computed-touch-targets.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:754fc16e35e0daf03ecfd1b9c6f862497be902a6"
+    },
+    {
+      "path": "tools/probe-ui-control-interactions.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:7d71b2caec52a0ca4374006cd08eb2ca348b3b87"
+    },
+    {
+      "path": "tools/probe-utility-job-board.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:98ebad6637e2b7a3debdbd857adac0242ee32816"
+    },
+    {
+      "path": "tools/probe-utility-jobs.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:0b776e087cd0acada8d3b8251be46cc25fe51000"
+    },
+    {
+      "path": "tools/probe-weapon-flight-singularity.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:36cc9b761590b444dbda64bcdea616f451e2b6d2"
+    },
+    {
+      "path": "tools/probe-weapon-flight.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:981392bd6785ff55633863585304c81f6514da2b"
+    },
+    {
+      "path": "tools/publish-assets.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/build-voice-pack.mjs",
+        "tools/publish-voice-pack.py"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:eed5dc15b334ab3dc38f89d76b81b2e2118b0c2d"
+    },
+    {
+      "path": "tools/publish-cloudflare.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:34608ec05b8da15191e6615ec3e463d0e96ea908"
+    },
+    {
+      "path": "tools/publish-hf-release.ps1",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:34fbc8617b23869858ef9fd630d51c1cc480a9a6"
+    },
+    {
+      "path": "tools/publish-voice-pack.py",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/build-voice-pack.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:686848176fe0b6fe8d7479186fbd936510ac9dc9"
+    },
+    {
+      "path": "tools/publish.py",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/publish-voice-pack.py"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:5a7883deeeb72b72f47077ba119c160af668de64"
+    },
+    {
+      "path": "tools/pw-browser.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/audit-material-variety.mjs",
+        "tools/bake-asset-maps.mjs",
+        "tools/bake-buildmenu-icons.mjs",
+        "tools/capture-air-warfare.mjs",
+        "tools/capture-asset-bake-ab.mjs",
+        "tools/capture-assetskin-gpu.mjs",
+        "tools/capture-audio-radio.mjs",
+        "tools/capture-authored-planet-scanners.mjs",
+        "tools/capture-bespoke-heavy-artillery.mjs",
+        "tools/capture-brood-silhouettes.mjs",
+        "tools/capture-brood-translucency.mjs",
+        "tools/capture-cinematic-blast.mjs",
+        "tools/capture-codex-buildmenu.mjs",
+        "tools/capture-combat-vfx.mjs",
+        "tools/capture-commander-icon.mjs",
+        "tools/capture-commander-kits.mjs",
+        "tools/capture-commander-weapons.mjs",
+        "tools/capture-daytime-fx.mjs",
+        "tools/capture-exploration-flag.mjs",
+        "tools/capture-faction-commanders-deployers.mjs",
+        "tools/capture-faction-defense-role-splits.mjs",
+        "tools/capture-faction-icons.mjs",
+        "tools/capture-faction-rhinos-live3d.mjs",
+        "tools/capture-faction-strategic-defense.mjs",
+        "tools/capture-faction-unit-doctrine.mjs",
+        "tools/capture-fog-haze.mjs",
+        "tools/capture-four-commander-spawn.mjs",
+        "tools/capture-gfx-high-mid.mjs",
+        "tools/capture-gfx-presets.mjs",
+        "tools/capture-hud-stage1.mjs",
+        "tools/capture-ingame.mjs",
+        "tools/capture-intel-preview-context-leak.mjs",
+        "tools/capture-interface-matrix.mjs",
+        "tools/capture-live-roster.mjs",
+        "tools/capture-mat-atlas.cjs",
+        "tools/capture-match-gameplay.mjs",
+        "tools/capture-material-orm-views.mjs",
+        "tools/capture-megacity-materials.mjs",
+        "tools/capture-mobile-portrait-scenarios.mjs",
+        "tools/capture-mosswatch.mjs",
+        "tools/capture-nova-art.mjs",
+        "tools/capture-onboarding-2026-08-14.mjs",
+        "tools/capture-overhaul-baseline.mjs",
+        "tools/capture-physics-destruction.mjs",
+        "tools/capture-planet-homeworlds.mjs",
+        "tools/capture-qa-stagegate.mjs",
+        "tools/capture-real-ingame-screenshot.mjs",
+        "tools/capture-resource-drop-presentation.mjs",
+        "tools/capture-screen-grade-ab.mjs",
+        "tools/capture-screen-grade-setting.mjs",
+        "tools/capture-showcase.mjs",
+        "tools/capture-site-templates.mjs",
+        "tools/capture-space-exploration-overhaul.mjs",
+        "tools/capture-stage0.mjs",
+        "tools/capture-stage11-space-ux.mjs",
+        "tools/capture-stage8-team-identification.mjs",
+        "tools/capture-stage9-galactic-operations.mjs",
+        "tools/capture-stage9-location-visuals.mjs",
+        "tools/capture-stagec-fx.mjs",
+        "tools/capture-strategic-icons.mjs",
+        "tools/capture-tacticons.mjs",
+        "tools/capture-td-screenshots.mjs",
+        "tools/capture-terrain-fixes.mjs",
+        "tools/capture-tower-hq-fx.mjs",
+        "tools/capture-tower-hq-high.mjs",
+        "tools/capture-track7-art.mjs",
+        "tools/capture-wartable-mobile.mjs",
+        "tools/capture-water-shore.mjs",
+        "tools/chrome-gpu.mjs",
+        "tools/debug-lab/gl-state-inspector.mjs",
+        "tools/debug-lab/memory-leak-tracer.mjs",
+        "tools/debug-lab/spatial-hash-validator.mjs",
+        "tools/diagnose-deploy-flow.mjs",
+        "tools/dump-buildmenu-roster.mjs",
+        "tools/inspect-drive-folder.mjs",
+        "tools/measure-billboard-baseline.mjs",
+        "tools/measure-billboard-baseline2.mjs",
+        "tools/measure-billboard-baseline3.mjs",
+        "tools/measure-gfx-presets.mjs",
+        "tools/perf-lab/perf-probe-runner.mjs",
+        "tools/planet-map-art/capture-material-ab.mjs",
+        "tools/preview-codex-glyphs.mjs",
+        "tools/probe-air-propulsion.mjs",
+        "tools/probe-air-warfare.mjs",
+        "tools/probe-artillery-obstruction.mjs",
+        "tools/probe-commander-hud.mjs",
+        "tools/probe-debris-pressure.mjs",
+        "tools/probe-exact-template-runtime.mjs",
+        "tools/probe-intel-artillery.mjs",
+        "tools/probe-intel-contacts.mjs",
+        "tools/probe-live-utility-jobs.mjs",
+        "tools/probe-movement-blockers.mjs",
+        "tools/probe-naval-rally.mjs",
+        "tools/probe-navigation-blockers.mjs",
+        "tools/probe-nova-plume.mjs",
+        "tools/probe-population-cap.mjs",
+        "tools/probe-resource-placement.mjs",
+        "tools/probe-shader-compile.mjs",
+        "tools/probe-social-ui.mjs",
+        "tools/probe-stage13-audio-bridge.mjs",
+        "tools/probe-stage15-launch-ui.mjs",
+        "tools/probe-stage15-match-runtime.mjs",
+        "tools/probe-stage3-turret-charge.mjs",
+        "tools/probe-stage7-loadout-summary.mjs",
+        "tools/probe-stage7-production-ui.mjs",
+        "tools/probe-stage8-accessibility.mjs",
+        "tools/probe-stage8-music-states.mjs",
+        "tools/probe-stage8-save-transfer.mjs",
+        "tools/probe-turret-articulation.mjs",
+        "tools/probe-turret-charge.mjs",
+        "tools/probe-turret-traverse.mjs",
+        "tools/probe-ui-computed-touch-targets.mjs",
+        "tools/probe-ui-control-interactions.mjs",
+        "tools/probe-utility-jobs.mjs",
+        "tools/probe-weapon-flight-singularity.mjs",
+        "tools/probe-weapon-flight.mjs",
+        "tools/quick-capture.mjs",
+        "tools/render-building-lab.mjs",
+        "tools/render-faction-building-lab.mjs",
+        "tools/render-modernized-vehicle-sheet.mjs",
+        "tools/render-tower-lab.mjs",
+        "tools/render-unit-lab.mjs",
+        "tools/test-airlift-factions.mjs",
+        "tools/test-airlift-transport.mjs",
+        "tools/test-artillery-barrage.mjs",
+        "tools/test-brood-resource-fields.mjs",
+        "tools/test-campaign-prologue.mjs",
+        "tools/test-city-combat-surface.mjs",
+        "tools/test-city-terrain-integration.mjs",
+        "tools/test-class-doctrines.mjs",
+        "tools/test-cloud-playtest.mjs",
+        "tools/test-cloud-postfx.mjs",
+        "tools/test-codex-icon-resilience.mjs",
+        "tools/test-construction-stream.mjs",
+        "tools/test-dialogue-intel-ui.mjs",
+        "tools/test-faction-runtime-mobile.mjs",
+        "tools/test-first-contact-domains.mjs",
+        "tools/test-fog-pickups.mjs",
+        "tools/test-hud-safe-rows.mjs",
+        "tools/test-intel-cards.mjs",
+        "tools/test-intel-preview-cards-realgpu.mjs",
+        "tools/test-intro-launch.mjs",
+        "tools/test-inventory-loadout.mjs",
+        "tools/test-map-depth.mjs",
+        "tools/test-map-edges.mjs",
+        "tools/test-map-sizes.mjs",
+        "tools/test-massflesh-transport.mjs",
+        "tools/test-material-v2-lab.mjs",
+        "tools/test-material-v2-optout.mjs",
+        "tools/test-modifier-art-atlas.mjs",
+        "tools/test-operations-shell.mjs",
+        "tools/test-platoon-orders.mjs",
+        "tools/test-population-seats.mjs",
+        "tools/test-prealpha-intro.mjs",
+        "tools/test-progression-rewards.mjs",
+        "tools/test-raymarched-artillery-trails.mjs",
+        "tools/test-reference-vfx-pass.mjs",
+        "tools/test-research-network.mjs",
+        "tools/test-sandbox-standalone.mjs",
+        "tools/test-space-module.mjs",
+        "tools/test-spatial-hash.mjs",
+        "tools/test-tower-defense.mjs",
+        "tools/test-training-briefing.mjs",
+        "tools/test-training-deep.mjs",
+        "tools/test-training-operation.mjs",
+        "tools/test-training-standard-isolation.mjs",
+        "tools/test-ui-action-safety.mjs",
+        "tools/test-unit-separation.mjs",
+        "tools/test-updater-status.mjs",
+        "tools/test-weekly-briefing.mjs",
+        "tools/test-world-boundary-content.mjs",
+        "tools/test-world-structures-v2-mobile.mjs",
+        "tools/verify-ao-resize.mjs",
+        "tools/verify-asset-unwrap.mjs",
+        "tools/verify-building-input-hotfix.mjs",
+        "tools/verify-gl-probe-recovery.mjs",
+        "tools/verify-mat-orm.mjs",
+        "tools/verify-overhaul.mjs",
+        "tools/verify-perf-terrain-acceptance.mjs",
+        "tools/verify-perfscale-gates.mjs",
+        "tools/verify-pw-browser-isolation.mjs",
+        "tools/verify-pwa-shell.mjs",
+        "tools/verify-resource-foundation-mask.mjs",
+        "tools/verify-runtime-fx-contracts.mjs",
+        "tools/verify-stage14-pwa-delivery.mjs",
+        "tools/verify-tacticon-corrupt.mjs",
+        "tools/verify-tacticon-request-hygiene.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:7285a363b4f11c406bc0cbb2cd720e225e01ed56"
+    },
+    {
+      "path": "tools/quick-capture.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:e1b854d1b7b1e787960e5d7309ecbf22265c8fbc"
+    },
+    {
+      "path": "tools/release-retention-core.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [
+        "tools/release-retention.mjs",
+        "tools/test-release-retention.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "preserve working-copy bytes; no external recovery proven"
+    },
+    {
+      "path": "tools/release-retention.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:2714a288371266fab3719c638faf3fea6560a057"
+    },
+    {
+      "path": "tools/render-building-lab.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:63f98514206dcd1fc070f21189a17858b3826951"
+    },
+    {
+      "path": "tools/render-faction-building-lab.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:430c67e7a0ae3286475fd3dc07059b83937e0e43"
+    },
+    {
+      "path": "tools/render-modernized-vehicle-sheet.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:f8f445dd0ad5147a4374865ce40bae8360729c3f"
+    },
+    {
+      "path": "tools/render-tower-lab.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/blender/render-tower-lab.py"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:3a1c866d3c060d75a25d7d3ccff1f4a7c94c83ba"
+    },
+    {
+      "path": "tools/render-unit-lab.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [
+        "tools/render-modernized-vehicle-sheet.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:e99a5a33366a957214435f09e80955733f157e3f"
+    },
+    {
+      "path": "tools/runtime-compatibility.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [
+        "tools/bundle-update.mjs",
+        "tools/pack-www.mjs",
+        "tools/test-runtime-compatibility-build.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "preserve working-copy bytes; no external recovery proven"
+    },
+    {
+      "path": "tools/serve-8100.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:34167b7293757c506b223fafa7243a51ec03d5c8"
+    },
+    {
+      "path": "tools/shrink-apk.ps1",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:8f2471fb276e986f99b83f1f09e65cecc870ddd2"
+    },
+    {
+      "path": "tools/shrink-apk.sh",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/pack-www.mjs",
+        "tools/publish-hf-release.ps1"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:b4b5236ca252887fc58833e87e2c73e2db8b565d"
+    },
+    {
+      "path": "tools/social-contract-lab/checker.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [
+        "tools/social-contract-lab/selftest.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:190b6f4698c6198a81035c2354ffa86d0fbae493"
+    },
+    {
+      "path": "tools/social-contract-lab/selftest.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:5a6480aeef694ea2e1aeac9c129f682ff51139da"
+    },
+    {
+      "path": "tools/source-inventory.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "preserve working-copy bytes; no external recovery proven"
+    },
+    {
+      "path": "tools/source-model-intake-alpha.selftest.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:9577eba2e799f606704da7562bc7a591a0de31c8"
+    },
+    {
+      "path": "tools/source-model-intake.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/blender/source-model-intake.py",
+        "tools/intake-spline-prefabs.mjs",
+        "tools/source-model-intake-alpha.selftest.mjs",
+        "tools/source-model-intake.selftest.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:6c3e6c93e9b5fffc1972d23371105c02f90b8901"
+    },
+    {
+      "path": "tools/source-model-intake.selftest.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:012d570c76efe16a129e2a0c5bbf5e3350488c9d"
+    },
+    {
+      "path": "tools/test-account-cloud-sync.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:ad8486c6379a8d3776514e93d9e5612de6f203b4"
+    },
+    {
+      "path": "tools/test-airlift-factions.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:ffd217014295edd7eb7af0c0634b92fca056b1ca"
+    },
+    {
+      "path": "tools/test-airlift-transport.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:eb9bdbc688c049b4f00069e5eaa33bb7b517ce87"
+    },
+    {
+      "path": "tools/test-artillery-barrage.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:8aa03fce793fe54aa0ae63cd90e5a66400c7a911"
+    },
+    {
+      "path": "tools/test-audio-identity.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:d7a02754f36db6bff7ef61dee97cf53e814c3171"
+    },
+    {
+      "path": "tools/test-brood-resource-fields.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:00ae30c6a0e351207d2c33b2f4021f5ee6fea800"
+    },
+    {
+      "path": "tools/test-campaign-prologue.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:94a9da93c174b4e31e3e0b4462ec2232028cdabd"
+    },
+    {
+      "path": "tools/test-career-faction-gate.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/capture-stage11-space-ux.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "preserve working-copy bytes; no external recovery proven"
+    },
+    {
+      "path": "tools/test-city-combat-surface.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:8c4dcd71b70da07ca39a4916d35066bbe2ebac18"
+    },
+    {
+      "path": "tools/test-city-terrain-integration.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:c56073f86e9d970114b1f720f9567b94af7f8457"
+    },
+    {
+      "path": "tools/test-class-doctrines.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:7f1f69a625a59fba18304a1bbab18637083a7d30"
+    },
+    {
+      "path": "tools/test-cloud-playtest.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:a62951053c86f0de21cc8a8131bec915a16bfd96"
+    },
+    {
+      "path": "tools/test-cloud-postfx.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [
+        "tools/test-stage8-offline-diagnostics.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:d33e74ddda65353f0f33279663aa1aab03465eaf"
+    },
+    {
+      "path": "tools/test-codex-icon-resilience.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:41751d2607f9df66f212634a25a6125236aadff1"
+    },
+    {
+      "path": "tools/test-commander-signatures.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:ae83f9c4cfd3b24de3bb15fded7542da3aa95ca0"
+    },
+    {
+      "path": "tools/test-construction-stream.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:e836b801f44f7d04825a728a923da2d12985292b"
+    },
+    {
+      "path": "tools/test-daily-render-stability.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:2b8aca16a6cb9aacf64056b293a97795e3c5010d"
+    },
+    {
+      "path": "tools/test-dark-faction-readability.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:53ec28dd0dbd3e4545728b4493eb90a81f8429ab"
+    },
+    {
+      "path": "tools/test-defense-role-integrity.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:59bfc9cd1f9786b80a3ed05d4f1433d77cfc47ef"
+    },
+    {
+      "path": "tools/test-deployment-fog.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:e1cf1cba98a21fcabecc3099d6f0e57967853294"
+    },
+    {
+      "path": "tools/test-dialogue-intel-ui.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:cd4fff3e040257bea0f48e366ff4325a992a4634"
+    },
+    {
+      "path": "tools/test-faction-canonical-identity.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:882c162448a1e70a34c56a706a64ad7e729091ae"
+    },
+    {
+      "path": "tools/test-faction-doctrines.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:5310ca0c673ab2f17522a0159f7989db4f417242"
+    },
+    {
+      "path": "tools/test-faction-footprints.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:5da4d737c374b311929153a2a1fea632af8b08f8"
+    },
+    {
+      "path": "tools/test-faction-identity-contract.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "preserve working-copy bytes; no external recovery proven"
+    },
+    {
+      "path": "tools/test-faction-model-exclusivity.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:449f42c5917a65f3a35fe7442d59537ac3b7c3c3"
+    },
+    {
+      "path": "tools/test-faction-rhino-identity.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:abc38ab19bda95fd8fcb1135e9baf7ac49bd4945"
+    },
+    {
+      "path": "tools/test-faction-runtime-mobile.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:0c7174f7f11f64546681be7d4e7216a25f6031be"
+    },
+    {
+      "path": "tools/test-faction-strategic-defense.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:a2b6e03ae1530ecce0d900cbdb5ff0621899853b"
+    },
+    {
+      "path": "tools/test-faction-structure-distinctiveness.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:69ac860f24a040d05e51b51a85de2e93d9f4a46e"
+    },
+    {
+      "path": "tools/test-faction-structures.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:352087d76599128d1c39ce2caf5e88651d5e2790"
+    },
+    {
+      "path": "tools/test-faction-tech.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:34551499654702d747fe6bbd660f6cd66e5a753c"
+    },
+    {
+      "path": "tools/test-faction-ui-preview.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:921efc0955be31349db3e059d512ce1435d85292"
+    },
+    {
+      "path": "tools/test-faction-unit-identity.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:e8a7732c7be5172498a6b7cedcd56688952cc5a4"
+    },
+    {
+      "path": "tools/test-first-contact-domains.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:f97aceb843b2c55e1a9fb63080ae931d326bbb5a"
+    },
+    {
+      "path": "tools/test-fog-pickups.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/capture-site-templates.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:a5f6b0de6dc0ce3d4777a55cfecf1e334e2d1237"
+    },
+    {
+      "path": "tools/test-galactic-campaign-product-model.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/capture-stage11-space-ux.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "preserve working-copy bytes; no external recovery proven"
+    },
+    {
+      "path": "tools/test-galactic-entry-intro-ticket.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/capture-stage11-space-ux.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "preserve working-copy bytes; no external recovery proven"
+    },
+    {
+      "path": "tools/test-galactic-wartable-routing.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/capture-stage11-space-ux.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "preserve working-copy bytes; no external recovery proven"
+    },
+    {
+      "path": "tools/test-gl-probe-recovery-contract.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:594aca101fcdf2d8fcc1e160ba7032610b88ffeb"
+    },
+    {
+      "path": "tools/test-hud-safe-rows.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:fa0bb48b2791d4ee0ec727923cec5915a635b8c7"
+    },
+    {
+      "path": "tools/test-input-hold-ms.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:f1ced67adcab5bb81630213bb562cd76b0233fdc"
+    },
+    {
+      "path": "tools/test-intel-cards.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:fea40b00185b2f145f74dadae4c36aec457300c9"
+    },
+    {
+      "path": "tools/test-intel-preview-cards-realgpu.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:c9d07b1dcd0ef8ddfbd1f44d899d985276b280ba"
+    },
+    {
+      "path": "tools/test-intro-launch.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:e92bb3ebd5ff42b9f29c307285423af394d7dfc2"
+    },
+    {
+      "path": "tools/test-inventory-loadout.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:fd442c208b073f3810765dededf4b13e77153aab"
+    },
+    {
+      "path": "tools/test-legion-conversion-stage2.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:988d42e7b7fdb5a047c17912947e56186ae68a12"
+    },
+    {
+      "path": "tools/test-live-preview-faction-regressions.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:c1995ac8eb06edfa6f947cf0cee7a941a4bd3896"
+    },
+    {
+      "path": "tools/test-map-depth.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:b5f49fe17144c213af9a9b25eaf95bb7ab076b88"
+    },
+    {
+      "path": "tools/test-map-edges.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:c838198441dd36dd69efea396b046fcb3cf6be49"
+    },
+    {
+      "path": "tools/test-map-sizes.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/capture-onboarding-2026-08-14.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:88349adf7786a48868d7a86c302d021086254555"
+    },
+    {
+      "path": "tools/test-massflesh-transport.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:baa57d3aa32a789780173332aa2eab10c25f828f"
+    },
+    {
+      "path": "tools/test-material-v2-factory.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:df963b1c5d801465cbeeaba0acbda41979801089"
+    },
+    {
+      "path": "tools/test-material-v2-lab.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:d969fcd9e5134c4e4774d9d8c771f2a6c689218d"
+    },
+    {
+      "path": "tools/test-material-v2-optout.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:3ebfb9389842c2550511898dfc139925aba8100d"
+    },
+    {
+      "path": "tools/test-mobile-mobility-fx.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:8ca148b7324911fd55bc8bebc684b33d325a4b6f"
+    },
+    {
+      "path": "tools/test-models-infestation.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:beb7a51d454d8dac4ac3fd6a621432912821ba64"
+    },
+    {
+      "path": "tools/test-models-machine.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:d90f7f507a1828a2660cbd193bc128756ec0a26f"
+    },
+    {
+      "path": "tools/test-modifier-art-atlas.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:64362a37790b132f14b0c43b0b90296700bd63d9"
+    },
+    {
+      "path": "tools/test-nova-conversion-stage1.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:1cb292a88ad05cb580c44ddf061130dad60852ed"
+    },
+    {
+      "path": "tools/test-offline-network-isolation.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:2643e9cf4e864260ff81fe145b3136d2510ed520"
+    },
+    {
+      "path": "tools/test-onboarding-foundation.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "preserve working-copy bytes; no external recovery proven"
+    },
+    {
+      "path": "tools/test-operations-shell.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:c1d5d54bc18f617a13d0582fd667b26803959edf"
+    },
+    {
+      "path": "tools/test-perf-terrain-evidence-contract.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:6a1fc532f2730de6ae6fa6b42eee95bf00050716"
+    },
+    {
+      "path": "tools/test-platoon-orders.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:4689412ece1d17d1c5884c32a521c3f764f38605"
+    },
+    {
+      "path": "tools/test-population-seats.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:7ecbbe698f8cbf7144056d1bb9d3f0ce8399fc51"
+    },
+    {
+      "path": "tools/test-prealpha-intro.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:9366a0bb714e913b7035df0cf2ebb0174b33b359"
+    },
+    {
+      "path": "tools/test-progression-rewards.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:a25c08d05f9c561c5909ca5b043e5f5e9f9c6708"
+    },
+    {
+      "path": "tools/test-raymarched-artillery-trails.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:3e1545d648afb8d9454fcdb4b8f3a225b20f2f43"
+    },
+    {
+      "path": "tools/test-reference-vfx-pass.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:0328d653261ef3a3dfe29b6fb27e45a1c81e6e5a"
+    },
+    {
+      "path": "tools/test-release-retention.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "preserve working-copy bytes; no external recovery proven"
+    },
+    {
+      "path": "tools/test-research-network.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:abfae429587886509aee054aad88fde4c7963175"
+    },
+    {
+      "path": "tools/test-retired-provider-adapter.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "preserve working-copy bytes; no external recovery proven"
+    },
+    {
+      "path": "tools/test-runtime-compatibility-accessor.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "preserve working-copy bytes; no external recovery proven"
+    },
+    {
+      "path": "tools/test-runtime-compatibility-build.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "preserve working-copy bytes; no external recovery proven"
+    },
+    {
+      "path": "tools/test-sandbox-standalone.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:caffc58e24effda0f0868db92c78029e347eb9a6"
+    },
+    {
+      "path": "tools/test-save-persist.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:f797bb05c2f1722f07efc7984f0233d2bd9997a2"
+    },
+    {
+      "path": "tools/test-social-live.ps1",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:83ea35f0d7d3ba42b819655b11aacc3f280b4c8e"
+    },
+    {
+      "path": "tools/test-space-module.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:c7415dc65fa15532ac5de2a3e0a3d0b243814f81"
+    },
+    {
+      "path": "tools/test-spatial-hash.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:8fe2f18027f0a6ff62c821b5c751b2b94e33e378"
+    },
+    {
+      "path": "tools/test-stage11-tutorial-contract.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/capture-stage11-space-ux.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "preserve working-copy bytes; no external recovery proven"
+    },
+    {
+      "path": "tools/test-stage7-armory-migration.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:1db3fdc317173fcc4891d1160aef1359f4eb2b4e"
+    },
+    {
+      "path": "tools/test-stage7-economy-contracts.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:0360e9b5f06918570c8e512155cec0f41d9f2e5d"
+    },
+    {
+      "path": "tools/test-stage7-input-cancel.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:a4bd86ba216a43c2deacc77ceaad0dc59c5f20cd"
+    },
+    {
+      "path": "tools/test-stage7-input-navigation.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:b48f158af3dd861fceead726420f8ffd377218ae"
+    },
+    {
+      "path": "tools/test-stage7-production-contracts.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:cdd65e83a449e939d06a9c3374a444473ace191c"
+    },
+    {
+      "path": "tools/test-stage7-progression-coherence.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:8804a262c2b74e5cf412b3774484996f3aa95edd"
+    },
+    {
+      "path": "tools/test-stage7-progression-presenters.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:99dd82d95279b5e259584c6097c4c66f74be03ed"
+    },
+    {
+      "path": "tools/test-stage8-accessibility-contract.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:05e23c11ea769f16a628c1e216e7e8af571f3350"
+    },
+    {
+      "path": "tools/test-stage8-audio-buses.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:f371752e125c08e098b28669bbba2c8261ad158f"
+    },
+    {
+      "path": "tools/test-stage8-commander-entry-clock.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:dc593eef1b347b084857bbffa9d7a6ceb9a52456"
+    },
+    {
+      "path": "tools/test-stage8-effects-budget.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:bb3ef6bd832cd94583669ddc175ec5aefa8a50e5"
+    },
+    {
+      "path": "tools/test-stage8-music-states.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:a63cfa65fb3bdb41e698252258ceeb1aea064382"
+    },
+    {
+      "path": "tools/test-stage8-offline-diagnostics.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:277d26bc2ffcc9631ad450d3897781b3163f0c7d"
+    },
+    {
+      "path": "tools/test-stage8-save-transfer.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:8192990c4746d7a8b6607eccc09722fb31f26c92"
+    },
+    {
+      "path": "tools/test-stage8-settings-keyboard.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:2cb26c51982f59109fb901d8b706b15b9accb9ab"
+    },
+    {
+      "path": "tools/test-stage8-team-identification.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:9f3238e7df385a6c0d04f20f44dbed1908cb10c8"
+    },
+    {
+      "path": "tools/test-stage8-updater-interruption.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:261f32fe33e6a00abb92c846e0b48d2cb01810b5"
+    },
+    {
+      "path": "tools/test-stage9-galactic-bridge.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/capture-stage11-space-ux.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:b50372fafe6ec7583212fac525f7d01ed32ea165"
+    },
+    {
+      "path": "tools/test-syndicate-conversion-stage3.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:99530c8618bedb428776759884ef67738b791253"
+    },
+    {
+      "path": "tools/test-tower-defense.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:18f5ae93a0648cbd294ee5a8568537fa89488130"
+    },
+    {
+      "path": "tools/test-training-briefing.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:df9867973c203de0e1de0bf9aab013031137bce7"
+    },
+    {
+      "path": "tools/test-training-deep.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:bcedfad82c1a639848595a06c1d138885d691048"
+    },
+    {
+      "path": "tools/test-training-operation.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:8d08a82037b80fba796336079f5bdbfed656b55d"
+    },
+    {
+      "path": "tools/test-training-standard-isolation.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:e262874e92a96540be1fbaa04a181d36fc6df02c"
+    },
+    {
+      "path": "tools/test-uga-management-profile-camera.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/capture-stage11-space-ux.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "preserve working-copy bytes; no external recovery proven"
+    },
+    {
+      "path": "tools/test-ui-action-safety.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:6991049baa6b12fe92535e321d71620df72ac00d"
+    },
+    {
+      "path": "tools/test-unit-art-tranche.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:bd02765cdd8b5d11790811438fab7b2f78f50730"
+    },
+    {
+      "path": "tools/test-unit-separation.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:3b4d829a5689221559164cd7d80701a74c30fc7a"
+    },
+    {
+      "path": "tools/test-update-binary-art.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/embed-art.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:a9169c552017394d40570abefa40a955cb8f5bd3"
+    },
+    {
+      "path": "tools/test-updater-boot-retry.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:3a0f80c08dba9132238fbb50b75eb677cf183ead"
+    },
+    {
+      "path": "tools/test-updater-status.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [
+        "tools/test-stage8-offline-diagnostics.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:a2e3122d4468e57ce018fe03f9d1662dcb9f261b"
+    },
+    {
+      "path": "tools/test-updater-two-launch.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/evidence-classification.mjs",
+        "tools/test-updater-status.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:ca60b545f08a15aa90ff67217f073cb5d253555e"
+    },
+    {
+      "path": "tools/test-v133-second-pass.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:5e7868b5e450ff01604864107306a44190a198c1"
+    },
+    {
+      "path": "tools/test-weekly-briefing.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:8fe7c88d83e62670a94e41156c7847330cb8fde4"
+    },
+    {
+      "path": "tools/test-world-asset-quality.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:164fa07f6f3d1029feb0c124d4fdd17b45a089ce"
+    },
+    {
+      "path": "tools/test-world-boundary-content.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:67931a280dc4dcb8c138a077ca0bd88b73005f36"
+    },
+    {
+      "path": "tools/test-world-structures-v2-mobile.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:c3e30527f241ccf96ee94df95612c88d30cb4b7c"
+    },
+    {
+      "path": "tools/tripo.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:5843f2621c5773ceeb52b7e2fed4fd337ed40b10"
+    },
+    {
+      "path": "tools/ui-control-safety-fixtures/clean/src/account.js",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:5c72b34a520ebbcb2a4aea307c5c35cb8f3a94e4"
+    },
+    {
+      "path": "tools/ui-control-safety-fixtures/clean/src/game/meta.js",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:37de8c4cb3c87b0a655711e4e4b36aff93d6dbe1"
+    },
+    {
+      "path": "tools/ui-control-safety-fixtures/clean/src/main.js",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:492080100c28554b2e906d61b84d53546f4edadf"
+    },
+    {
+      "path": "tools/ui-control-safety-fixtures/clean/src/ui/hotslots.js",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:f1102de881707f871cf0d8c1e332369a3fec331d"
+    },
+    {
+      "path": "tools/ui-control-safety-fixtures/clean/src/ui/hud.js",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:7090a77f8254b2ea98e7545b5ab3a9682c2ab090"
+    },
+    {
+      "path": "tools/ui-control-safety-fixtures/clean/src/ui/hudflow.js",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:2ba40c6095de9997b0f10a3146608b1eaea6b89e"
+    },
+    {
+      "path": "tools/ui-control-safety-fixtures/clean/src/ui/input.js",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:2df4adf5d14057e834a5636345575086b8306099"
+    },
+    {
+      "path": "tools/ui-control-safety-fixtures/clean/src/updater.js",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:74467dd939c08a23a8fdff16d7adfe87f55feb7e"
+    },
+    {
+      "path": "tools/ui-control-safety-fixtures/self-test.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:1c2304304ad22f434d3fd2e4eea33c5babb14633"
+    },
+    {
+      "path": "tools/validate-nova-hq-v2-pack.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:5fd36514bafae52b8bffdcde136bbd3cdef2080f"
+    },
+    {
+      "path": "tools/verify-ao-resize.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:c67d58c8f92ceebbf94e94ba64aaf913154d61a1"
+    },
+    {
+      "path": "tools/verify-asset-unwrap.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/capture-brood-silhouettes.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:71af160aabe08de7f4ef79acf2c2bc0cbd220544"
+    },
+    {
+      "path": "tools/verify-bespoke-packs.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:fc0214eed17c62c8ebd7f0085f2eff00092e5e0b"
+    },
+    {
+      "path": "tools/verify-brood-semantic-packs.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:095bb6fa866c311d0e7ff7713dd4165e9527e18b"
+    },
+    {
+      "path": "tools/verify-building-input-hotfix.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:6aa84fee8145ce7b1feeb685f7c31b0c4411738b"
+    },
+    {
+      "path": "tools/verify-campaign-prologue.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:a6703853e34656e894a7ca03046621d5352c0cbd"
+    },
+    {
+      "path": "tools/verify-clean-checkout.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:a79e6a795a6870478fb6991b91317fbe3262ae48"
+    },
+    {
+      "path": "tools/verify-damaged-structure-fx-tick-gate.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:5fe43856e87d7673f3b73421262058e738cb1e05"
+    },
+    {
+      "path": "tools/verify-dominion-semantic-packs.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:2441378832695edf2c7422eaff7e077ecca21c82"
+    },
+    {
+      "path": "tools/verify-econ-seats.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:58a9261a5cd20357988cd4a2b0216095e43b9a24"
+    },
+    {
+      "path": "tools/verify-faction-tech.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:1ebab1e0af4de397a4fdda6b9a7d47fa9b29ecf3"
+    },
+    {
+      "path": "tools/verify-gl-probe-recovery.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/test-stage8-offline-diagnostics.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:892ed98810cdbd1b09a4282b170f9c809c823f52"
+    },
+    {
+      "path": "tools/verify-global-scope.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/verify-stage10-layouts.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:9b927df76fabb199b6844d34857789df1e14de30"
+    },
+    {
+      "path": "tools/verify-mat-orm.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:0a33d1ed40db2494cb3bf62b9e99e7f63eb9f585"
+    },
+    {
+      "path": "tools/verify-material-registry.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:8a9863ca55a5fe3e4f2d50582954079b92863aef"
+    },
+    {
+      "path": "tools/verify-nova-semantic-packs.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:e86718a0aae4768841b4b9b58b253f592d32e1ee"
+    },
+    {
+      "path": "tools/verify-overhaul.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:1a7c0b451e4e537bead78dfdce166b7c64acf13c"
+    },
+    {
+      "path": "tools/verify-perf-terrain-acceptance.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/test-perf-terrain-evidence-contract.mjs",
+        "tools/test-stage8-offline-diagnostics.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:091c32fb6be0c6d107f6f96c0d863598a39ae835"
+    },
+    {
+      "path": "tools/verify-perfscale-gates.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/test-stage8-offline-diagnostics.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:0ea9f9700ec9f4d24ffa1fce57f7f15a29efb0ba"
+    },
+    {
+      "path": "tools/verify-pw-browser-isolation.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:01abe6772760bed7d8e24959d8a2abbe55ae3ef5"
+    },
+    {
+      "path": "tools/verify-pwa-shell.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:1604debaf62db5a5e34244fc2619f1904be923d4"
+    },
+    {
+      "path": "tools/verify-release-freeze.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:357f65d1e22aa7215fbe7ba42a6e3f966f7a429f"
+    },
+    {
+      "path": "tools/verify-resource-drop-presentation.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:5ed6de79c6337dd710dcdbfb9cb56fe8ef703fa0"
+    },
+    {
+      "path": "tools/verify-resource-foundation-mask.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:e0cfb4bbc0778a87d3ad7d5e6d6d39d1357d31d6"
+    },
+    {
+      "path": "tools/verify-runtime-fx-contracts.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:d807d85e4f8997ac2ed245252ab375860eb6d5c2"
+    },
+    {
+      "path": "tools/verify-sim-combat-fixes.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:50c0dc46a06b58dc04d6ddd6bf21e89e8ff5d171"
+    },
+    {
+      "path": "tools/verify-social-live-contract.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/social-contract-lab/checker.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:17556c69a04b748429a43364c55d4cc48b58dd14"
+    },
+    {
+      "path": "tools/verify-stage10-battlefield-topology.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/verify-stage10-layouts.mjs",
+        "tools/verify-stage10-traversal-fixtures.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:b3bfe38a1d949d6b2c27b9737973e9465fe845b4"
+    },
+    {
+      "path": "tools/verify-stage10-exploration-planet-layout-profiles.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/verify-stage10-layouts.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:882821fe1004a099764e409ffefa7c304509cda3"
+    },
+    {
+      "path": "tools/verify-stage10-interior-gap-resolution.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/verify-stage10-layouts.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:4a92b1aa7a284a68b3c19a0994392786e0a38597"
+    },
+    {
+      "path": "tools/verify-stage10-interior-layout-bindings.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/verify-stage10-layouts.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:fe5aec0002d205e8fe2923165e10f6306c1e0c91"
+    },
+    {
+      "path": "tools/verify-stage10-interior-topology.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/verify-stage10-layouts.mjs",
+        "tools/verify-stage10-traversal-fixtures.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:88df4d25129a74689f52a9a9c0033d9a1dbb6ccf"
+    },
+    {
+      "path": "tools/verify-stage10-layouts.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:f70ac16745b8a4d26c63e015aafc9abad307711f"
+    },
+    {
+      "path": "tools/verify-stage10-model-review-gallery.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/verify-stage10-layouts.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:3bf3dd63691b837a59cfdb3410a5deed19416910"
+    },
+    {
+      "path": "tools/verify-stage10-orbital-layout-bindings.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/verify-stage10-layouts.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:fa829f78bd505ac6369b49cfbd18b74c19edb239"
+    },
+    {
+      "path": "tools/verify-stage10-orbital-topology.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/verify-stage10-layouts.mjs",
+        "tools/verify-stage10-traversal-fixtures.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:443e338a7009c6e37e8187b96a2e30fe4d3c7123"
+    },
+    {
+      "path": "tools/verify-stage10-repaired-model-pack.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/verify-stage10-layouts.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "preserve working-copy bytes; no external recovery proven"
+    },
+    {
+      "path": "tools/verify-stage10-surface-site-requests.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/verify-stage10-layouts.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:fd34de9d6566c45f6ec173345a688ff135ad4b14"
+    },
+    {
+      "path": "tools/verify-stage10-surface-topology-bindings.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/verify-stage10-layouts.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:2e12ea2c49ba6efaa0d2a75e19702f0fa16378d3"
+    },
+    {
+      "path": "tools/verify-stage10-theatre-catalog.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/verify-stage10-layouts.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:a96698109376c961b052ca99bc7af41c94e68d83"
+    },
+    {
+      "path": "tools/verify-stage10-traversal-fixtures.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [
+        "tools/verify-stage10-layouts.mjs"
+      ],
+      "owner": "tooling",
+      "recovery": "git-blob:d91e663a0e0afbb37dfb8af02d0860b4a7af4920"
+    },
+    {
+      "path": "tools/verify-stage14-pwa-delivery.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "preserve working-copy bytes; no external recovery proven"
+    },
+    {
+      "path": "tools/verify-stage9-location-grammar.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:47d20768efde3081ffbcfb0f4dc9f8ad24f1bc13"
+    },
+    {
+      "path": "tools/verify-stage9-location-plans.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:159055fc7b54905797a55a37555b831f90ff4189"
+    },
+    {
+      "path": "tools/verify-surface-contracts.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:7bf82040b01fcd339b270d9db28a91c707b9fe29"
+    },
+    {
+      "path": "tools/verify-syndicate-semantic-packs.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:7f19dd71fa823d443d0fb881421c21883a67177b"
+    },
+    {
+      "path": "tools/verify-tacticon-corrupt.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:eafe28e5524b2129447e41d5d6b51630f85792d3"
+    },
+    {
+      "path": "tools/verify-tacticon-request-hygiene.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:6b77b970973de71ec59afb8f17d30e040837976a"
+    },
+    {
+      "path": "tools/verify-unit-v2.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:7998ad30c36f89762cb89a104e5c9cfb6523d9dd"
+    },
+    {
+      "path": "tools/verify-vfx-api-pickup-contracts.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:4d5610a85fa57d026c86dd9e171649d47c8fba41"
+    },
+    {
+      "path": "tools/verify-world-catalog.mjs",
+      "registered": true,
+      "status": "registered",
+      "disposition": "retained",
+      "documented": true,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:775f7fd55e0cee17828ab3a4c256f1fa75ddbd02"
+    },
+    {
+      "path": "tools/vrm_import.mjs",
+      "registered": false,
+      "status": "unknown",
+      "disposition": "retained",
+      "documented": false,
+      "referencedBy": [],
+      "owner": "tooling",
+      "recovery": "git-blob:417288ba96d726452bc503e2a787d10dbd898e1e"
+    }
+  ]
+}

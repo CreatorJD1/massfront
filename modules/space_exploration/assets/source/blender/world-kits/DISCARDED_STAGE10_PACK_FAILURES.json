@@ -1,0 +1,17 @@
+{
+  "schema": "MassfrontDiscardedStage10PackFailuresV1",
+  "discardedDate": "2026-08-31",
+  "reason": "User rejected the seven Stage 10 derived-pack failures from source, then also rejected the remaining hard-surface brutalist arcology stack as the worst remaining exact-duplicate performer (298 stacked faces).",
+  "runtimeAllowed": false,
+  "sourceAllowed": false,
+  "ids": [
+    "mf-building-hs-v1/colonial_arcology_stack",
+    "mf-building-hs-v1/ruined_arcology_stack",
+    "mf-building-hs-v1/brutalist_arcology_stack",
+    "mf-cityforms-kit-v1/brutalist_blade_tower",
+    "mf-cityforms-kit-v1/ruined_mega_slab_stepped",
+    "mf-cityforms-kit-v1/ruined_flare_stack",
+    "mf-cityforms-kit-v1/ruined_container_yard",
+    "mf-superstructure-v1/ruined_spire_crown"
+  ]
+}

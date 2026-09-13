@@ -1,0 +1,18 @@
+{
+  "capturedAt": "2026-09-01T20:38:27.641Z",
+  "url": "http://127.0.0.1:8914/",
+  "viewport": {
+    "width": 412,
+    "height": 900
+  },
+  "source": {
+    "offlineSha256": "c4d81f1077cdc90cf0ffeb0263790c445d1e8af90d3b3986ae476abbf9007de6",
+    "packagedOfflineSha256": "c4d81f1077cdc90cf0ffeb0263790c445d1e8af90d3b3986ae476abbf9007de6",
+    "indexSha256": "f256d36551a2fda3551499e8c301ea85a6e37b313d1e506ef711f73d33f7042e",
+    "bootSha256": "ed3e8f8b3777b48a218a620e31d3b4e037ddb4c2ad44da26f77c7ec2ed2a3e46"
+  },
+  "passes": [],
+  "failures": [],
+  "fatal": "page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:8914/?diag=1\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:8914/?diag=1\", waiting until \"domcontentloaded\"\u001b[22m\n\n    at C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\tools\\verify-stage14-pwa-delivery.mjs:39:14",
+  "failureScreenshot": "failure-mobile.png"
+}

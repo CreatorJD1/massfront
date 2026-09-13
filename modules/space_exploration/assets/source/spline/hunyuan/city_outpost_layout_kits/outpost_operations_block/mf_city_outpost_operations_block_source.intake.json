@@ -1,0 +1,186 @@
+{
+  "schemaVersion": 1,
+  "tool": "MASSFRONT_SOURCE_MODEL_INTAKE",
+  "toolVersion": "1.0.0",
+  "status": "SOURCE_AUTHORING_ONLY",
+  "runtimeReady": false,
+  "runtimeEvidence": "UNKNOWN",
+  "createdAt": "2026-08-26T08:45:22.083Z",
+  "input": {
+    "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\spline\\hunyuan\\city_outpost_layout_kits\\outpost_operations_block\\mf_city_outpost_operations_block_raw-spline.glb",
+    "bytes": 14849332,
+    "sha256": "D98811397FC2BB10D5AE9BD0DFCB2E4090BC145844B0A60348CB87D1EFC3D190"
+  },
+  "output": {
+    "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\spline\\hunyuan\\city_outpost_layout_kits\\outpost_operations_block\\mf_city_outpost_operations_block_source.glb",
+    "bytes": 14847976,
+    "sha256": "97AB64422048E86CA231C4DC8C1D8B176890A224C7D388208978B74DB600F0BA"
+  },
+  "reportPath": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\spline\\hunyuan\\city_outpost_layout_kits\\outpost_operations_block\\mf_city_outpost_operations_block_source.intake.json",
+  "contract": {
+    "coordinateSystem": "GLTF_Y_UP",
+    "units": "meters",
+    "targetBoundsM": [
+      32,
+      20,
+      32
+    ],
+    "fitMode": "exact",
+    "pivot": "FLOOR_CENTER"
+  },
+  "cleanup": {
+    "removeNames": [
+      "Ground Shadow Catcher"
+    ],
+    "removeRegex": [],
+    "removeTypes": [
+      "CAMERA",
+      "LIGHT"
+    ],
+    "removedObjects": [
+      {
+        "name": "Camera",
+        "type": "CAMERA",
+        "reason": "type:CAMERA"
+      },
+      {
+        "name": "Directional Light",
+        "type": "LIGHT",
+        "reason": "type:LIGHT"
+      }
+    ]
+  },
+  "imported": {
+    "meshCount": 1,
+    "meshNames": [
+      "MF_CITY_OUTPOST_OPERATIONS_BLOCK_LOD0_SOURCE_MESH"
+    ],
+    "vertices": 263614,
+    "triangles": 374298,
+    "materialCount": 1,
+    "materialNames": [
+      "Material_0"
+    ],
+    "imageCount": 1,
+    "bounds": {
+      "min": [
+        -15.9996185,
+        -10.000555,
+        -15.9997921
+      ],
+      "max": [
+        15.9996185,
+        10.0005522,
+        15.9997911
+      ],
+      "dimensions": [
+        31.9992371,
+        20.0011072,
+        31.9995832
+      ],
+      "center": [
+        0,
+        -0.0000014,
+        -5e-7
+      ]
+    }
+  },
+  "normalized": {
+    "fitMode": "exact",
+    "logicalScale": [
+      1.0000238,
+      0.9999448,
+      1.0000131
+    ],
+    "before": {
+      "min": [
+        -15.9996185,
+        -10.0005531,
+        -15.9997911
+      ],
+      "max": [
+        15.9996185,
+        10.0005512,
+        15.9997892
+      ],
+      "dimensions": [
+        31.9992371,
+        20.0011044,
+        31.9995804
+      ],
+      "center": [
+        0,
+        -0.000001,
+        -0.000001
+      ]
+    },
+    "after": {
+      "min": [
+        -16,
+        0,
+        -16
+      ],
+      "max": [
+        16,
+        20,
+        16
+      ],
+      "dimensions": [
+        32,
+        20,
+        32
+      ],
+      "center": [
+        0,
+        10,
+        0
+      ]
+    }
+  },
+  "glb": {
+    "glbVersion": 2,
+    "generator": "Khronos glTF Blender I/O v5.2.39",
+    "bytes": 14847976,
+    "scenes": 1,
+    "nodes": 1,
+    "meshes": 1,
+    "primitives": 1,
+    "vertices": 263626,
+    "triangles": 374298,
+    "materials": 1,
+    "materialNames": [
+      "Material_0"
+    ],
+    "textures": 1,
+    "images": 1,
+    "externalUris": [],
+    "bounds": {
+      "min": [
+        -16,
+        0,
+        -16
+      ],
+      "max": [
+        16,
+        20,
+        16
+      ],
+      "dimensions": [
+        32,
+        20,
+        32
+      ]
+    }
+  },
+  "checks": {
+    "inputUnchanged": true,
+    "targetBounds": true,
+    "floorCenterPivot": true,
+    "selfContainedGlb": true,
+    "intendedMeshCountPreservedAfterCleanup": true
+  },
+  "blockers": [
+    "RUNTIME_ADMISSION_NOT_EVALUATED",
+    "LOD_TOPOLOGY_MATERIAL_COLLISION_NAV_AND_DEVICE_EVIDENCE_REQUIRED"
+  ]
+}

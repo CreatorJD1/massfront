@@ -1,13 +1,14 @@
 import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
 import { playwrightGpuLaunch, assertHardwareGpu } from './chrome-gpu.mjs';
 import { createServer } from 'node:http';
-import { readFile } from 'node:fs/promises';
+import { mkdir, readFile } from 'node:fs/promises';
 import { join, resolve, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const wwwDir = join(root, 'www');
-const artifactDir = 'C:/Users/Jason/.gemini/antigravity/brain/86010afe-f1c4-44d4-a618-12f28cfd8c8b';
+const artifactDir = join(root, '.tmp', 'agent-captures', 'antigravity', 'real-ingame');
+await mkdir(artifactDir, { recursive: true });
 
 const MIME_TYPES = {
   '.html': 'text/html',

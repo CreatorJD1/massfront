@@ -42,8 +42,23 @@ ok(ctx.factionDoctrineBuildSpeedMul(0)===1.18,'Brood hatch speed must be +18%');
 const aiSource=fs.readFileSync('src/game/ai.js','utf8');
 ok(aiSource.includes('income:0.92, waveMul:0.82, buildMul:1.0'),
   'Brood AI must not double-apply its hatch-speed doctrine');
-ok(aiSource.includes('const airThreat=playerAirCount()>0;'),
-  'Syndicate production must gate pure AA against an actual air threat');
+/* THE VULTURE IS PURE ANTI-AIR AND MUST NEVER BE BUILT AGAINST GROUND.
+   Type 10 cannot shoot ground at all, so rolling it into ground waves
+   regardless of whether the player owns a single aircraft sent free kills
+   across the map every wave.
+   This used to assert the literal `const airThreat=playerAirCount()>0;`. That
+   variable is now called `aa` and there is a second, stronger backstop after
+   the faction-bias override — so assert both gates by their effect, not by
+   the name one of them happens to carry. */
+ok(/const aa\s*=\s*playerAirCount\(\)>0;/.test(aiSource),
+  'tier-1 production must read an actual air threat before it can roll the Vulture');
+ok(/\(aa\?10:\d+\)/.test(aiSource),
+  'the Vulture must only appear in a tier-1 phase roll when that air threat is real');
+ok(/if\(t===10&&playerAirCount\(\)<=0\)\s*t=/.test(aiSource),
+  'a Vulture named by faction bias or a behaviour pool must still be replaced when the player flies nothing');
+/* And the replacement has to be something that can actually shoot back. */
+ok(/if\(t===10&&playerAirCount\(\)<=0\) t=legal&&legal\.indexOf\(23\)>=0\?23:/.test(aiSource),
+  'the no-air-threat substitution must fall back to a ground-capable chassis');
 
 const hooks={
   'src/game/economy.js':'factionDoctrineNodeYieldMul(team)',

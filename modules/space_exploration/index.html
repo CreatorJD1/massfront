@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
+  <meta name="theme-color" content="#02070d">
+  <title>MASSFRONT — UGA Expedition</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%2302070d' d='M0 0h32v32H0z'/%3E%3Cpath fill='none' stroke='%2355dfff' stroke-width='2' d='m16 3 11 7v12l-11 7-11-7V10zM10 21l6-13 6 13-6-4z'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="src/ui/space_module.css?v=20260908-uga81r1">
+  <link rel="stylesheet" href="src/ui/space_presentation.css?v=20260907-touch1">
+  <script src="lib/three.min.js"></script>
+  <script src="lib/GLTFLoader.js"></script>
+  <script src="lib/DRACOLoader.js"></script>
+</head>
+<body>
+  <svg class="mf-symbols" aria-hidden="true">
+    <symbol id="i-galaxy" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><path d="M3.5 10.5c2.8-4.4 9.8-6.7 15-3.5 4.3 2.7 2.5 7.4-1.8 9.6-5.1 2.6-12.5 1.1-13.5-2.7-.7-2.5 2.7-4.5 6.1-4.5 4.4 0 7.4 2.5 6.6 4.5-.7 1.7-3.7 2.4-5.9 1.4"/></symbol>
+    <symbol id="i-ship" viewBox="0 0 24 24"><path d="M3 14 8 9l2.5-6h3L16 9l5 5-2 3-5-1.2V21h-4v-5.2L5 17l-2-3Z"/><path d="M8 9h8M6 13h12"/></symbol>
+    <symbol id="i-scan" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M3 9V3h6M15 3h6v6M21 15v6h-6M9 21H3v-6M12 6v12M6 12h12"/></symbol>
+    <symbol id="i-route" viewBox="0 0 24 24"><circle cx="5" cy="18" r="2"/><circle cx="19" cy="6" r="2"/><path d="M7 18c7 0 3-12 10-12"/></symbol>
+    <!-- Lifted verbatim from the base game sprite (index.html mi-social /
+         mi-settings) so social and settings read identically wherever the
+         player meets them. Redrawing them here would make the same action
+         look like two different features. -->
+    <symbol id="i-social" viewBox="0 0 24 24"><circle cx="9" cy="8" r="2.8"/><circle cx="16.5" cy="9.5" r="2.2"/><path d="M3.5 19c0-3.1 2.5-5.2 5.5-5.2s5.5 2.1 5.5 5.2"/><path d="M15 13.8c2.6 0 4.5 1.8 4.5 4.4"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.1"/><path d="M12 2.6v3M12 18.4v3M2.6 12h3M18.4 12h3M5.4 5.4l2.1 2.1M16.5 16.5l2.1 2.1M18.6 5.4l-2.1 2.1M7.5 16.5l-2.1 2.1"/></symbol>
+    <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="M3.6 7l8.4 6 8.4-6"/></symbol>
+    <symbol id="i-align" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5"/></symbol>
+    <symbol id="i-expand" viewBox="0 0 24 24"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m5 5 14 14M19 5 5 19"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="m15 5-7 7 7 7M8 12h13"/></symbol>
+    <symbol id="i-probe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v6M12 15v6M3 12h6M15 12h6M5.5 5.5l4 4M14.5 14.5l4 4M18.5 5.5l-4 4M9.5 14.5l-4 4"/></symbol>
+    <symbol id="i-reset" viewBox="0 0 24 24"><path d="M4 8V3l4 2M5 6a8 8 0 1 1-1 8"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m4 12 5 5L20 6"/></symbol>
+    <symbol id="i-warning" viewBox="0 0 24 24"><path d="M12 3 2.5 20h19L12 3Z"/><path d="M12 9v5m0 3h.01"/></symbol>
+  </svg>
+
+  <main id="moduleFrame" class="space-experience" data-scene="loading">
+    <div id="spatialHudLayer" class="space-render-stage" aria-label="Interactive three-dimensional exploration view">
+      <div id="hudCalloutsLayer" class="space-callouts"></div>
+    </div>
+    <div class="cinematic-vignette" aria-hidden="true"></div>
+
+    <header id="explorationTopbar" class="exploration-topbar">
+      <div class="mf-ident"><span class="mf-mark">MF</span><span><b>UGA EXPEDITION 07</b><small>NEXUS-VII · CIVILIZATION SHIP</small></span></div>
+      <div class="location-crumb"><small id="crumbCluster">SOMBRERO-I · UGA ANCHORAGE</small><strong id="crumbSystem">AELOS</strong><span id="crumbThreat">UGA CONTROL · CIVILIAN CORRIDOR</span></div>
+      <div class="expedition-resources" aria-label="Expedition resources">
+        <span><small>FUEL</small><b id="statFuelVal">78%</b></span><span><small>PROBES</small><b id="statProbesVal">12</b></span><span><small>RESEARCH</small><b id="statResearchVal">240</b></span><span><small>CREDITS</small><b id="statCreditsVal">18,500</b></span>
+      </div>
+      <div class="space-chrome" aria-label="Mail, social and settings">
+        <button id="btnSpaceInbox" class="icon-action compact" type="button" aria-label="Inbox"><svg><use href="#i-mail"/></svg><i id="spaceInboxDot" class="chrome-dot" hidden aria-hidden="true"></i></button>
+        <button id="btnSpaceSocial" class="icon-action compact" type="button" aria-label="Friends, chat and multiplayer lobby"><svg><use href="#i-social"/></svg><i id="spaceSocialDot" class="chrome-dot" hidden aria-hidden="true"></i></button>
+        <button id="btnSpaceSettings" class="icon-action compact" type="button" aria-label="Settings"><svg><use href="#i-settings"/></svg></button>
+      </div>
+      <nav class="top-actions" aria-label="Primary actions">
+        <button id="btnGalaxyMap" class="icon-action" type="button"><svg><use href="#i-galaxy"/></svg><span>GALACTIC WAR</span></button>
+        <button id="btnUgaCommand" class="icon-action command-action" type="button"><svg><use href="#i-ship"/></svg><span>UGA COMMAND</span></button>
+        <button id="btnRecenterView" class="icon-action compact" type="button" aria-label="Recenter navigation camera"><svg><use href="#i-align"/></svg><span>RECENTER</span></button>
+        <button id="btnToggleFullscreen" class="icon-action compact" type="button" aria-label="Toggle fullscreen"><svg><use href="#i-expand"/></svg></button>
+      </nav>
+    </header>
+
+    <aside id="storyRail" class="story-rail" aria-label="Expedition story and transmissions">
+      <div class="story-rail-default" data-story-default>
+        <div class="eyebrow">EXPEDITION DIRECTIVE</div><h1 id="storyTitle">Departure Window</h1>
+        <p id="storyBody">Inspect NEXUS-VII, establish a resident-faction liaison, then plot the frontier route toward Veyra.</p>
+        <ol id="storySteps" class="story-steps"><li class="active"><span>01</span><b>Inspect NEXUS-VII</b></li><li><span>02</span><b>Survey Aelos</b></li><li><span>03</span><b>Plot Veyra route</b></li></ol>
+        <div class="system-tone"><span class="pulse"></span><b>LIVE SYSTEM TELEMETRY</b><small id="systemActivity">428 CIVILIAN TRANSPONDERS</small></div>
+      </div>
+      <section id="storyTransmission" class="story-transmission" aria-live="polite" aria-atomic="true" hidden>
+        <div class="story-transmission-signal">
+          <span><i aria-hidden="true"></i><b id="storyTransmissionChannel">UGA PERSONNEL LINK</b></span>
+          <small id="storyTransmissionStage">ENTRY BRIEF</small>
+        </div>
+        <div class="story-transmission-main">
+          <figure id="storyTransmissionMedia" class="story-transmission-media" hidden>
+            <video id="storyTransmissionVideo" muted autoplay playsinline loop hidden></video>
+            <img id="storyTransmissionPortrait" alt="" hidden>
+          </figure>
+          <div class="story-transmission-copy">
+            <div class="story-transmission-identity">
+              <span><small id="storyTransmissionRole">UGA EXPEDITION GUIDE</small><strong id="storyTransmissionSpeaker">KEEL</strong></span>
+              <b id="storyTransmissionAffiliation">UGA PERSONNEL</b>
+            </div>
+            <h2 id="storyTransmissionTitle">FIRST COMMAND DECISION</h2>
+            <p id="storyTransmissionText"></p>
+          </div>
+        </div>
+        <div id="storyTransmissionProgress" class="story-transmission-progress" aria-hidden="true"></div>
+        <div id="storyTransmissionActions" class="story-transmission-actions"></div>
+      </section>
+    </aside>
+
+    <section id="targetCard" class="target-console" aria-live="polite">
+      <div class="target-heading"><span>SELECTED CONTACT</span><b id="targetRange">--</b></div><h2 id="targetName">NEXUS-VII</h2><p id="targetSub">Select the UGA civilization ship to enter management.</p>
+      <div class="target-actions">
+        <button id="actAlign" type="button"><svg><use href="#i-align"/></svg><span>ALIGN</span></button><button id="actWarp" type="button"><svg><use href="#i-route"/></svg><span>AUTOPILOT</span></button><button id="actSurvey" type="button"><svg><use href="#i-scan"/></svg><span>SURVEY</span></button><button id="actInteract" class="primary" type="button"><svg><use href="#i-ship"/></svg><span>ENTER UGA MANAGEMENT</span></button>
+      </div>
+    </section>
+
+    <footer id="helmDock" class="helm-dock autopilot-dock" aria-label="Autopilot status">
+      <div class="autopilot-ident"><svg><use href="#i-route"/></svg><span><small>UGA AUTOPILOT</small><b>ROUTE CONTROL</b></span></div>
+      <div class="helm-readout"><span><small>VELOCITY</small><b id="telemSpeed">0 m/s</b></span><span><small>HEADING</small><b id="telemHeading">000°</b></span><span><small>ROUTE STATE</small><b id="telemSystemStatus">READY</b></span></div>
+      <div class="autopilot-actions"><button id="btnAutopilotMap" type="button"><svg><use href="#i-galaxy"/></svg><span>SELECT ROUTE</span></button><button id="btnAutopilotHold" type="button"><svg><use href="#i-align"/></svg><span>HOLD ORBIT</span></button></div>
+    </footer>
+
+    <section id="surveyModal" class="scene-overlay survey-overlay" aria-hidden="true">
+      <div id="survey3DStage" class="survey-3d-stage"></div>
+      <button id="btnCloseSurvey" class="overlay-back" type="button"><svg><use href="#i-back"/></svg><span>RETURN TO ORBIT</span></button>
+      <div id="surveyPlanetSelector" class="survey-planet-selector"></div>
+
+      <!-- Mass Effect 2 Planetary Scanner HUD -->
+      <div id="surveyScannerHud" class="me2-scanner-hud">
+        <div class="me2-scanner-reticle">
+          <div class="me2-reticle-ring"></div>
+          <div class="me2-reticle-crosshair"></div>
+          <div class="me2-reticle-coords"><span id="me2ScanCoords">LAT: +00.0° // LON: 000.0°</span></div>
+          <div class="me2-reticle-status"><span id="me2ScanStatus">SWEEPING SURFACE</span></div>
+        </div>
+
+        <div class="me2-scanner-side-panel">
+          <div class="me2-oscilloscope-box">
+            <div class="me2-oscilloscope-header">
+              <small>SPECTRAL OSCILLOSCOPE</small>
+              <b id="me2SignalStrength">0%</b>
+            </div>
+            <canvas id="surveyOscilloscope" width="220" height="64"></canvas>
+            <div class="me2-signal-meter"><i id="me2SignalBar" style="width: 0%"></i></div>
+          </div>
+
+          <div class="me2-mineral-readouts">
+            <div class="me2-mineral-row"><small>ALLOYS</small><div class="me2-min-bar"><span id="me2MinAlloy" style="width: 75%"></span></div><em>RICH</em></div>
+            <div class="me2-mineral-row"><small>COMPONENTS</small><div class="me2-min-bar"><span id="me2MinComp" style="width: 60%"></span></div><em>ABUNDANT</em></div>
+            <div class="me2-mineral-row"><small>BIO-DATA</small><div class="me2-min-bar"><span id="me2MinBio" style="width: 40%"></span></div><em>MODERATE</em></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="survey-dossier"><div class="eyebrow">ORBITAL SPECTRAL SCANNER // PLANETARY SURVEY</div><h2 id="surveyModalTitle">NO PLANET SELECTED</h2><p id="surveyDescription">Rotate the complete globe beneath the fixed scanner. Commit a directed probe only when the waveform reaches a signal peak.</p>
+        <div class="survey-progress"><span><i id="surveyProgressBar"></i></span><b id="survPctVal">0%</b></div>
+        <div class="survey-telemetry"><span><small>SIGNAL SPIKE</small><b id="survSigVal">0%</b></span><span><small>PROBES READY</small><b id="survProbesVal">12</b></span><span><small>SITES RESOLVED</small><b id="survSitesVal">0 / 0</b></span></div>
+        <div id="surveyDiscoveryList" class="discovery-list"></div>
+        <section id="surveyResult" class="survey-result" aria-live="polite" hidden>
+          <small>SCAN RESOLVED</small><strong id="surveyResultTitle">DISCOVERY CONFIRMED</strong><p id="surveyResultReward"></p>
+          <div class="survey-result-actions"><button id="surveyNextAction" class="wide-action" type="button"><svg><use href="#i-route"/></svg><span>CONTINUE</span></button><button id="surveyContinueScan" type="button">KEEP SCANNING</button></div>
+        </section>
+        <button id="btnSurveyLaunchProbe" class="wide-action" type="button"><svg><use href="#i-probe"/></svg><span>LAUNCH DIRECTED PROBE</span></button>
+      </div>
+    </section>
+
+    <section id="galaxyModal" class="scene-overlay galaxy-overlay" aria-hidden="true">
+      <div class="galactic-war-header">
+        <button id="btnCloseGalaxy" class="overlay-back" type="button"><svg><use href="#i-back"/></svg><span>RETURN TO ORBIT</span></button>
+        <div class="galactic-war-title"><small>UGA GALACTIC COMMAND</small><h1>THE SOMBRERO FRONT</h1><p>Choose where the expedition intervenes. Reconnaissance unlocks operations; every deployment changes the campaign record.</p></div>
+        <div class="galactic-war-legend" aria-label="Galactic control legend"><span data-front-state="protected">PROTECTED</span><span data-front-state="contested">CONTESTED</span><span data-front-state="enemy">ENEMY CONTROL</span></div>
+      </div>
+      <div id="galaxy3DContainer" class="galaxy-stage" aria-hidden="true"></div><div id="galaxyLabelsLayer" class="galaxy-labels-layer"></div>
+      <aside id="galaxyInfoPane" class="galaxy-info-pane" data-front-state="protected">
+        <div class="galaxy-system-heading"><span id="galaxyControlBadge" class="galaxy-control-badge">PROTECTED</span><div><small id="galaxyFrontDirective">ALLIED ANCHORAGE</small><h2 id="galaxyInfoName">AELOS</h2><p id="galaxyInfoCluster">Sombrero-I · UGA Anchorage</p></div></div>
+        <div class="galaxy-control-track" aria-label="Allied control"><span><small>ALLIED CONTROL</small><b id="galaxyControlValue">82%</b></span><i><em id="galaxyControlFill" style="width:82%"></em></i></div>
+        <dl><div><dt>CONTROL</dt><dd id="galaxyInfoSecurity">UGA</dd></div><div><dt>WORLDS</dt><dd id="galaxyInfoPlanets">2</dd></div><div><dt>CONTACTS</dt><dd id="galaxyInfoContacts">3</dd></div><div><dt>GATES</dt><dd id="galaxyInfoRelays">1</dd></div></dl>
+        <p id="galaxyInfoDesc" class="galaxy-description"></p>
+        <section class="galaxy-operation-board" aria-label="Operations in selected system"><header><div><small>ACTIVE FRONT</small><b>SELECT AN OPERATION</b></div><span id="galaxyOperationAvailability">0 READY</span></header><div id="galaxyOperations" class="galaxy-operation-list"></div><p id="galaxyMissionBrief" class="galaxy-mission-brief"></p></section>
+        <div class="galaxy-primary-actions"><button id="galaxyScanBtn" type="button"><svg><use href="#i-scan"/></svg><span>SCAN FOR INTELLIGENCE</span></button><button id="galaxyLoadoutBtn" class="wide-action" type="button" disabled><svg><use href="#i-ship"/></svg><span>OPEN DROP LOADOUT</span></button></div>
+        <div class="galaxy-route-actions"><div id="galaxyInfoStatus" class="route-status current">CURRENT SYSTEM</div><button id="galaxyJumpBtn" type="button" disabled><svg><use href="#i-route"/></svg><span>COMMIT AUTOPILOT ROUTE</span></button><button id="galaxyFlagshipBtn" type="button"><svg><use href="#i-ship"/></svg><span>FLAGSHIP</span></button></div>
+      </aside>
+    </section>
+
+    <section id="ugaMode" class="uga-mode" aria-hidden="true"><div class="uga-scene-controls"><button id="btnExitUga" type="button"><svg><use href="#i-back"/></svg><span>RETURN TO ORBIT</span></button><button id="btnUgaOverview" type="button"><svg><use href="#i-ship"/></svg><span>VESSEL OVERVIEW</span></button></div><div id="ugaCommandMount" class="uga-command-mount"></div></section>
+
+    <section id="operationModal" class="operation-modal" aria-hidden="true"><div class="operation-card"><div class="eyebrow">LOCAL GROUND-OPERATION ADAPTER</div><h2 id="operationTitle">Operation staged</h2><p id="operationSummary"></p><div id="operationPayload" class="operation-payload"></div><div class="operation-sim-actions"><button id="btnSimVictory" class="wide-action" type="button"><svg><use href="#i-check"/></svg><span>SIMULATE VICTORY</span></button><button id="btnSimSetback" type="button"><svg><use href="#i-warning"/></svg><span>SIMULATE SETBACK</span></button><button id="btnCancelOperation" type="button"><svg><use href="#i-close"/></svg><span>LEAVE UNRESOLVED</span></button></div></div></section>
+
+    <button id="btnResetRoom" class="test-reset" type="button" title="Reset the isolated test-room save"><svg><use href="#i-reset"/></svg><span>RESET TEST ROOM</span></button><div id="toastBanner" class="toast-banner" role="status"></div>
+    <div id="renderVeil" class="render-veil">
+      <div class="render-brand" role="img" aria-label="MASSFRONT — Command. Conquer. Overwhelm.">
+        <span class="render-brand-fallback" aria-hidden="true">MASSFRONT</span>
+        <img src="../../assets/brand/massfront-title-command-conquer-overwhelm-v1.png" alt="" aria-hidden="true" width="1280" height="681" decoding="async" onerror="this.style.display='none'">
+      </div>
+      <div class="loader-mark"><span></span><i></i></div>
+      <b>OPENING UGA EXPEDITION LINK</b>
+      <small id="loadStatus">CALIBRATING EXTERIOR NAVIGATION</small>
+      <div class="load-meter" aria-label="Expedition loading progress">
+        <span id="loadProgressBar"></span>
+      </div>
+      <div class="load-telemetry"><strong id="loadProgressPercent">2%</strong><span id="loadPhase">RUNTIME BOOT</span><time id="loadElapsed">0s</time></div>
+      <div class="render-failure-actions">
+        <button id="renderRetryGpu" data-render-retry type="button" aria-label="Retry GPU initialization" hidden>RETRY GPU INITIALIZATION</button>
+        <button id="renderReturnMassfront" data-render-return type="button" aria-label="Return to the MASSFRONT Classic War Room">RETURN TO MASSFRONT</button>
+      </div>
+    </div>
+  </main>
+  <script>
+    (() => {
+      const started = performance.now();
+      let highest = 2;
+      const CLASSIC_FALLBACK_QUERY = 'galacticFallback=classic';
+      const returnButton = document.getElementById('renderReturnMassfront');
+      function showBootstrapFailure(message) {
+        const veil = document.getElementById('renderVeil');
+        if (!veil || veil.classList.contains('ready')) return;
+        veil.className = 'render-veil failed';
+        const title = veil.querySelector('b');
+        const status = document.getElementById('loadStatus');
+        if (title) title.textContent = 'EXPEDITION INTERFACE FAILED TO START';
+        if (status) status.textContent = String(message || 'THE UGA MODULE DID NOT INITIALIZE').toUpperCase();
+      }
+      function inlineBaseReturnTarget() {
+        const current = new URL(location.href);
+        try {
+          const record = JSON.parse(sessionStorage.getItem('massfront.exploration.mount.v1') || 'null');
+          const keys = record && Object.keys(record).sort().join('|');
+          const base = record && new URL(record.baseUrl);
+          const module = record && new URL(record.moduleUrl);
+          if (keys === 'baseUrl|generation|issuedAt|kind|moduleUrl|schema|token'
+            && record.schema === 1 && record.kind === 'MassfrontNativeExplorationMountV1'
+            && /^[a-f0-9]{64}$/.test(record.generation || '') && /^[a-f0-9]{32}$/.test(record.token || '')
+            && Number.isSafeInteger(record.issuedAt) && record.issuedAt >= 0
+            && ['https:', 'http:'].includes(base.protocol) && base.origin === current.origin
+            && base.pathname.endsWith('/index.html') && !base.pathname.startsWith('/_capacitor_file_')
+            && !base.username && !base.password && !base.search && !base.hash
+            && module.origin === current.origin && module.pathname === current.pathname
+            && module.pathname.startsWith('/_capacitor_file_/') && !module.search && !module.hash) {
+            return new URL(`index.html?${CLASSIC_FALLBACK_QUERY}`, new URL('./', base)).href;
+          }
+        } catch (_) {}
+        if (current.pathname.startsWith('/_capacitor_file_/')) {
+          return ['https:', 'http:'].includes(current.protocol) && current.hostname === 'localhost'
+            && !current.username && !current.password
+            ? new URL(`/index.html?${CLASSIC_FALLBACK_QUERY}`, current.origin).href
+            : null;
+        }
+        const target = new URL(`../../../index.html?${CLASSIC_FALLBACK_QUERY}`, current);
+        return target.origin === current.origin ? target.href : null;
+      }
+      function inlineFatalReturn(event) {
+        if (event) event.preventDefault();
+        const delegated = window.__MASSFRONT_FATAL_RETURN_HANDLER__;
+        if (typeof delegated === 'function') {
+          delegated();
+          return;
+        }
+        if (returnButton?.disabled) return;
+        const target = inlineBaseReturnTarget();
+        if (!target) {
+          showBootstrapFailure('THE INSTALLED-GAME RETURN PATH IS UNAVAILABLE · RESTART MASSFRONT TO RECOVER SAFELY');
+          return;
+        }
+        returnButton.disabled = true;
+        returnButton.setAttribute('aria-busy', 'true');
+        returnButton.textContent = 'RETURNING TO MASSFRONT';
+        location.assign(target);
+      }
+      window.__MASSFRONT_INLINE_FATAL_RETURN_BOUND__ = true;
+      if (returnButton) returnButton.addEventListener('click', inlineFatalReturn);
+      window.addEventListener('error', event => {
+        if (event.target?.id === 'spaceModuleScript') {
+          showBootstrapFailure('THE UGA MODULE FILES COULD NOT LOAD · RETURN TO THE CLASSIC WAR ROOM');
+        }
+      }, true);
+      window.setTimeout(() => {
+        if (window.__MASSFRONT_SPACE_MODULE_BOUND__ !== true) {
+          showBootstrapFailure('THE UGA MODULE DID NOT INITIALIZE · RETURN TO THE CLASSIC WAR ROOM');
+        }
+      }, 12000);
+      window.__MASSFRONT_SET_LOAD_PROGRESS__ = progress => {
+        const veil = document.getElementById('renderVeil');
+        if (!veil || veil.classList.contains('ready') || veil.classList.contains('failed')) return;
+        highest = Math.max(highest, Math.min(100, Number(progress?.percent) || 0));
+        const bar = document.getElementById('loadProgressBar');
+        const percent = document.getElementById('loadProgressPercent');
+        const phase = document.getElementById('loadPhase');
+        const detail = document.getElementById('loadStatus');
+        if (bar) bar.style.width = `${highest}%`;
+        if (percent) percent.textContent = `${Math.round(highest)}%`;
+        if (phase && progress?.stage) phase.textContent = progress.stage;
+        if (detail && progress?.detail) detail.textContent = progress.detail;
+      };
+      const timer = window.setInterval(() => {
+        const veil = document.getElementById('renderVeil');
+        const elapsed = document.getElementById('loadElapsed');
+        if (elapsed) elapsed.textContent = `${Math.floor((performance.now() - started) / 1000)}s`;
+        if (!veil || veil.classList.contains('ready') || veil.classList.contains('failed')) window.clearInterval(timer);
+      }, 500);
+    })();
+  </script>
+  <script id="spaceModuleScript" type="module" src="src/space_module.js?v=20260908-uga81r1"></script>
+</body>
+</html>

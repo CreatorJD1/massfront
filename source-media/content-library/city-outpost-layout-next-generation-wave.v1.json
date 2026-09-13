@@ -1,0 +1,150 @@
+{
+  "schemaVersion": 1,
+  "planId": "massfront-city-outpost-layout-next-generation-wave-v1",
+  "auditDate": "2026-08-26",
+  "status": "SOURCE_AUTHORING_PLAN_ONLY",
+  "runtimeReady": false,
+  "sourceQueue": "source-media/content-library/hunyuan-city-outpost-layout-generation-queue.v1.json",
+  "selectionContext": {
+    "alreadyInFlightOrSaved": [
+      "outpost_gatehouse_command_tower",
+      "outpost_operations_block"
+    ],
+    "objective": "Create the smallest coherent layout-forming wave after the saved gatehouse and operations block. This wave establishes a repeatable primary-road spine, legal turns, and a four-way authored plaza before any additional hero building.",
+    "selectionRule": "Prefer reusable transit topology over landmarks. The first wave must connect, turn, and cross without a dead end or a structure placed on the cross-street.",
+    "deferredFourthJob": {
+      "jobId": "hy3d_layout_road_primary_t_32",
+      "reason": "The X/plaza supplies branching in the first usable network and directly addresses the known cross-street/plaza failure. The T junction remains the immediate fourth road-family generation."
+    }
+  },
+  "currentConceptAudit": {
+    "conceptRoot": "source-media/concepts/hunyuan/city_outpost_layout_kits",
+    "present": [
+      {
+        "conceptId": "brutalist_command_hub_v1",
+        "path": "source-media/concepts/hunyuan/city_outpost_layout_kits/brutalist_command_hub/mf_city_outpost_brutalist_command_hub-concept-v1.png",
+        "dimensionsPixels": [1536, 1024],
+        "sha256": "f39b2020978c8c888f823458943364d596247f0900fb8405819872913892f32e"
+      },
+      {
+        "conceptId": "outpost_operations_block_v1",
+        "path": "source-media/concepts/hunyuan/city_outpost_layout_kits/outpost_operations_block/mf_outpost_operations_block-concept-v1.png",
+        "dimensionsPixels": [1402, 1122],
+        "sha256": "1c10bbc4bae58ce421414a1f53897b1f000699e1d71a69adcf68da2b90abf51d"
+      }
+    ],
+    "missingForThisWave": 3,
+    "pathReconciliationRequired": "The 13-job queue currently declares source-media/concepts/city-outpost-layout-kit-v1 paths, while the saved concepts use source-media/concepts/hunyuan/city_outpost_layout_kits. Do not claim READY_FOR_HUNYUAN until each selected job points to its real approved concept and recorded hash."
+  },
+  "coordinateContract": {
+    "units": "meters",
+    "upAxis": "+Y",
+    "northAxis": "+Z",
+    "origin": "center_of_footprint_at_ground_y0",
+    "detailSnapMeters": 4,
+    "macroGridMeters": 16,
+    "primaryRoadClearWidthMeters": 18,
+    "socketGapToleranceMeters": 0.01,
+    "allowedYawDegrees": [0, 90, 180, 270]
+  },
+  "sharedConceptRequirements": {
+    "minimumResolutionPixels": [1536, 1536],
+    "preferredResolutionPixels": [2048, 2048],
+    "view": "single clean elevated three-quarter orthographic-style view with enough top visibility to read the complete route topology and all boundary sockets",
+    "background": "neutral mid-gray studio background with a soft contact shadow only",
+    "mustShow": [
+      "one isolated module and no neighboring scene",
+      "complete footprint and every socket boundary",
+      "18 meter unobstructed route clearance",
+      "flat matching seam faces at the declared boundary centers",
+      "4 meter construction rhythm and restrained lane/curb/service detailing",
+      "separate graphite structural, warm-gray pavement, pale armor, dark contact, cyan emissive, and amber hazard regions"
+    ],
+    "mustExclude": [
+      "terrain or baked landscape",
+      "buildings, vehicles, people, weapons, turrets, creatures, or loose props",
+      "raised median, sign, lamp, bollard, curb, rail, pipe, debris, or decal crossing a socket clearance plane",
+      "text, labels, logos, watermarks, source cameras, source lights, or franchise-specific motifs",
+      "biological forms, random greeble masses, or perspective-cropped boundaries"
+    ],
+    "originality": "Original MASSFRONT heavy civic and industrial science-fiction infrastructure. Reference genre principles for scale and function only; do not reproduce protected designs."
+  },
+  "generationOrder": [
+    {
+      "rank": 1,
+      "jobId": "hy3d_layout_road_primary_straight_32",
+      "assetId": "mf_hi_road_primary_straight_32_01",
+      "reason": "The repeatable north-south spine is the highest-use placement piece and the calibration object for every later primary-road socket.",
+      "concept": {
+        "requiredPath": "source-media/concepts/hunyuan/city_outpost_layout_kits/road_primary_straight_32/mf_road_primary_straight_32-concept-v1.png",
+        "status": "MISSING_BLOCKING",
+        "compositionRequirements": [
+          "Road runs exactly north-south through the footprint center.",
+          "Show the full north and south seam faces without perspective cropping.",
+          "Keep a continuous 18 meter clear carriageway plus two 7 meter service/curb bands inside the 32 meter width.",
+          "Use shallow drainage, flush access panels, recessed cyan edge lights, and sparse amber hazard marks; nothing may protrude into the route or seam."
+        ]
+      },
+      "dimensionsMeters": { "x": 32, "y": 0.6, "z": 32 },
+      "sockets": [
+        { "id": "road_n", "profile": "road_primary_18", "face": "+Z", "centerBottomMeters": [0, 0, 16], "outward": [0, 0, 1], "clearWidthMeters": 18 },
+        { "id": "road_s", "profile": "road_primary_18", "face": "-Z", "centerBottomMeters": [0, 0, -16], "outward": [0, 0, -1], "clearWidthMeters": 18 }
+      ],
+      "hunyuanPrompt": "Use the attached approved concept as the sole silhouette and topology reference. Generate one original MASSFRONT modular primary-road straight piece, not a scene. Target normalization envelope 32 m X by 0.6 m Y by 32 m Z, Y-up, +Z north, origin at the footprint center on ground Y=0. Build one continuous 18 m unobstructed heavy-vehicle carriageway running north-south through X=0, with matching perfectly flat road_primary_18 socket faces centered at (0,0,+16) and (0,0,-16). Keep two 7 m service and curb bands within the 32 m width. Add restrained heavy civic science-fiction construction: warm-gray pavement plates, graphite substructure, dark contact strips, shallow drainage, flush maintenance panels, recessed cyan edge lights, and sparse amber hazard markings. Every curb, light, panel, decal, and drain must stop before both socket clearance planes. One connected source root only. No terrain, buildings, vehicles, people, weapons, turrets, biology, loose props, text, logos, cameras, lights, or franchise copying. Preserve clean low-relief surfaces suitable for later semantic materials, collision, navigation, and LOD authoring."
+    },
+    {
+      "rank": 2,
+      "jobId": "hy3d_layout_road_primary_corner_32",
+      "assetId": "mf_hi_road_primary_corner_32_01",
+      "reason": "A legal cardinal turn combines with the straight module to form perimeter loops, city blocks, and outpost approaches without arbitrary rotation or distorted road meshes.",
+      "concept": {
+        "requiredPath": "source-media/concepts/hunyuan/city_outpost_layout_kits/road_primary_corner_32/mf_road_primary_corner_32-concept-v1.png",
+        "status": "MISSING_BLOCKING",
+        "compositionRequirements": [
+          "Road enters from north at X=0 and exits east at Z=0.",
+          "Show both complete seam faces and the entire inner and outer elbow.",
+          "The center turn apron remains an unobstructed 18 meter heavy-vehicle path with a readable smooth fillet rather than a sharp decorative maze.",
+          "Drainage, edge lights, plate seams, and amber turn warnings follow the bend and terminate before both sockets."
+        ]
+      },
+      "dimensionsMeters": { "x": 32, "y": 0.6, "z": 32 },
+      "sockets": [
+        { "id": "road_n", "profile": "road_primary_18", "face": "+Z", "centerBottomMeters": [0, 0, 16], "outward": [0, 0, 1], "clearWidthMeters": 18 },
+        { "id": "road_e", "profile": "road_primary_18", "face": "+X", "centerBottomMeters": [16, 0, 0], "outward": [1, 0, 0], "clearWidthMeters": 18 }
+      ],
+      "hunyuanPrompt": "Use the attached approved concept as the sole silhouette and topology reference. Generate one original MASSFRONT modular 90-degree primary-road corner, not a scene. Target normalization envelope 32 m X by 0.6 m Y by 32 m Z, Y-up, +Z north, origin at the footprint center on ground Y=0. An 18 m unobstructed heavy-vehicle route enters through a perfectly flat road_primary_18 socket centered at (0,0,+16), bends once through a broad functional center apron, and exits through a matching socket centered at (+16,0,0). Preserve the full 18 m clearance through the bend; use a smooth restrained fillet and no central obstacle, raised median, rail, lamp, or decorative island. Add warm-gray pavement plates, graphite substructure, shallow drainage, flush maintenance panels, recessed cyan edge lights, and sparse amber turn markings that follow the elbow and stop before both socket planes. One connected source root only. No terrain, neighboring roads, buildings, vehicles, people, weapons, turrets, biology, loose props, text, logos, cameras, lights, random greeble masses, or franchise copying. Preserve simple semantic material regions and clean geometry for later navigation and LOD authoring."
+    },
+    {
+      "rank": 3,
+      "jobId": "hy3d_layout_road_primary_x_plaza_48",
+      "assetId": "mf_hi_road_primary_x_plaza_48_01",
+      "reason": "The four-way plaza creates the first useful district junction and supplies an authored no-plot intersection treatment for the deterministic cross-street placement failure.",
+      "concept": {
+        "requiredPath": "source-media/concepts/hunyuan/city_outpost_layout_kits/road_primary_x_plaza_48/mf_road_primary_x_plaza_48-concept-v1.png",
+        "status": "MISSING_BLOCKING",
+        "compositionRequirements": [
+          "Two 18 meter roads cross on the X and Z axes with four complete flat socket faces.",
+          "The center is a reinforced, empty, traversable 28 by 28 meter hardstand; it is explicitly a no-building/no-required-plot zone.",
+          "Corner pedestrian/service pads stay outside the 18 meter road clearances and do not form a traffic-blocking island.",
+          "Use quadrant plate logic and directional light/marking cues so the X topology remains readable at RTS command zoom."
+        ]
+      },
+      "dimensionsMeters": { "x": 48, "y": 0.6, "z": 48 },
+      "reservedNoPlotZoneMeters": { "x": 28, "z": 28, "center": [0, 0, 0] },
+      "sockets": [
+        { "id": "road_n", "profile": "road_primary_18", "face": "+Z", "centerBottomMeters": [0, 0, 24], "outward": [0, 0, 1], "clearWidthMeters": 18 },
+        { "id": "road_e", "profile": "road_primary_18", "face": "+X", "centerBottomMeters": [24, 0, 0], "outward": [1, 0, 0], "clearWidthMeters": 18 },
+        { "id": "road_s", "profile": "road_primary_18", "face": "-Z", "centerBottomMeters": [0, 0, -24], "outward": [0, 0, -1], "clearWidthMeters": 18 },
+        { "id": "road_w", "profile": "road_primary_18", "face": "-X", "centerBottomMeters": [-24, 0, 0], "outward": [-1, 0, 0], "clearWidthMeters": 18 }
+      ],
+      "hunyuanPrompt": "Use the attached approved concept as the sole silhouette and topology reference. Generate one original MASSFRONT modular four-way primary-road plaza, not a scene. Target normalization envelope 48 m X by 0.6 m Y by 48 m Z, Y-up, +Z north, origin at the footprint center on ground Y=0. Two continuous 18 m unobstructed heavy-vehicle roads cross on the X and Z axes. Provide four identical perfectly flat road_primary_18 sockets centered at (0,0,+24), (+24,0,0), (0,0,-24), and (-24,0,0). Keep a reinforced empty traversable 28 m by 28 m central hardstand as an authored no-building and no-required-plot zone; do not add a statue, tower, island, median, bollard field, or raised centerpiece. Corner pedestrian/service pads, drainage, flush access plates, recessed cyan route lights, and amber directional markings must stay outside all route clearances and stop before every socket plane. Make the X topology readable from RTS command zoom through large plate quadrants and restrained directional cues. One connected source root only. No terrain, buildings, vehicles, people, weapons, turrets, biology, loose props, text, logos, cameras, lights, random greeble masses, or franchise copying. Preserve clean semantic material regions for later collision, navigation, placement, and LOD authoring."
+    }
+  ],
+  "admissionBoundary": {
+    "allSelectedStatuses": "BLOCKED_CONCEPT",
+    "evidence": "UNKNOWN",
+    "runtimeReady": false,
+    "nextAction": "Generate and approve the three isolated concept images at the declared paths, record their SHA-256 hashes, then run one serialized Hunyuan job at a time.",
+    "sourceExportIsNotRuntimeApproval": true
+  }
+}

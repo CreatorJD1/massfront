@@ -170,6 +170,13 @@ const MOD_ATTACH_MESH={};      // modId -> [InstMesh per variant]
 let modAttachLive=[];          // rebuilt only when the equipped set changes
 let modAttachSig='';
 
+function modAttachGLReset(){
+  for(const id in MOD_ATTACH_MESH) delete MOD_ATTACH_MESH[id];
+  modAttachLive=[];
+  modAttachSig='';
+  modAttachDrawn=0;
+}
+
 /* Lazy, and only for what is actually fitted: a player who never crafts a
    module never pays a byte of GPU memory for this feature. */
 function modAttachMeshes(id){
@@ -212,4 +219,3 @@ function modAttachFlush(){
   for(const id in MOD_ATTACH_MESH) for(const M of MOD_ATTACH_MESH[id]){ n+=M.n||0; M.flush(gl); }
   modAttachDrawn=n;
 }
-

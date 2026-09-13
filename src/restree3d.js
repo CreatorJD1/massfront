@@ -29,6 +29,11 @@
   var RT_QUEUE_SLOTS=5;
   var RT_NODE_W=126,RT_NODE_H=76,RT_COL=154,RT_GAP_Y=94;
   var RT={sel:null,scrollX:0,scrollY:0,branch:'FABRICATION',faction:'nova',factionPicked:false,inspect:false,focus:null,renderCount:0};
+  function rtBindTap(el,fn){
+    if(!el) return;
+    if(typeof mfBindTap==='function') mfBindTap(el,fn);
+    else el.addEventListener('click',fn);
+  }
   function rtPlayerFaction(){
     var pf=(typeof playerFaction!=='undefined'&&playerFaction)||'nova';
     var id=(typeof facCanonicalId==='function'&&facCanonicalId(pf))||pf;
@@ -128,7 +133,7 @@
     META.resQueue=q;
     if(typeof metaSave==='function') metaSave();
     if(add.some(function(x){ return q.indexOf(x)<0; })&&typeof toast==='function')
-      toast('Research queue is full — '+RT_QUEUE_SLOTS+' priorities maximum');
+      toast('Development queue is full — '+RT_QUEUE_SLOTS+' priorities maximum');
     if(typeof sfx==='function') sfx('ui');
     buildTree();
   }
@@ -170,16 +175,18 @@
     var n=RT.sel&&rtNode(RT.sel);
     if(!n){
       return '<section class="rt3d-detail empty" id="rtDetail" data-test="research-detail">'
-        +'<div class="rt3d-emptyIcon">⌬</div><div><b>SELECT A RESEARCH NODE</b>'
-        +'<span>Inspect its unlock, resource cost, and prerequisite path.</span></div></section>';
+        +'<div class="rt3d-emptyIcon">⌬</div><div><b>SELECT A DEVELOPMENT NODE</b>'
+        +'<span>Inspect its persistent unlock, resource cost, and prerequisite path.</span></div></section>';
     }
     var st=rtState(n),q=rtQueue(false),queued=q.indexOf(n.id)>=0;
+    var outcome=typeof devNodeOutcome==='function'?devNodeOutcome(n):{
+      scope:'ACCOUNT UNLOCK · FUTURE RTS MATCHES',unlocks:[{label:n.ds}],recommendation:null,jump:''};
     var missing=n.req.filter(function(id){ return !devHas(id); });
-    var stateText={owned:'RESEARCHED',ready:'READY TO RESEARCH',funding:'RESOURCES REQUIRED',locked:'PREREQUISITES LOCKED',dossier:'AI DOSSIER · FUTURE PLAYER TECH'}[st];
+    var stateText={owned:'UNLOCKED',ready:'READY TO UNLOCK',funding:'RESOURCES REQUIRED',locked:'PREREQUISITES LOCKED',dossier:'AI DOSSIER · FUTURE PLAYER TECH'}[st];
     var h='<section class="rt3d-detail '+st+(RT.inspect?' rt3d-inspector':'')+'" id="rtDetail" data-test="research-detail" data-node="'+rtEsc(n.id)+'">'
-      +'<button class="rt3d-detailClose" id="rtDetailClose" type="button" aria-label="Close research details">×</button>'
+      +'<button class="rt3d-detailClose" id="rtDetailClose" type="button" aria-label="Close Development details">×</button>'
       +'<header><div class="rt3d-detailArt">'+itemArt(n.art||'res_'+n.id,'⌬',46)+'</div>'
-      +'<div><small>'+rtEsc(n.br)+' · TIER '+(rtDepth(n,{},{} )+1)+'</small><b>'+rtEsc(n.nm)+'</b>'
+      +'<div><small>'+rtEsc(n.br)+' · TIER '+(rtDepth(n,{},{} )+1)+'</small>'+mfOwnershipBadgeHTML('permanent')+'<b>'+rtEsc(n.nm)+'</b>'
       +'<span>'+rtEsc(n.ds)+'</span></div><em>'+stateText+'</em></header>';
     if(n.req.length){
       h+='<div class="rt3d-detailLabel">PREREQUISITES</div><div class="rt3d-prereqs">'
@@ -189,14 +196,17 @@
             +(ok?'✓ ':'🔒 ')+rtEsc(p?p.nm:id)+'</button>';
         }).join('')+'</div>';
     }
-    if(st!=='dossier') h+='<div class="rt3d-detailLabel">RESEARCH COST</div>'+rtCostHtml(n);
+    h+='<div class="rt3d-detailLabel">AFFECTED SCOPE</div><div class="rt3d-factionCaption">'+rtEsc(outcome.scope)+'</div>'
+      +'<div class="rt3d-detailLabel">EXACT OUTCOMES</div><div class="rt3d-factionCaption">'
+      +outcome.unlocks.map(function(x){ return rtEsc(x.label); }).join(' · ')+'</div>';
+    if(st!=='dossier') h+='<div class="rt3d-detailLabel">DEVELOPMENT COST</div>'+rtCostHtml(n);
     h+='<div class="rt3d-detailActions">';
     if(st==='owned'){
-      h+='<button class="rt3d-primary done" type="button" disabled>✓ RESEARCH COMPLETE</button>';
+      h+='<button class="rt3d-primary done" type="button" disabled>✓ UNLOCK COMPLETE</button>';
     }else if(st==='dossier'){
       h+='<button class="rt3d-primary locked" type="button" disabled>AI DOSSIER · PLAYER TECH RESERVED</button>';
     }else if(st==='ready'){
-      h+='<button class="rt3d-primary" id="rtResearchNow" type="button">RESEARCH NOW</button>';
+      h+='<button class="rt3d-primary" id="rtResearchNow" type="button">UNLOCK NOW</button>';
     }else{
       h+='<button class="rt3d-primary locked" type="button" disabled>'
         +(st==='locked'?'COMPLETE '+missing.length+' PREREQUISITE'+(missing.length===1?'':'S'):'GATHER REQUIRED RESOURCES')+'</button>';
@@ -206,13 +216,17 @@
         +(queued?'REMOVE FROM QUEUE':'ADD TO QUEUE')+'</button>';
       if(st==='locked') h+='<button class="rt3d-secondary path" id="rtQueuePath" type="button">QUEUE PREREQUISITE PATH</button>';
     }
+    if(st==='owned'&&outcome.jump)
+      h+='<button class="rt3d-secondary" id="rtOutcomeJump" data-devtab="'+rtEsc(outcome.jump)+'" type="button">OPEN '+(outcome.jump==='craft'?'CRAFTING':'LOADOUT')+'</button>';
+    if(st==='owned'&&outcome.recommendation)
+      h+='<button class="rt3d-secondary path" id="rtRecommendNext" data-recommend="'+rtEsc(outcome.recommendation.id)+'" type="button">RECOMMENDED NEXT · '+rtEsc(outcome.recommendation.nm)+'<br><small>'+rtEsc(outcome.recommendation.reason)+'</small></button>';
     return h+'</div></section>';
   }
 
   function rtQueueHtml(){
     var q=rtQueue(true),next=q.length?rtNode(q[0]):null;
-    var h='<section class="rt3d-queue" data-test="research-queue"><header><div><b>RESEARCH QUEUE</b>'
-      +'<span>Plan the next unlocks without spending resources</span></div><strong>'+q.length+'/'+RT_QUEUE_SLOTS+'</strong></header>'
+    var h='<section class="rt3d-queue" data-test="research-queue"><header><div><b>DEVELOPMENT QUEUE</b>'
+      +'<span>Plan persistent account unlocks without spending resources</span></div><strong>'+q.length+'/'+RT_QUEUE_SLOTS+'</strong></header>'
       +'<div class="rt3d-qslots">';
     for(var i=0;i<RT_QUEUE_SLOTS;i++){
       var n=i<q.length?rtNode(q[i]):null;
@@ -229,7 +243,7 @@
     if(next){
       var st=rtState(next);
       h+='<button class="rt3d-next '+(st==='ready'?'ready':'')+'" id="rtResearchNext" type="button" '
-        +(st==='ready'?'':'disabled')+'>'+(st==='ready'?'RESEARCH NEXT · '+rtEsc(next.nm):'NEXT · '+rtEsc(next.nm)+' · '+(st==='locked'?'LOCKED':'NEEDS RESOURCES'))+'</button>';
+        +(st==='ready'?'':'disabled')+'>'+(st==='ready'?'UNLOCK NEXT · '+rtEsc(next.nm):'NEXT · '+rtEsc(next.nm)+' · '+(st==='locked'?'LOCKED':'NEEDS RESOURCES'))+'</button>';
     }
     return h+'</section>';
   }
@@ -238,24 +252,27 @@
     var tree=rtFactionNodes();
     var done=tree.filter(function(n){ return devHas(n.id); }).length;
     var ready=tree.filter(function(n){ return rtState(n)==='ready'; }).length;
+    var recommended=typeof devRecommendNext==='function'?devRecommendNext(tree):tree.find(function(n){ return rtState(n)==='ready'; });
     var faction=typeof facArt==='function'?facArt(RT.faction):null;
-    var h='<div class="rt3d-summary"><div><small>RESEARCH NETWORK</small><b>'+done+' / '+tree.length+' NODES</b></div>'
+    var h='<div class="rt3d-summary"><div><small>PERSISTENT DEVELOPMENT</small>'+mfOwnershipBadgeHTML('permanent')+'<b>'+done+' / '+tree.length+' ACCOUNT UNLOCKS</b></div>'
       +'<div class="rt3d-summaryStats"><span><i class="ready"></i>'+ready+' READY</span><span>◆ '+Math.floor(META.researchData||0)+' DATA</span>'
-      +'<button type="button" class="rt3d-focusReady" id="rtFocusReady" aria-label="Focus the next ready research node">FOCUS READY</button></div></div>'
+      +'<button type="button" class="rt3d-focusReady" id="rtFocusReady" '+(recommended?'':'disabled')
+      +' aria-label="'+(recommended?('Focus recommended Development unlock '+rtEsc(recommended.nm)):'No recommended Development unlock')+'">'
+      +(recommended?'FOCUS RECOMMENDED':'NO PLAYER UNLOCKS')+'</button></div></div>'
       +rtQueueHtml()
-      +'<nav class="rt3d-factionNav" aria-label="Faction research trees">'
+      +'<nav class="rt3d-factionNav" aria-label="Faction Development trees">'
       +RT_FACTIONS.map(function(f){
         var a=typeof facArt==='function'?facArt(f):null;
         return '<button type="button" data-rtfaction="'+f+'" class="'+(RT.faction===f?'on':'')+'" aria-label="'+rtEsc(a?a.nm:f)+' research tree">'
           +(a&&typeof facIcon==='function'?facIcon(f,24,'rt3d-facIcon'):'<span>FACTION</span>')+'<b>'+rtEsc(a?a.nm:f)+'</b></button>';
       }).join('')+'</nav>'
-      +'<div class="rt3d-factionCaption">'+rtEsc(RT.faction==='brood'?'AI OPPONENT DOSSIER — evolution research is reserved until the Brood becomes playable':
-        (faction?faction.motto:'FACTION DOCTRINE')+' — '+(faction?faction.bonus:'Dedicated faction research'))+'</div>'
+      +'<div class="rt3d-factionCaption">'+rtEsc(RT.faction==='brood'?'AI OPPONENT DOSSIER — Brood evolution unlocks are reserved until the faction becomes playable':
+        (faction?faction.motto:'FACTION DOCTRINE')+' — '+(faction?faction.bonus:'Dedicated faction unlocks'))+'</div>'
       /* No branch sub-tabs. Every branch of this faction is laid out together in
          one canvas below, and the player drags around it freely. */
        +'<div class="rt3d-navHint"><span>✥</span> Drag to explore the whole tree · tap a node to inspect</div>';
     if(RT.inspect&&RT.sel) return h+rtDetailHtml();
-    h+='<div class="rt3d-stage" id="rtStage" data-test="research-graph" tabindex="0" aria-label="Scrollable research prerequisite graph">'
+    h+='<div class="rt3d-stage" id="rtStage" data-test="research-graph" tabindex="0" aria-label="Scrollable persistent Development prerequisite graph">'
       +'<div class="rt3d-world" id="rtWorld" style="width:'+layout.width+'px;height:'+layout.height+'px">';
     layout.bands.forEach(function(b){
       h+='<div class="rt3d-band '+b.br.toLowerCase()+'" data-band="'+b.br+'" style="top:'+b.top+'px;height:'+b.height+'px">'
@@ -275,7 +292,7 @@
     h+='</svg>';
     layout.nodes.forEach(function(row){
       var n=row.n,st=row.state,missing=n.req.filter(function(id){ return !devHas(id); });
-      var sub=st==='owned'?'RESEARCHED':st==='ready'?'READY':st==='funding'?'NEEDS RESOURCES':st==='dossier'?'AI DOSSIER':'NEEDS '+missing.length;
+      var sub=st==='owned'?'UNLOCKED':st==='ready'?'READY':st==='funding'?'NEEDS RESOURCES':st==='dossier'?'AI DOSSIER':'NEEDS '+missing.length;
       h+='<button type="button" class="rt3d-node '+st+(RT.sel===n.id?' selected':'')+'" data-research-id="'+rtEsc(n.id)+'" '
         +'data-state="'+st+'" data-prerequisites="'+rtEsc(n.req.join(','))+'" '
         +'style="left:'+(row.x-RT_NODE_W*.5)+'px;top:'+(row.y-RT_NODE_H*.5)+'px" aria-label="'+rtEsc(n.nm)+', '+sub+'">'
@@ -302,14 +319,13 @@
       stage.addEventListener('scroll',function(){ RT.scrollX=stage.scrollLeft; RT.scrollY=stage.scrollTop; },{passive:true});
     }
     document.querySelectorAll('[data-research-id]').forEach(function(el){
-      if(typeof mfBindTap==='function') mfBindTap(el,function(ev){ ev.stopPropagation(); rtSelect(el.dataset.researchId,true); });
-      else el.addEventListener('click',function(){ rtSelect(el.dataset.researchId,true); });
+      rtBindTap(el,function(ev){ ev.stopPropagation(); rtSelect(el.dataset.researchId,true); });
     });
     var focusReady=document.getElementById('rtFocusReady');
-    if(focusReady) focusReady.addEventListener('click',function(){
-      var ready=rtFactionNodes().find(function(n){ return rtState(n)==='ready'; });
-      if(!ready){ if(typeof toast==='function') toast('No research node is ready yet'); return; }
-      RT.sel=ready.id; RT.inspect=false; RT.focus=ready.id; buildTree();
+    rtBindTap(focusReady,function(){
+      var recommended=typeof devRecommendNext==='function'?devRecommendNext(rtFactionNodes()):rtFactionNodes().find(function(n){ return rtState(n)==='ready'; });
+      if(!recommended){ if(typeof toast==='function') toast('No Development unlock is recommended yet'); return; }
+      RT.sel=recommended.id; RT.inspect=false; RT.focus=recommended.id; buildTree();
     });
     /* The branch sub-tabs are gone: the whole faction tree is one canvas you
        drag around. Touch already pans natively (overflow:auto + touch-action),
@@ -340,34 +356,41 @@
         RT.sel=null; RT.inspect=false; RT.focus=null; RT.scrollX=0; RT.scrollY=0;
         buildTree(); if(typeof sfx==='function') sfx('ui');
       };
-      if(typeof mfBindTap==='function') mfBindTap(el,choose); else el.addEventListener('click',choose);
+      rtBindTap(el,choose);
     });
     rtWireDetail();
-    document.querySelectorAll('[data-qid]').forEach(function(el){ el.addEventListener('click',function(){ rtSelect(el.dataset.qid,true); }); });
-    document.querySelectorAll('[data-qremove]').forEach(function(el){ el.addEventListener('click',function(ev){ ev.stopPropagation(); rtQueueRemove(+el.dataset.qremove); }); });
+    document.querySelectorAll('[data-qid]').forEach(function(el){ rtBindTap(el,function(){ rtSelect(el.dataset.qid,true); }); });
+    document.querySelectorAll('[data-qremove]').forEach(function(el){ rtBindTap(el,function(ev){ ev.stopPropagation(); rtQueueRemove(+el.dataset.qremove); }); });
     var next=document.getElementById('rtResearchNext');
-    if(next) next.addEventListener('click',function(){ var q=rtQueue(false),n=q.length&&rtNode(q[0]); if(n) rtBuy(n); });
+    rtBindTap(next,function(){ var q=rtQueue(false),n=q.length&&rtNode(q[0]); if(n) rtBuy(n); });
   }
   function rtWireDetail(){
     var close=document.getElementById('rtDetailClose');
     if(close){
       if(RT.inspect) close.setAttribute('aria-label','Back to research network');
-      close.addEventListener('click',function(){
+      rtBindTap(close,function(){
         if(RT.inspect){ RT.inspect=false; RT.focus=RT.sel; }
         else RT.sel=null;
         buildTree();
       });
     }
-    document.querySelectorAll('[data-prereq]').forEach(function(el){ el.addEventListener('click',function(){ rtSelect(el.dataset.prereq,true); }); });
+    document.querySelectorAll('[data-prereq]').forEach(function(el){ rtBindTap(el,function(){ rtSelect(el.dataset.prereq,true); }); });
     var buy=document.getElementById('rtResearchNow');
-    if(buy) buy.addEventListener('click',function(){ rtBuy(rtNode(RT.sel)); });
+    rtBindTap(buy,function(){ rtBuy(rtNode(RT.sel)); });
     var toggle=document.getElementById('rtQueueToggle');
-    if(toggle) toggle.addEventListener('click',function(){
+    rtBindTap(toggle,function(){
       var q=rtQueue(false),at=q.indexOf(RT.sel);
       if(at>=0) rtQueueRemove(at); else rtQueueAdd(RT.sel,false);
     });
     var path=document.getElementById('rtQueuePath');
-    if(path) path.addEventListener('click',function(){ rtQueueAdd(RT.sel,true); });
+    rtBindTap(path,function(){ rtQueueAdd(RT.sel,true); });
+    var jump=document.getElementById('rtOutcomeJump');
+    rtBindTap(jump,function(){
+      if(typeof devTab!=='undefined') devTab=jump.dataset.devtab;
+      RT.inspect=false; renderDevelop(); if(typeof sfx==='function') sfx('ui');
+    });
+    var recommend=document.getElementById('rtRecommendNext');
+    rtBindTap(recommend,function(){ rtSelect(recommend.dataset.recommend,true); });
   }
   function rtSelect(id,inspect){
     if(!rtNode(id)) return;
@@ -385,20 +408,22 @@
     rtSyncFaction();
     var layout=rtLayout();
     if(RT.sel&&!rtNode(RT.sel)) RT.sel=null;
-    body.innerHTML='<div class="rt3d-wrap" data-test="research-tree">'+rtGraphHtml(layout)+'</div>';
+    body.innerHTML=mfProgressionGuideHTML('development')+'<div class="rt3d-wrap" data-test="research-tree">'+rtGraphHtml(layout)+'</div>';
     RT.renderCount++;
     rtWire();
   }
 
   function rtSnapshot(){
-    var layout=rtLayout(),edges=0;
+    var layout=rtLayout(),edges=0,tree=rtFactionNodes();
     DEVTREE.forEach(function(n){ edges+=n.req.length; });
+    var recommended=typeof devRecommendNext==='function'?devRecommendNext(tree):null;
     return {
       version:'2.0',nodeCount:DEVTREE.length,edgeCount:edges,
       renderedNodes:document.querySelectorAll('[data-research-id]').length,
       renderedEdges:document.querySelectorAll('.rt3d-links path').length,
       branches:RT_BRANCHES.slice(),queueSlots:RT_QUEUE_SLOTS,queue:rtQueue(false).slice(),
       selected:RT.sel,faction:RT.faction,inspecting:RT.inspect,renderCount:RT.renderCount,width:layout.width,height:layout.height,
+      recommended:recommended?recommended.id:null,
       states:DEVTREE.reduce(function(o,n){ o[n.id]=rtState(n); return o; },{})
     };
   }
@@ -421,4 +446,3 @@
 
   window.initResTree3D=initResTree3D;
 })();
-

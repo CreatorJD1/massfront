@@ -21,14 +21,33 @@
    ============================================================================ */
 (function(){
   var MANIFEST=[
-    './assets/data/unitrows.js','./assets/data/unitsheet.js','./assets/data/itemart.js','./src/engine/gl.js','./src/engine/terragen.js','./src/terralab.js','./src/engine/mesh.js','./src/engine/billboard.js','./src/engine/tacticons.js','./src/engine/gpufx.js','./src/engine/organicfx.js','./src/engine/materials.js','./src/engine/materials-v2.js','./src/engine/terrain.js','./src/engine/models-world-data.js','./src/engine/models-world-loader.js','./src/engine/models.js','./assets/data/worldkit.js','./assets/data/sitetemplates.js','./src/engine/worldsites.js','./assets/data/meshes.js','./src/engine/models-legion.js','./src/engine/models-machine.js','./src/engine/models-infestation.js','./src/engine/models-civic.js','./src/engine/models-skyline.js','./src/engine/materials-world-v2.js','./src/engine/models-units-nova.js','./src/engine/models-units-legion.js','./src/engine/models-units-syndicate.js','./src/engine/models-units-brood.js','./src/engine/modkit.js','./src/game/sim.js','./src/game/economy.js','./src/game/commander.js','./src/game/meta.js','./src/game/ai.js','./src/ui/input.js','./src/ui/facticons.js','./src/ui/hud.js','./src/ui/render3d.js','./src/ui/orderfx.js','./src/airlift.js','./src/airlift-factions.js','./src/rumble.js','./src/factions.js','./src/factext.js','./src/offline.js','./src/audio.js','./src/assetpack.js','./src/hazards.js','./src/authportal.js','./src/tutorial.js','./src/adboards.js','./src/storeui.js','./src/restree3d.js','./src/develop.js','./src/factiondoctrine.js','./src/endgame.js','./src/story.js','./src/daily.js','./src/account.js','./src/economy-net.js','./src/updater.js','./src/intro.js','./src/session.js','./src/faction-id.js','./src/glrecover.js','./src/main.js','./src/intel.js','./src/repairbay.js','./src/galaxyui.js','./src/departure.js','./src/warprimer.js','./src/uistack.js','./src/ui/hudflow.js','./src/ui/hotslots.js'
+    './assets/data/theatreprofiles-stage10.js',
+    './assets/data/interiortopology-stage10.js','./assets/data/orbitaltopology-stage10.js',
+    './src/game/determinism.js',
+    './assets/data/unitrows.js','./assets/data/unitsheet.js','./assets/data/itemart.js','./assets/data/planetart.js','./src/engine/gl.js','./src/engine/planetpreview.js','./src/engine/perf.js','./src/engine/noisegen.js','./src/engine/factionenergy.js','./src/engine/ordnancetrails.js','./src/engine/terragen.js','./src/terralab.js','./src/engine/mesh.js','./src/engine/billboard.js','./src/engine/macrofx.js','./src/engine/shieldfx.js','./src/engine/tacticons.js','./src/engine/gpufx.js','./src/engine/volfx.js','./src/engine/shockwave.js','./src/engine/vfxlayers.js','./src/engine/organicfx.js','./assets/basis/basis_transcoder.js','./src/engine/materials.js','./src/engine/materials-v2.js','./src/engine/terrain.js','./src/engine/models-world-data.js','./src/engine/models-world-loader.js','./src/engine/models.js','./assets/data/worldkit.js','./assets/data/locationgrammar.js','./assets/data/sitetemplates.js','./assets/data/sitetemplates-stage9.js','./assets/data/locationplans.js','./assets/data/battlefieldtopology-stage10.js','./src/engine/worldsites.js','./assets/data/meshes.js','./src/engine/models-legion.js','./src/engine/models-machine.js','./src/engine/models-infestation.js','./src/engine/models-civic.js','./src/engine/models-skyline.js','./src/engine/materials-world-v2.js','./src/engine/models-units-nova.js','./src/engine/models-units-legion.js','./src/engine/models-units-syndicate.js','./src/engine/models-units-brood.js','./src/engine/brood-crowd.js','./src/engine/modkit.js','./src/engine/physics.js','./src/engine/cloudfx.js','./src/engine/cloudpostfx.js','./src/game/utilityjobs.js','./src/game/sim.js','./src/game/airwarfare.js','./src/game/economy.js','./src/game/commander.js','./src/game/meta.js','./src/game/ai.js','./src/ui/input.js','./src/ui/facticons.js','./src/ui/hud.js','./src/ui/render3d.js','./src/ui/orderfx.js','./src/airlift.js','./src/airlift-factions.js','./src/rumble.js','./src/factions.js','./src/factext.js','./src/offline.js','./src/audio.js','./src/assetpack.js','./src/content-mount.js','./src/hazards.js','./src/game/statehash.js','./src/authportal.js','./src/tutorial.js','./src/adboards.js','./src/storeui.js','./src/restree3d.js','./src/develop.js','./src/factiondoctrine.js','./src/endgame.js','./src/story.js','./src/socialui.js','./src/game/matchconsumer.js','./src/daily.js','./src/account.js','./src/economy-net.js','./src/updater.js','./src/intro.js','./src/launcher.js','./src/session.js','./src/faction-id.js','./src/glrecover.js','./src/main.js','./src/intel.js','./src/repairbay.js','./src/galaxyui.js','./src/departure.js','./src/warprimer.js','./src/uistack.js','./src/ui/hudflow.js','./src/ui/hotslots.js','./src/ui/unit-stack-hotbar.js','./src/galactic-operations.js','./src/onboarding.js','./src/career-faction-gate.js','./src/ui/cinematic-hud.js'
   ];
   /* Packaged scripts need a release key. WebViews and development browsers can
      otherwise reuse a stale source even after the installer or local preview
      has changed, which made new settings appear to be missing until cache was
      cleared manually. Patch bundles keep their content-addressed Blob URLs. */
-   var PACKAGED_REV='1.33.44';
+  var PACKAGED_REV='1.33.88';
+  /* Source-cache revision is deliberately independent from the user-facing
+     release number. Local/hotfix rebuilds of the same release must not reuse
+     an older gl.js merely because its ?v= version string is unchanged. */
+  /* Factory command and native content fixes change the same candidate's
+     source bytes. A new cache key prevents an earlier local preview lingering. */
+  var PACKAGED_SRC_REV=PACKAGED_REV+'-boot1';
   var DB='massfront-updates', STORE='bundles';
+  /* Packaged boot capability flag. OTA source checks this before staging a
+     descriptor that references per-artifact records. Old APK-bound boot
+     loaders never set it and therefore continue receiving the legacy complete
+     in-record bundle they understand. */
+  window.__MF_ARTIFACT_BOOT_V1=true;
+  /* Source preview and the default player pack include the signed Galactic
+     runtime allowlist. pack-www rewrites only its copied boot.js to false for
+     an explicitly slim package, giving later OTA launcher code local build
+     authority without ever requesting an intentionally absent module path. */
+  window.__MF_BUILD_HAS_GALACTIC_EXPLORATION=true;
   var bootShield=null, bootShieldTimer=0, bootShieldWatchdog=0;
   var bootShieldEvents=['pointerdown','pointerup','touchstart','touchend','click'];
   /* Absolute ceiling on how long the shield/guard may live. The guard is only
@@ -93,29 +112,128 @@
       r.onerror=function(){ rej(r.error); };
     });
   }
-  function get(db,key){
-    return new Promise(function(res){
-      try{
-        var tx=db.transaction(STORE,'readonly'), q=tx.objectStore(STORE).get(key);
-        q.onsuccess=function(){ res(q.result); }; q.onerror=function(){ res(null); };
-      }catch(e){ res(null); }
-    });
+  function patchChannel(rec){ return String(rec&&rec.channel||'stable'); }
+  function bundleMeta(rec){
+    if(!rec) return null;
+    return {version:rec.version,channel:rec.channel||'stable',at:rec.at,
+      schema:rec.schema||1,
+      notes:rec.notes||'',severity:rec.severity||'recommended',
+      kind:rec.kind||'full',patchedFrom:rec.patchedFrom||'',
+      manifestRoot:rec.manifestRoot||'',payloadRoot:rec.payloadRoot||'',
+      targetRoot:rec.targetRoot||'',sourcePayloadRoot:rec.sourcePayloadRoot||'',
+      fullRoot:rec.fullRoot||'',manifestKind:rec.manifestKind||'',
+      manifestCategory:rec.manifestCategory||'',
+      manifestPatchFrom:rec.manifestPatchFrom||'',
+      runtimeRoot:rec.runtimeRoot||'',
+      storage:rec.storage||''};
   }
-  function del(db,key){
-    return new Promise(function(res){
-      try{
-        var tx=db.transaction(STORE,'readwrite');
-        tx.objectStore(STORE).delete(key);
-        tx.oncomplete=function(){ res(); }; tx.onerror=function(){ res(); };
-      }catch(e){ res(); }
-    });
+  function sameRoots(a,b){
+    if(!a||!b) return false;
+    var ah=!!(a.manifestRoot||a.targetRoot||a.runtimeRoot),
+        bh=!!(b.manifestRoot||b.targetRoot||b.runtimeRoot);
+    if(!ah&&!bh) return true;
+    if(!(a.manifestRoot&&b.manifestRoot&&a.targetRoot&&b.targetRoot&&
+      String(a.manifestRoot).toLowerCase()===String(b.manifestRoot).toLowerCase()&&
+      String(a.targetRoot).toLowerCase()===String(b.targetRoot).toLowerCase())) return false;
+    /* Schema-1/2 records from before rooted identities remain compatible only
+       when both sides omit the runtime root. Once either side names one, both
+       must name the same ordered runtime or it cannot bless/replace the other. */
+    if(a.runtimeRoot||b.runtimeRoot) return !!(a.runtimeRoot&&b.runtimeRoot&&
+      String(a.runtimeRoot).toLowerCase()===String(b.runtimeRoot).toLowerCase());
+    return true;
   }
-  function put(db,key,val){
+  function sameBundle(a,b){
+    if(!a||!b||String(a.version)!==String(b.version)||
+       patchChannel(a)!==patchChannel(b)||!sameRoots(a,b)) return false;
+    if(a.at!=null||b.at!=null) return String(a.at||'')===String(b.at||'');
+    return true;
+  }
+  function sameBundleExact(a,b){
+    /* Mirrors updater's persisted identity contract: a legacy pair whose two
+       timestamps are both absent still matches, while one absent/one present
+       or any differing value does not. */
+    return !!(a&&b&&sameBundle(a,b));
+  }
+  function previousSlot(key){
+    key=String(key||'');
+    return key==='previousA'||key==='previousB'?key:null;
+  }
+  function previousSelection(records){
+    var ref=records.previousRef,key=previousSlot(ref&&ref.key);
+    var meta=key&&records[key+'Meta'];
+    return key&&sameBundleExact(ref,meta)
+      ?{key:key,meta:meta,ref:ref,slotted:true}
+      :{key:'previous',meta:records.previousMeta,ref:null,slotted:false};
+  }
+  function clearPreviousRecords(store){
+    store.delete('previousRef');
+    store.delete('previousA'); store.delete('previousAMeta');
+    store.delete('previousB'); store.delete('previousBMeta');
+    store.delete('previous'); store.delete('previousMeta');
+  }
+  function liveApplyOperation(op){
+    var age=op&&typeof op.at==='number'?Date.now()-op.at:-1;
+    return !!(op&&op.kind==='apply'&&op.token&&age>=0&&age<5*60*1000);
+  }
+  function probationMatchesBundle(prob,bundle){
+    if(!prob||!bundle||String(prob.version)!==String(bundle.version)||
+       patchChannel(prob)!==patchChannel(bundle)||!sameRoots(prob,bundle)) return false;
+    return prob.pendingAt==null||String(prob.pendingAt)===String(bundle.at||'');
+  }
+  function probationOwnsMetaExact(prob,meta){
+    return !!(prob&&meta&&prob.pendingAt!=null&&meta.at!=null&&
+      String(prob.version)===String(meta.version)&&
+      patchChannel(prob)===patchChannel(meta)&&
+      sameRoots(prob,meta)&&
+      String(prob.pendingAt)===String(meta.at));
+  }
+  function pendingMatchesFailure(pending,prob,bundle,version){
+    if(!pending||String(pending.version)!==String(version)) return false;
+    var owner=prob||bundle;
+    if(owner&&patchChannel(pending)!==patchChannel(owner)) return false;
+    if(owner&&!sameRoots(pending,owner)) return false;
+    var token=prob&&prob.pendingAt!=null?prob.pendingAt:
+      (bundle&&bundle.at!=null?bundle.at:null);
+    /* Old records without an attempt token cannot be distinguished from a
+       freshly downloaded rebuild carrying the same version. Retaining one
+       ambiguous payload is safer than deleting new verified bytes. */
+    return token!=null&&String(pending.at||'')===String(token);
+  }
+  /* Confirm exactly the patch represented by probation in one transaction.
+     The old three independent deletes left a cross-window gap: a newly staged
+     pending payload could land after probation was cleared and then be erased
+     by the final unconditional delete. Serialized conditional cleanup means a
+     concurrent stage either sees probation and stops, or commits after this
+     transaction and survives for its own install. */
+  function confirmPatch(db,identity){
     return new Promise(function(res){
       try{
-        var tx=db.transaction(STORE,'readwrite');
-        tx.objectStore(STORE).put(val,key);
-        tx.oncomplete=function(){ res(); }; tx.onerror=function(){ res(); };
+        var tx=db.transaction(STORE,'readwrite'),store=tx.objectStore(STORE);
+        var probation=store.get('probation'),pending=store.get('pendingMeta');
+        var failure=store.get('applyFailure'),active=store.get('activeMeta');
+        var operation=store.get('operation'),ready=0;
+        function inspect(){
+          if(++ready<5) return;
+          var prob=probation.result,pend=pending.result,fail=failure.result;
+          var running=active.result,op=operation.result;
+          if(!sameBundle(running,identity)||!probationMatchesBundle(prob,running)) return;
+          store.delete('probation');
+          if(fail&&String(fail.version)===String(running.version)) store.delete('applyFailure');
+          if(pendingMatchesFailure(pend,prob,running,running.version)){
+            store.delete('pending'); store.delete('pendingMeta');
+          }
+          /* A killed Apply document can leave its lease after the atomic
+             active/probation commit. Only the first proven frame of that exact
+             target owns the orphan; an unrelated or still-uncommitted Apply
+             remains visible to updater recovery. */
+          if(op&&op.kind==='apply'&&sameBundle(op.target,running))
+            store.delete('operation');
+        }
+        probation.onsuccess=inspect; pending.onsuccess=inspect;
+        failure.onsuccess=inspect; active.onsuccess=inspect;
+        operation.onsuccess=inspect;
+        tx.oncomplete=function(){ res(); };
+        tx.onerror=function(){ res(); }; tx.onabort=function(){ res(); };
       }catch(e){ res(); }
     });
   }
@@ -128,109 +246,550 @@
     }
     return false;
   }
-  function failed(db,version,reason){
-    version=version||'?';
-    return get(db,'applyFailure').then(function(prev){
-      var count=prev&&prev.version===version?(prev.count|0)+1:1;
-      var rec={version:version,at:Date.now(),reason:reason,count:count,
-               quarantined:count>=2};
-      return put(db,'applyFailure',rec).then(function(){ return rec; });
-    });
-  }
-  function dropPendingVersion(db,version){
-    return get(db,'pending').then(function(p){
-      return p&&p.version===version?del(db,'pending'):null;
-    });
-  }
   function validBundle(b){
     if(!b||!b.files||!verNewer(b.version,PACKAGED_REV)) return false;
     var order=b.order&&b.order.length?b.order:MANIFEST;
-    for(var i=0;i<order.length;i++) if(typeof b.files[order[i]]!=='string') return false;
+    var schema=Number(b.schema||1);
+    if(schema>=3){
+      var hex=/^[0-9a-f]{64}$/;
+      if(!Number.isSafeInteger(schema)||
+         !hex.test(String(b.manifestRoot||''))||
+         !hex.test(String(b.payloadRoot||''))||
+         !hex.test(String(b.sourcePayloadRoot||''))||
+         !hex.test(String(b.fullRoot||''))||
+         !hex.test(String(b.targetRoot||''))||
+         !hex.test(String(b.runtimeRoot||''))||
+         String(b.targetRoot)!==String(b.fullRoot)||
+         (String(b.payloadRoot)!==String(b.sourcePayloadRoot)&&
+          String(b.payloadRoot)!==String(b.fullRoot))||
+         (b.manifestKind!=='full'&&b.manifestKind!=='patch')||
+         ['system','hotfix','content','overhaul'].indexOf(b.manifestCategory)<0||
+         (b.manifestKind==='patch'&&!/^\d+\.\d+\.\d+$/.test(String(b.manifestPatchFrom||'')))||
+         (b.manifestKind==='full'&&String(b.manifestPatchFrom||'')!=='')||
+         (b.channel!=='stable'&&b.channel!=='preview')||
+         (b.storage!=='artifact-v1'&&b.storage!=='bundle-v1')||
+         !Array.isArray(b.order)||!b.order.length||
+         !b.files||typeof b.files!=='object'||Array.isArray(b.files)) return false;
+      var own=Object.keys(b.files),seen={};
+      if(own.length!==b.order.length) return false;
+      for(var p=0;p<b.order.length;p++){
+        var path=b.order[p];
+        if(typeof path!=='string'||path.length>512||
+           !/^[A-Za-z0-9._/-]+$/.test(path)||path.charAt(0)==='/'||
+           path.slice(-1)==='/'||path.indexOf('//')>=0||
+           path.split('/').some(function(part){return !part||part==='.'||part==='..';})||
+           seen[path]||!Object.prototype.hasOwnProperty.call(b.files,path)) return false;
+        seen[path]=true;
+      }
+      for(var o=0;o<own.length;o++) if(!seen[own[o]]) return false;
+    }
+    for(var i=0;i<order.length;i++){
+      var file=b.files[order[i]];
+      if(typeof file==='string'){
+        if(schema>=3&&b.storage!=='bundle-v1') return false;
+        continue;
+      }
+      if(!file||typeof file!=='object'||typeof file.key!=='string'||!file.key||
+         typeof file.sha256!=='string'||!/^[0-9a-f]{64}$/i.test(file.sha256)||
+         !Number.isSafeInteger(file.size)||file.size<=0) return false;
+      if(schema>=3){
+        if(b.storage!=='artifact-v1') return false;
+        var suffix=':file:'+order[i];
+        if(file.key.slice(-suffix.length)!==suffix||
+           !/^transfer-v1:(stable|preview)-\d+\.\d+\.\d+-[0-9a-f]{64}-(payload|full)$/.test(
+             file.key.slice(0,-suffix.length)))
+          return false;
+      }
+    }
     return true;
   }
-  function restorePreviousOrPackaged(db,failedVersion){
-    return get(db,'previous').then(function(prev){
-      if(!validBundle(prev)||String(prev.version)===String(failedVersion)){
-        return del(db,'previous').then(function(){ runPackaged(); });
-      }
-      /* This record was captured only while its exact version was running after
-         probation. Consume it once: a broken update must never bounce between
-         two patches. Keep the failed pending payload so the Update screen can
-         offer one controlled retry and explain what happened. */
-      return put(db,'active',prev).then(function(){ return del(db,'previous'); })
-        .then(function(){
-          window.__MASSFRONT_PATCHED=prev.version||'?';
-          window.__MASSFRONT_RECOVERED_PATCH=failedVersion||'?';
-          console.warn('boot: restored validated patch '+prev.version+
-                       ' after '+failedVersion+' failed');
-          runBundle(prev);
-        });
-    });
-  }
-  function rejectPatch(db,version,reason){
-    return failed(db,version,reason).then(function(rec){
-      if(rec.quarantined)
-        console.warn('boot: patch '+version+' failed twice and was quarantined');
-      return del(db,'active')
-        .then(function(){ return del(db,'probation'); })
-        .then(function(){ return rec.quarantined?dropPendingVersion(db,version):null; })
-        .then(function(){ return restorePreviousOrPackaged(db,version); });
-    });
-  }
   function evictSuperseded(db){
-    var keys=['active','pending','probation','previous'];
-    return Promise.all(keys.map(function(key){ return get(db,key); }))
-      .then(function(records){
-        var work=[];
-        for(var i=0;i<keys.length;i++){
-          var rec=records[i];
-          if(rec&&!verNewer(rec.version,PACKAGED_REV)){
-            console.info('boot: discarding '+keys[i]+' patch '+(rec.version||'?')+
-                         '; packaged build is '+PACKAGED_REV);
-            work.push(del(db,keys[i]));
+    var keys=['activeMeta','pendingMeta','probation','previousRef',
+              'previousAMeta','previousBMeta','previousMeta','operation'];
+    return new Promise(function(res,rej){
+      try{
+        var tx=db.transaction(STORE,'readwrite'),store=tx.objectStore(STORE);
+        var requests=[],records={},ready=0,evicted=[];
+        function discard(metaKey,payload,label,rec){
+          store.delete(payload);
+          if(metaKey!==payload) store.delete(metaKey);
+          evicted.push({key:label,version:rec.version||'?'});
+        }
+        function inspect(){
+          if(++ready<keys.length) return;
+          for(var i=0;i<keys.length;i++) records[keys[i]]=requests[i].result;
+          var simple=[
+            {meta:'activeMeta',payload:'active',label:'active'},
+            {meta:'pendingMeta',payload:'pending',label:'pending'},
+            {meta:'probation',payload:'probation',label:'probation'},
+            {meta:'previousMeta',payload:'previous',label:'previous'}
+          ];
+          for(var j=0;j<simple.length;j++){
+            var entry=simple[j],rec=records[entry.meta];
+            if(rec&&!verNewer(rec.version,PACKAGED_REV))
+              discard(entry.meta,entry.payload,entry.label,rec);
+          }
+
+          var ref=records.previousRef,refKey=previousSlot(ref&&ref.key);
+          var refMeta=refKey&&records[refKey+'Meta'];
+          var refValid=refKey&&sameBundleExact(ref,refMeta);
+          if(ref&&!refValid) store.delete('previousRef');
+
+          /* Apply prepares the opposite slot before atomically swinging the
+             pointer. A concurrent boot may discard an obsolete referenced
+             rollback, but must not erase that exact inactive copy from under
+             the still-live Apply transaction. Superseded spare slots without
+             that current owner are safe to retire. */
+          var inactive=refKey==='previousA'?'previousB':'previousA';
+          var inactiveMeta=records[inactive+'Meta'];
+          var protectedSlot=liveApplyOperation(records.operation)&&
+            sameBundleExact(inactiveMeta,records.activeMeta)?inactive:null;
+          var referencedSlot=refValid?refKey:null;
+          var slots=['previousA','previousB'];
+          for(var k=0;k<slots.length;k++){
+            var slot=slots[k],slotMeta=records[slot+'Meta'];
+            if(slot===protectedSlot) continue;
+            /* The pointer is the sole durable owner. Any other slot is either
+               a completed preparation whose pointer swing never committed or
+               debris from an older owner, so reclaim it even when its version
+               is newer than the packaged shell. Slot writers are protected
+               above only while their exact Apply lease remains live. */
+            if(slot!==referencedSlot){
+              store.delete(slot); store.delete(slot+'Meta');
+              if(slotMeta) evicted.push({key:slot,version:slotMeta.version||'?',orphan:true});
+              continue;
+            }
+            if(slotMeta&&!verNewer(slotMeta.version,PACKAGED_REV)){
+              discard(slot+'Meta',slot,slot,slotMeta);
+              store.delete('previousRef');
+            }
           }
         }
-        return Promise.all(work);
-      });
+        for(var i=0;i<keys.length;i++){
+          requests[i]=store.get(keys[i]);
+          requests[i].onsuccess=inspect;
+        }
+        tx.oncomplete=function(){
+          for(var j=0;j<evicted.length;j++){
+            var item=evicted[j];
+            console.info(item.orphan
+              ?'boot: discarding unreferenced '+item.key+' rollback patch '+item.version
+              :'boot: discarding '+item.key+' patch '+item.version+
+               '; packaged build is '+PACKAGED_REV);
+          }
+          res();
+        };
+        tx.onerror=function(){ rej(tx.error||new Error('boot supersession failed')); };
+        tx.onabort=function(){ rej(tx.error||new Error('boot supersession aborted')); };
+      }catch(e){ rej(e); }
+    });
   }
 
-  function bootProgress(done,total){
-    var el=document.getElementById('mfBootPct');
-    if(el) el.textContent=total?('LOADING  '+done+' / '+total):'LOADING';
+  /* Select, claim, reject and recover in one readwrite transaction. IndexedDB
+     serializes this scope against updater Apply/Rollback transactions, so the
+     decision can never combine probation from one payload with active bytes
+     from another. The caller starts scripts only after tx.oncomplete. */
+  function prepareBoot(db){
+    var keys=['probation','activeMeta','pendingMeta','previousRef',
+              'previousAMeta','previousBMeta','previousMeta',
+              'applyFailure','operation'];
+    return new Promise(function(res,rej){
+      try{
+        var tx=db.transaction(STORE,'readwrite'),store=tx.objectStore(STORE);
+        var requests=[],records={},ready=0,decision={kind:'packaged'};
+        function clearFinishedRollback(nextActive){
+          var op=records.operation;
+          /* Rollback's target is the active identity it set out to remove. If
+             durable active has moved (including to packaged), its commit won
+             and only the releasing document was lost. A rollback which has not
+             committed still sees its target and keeps exclusive ownership. */
+          if(op&&op.kind==='rollback'&&op.target&&!sameBundle(op.target,nextActive))
+            store.delete('operation');
+        }
+        function fail(version,reason,prob,bundle){
+          version=version||'?';
+          var prior=records.applyFailure;
+          var count=prior&&String(prior.version)===String(version)?(prior.count|0)+1:1;
+          var failure={version:version,at:Date.now(),reason:reason,count:count,
+                       quarantined:count>=2};
+          store.put(failure,'applyFailure');
+          store.delete('probation');
+          /* Recovered builds deliberately skip __bootOk confirmation. Retire
+             the Apply lease here only when probation, failed active identity,
+             and lease target all name the same exact committed payload. */
+          var op=records.operation;
+          if(op&&op.kind==='apply'&&probationOwnsMetaExact(prob,bundle)&&
+             sameBundleExact(op.target,bundle)) store.delete('operation');
+          if(failure.quarantined&&
+             pendingMatchesFailure(records.pendingMeta,prob,bundle,version)){
+            store.delete('pending'); store.delete('pendingMeta');
+          }
+          /* Rollback payloads are about 85 MB. Resolve the small atomic pointer
+             first and queue exactly one payload read only after failure is
+             certain. A torn/mismatched slot pointer falls back to the legacy
+             key without ever deserialising the unowned slot. */
+          var selected=previousSelection(records);
+          var previous=store.get(selected.key);
+          previous.onsuccess=function(){
+            var value=previous.result,meta=selected.meta;
+            var good=validBundle(value)&&String(value.version)!==String(version)&&
+              (selected.slotted
+                ?sameBundleExact(meta,value)&&sameBundleExact(selected.ref,value)
+                :(!meta||sameBundle(meta,value)));
+            if(good){
+              store.put(value,'active'); store.put(bundleMeta(value),'activeMeta');
+              /* Re-validate the rollback payload on this launch. Its metadata
+                 was previously trusted, but descriptor records may since have
+                 been evicted or corrupted. tries:1 makes the next launch fail
+                 closed to packaged code unless this exact recovered runtime
+                 reaches __bootOk now. */
+              store.put({version:value.version,channel:value.channel||'stable',
+                manifestRoot:value.manifestRoot||'',targetRoot:value.targetRoot||'',
+                runtimeRoot:value.runtimeRoot||'',
+                pendingAt:value.at,at:Date.now(),tries:1,recoveryOf:version},'probation');
+              clearPreviousRecords(store);
+              clearFinishedRollback(value);
+              decision={kind:'recovered',bundle:value,failedVersion:version,
+                        failure:failure};
+            }else{
+              store.delete('active'); store.delete('activeMeta');
+              clearPreviousRecords(store);
+              clearFinishedRollback(null);
+              decision={kind:'packaged',failedVersion:version,failure:failure};
+            }
+          };
+        }
+        function inspectActive(bundle){
+          var prob=records.probation,meta=records.activeMeta;
+          /* Metadata-backed supersession was already handled without touching
+             payloads. This is the one compatibility read required for a
+             pre-metadata active record. */
+          if(bundle&&!verNewer(bundle.version,PACKAGED_REV)){
+            store.delete('active'); store.delete('activeMeta');
+            if(prob&&probationMatchesBundle(prob,bundle)) store.delete('probation');
+            clearFinishedRollback(null);
+            decision={kind:'packaged'};
+            return;
+          }
+          if(bundle&&!validBundle(bundle)){
+            fail(bundle.version,'The downloaded update was incomplete at restart.',prob,bundle);
+            return;
+          }
+          if(bundle&&meta&&!sameBundle(meta,bundle)){
+            fail(bundle.version,'The installed update metadata did not match its payload.',prob,bundle);
+            return;
+          }
+          if(!bundle&&meta){
+            fail(meta.version,'The downloaded update was not available at restart.',prob,meta);
+            return;
+          }
+          if(prob&&!bundle){
+            fail(prob.version,'The downloaded update was not available at restart.',prob,null);
+            return;
+          }
+          if(bundle&&!meta){
+            /* One-time migration for installs written before lightweight
+               metadata existed. Confirmation can now stay off the payload. */
+            store.put(bundleMeta(bundle),'activeMeta');
+          }
+          if(bundle&&prob&&probationMatchesBundle(prob,bundle)){
+            if((prob.tries|0)>=1){
+              fail(prob.version,'The downloaded update did not finish starting.',prob,bundle);
+              return;
+            }
+            var claimed={version:bundle.version,channel:bundle.channel||prob.channel,
+              manifestRoot:bundle.manifestRoot||'',targetRoot:bundle.targetRoot||'',
+              runtimeRoot:bundle.runtimeRoot||'',
+              pendingAt:bundle.at!=null?bundle.at:prob.pendingAt,
+              at:prob.at||Date.now(),tries:(prob.tries|0)+1};
+            store.put(claimed,'probation');
+            clearFinishedRollback(bundle);
+            decision={kind:'run',bundle:bundle,claimed:true};
+            return;
+          }
+          if(bundle&&prob){
+            /* A mismatched legacy/torn guard must never be used to validate a
+               different active record. Replace it with an exact first claim. */
+            store.put({version:bundle.version,channel:bundle.channel||'stable',
+              manifestRoot:bundle.manifestRoot||'',targetRoot:bundle.targetRoot||'',
+              runtimeRoot:bundle.runtimeRoot||'',
+              pendingAt:bundle.at,at:Date.now(),tries:1},'probation');
+            clearFinishedRollback(bundle);
+            decision={kind:'run',bundle:bundle,claimed:true,repaired:true};
+            return;
+          }
+          if(bundle){
+            clearFinishedRollback(bundle);
+            decision={kind:'run',bundle:bundle,claimed:false};
+          }else clearFinishedRollback(null);
+        }
+        function inspect(){
+          if(++ready<keys.length) return;
+          for(var i=0;i<keys.length;i++) records[keys[i]]=requests[i].result;
+          var prob=records.probation,meta=records.activeMeta;
+          /* Once a current probation attempt and active metadata name the same
+             exact bytes, tries>=1 already proves those bytes started and never
+             confirmed. Reject them without deserialising the failed 85 MiB
+             active payload; recovery needs only the one previous payload. */
+          if(prob&&(prob.tries|0)>=1&&probationOwnsMetaExact(prob,meta)){
+            fail(prob.version,'The downloaded update did not finish starting.',prob,meta);
+            return;
+          }
+          var active=store.get('active');
+          active.onsuccess=function(){ records.active=active.result; inspectActive(active.result); };
+        }
+        for(var i=0;i<keys.length;i++){
+          requests[i]=store.get(keys[i]);
+          requests[i].onsuccess=inspect;
+        }
+        tx.oncomplete=function(){ res(decision); };
+        tx.onerror=function(){ rej(tx.error||new Error('boot selection failed')); };
+        tx.onabort=function(){ rej(tx.error||new Error('boot selection aborted')); };
+      }catch(e){ rej(e); }
+    });
   }
-  function injectScripts(makeSrc,total){
-    /* Append every tag now. async=false BEFORE src, plus document order, keeps
-       the one-scope contract. The old onload→next chain waited for each file
-       before requesting the next, so 77 scripts (unitsheet is 1.6 MB) left
-       #mfBootCover black for ~10s and looked like a failed launch. */
-    var left=total;
-    function tick(src){
+
+  function bootText(id,value){var el=document.getElementById(id);if(el)el.textContent=value;}
+  function bootProgress(done,total,path,stage){
+    var verifying=stage==='verify',finished=total>0&&done>=total&&!verifying;
+    var clean=String(path||'').replace(/^\.\//,'').split('?')[0];
+    var phase=finished?'STARTING MASSFRONT':verifying?'VERIFYING INSTALLED UPDATE':
+      /engine\/gl\.js/.test(clean)?'INITIALIZING GRAPHICS':
+      /engine\/|assets\/data\//.test(clean)?'PREPARING WORLD SYSTEMS':
+      /audio|factions|story|tutorial/.test(clean)?'PREPARING GAME CONTENT':
+      /ui\/|intro|launcher|main\.js/.test(clean)?'PREPARING COMMAND INTERFACE':'PREPARING COMMAND SYSTEMS';
+    bootText('mfBootPct',total?Math.max(0,Math.min(total,done))+' / '+total:'STARTING');
+    bootText('mfBootPhase',phase);
+    var detail=/glrecover/.test(clean)?'Preparing graphics recovery and reconnect controls.':
+      /engine\//.test(clean)?'Loading terrain, models and visual systems.':
+      /audio|assetpack/.test(clean)?'Preparing audio and additional-content delivery.':
+      /auth|account|session/.test(clean)?'Preparing account access and local career support.':
+      /ui\/|intro|launcher|main\.js/.test(clean)?'Preparing menus and command controls.':
+      /assets\/data\//.test(clean)?'Loading world and unit definitions.':'Preparing game rules and career systems.';
+    bootText('mfBootDetail',finished?'Preparing the first frame and launch interface.':verifying?'Checking the integrity of stored runtime files.':detail);
+    var bar=document.getElementById('mfBootBar'),fill=document.getElementById('mfBootFill');
+    if(bar&&bar.setAttribute){bar.setAttribute('aria-valuemin','0');bar.setAttribute('aria-valuemax',String(total||1));bar.setAttribute('aria-valuenow',String(done));bar.setAttribute('aria-valuetext',finished?'Game systems loaded; starting MASSFRONT':done+' of '+total+' game systems '+(verifying?'verified':'loaded'));}
+    if(fill&&fill.style)fill.style.width=(total?Math.max(0,Math.min(100,done/total*100)):0)+'%';
+    var cover=document.getElementById('mfBootCover');
+    if(cover){cover.setAttribute('data-progress','determinate');cover.setAttribute('aria-busy','true');}
+  }
+  function rendererGateIndex(order){
+    for(var i=0;i<order.length;i++)
+      if(String(order[i]||'').replace(/^\.\//,'')==='src/engine/gl.js') return i;
+    /* A malformed legacy payload still gets a bounded first phase instead of
+       appending nothing. Completeness validation will reject it separately. */
+    return Math.min(3,Math.max(0,order.length-1));
+  }
+  function injectScripts(makeSrc,total,gate,order){
+    /* WebGL is the one hard boot dependency. Load through gl.js as a small
+       first phase, then append the remaining tags in parallel. If the browser
+       cannot allocate WebGL2, gl.js raises __MF_GL_BOOT_FAILED and owns a
+       usable retry panel; stopping here prevents 79 misleading missing-global
+       errors from obscuring the real graphics-session failure. The happy path
+       still requests the large remainder together and preserves classic-script
+       execution order through async=false. */
+    var left=total,failedCount=0;
+    gate=Math.max(0,Math.min(total-1,gate|0));
+    var gateFailed=false, restStarted=false;
+    function tick(i,src){
       left--;
-      bootProgress(total-left,total);
+      if(src)failedCount++;
+      bootProgress(total-left-failedCount,total,order&&order[i]);
+      if(failedCount){bootText('mfBootPhase','GAME FILE FAILED TO LOAD');bootText('mfBootDetail','Restart to retry loading installed content.');}
       if(src) console.error('boot: failed',src);
+      if(i===gate){
+        gateFailed=!!src||window.__MF_GL_BOOT_FAILED===true;
+        if(gateFailed){
+          bootText('mfBootPhase','GRAPHICS INITIALIZATION NEEDS ATTENTION');
+          bootText('mfBootDetail','Use the graphics retry control to continue.');
+          console.warn('boot: renderer phase stopped after WebGL2 initialization failed');
+          clearBootShield();
+          /* OTA payloads add their own temporary input guard. Leave the real
+             WebGL retry control clickable immediately instead of waiting for
+             that guard's watchdog after the renderer has already failed. */
+          try{if(typeof window.__MASSFRONT_CLEAR_INPUT_GUARD==='function')
+            window.__MASSFRONT_CLEAR_INPUT_GUARD();}catch(e){}
+        }else if(!restStarted){
+          restStarted=true;
+          appendRange(gate+1,total);
+        }
+      }
     }
-    bootProgress(0,total);
-    for(var i=0;i<total;i++){
+    function appendOne(i){
       var s=document.createElement('script');
       s.async=false;
       makeSrc(s,i);
-      s.onload=function(){ tick(); };
-      s.onerror=(function(src){ return function(){ tick(src); }; })(s.src||s.getAttribute('data-src')||'?');
+      s.onload=(function(n){ return function(){ tick(n); }; })(i);
+      s.onerror=(function(n,src){ return function(){ tick(n,src); }; })(i,s.src||s.getAttribute('data-src')||'?');
       document.body.appendChild(s);
     }
+    function appendRange(a,b){ for(var i=a;i<b;i++) appendOne(i); }
+    bootProgress(0,total);
+    appendRange(0,Math.min(total,gate+1));
   }
   function runPackaged(){
-    injectScripts(function(s,i){ s.src=MANIFEST[i]+'?v='+PACKAGED_REV; }, MANIFEST.length);
+    injectScripts(function(s,i){ s.src=MANIFEST[i]+'?v='+PACKAGED_SRC_REV; },
+                  MANIFEST.length,rendererGateIndex(MANIFEST),MANIFEST);
+  }
+  function runArtifactBundle(b){
+    /* Descriptor bundles keep each verified source artifact in its own IDB
+       record. Load, re-hash, execute and release one file at a time so a large
+       source update does not deserialize a ~93 MB object or create 110 Blob
+       URLs simultaneously. Strict sequencing preserves the classic shared
+       global scope just like async=false script tags. */
+    var order=b.order&&b.order.length?b.order:MANIFEST;
+    var gate=rendererGateIndex(order),index=0,total=order.length,executed=0,stopped=false;
+    var runtimeRows=[];
+    bootProgress(0,total,'','verify');
+    function rangeFailure(path,reason){
+      if(stopped) return;
+      stopped=true;
+      bootText('mfBootPhase','RECOVERING PACKAGED GAME');
+      console.error('boot: failed',path,reason||'stored artifact unavailable');
+      clearBootShield();
+      try{if(typeof window.__MASSFRONT_CLEAR_INPUT_GUARD==='function')
+        window.__MASSFRONT_CLEAR_INPUT_GUARD();}catch(e){}
+      if(executed===0){
+        /* The verification pass failed before one downloaded script executed,
+           so a packaged session is safe. Keep probation in IndexedDB; clearing
+           only the window identity prevents that fallback frame from blessing
+           the broken patch through __bootOk. */
+        try{
+          delete window.__MASSFRONT_PATCHED; delete window.__MASSFRONT_PATCH_AT;
+          delete window.__MASSFRONT_PATCH_CHANNEL;
+          delete window.__MASSFRONT_PATCH_MANIFEST_ROOT;
+          delete window.__MASSFRONT_PATCH_TARGET_ROOT;
+          delete window.__MASSFRONT_PATCH_RUNTIME_ROOT;
+        }catch(e){}
+        runPackaged();
+      }else{
+        /* A record changed between preflight and execution. Never mix a partial
+           classic-script global scope with packaged code; restart so the armed
+           probation transaction performs normal recovery. */
+        console.warn('boot: stored artifact changed during execution; restarting for recovery');
+        try{ if(window.location&&typeof window.location.reload==='function') window.location.reload(); }
+        catch(e){}
+      }
+    }
+    function textDigest(text){
+      if(!window.crypto||!window.crypto.subtle||typeof TextEncoder==='undefined')
+        return Promise.reject(new Error('integrity checks unavailable'));
+      var bytes=new TextEncoder().encode(text);
+      return window.crypto.subtle.digest('SHA-256',bytes).then(function(value){
+        var a=new Uint8Array(value),hex='';
+        for(var i=0;i<a.length;i++) hex+=a[i].toString(16).padStart(2,'0');
+        return {size:bytes.byteLength,sha256:hex.toLowerCase()};
+      });
+    }
+    function digest(text,ref,path){
+      return textDigest(text).then(function(actual){
+        if(!Number.isSafeInteger(ref.size)||ref.size<=0||actual.size!==ref.size)
+          throw new Error('stored size mismatch');
+        if(actual.sha256!==String(ref.sha256).toLowerCase())
+          throw new Error('stored hash mismatch');
+        return text;
+      });
+    }
+    function append(text,path){
+      var blob=URL.createObjectURL(new Blob([text+'\n//# sourceURL='+path],{type:'text/javascript'}));
+      var script=document.createElement('script'); script.async=false; script.src=blob;
+      script.onload=function(){
+        URL.revokeObjectURL(blob);
+        var current=index++; executed++;
+        bootProgress(index,total,path);
+        if(current===gate&&window.__MF_GL_BOOT_FAILED===true){
+          bootText('mfBootPhase','GRAPHICS INITIALIZATION NEEDS ATTENTION');
+          console.warn('boot: renderer phase stopped after WebGL2 initialization failed');
+          clearBootShield();
+          try{if(typeof window.__MASSFRONT_CLEAR_INPUT_GUARD==='function')
+            window.__MASSFRONT_CLEAR_INPUT_GUARD();}catch(e){}
+          return;
+        }
+        next();
+      };
+      script.onerror=function(){ URL.revokeObjectURL(blob); rangeFailure(path,'script load error'); };
+      document.body.appendChild(script);
+    }
+    var dbPromise=idb();
+    function readArtifact(path,ref){
+      if(typeof ref==='string') return Promise.resolve(ref);
+      return dbPromise.then(function(db){
+        return new Promise(function(res,rej){
+          try{
+            var q=db.transaction(STORE,'readonly').objectStore(STORE).get(ref.key);
+            q.onsuccess=function(){ res(q.result); };
+            q.onerror=function(){ rej(q.error||new Error('artifact read failed')); };
+          }catch(e){ rej(e); }
+        });
+      }).then(function(rec){
+        if(!rec||typeof rec.text!=='string'||!Number.isSafeInteger(rec.size)||
+           rec.size<=0||rec.size!==ref.size||
+           String(rec.sha256).toLowerCase()!==String(ref.sha256).toLowerCase())
+          throw new Error('stored artifact metadata mismatch');
+        return digest(rec.text,ref,path);
+      });
+    }
+    function preflight(i){
+      if(stopped) return;
+      if(i>=total){
+        textDigest(runtimeRows.join('\n')).then(function(actual){
+          if(Number(b.schema||1)<3) return actual;
+          if(actual.sha256!==String(b.runtimeRoot||'').toLowerCase())
+            throw new Error('ordered runtime root mismatch');
+          var contract=[
+            'schema='+b.schema,'channel='+b.channel,'version='+b.version,
+            'kind='+b.manifestKind,'category='+b.manifestCategory,
+            'patchFrom='+b.manifestPatchFrom,
+            'payload='+b.sourcePayloadRoot,'full='+b.fullRoot,
+            'runtime='+actual.sha256
+          ].join('\n');
+          return textDigest(contract).then(function(root){
+            if(root.sha256!==String(b.manifestRoot||'').toLowerCase())
+              throw new Error('manifest root contract mismatch');
+            return actual;
+          });
+        }).then(function(){
+          index=0;bootProgress(0,total);next();
+        }).catch(function(error){ rangeFailure('__runtime__',error&&error.message); });
+        return;
+      }
+      var path=order[i],ref=b.files[path];
+      if(typeof ref==='string'){
+        textDigest(ref).then(function(actual){
+          if(!Number.isSafeInteger(actual.size)||actual.size<=0)
+            throw new Error('stored size mismatch');
+          runtimeRows.push(path+'|'+actual.size+'|'+actual.sha256);
+          bootProgress(i+1,total,path,'verify');preflight(i+1);
+        }).catch(function(error){ rangeFailure(path,error&&error.message); });
+        return;
+      }
+      readArtifact(path,ref).then(function(){
+        runtimeRows.push(path+'|'+ref.size+'|'+String(ref.sha256).toLowerCase());
+        bootProgress(i+1,total,path,'verify');preflight(i+1);
+      }).catch(function(error){ rangeFailure(path,error&&error.message); });
+    }
+    function next(){
+      if(stopped||index>=total) return;
+      var path=order[index],ref=b.files[path];
+      if(typeof ref==='string'){ append(ref,path); return; }
+      readArtifact(path,ref).then(function(text){ append(text,path); })
+        .catch(function(error){ rangeFailure(path,error&&error.message); });
+    }
+    preflight(0);
   }
   function runBundle(b){
     /* Blob URLs rather than inline text: the browser keeps a real filename for
        each source, so a stack trace from a patched build is still readable. */
     var order=b.order&&b.order.length? b.order : MANIFEST;
+    if(Number(b.schema||1)>=3&&b.runtimeRoot){ runArtifactBundle(b);return; }
+    for(var i=0;i<order.length;i++) if(typeof b.files[order[i]]!=='string'){
+      runArtifactBundle(b); return;
+    }
     injectScripts(function(s,i){
       var path=order[i], src=b.files[path];
       if(src==null) s.src=path;
       else s.src=URL.createObjectURL(new Blob([src+'\n//# sourceURL='+path],{type:'text/javascript'}));
-    }, order.length);
+    }, order.length,rendererGateIndex(order),order);
   }
 
   idb().then(function(db){
@@ -238,34 +797,36 @@
        remain above a newer packaged APK merely because it was active before
        the installer ran. Pending and probation records follow the same rule. */
     return evictSuperseded(db).then(function(){
-      return get(db,'probation').then(function(prob){
-      /* Probation counts ATTEMPTS, not intent. The updater writes it at zero
-         before reloading; this loader claims it by incrementing. Seeing a
-         record that has already been claimed means the previous launch ran the
-         patch and never reached a frame — so it is bad, and out it goes.
-         Counting rather than merely existing is the difference between "we are
-         about to try" and "we tried and it died". */
-      if(prob && (prob.tries|0)>=1){
-        console.warn('boot: rolling back a patch that failed to start');
-        return rejectPatch(db,prob.version,'The downloaded update did not finish starting.');
+      return prepareBoot(db);
+    }).then(function(decision){
+      if(decision.failure&&decision.failure.quarantined)
+        console.warn('boot: patch '+decision.failedVersion+' failed twice and was quarantined');
+      if(decision.kind==='recovered'){
+        window.__MASSFRONT_PATCHED=decision.bundle.version||'?';
+        window.__MASSFRONT_PATCH_AT=decision.bundle.at;
+        window.__MASSFRONT_PATCH_CHANNEL=decision.bundle.channel||'stable';
+        window.__MASSFRONT_PATCH_MANIFEST_ROOT=decision.bundle.manifestRoot||'';
+        window.__MASSFRONT_PATCH_TARGET_ROOT=decision.bundle.targetRoot||'';
+        window.__MASSFRONT_PATCH_RUNTIME_ROOT=decision.bundle.runtimeRoot||'';
+        window.__MASSFRONT_RECOVERED_PATCH=decision.failedVersion||'?';
+        console.warn('boot: restored validated patch '+decision.bundle.version+
+                     ' after '+decision.failedVersion+' failed');
+        runBundle(decision.bundle);
+        return;
       }
-      return get(db,'active').then(function(b){
-        if(!b||!b.files){
-          if(!prob) return runPackaged();
-          return rejectPatch(db,prob.version,'The downloaded update was not available at restart.');
-        }
-        if(!validBundle(b)){
-          console.warn('boot: patched bundle incomplete or superseded, using a validated fallback');
-          return rejectPatch(db,b.version,'The downloaded update was incomplete at restart.');
-        }
-        window.__MASSFRONT_PATCHED=b.version||'?';
-        if(prob){
-          var tx=db.transaction(STORE,'readwrite');
-          tx.objectStore(STORE).put({version:prob.version,at:prob.at,tries:(prob.tries|0)+1},'probation');
-        }
-        runBundle(b);
-      });
-      });
+      if(decision.kind==='run'){
+        window.__MASSFRONT_PATCHED=decision.bundle.version||'?';
+        window.__MASSFRONT_PATCH_AT=decision.bundle.at;
+        window.__MASSFRONT_PATCH_CHANNEL=decision.bundle.channel||'stable';
+        window.__MASSFRONT_PATCH_MANIFEST_ROOT=decision.bundle.manifestRoot||'';
+        window.__MASSFRONT_PATCH_TARGET_ROOT=decision.bundle.targetRoot||'';
+        window.__MASSFRONT_PATCH_RUNTIME_ROOT=decision.bundle.runtimeRoot||'';
+        runBundle(decision.bundle);
+        return;
+      }
+      if(decision.failedVersion)
+        console.warn('boot: patch '+decision.failedVersion+' rejected, using packaged build');
+      runPackaged();
     });
   }).catch(runPackaged);
 
@@ -273,13 +834,59 @@
      marks a patch as good. Only now may the retryable download be deleted. */
   window.__bootOk=function(){
     releaseBootShield();
+    /* A packaged fallback can reach a frame after IndexedDB or the loader
+       failed before it selected `active`. It has NOT proved the stored patch
+       good, so it must not erase that patch's probation record. Leaving it in
+       place means the next healthy launch retries under the normal rollback
+       guard instead of running an unguarded payload. Recovered previous code
+       now owns a fresh probation guard and must confirm its own descriptor
+       records before becoming the new last-known-good runtime. */
+    if(!window.__MASSFRONT_PATCHED) return;
     idb().then(function(db){
-      return del(db,'probation')
-        /* A packaged fallback also reaches a frame. It must not erase the
-           failure that explains why the patch did not start; only a confirmed
-           patched frame has earned the right to clear recovery state. */
-        .then(function(){ return window.__MASSFRONT_PATCHED&&!window.__MASSFRONT_RECOVERED_PATCH?del(db,'applyFailure'):null; })
-        .then(function(){ return window.__MASSFRONT_PATCHED&&!window.__MASSFRONT_RECOVERED_PATCH?del(db,'pending'):null; });
+      return confirmPatch(db,{version:window.__MASSFRONT_PATCHED,
+        channel:window.__MASSFRONT_PATCH_CHANNEL||'stable',
+        manifestRoot:window.__MASSFRONT_PATCH_MANIFEST_ROOT||'',
+        targetRoot:window.__MASSFRONT_PATCH_TARGET_ROOT||'',
+        runtimeRoot:window.__MASSFRONT_PATCH_RUNTIME_ROOT||'',
+        at:window.__MASSFRONT_PATCH_AT});
     }).catch(function(){});
+  };
+})();
+
+/* PWA delivery is independent from OTA bundle selection. The worker is
+   network-first and explicitly bypasses updater manifests/configuration, so it
+   cannot pin an old release channel or interfere with IndexedDB probation. */
+(function(){
+  /* boot.js is also executed by the updater's deterministic VM harness. Keep
+     PWA delivery inert in non-browser runtimes instead of making OTA tests
+     provide a fake navigator solely for this optional integration. */
+  if(typeof navigator==='undefined'||!('serviceWorker' in navigator)) return;
+  var secure=location.protocol==='https:'||location.hostname==='127.0.0.1'||location.hostname==='localhost';
+  if(!secure) return;
+  window.__mfPwaDiag={supported:true,registered:false,controlled:!!navigator.serviceWorker.controller,error:null,updateError:null};
+  window.addEventListener('load',function(){
+    navigator.serviceWorker.register('./sw.js?v=1.33.88-shell1',{scope:'./',updateViaCache:'none'})
+      .then(function(reg){
+        window.__mfPwaDiag.registered=true;
+        window.__mfPwaDiag.scope=reg.scope;
+        window.__mfPwaDiag.controlled=!!navigator.serviceWorker.controller;
+        /* Offline update failures reject asynchronously; a synchronous catch
+           alone leaks an unhandled Promise even though the cached app boots. */
+        function updateFailed(err){window.__mfPwaDiag.updateError=String(err&&err.message||err);}
+        try{Promise.resolve(reg.update()).catch(updateFailed);}catch(err){updateFailed(err);}
+        if(navigator.storage&&typeof navigator.storage.persist==='function')
+          navigator.storage.persist().then(function(ok){window.__mfPwaDiag.storagePersisted=!!ok;}).catch(function(){});
+      }).catch(function(err){window.__mfPwaDiag.error=String(err&&err.message||err);});
+  },{once:true});
+  window.addEventListener('beforeinstallprompt',function(event){
+    event.preventDefault();
+    window.__mfPwaInstallEvent=event;
+    window.dispatchEvent(new CustomEvent('massfront-pwa-install-ready'));
+  });
+  window.mfRequestPwaInstall=function(){
+    var event=window.__mfPwaInstallEvent;
+    if(!event) return Promise.resolve({available:false});
+    window.__mfPwaInstallEvent=null;
+    return event.prompt().then(function(){return event.userChoice;});
   };
 })();

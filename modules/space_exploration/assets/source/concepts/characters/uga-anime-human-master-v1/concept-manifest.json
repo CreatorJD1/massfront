@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "conceptId": "uga_expedition_specialist_turnaround_v1",
+  "status": "approved_for_clean_model_rebuild",
+  "file": "uga-expedition-specialist-turnaround-v1.png",
+  "sha256": "ab31ed58d2132f42236840a5a33dff6a45b8c5f6841e523e6f304508b9edb75f",
+  "bytes": 1740217,
+  "resolution": [1632, 963],
+  "originalProjectArt": true,
+  "generatedWith": "OpenAI built-in image generation",
+  "contentCategory": "character.human.specialist",
+  "biomeOrBiodome": ["uga_ship_interior"],
+  "faction": ["uga"],
+  "intention": ["cinematic_character", "ship_crew", "commander_icon_source"],
+  "authoringContract": {
+    "fullBody": true,
+    "strictTPose": true,
+    "views": ["front", "left_side", "back", "three_quarter"],
+    "helmeted": true,
+    "faceAnimation": false,
+    "conceptPixelsAreRuntimeTextures": false
+  },
+  "lodTriangleTargets": {
+    "LOD0": [25000, 40000],
+    "LOD1": [8000, 12000],
+    "LOD2": [2500, 3000]
+  }
+}

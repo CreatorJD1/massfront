@@ -24,7 +24,13 @@ The supplied reference art is useful for its coherent load paths, connected mech
 
 ## Audit method and evidence boundary
 
-This report is based on the current repository, `AGENTS.md`, `docs/HANDOFF.md`, `docs/CHATGPT-PROJECTS-HANDOFF.md`, the existing material/FX audit, and the owner's supplied screenshots. A fresh interactive browser capture was not available in this session, so visual claims that need live confirmation are identified as validation gates rather than reported as completed facts.
+This report was based on the repository state at writing, `AGENTS.md`,
+`docs/archive/handoffs/2026-08/HANDOFF.md`,
+`docs/archive/handoffs/2026-08/CHATGPT-PROJECTS-HANDOFF.md`, the existing
+material/FX audit, and the owner's supplied screenshots. A fresh interactive
+browser capture was not available in that session, so visual claims that need
+live confirmation are identified as validation gates rather than reported as
+completed facts.
 
 One documentation mismatch matters: older handoff notes describe a smaller atlas and an explicit final gamma power. Current source uses an 11-column, 2816-pixel atlas and the current battlefield fragment shader does not apply that documented output transform. The code is authoritative for this audit; color transfer must be measured before tuning art around it.
 

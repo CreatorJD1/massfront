@@ -1,11 +1,14 @@
 # AGENTS.md — MASSFRONT
 
-Read this before touching anything. It is short on purpose; the long version is
-`docs/HANDOFF.md`.
+Read this before touching anything. It is short on purpose. The current state of
+the work — live release, unreleased commits, open items and the traps that cost
+real hours — is the single pass-down at `docs/CODEX_HANDOFF.md`.
+`docs/HANDOFF.md` remains the stable doc index.
 
 MASSFRONT is a Supreme-Commander-style mobile RTS: a hand-written WebGL2 engine
-in plain JavaScript, packaged for Android and iOS with Capacitor, with a
-Cloudflare Workers backend for accounts, patches and asset delivery.
+in plain JavaScript, packaged for Android with Capacitor and installed on Apple
+devices from Safari as a PWA, with a Cloudflare Workers backend for accounts,
+patches and asset delivery.
 
 ---
 
@@ -60,6 +63,19 @@ decoder at all**, so every asset fails there. Effects ship `.ogg` + `.m4a` and
 the engine asks `canPlayType`. Music is AAC-only for size, with a fallback that
 abandons the playlist after three consecutive decode failures.
 
+## Apple support decision
+
+Apple remains a fully supported platform through the Safari-installed PWA
+(Share → Add to Home Screen). Native iOS/IPA/Xcode/TestFlight/App Store release
+work is permanently retired: do not version, sync, build, sign, upload, or gate
+a release on a native iOS artifact. Historical files under `ios/` and the
+native-build tombstone documents are reference material only.
+
+Do preserve and verify the Apple browser contract: Safari/WebKit behavior,
+WebGL2, standalone PWA install/launch, AAC playback and gesture unlock,
+`viewport-fit=cover`, safe-area insets, rotation/`visualViewport`, IndexedDB,
+offline behavior, OTA update and rollback.
+
 ---
 
 ## APK size
@@ -68,6 +84,13 @@ A debug APK builds at ~51 MB and its contents compress to 28 MB. The difference
 is 16 KB page-alignment padding on ~670 uncompressed entries. `tools/shrink-apk.sh`
 re-deflates and aligns to 4 bytes, then re-signs (mandatory — changing one byte
 invalidates the v2 signature). **Result: 51 MB → 28 MB.** Always run it.
+
+## Large art checkout
+
+New PNG/JPEG/WebP/KTX2, GLB, and Blender source assets are stored with Git LFS.
+Run `git lfs install` once and `git lfs pull` after cloning before building or
+reviewing art. Never force-add ignored `tmp/`, evidence, `.blend1`, or rejected
+world-kit products; only accepted canonical art belongs in the branch.
 
 ---
 
@@ -152,4 +175,54 @@ container. A clean console proves nothing about a renderer.
 Shipping a change to only the browser, or only the OTA, or only the APK, is how
 1.33.35 became two different builds with the same number. The checklist is
 `docs/FIVE_CHANNEL_UPDATE.md`. Bump every version field together, pack `www/`,
-verify 8901, then OTA / native / Space — or name the channel you skipped.
+verify 8901, then move the five channels: canonical source, packed preview, HF
+OTA, Android native, and HF Space — or name the channel you skipped. Apple
+Safari installation rides the browser/PWA channels; it is not a sixth native
+channel.
+
+---
+
+## Workspace containment gate
+
+The permanent user-facing entry path for this one Local checkout is:
+
+`C:\Users\Jason\Documents\Codex\MASSFRONT-main-source`
+
+During migration that path is a Windows junction to the physical checkout
+below, so `git rev-parse --show-toplevel` resolves the junction target. This is
+one checkout with two path names, not two source copies or branches.
+
+Before the first mutation, verify that `git rev-parse --show-toplevel`, executed
+from the current working directory, resolves to the following path after
+normalizing path separators and case:
+
+`C:\Users\Jason\Documents\Codex\2026-08-01\massfront-rts-mobile-game-for-apple`
+
+For work requested in the main source checkout, `.git` must be a directory, not
+a linked-worktree file. If either check fails, stop and direct the user to open
+the MASSFRONT folder at `MASSFRONT-main-source` as Local. Do not create
+external shadow trees, dated source copies, patch repositories, new branches,
+or evidence directories as a substitute. Dated folders are read-only transfer
+inputs; deliberately apply and verify their intended work in this Local
+checkout. Use collaboration subagents for ordinary parallel work. A Git
+worktree is allowed only when the user explicitly requests isolation, and its
+accepted changes must return to Local rather than becoming an indefinite chain
+of branches.
+
+All MASSFRONT scratch data and verification evidence belong under this checkout,
+normally in `tmp/` or `audit/`. Treat named external inputs as read-only;
+external writes require an explicitly named destination from the user.
+
+Before any repository mutation, run
+`node tools/evidence-foundation/workspace-guard.mjs check-write`. Refuse the
+mutation while `.git/massfront-verification.freeze` exists. Long acceptance
+captures own that token and watch the checkout for writes; bypassing or deleting
+it invalidates the evidence. Verification output may write below `.tmp/`, but
+source, package, documentation, and generated-asset writers must wait for the
+freeze to clear. This cooperative token avoids NTFS deny ACLs, which would also
+lock out the legitimate Main Source owner.
+
+If an interrupted verifier leaves the freeze behind, never delete it by hand.
+Run `node tools/evidence-foundation/workspace-guard.mjs clear-stale`; it removes
+only a readable same-host lease whose recorded PID is no longer alive, and
+refuses a live, replaced, cross-host, or unreadable token.

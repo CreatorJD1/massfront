@@ -1,0 +1,192 @@
+{
+  "schema": "MFPlanetArtProvenanceV1",
+  "generated": "2026-08-25",
+  "generator": "tools/bake-wartable-planets.py",
+  "contract": "basecolor(sRGB), normal(tangent RGB), ORM(AO/R roughness/G metalness/B), height(linear), emissive(sRGB), clouds(linear)",
+  "worlds": {
+    "aelos": {
+      "source": "assets/source/planets/war-table/aelos-surface-master.png",
+      "sourceSha256": "e201e65cc73f39d6244f693d0e06d89b455f781579e35e3da7d471e0ea877a69",
+      "dimensions": [
+        1024,
+        512
+      ],
+      "outputs": {
+        "basecolor": {
+          "path": "assets/textures/planets/war-table/aelos-basecolor-v1.png",
+          "bytes": 963034,
+          "sha256": "90c7441c32c7ee42844b793e5f9ee4d09bd0c51ad17f09a4d12364ed22ca3ef0",
+          "maxLongitudeDelta": 0
+        },
+        "normal": {
+          "path": "assets/textures/planets/war-table/aelos-normal-v1.png",
+          "bytes": 1125140,
+          "sha256": "a68467dad4e49ff079484bf21f653df253b503cc3b54b3eb1809f4cb502317ae",
+          "maxLongitudeDelta": 0
+        },
+        "orm": {
+          "path": "assets/textures/planets/war-table/aelos-orm-v1.png",
+          "bytes": 657382,
+          "sha256": "ba78ef6e6ee774cdb4722fc4c93f34a0859bd0f2fad1fcd6306ecc80331595f1",
+          "maxLongitudeDelta": 0
+        },
+        "height": {
+          "path": "assets/textures/planets/war-table/aelos-height-v1.png",
+          "bytes": 301818,
+          "sha256": "0f5fa646aac29b565abea75bfe4a7f336b549499ad62704a31d7aa1f077bac41",
+          "maxLongitudeDelta": 0
+        },
+        "emissive": {
+          "path": "assets/textures/planets/war-table/aelos-emissive-v1.png",
+          "bytes": 453864,
+          "sha256": "985a051350515f977f78fb1cce0f758ca6fde70ac4c7649382e13d75036babcd",
+          "maxLongitudeDelta": 0
+        },
+        "clouds": {
+          "path": "assets/textures/planets/war-table/aelos-clouds-v1.png",
+          "bytes": 171220,
+          "sha256": "11940ed9450bf6e975551dd12d5dbea37b256e29f1c11efd39338bc135c56b30",
+          "maxLongitudeDelta": 0
+        }
+      }
+    },
+    "pyraeth": {
+      "source": "assets/source/planets/war-table/pyraeth-surface-master.png",
+      "sourceSha256": "e0afe48b6b85067c8648c39fed66616ffe58ca8bf74039db274535dcbac4aa69",
+      "dimensions": [
+        1024,
+        512
+      ],
+      "outputs": {
+        "basecolor": {
+          "path": "assets/textures/planets/war-table/pyraeth-basecolor-v1.png",
+          "bytes": 870899,
+          "sha256": "9de392d0c2525bf4744134be540e2eb34812b8bb8dfc830ffb64b239ac65c4e2",
+          "maxLongitudeDelta": 0
+        },
+        "normal": {
+          "path": "assets/textures/planets/war-table/pyraeth-normal-v1.png",
+          "bytes": 947828,
+          "sha256": "0d8ebd7a49b5fc146d1f5ab1b367105b5b544da725d4c6d27e4c0235087af59c",
+          "maxLongitudeDelta": 0
+        },
+        "orm": {
+          "path": "assets/textures/planets/war-table/pyraeth-orm-v1.png",
+          "bytes": 513725,
+          "sha256": "3065831cecb5d89a79f676e5e23249d692168121ecb13422691b103c5b79a282",
+          "maxLongitudeDelta": 0
+        },
+        "height": {
+          "path": "assets/textures/planets/war-table/pyraeth-height-v1.png",
+          "bytes": 246894,
+          "sha256": "2f217fcd3ac5b9b283bee51ebd1ef1cc346fd66d3e4233061b5ca13cccabb040",
+          "maxLongitudeDelta": 0
+        },
+        "emissive": {
+          "path": "assets/textures/planets/war-table/pyraeth-emissive-v1.png",
+          "bytes": 223220,
+          "sha256": "4719b6deaba3aa5a1a071a67d712374b12589f844f737dabf84e1ad498959493",
+          "maxLongitudeDelta": 0
+        },
+        "clouds": {
+          "path": "assets/textures/planets/war-table/pyraeth-clouds-v1.png",
+          "bytes": 195174,
+          "sha256": "620fc8154c4ab526fa32bd2018f3b6f07cabc55f93654cadf21158c7981ef3eb",
+          "maxLongitudeDelta": 0
+        }
+      }
+    },
+    "nordhall": {
+      "source": "assets/source/planets/war-table/nordhall-surface-master.png",
+      "sourceSha256": "a5cf70c8fe5813906ab0ebbe78e82914661d893a8a81e851d48c1f0e36e4e96a",
+      "dimensions": [
+        1024,
+        512
+      ],
+      "outputs": {
+        "basecolor": {
+          "path": "assets/textures/planets/war-table/nordhall-basecolor-v1.png",
+          "bytes": 1082277,
+          "sha256": "3a827bc100286218b64c85d372db9c193f8d646a9a56125b35f5165e935fa254",
+          "maxLongitudeDelta": 0
+        },
+        "normal": {
+          "path": "assets/textures/planets/war-table/nordhall-normal-v1.png",
+          "bytes": 1195731,
+          "sha256": "966a77ed01f4c315041f00258ab8e89b25d6a9d1aabf4f264ed771ef4296bca5",
+          "maxLongitudeDelta": 0
+        },
+        "orm": {
+          "path": "assets/textures/planets/war-table/nordhall-orm-v1.png",
+          "bytes": 891393,
+          "sha256": "ba7f09494eedacc17529c0f789542976e21062a0fef7d9d2a7ef55e273b74ccf",
+          "maxLongitudeDelta": 0
+        },
+        "height": {
+          "path": "assets/textures/planets/war-table/nordhall-height-v1.png",
+          "bytes": 338979,
+          "sha256": "0e29d583ba9d845af73d74714573b6fdbf1abed3e431a39c1a9157f3286d44f3",
+          "maxLongitudeDelta": 0
+        },
+        "emissive": {
+          "path": "assets/textures/planets/war-table/nordhall-emissive-v1.png",
+          "bytes": 314481,
+          "sha256": "d06ec5fbfa7a968e3d5c5cbbcd02f4254c28cb7e700c942e7ad26de0e82be7fc",
+          "maxLongitudeDelta": 0
+        },
+        "clouds": {
+          "path": "assets/textures/planets/war-table/nordhall-clouds-v1.png",
+          "bytes": 89410,
+          "sha256": "61f1252987dab038bdf5c8b205013cfaef87b83865688699d794bb14dc854b11",
+          "maxLongitudeDelta": 0
+        }
+      }
+    },
+    "vespera": {
+      "source": "assets/source/planets/war-table/vespera-surface-master.png",
+      "sourceSha256": "435895fb8a0a25b47a8089350c2d93ddfbefa03d1eab6c560b73484e50a1f804",
+      "dimensions": [
+        1024,
+        512
+      ],
+      "outputs": {
+        "basecolor": {
+          "path": "assets/textures/planets/war-table/vespera-basecolor-v1.png",
+          "bytes": 1075129,
+          "sha256": "195e6494ce0c38610da4e27b9531ddc760abe4b6900bc8934fc56735360fdd29",
+          "maxLongitudeDelta": 0
+        },
+        "normal": {
+          "path": "assets/textures/planets/war-table/vespera-normal-v1.png",
+          "bytes": 1219574,
+          "sha256": "31a15a62cdda0570e06fa668293411108d02485800391b5a01ca156ad1b4c2dc",
+          "maxLongitudeDelta": 0
+        },
+        "orm": {
+          "path": "assets/textures/planets/war-table/vespera-orm-v1.png",
+          "bytes": 670562,
+          "sha256": "b4e5d1740fcc9075379e5b5d9ce9974bdf2dbba1ecac932f37cca51e431502e4",
+          "maxLongitudeDelta": 0
+        },
+        "height": {
+          "path": "assets/textures/planets/war-table/vespera-height-v1.png",
+          "bytes": 325800,
+          "sha256": "3a3c50789565aab10121bbc7ac2cb5b811e742f6be423d348d925dc33304cd02",
+          "maxLongitudeDelta": 0
+        },
+        "emissive": {
+          "path": "assets/textures/planets/war-table/vespera-emissive-v1.png",
+          "bytes": 164952,
+          "sha256": "f0f6b8e2e45c31281218a445175781416714386aed071b5cc4c1ede29d06681e",
+          "maxLongitudeDelta": 0
+        },
+        "clouds": {
+          "path": "assets/textures/planets/war-table/vespera-clouds-v1.png",
+          "bytes": 172048,
+          "sha256": "c1ff04dfce670fad556af0031960a2da343436bc413a226794ade31c06930c19",
+          "maxLongitudeDelta": 0
+        }
+      }
+    }
+  }
+}

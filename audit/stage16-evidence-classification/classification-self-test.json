@@ -1,0 +1,98 @@
+{
+  "ok": true,
+  "evidenceClass": "classification-contract-self-test",
+  "visualProof": false,
+  "releaseProof": false,
+  "classifications": {
+    "staticSource": {
+      "evidenceClass": "static-source-contract",
+      "visualProof": false,
+      "releaseProof": false,
+      "scope": {
+        "sourceOnly": true,
+        "production": false
+      }
+    },
+    "vmRuntime": {
+      "evidenceClass": "vm-runtime-contract",
+      "visualProof": false,
+      "releaseProof": false,
+      "scope": {
+        "sandbox": "node:vm",
+        "production": false
+      }
+    },
+    "localBrowser": {
+      "evidenceClass": "local-browser-runtime-regression",
+      "visualProof": false,
+      "releaseProof": false,
+      "scope": {
+        "servedFrom": "loopback",
+        "production": false
+      }
+    },
+    "stagedArchiveVm": {
+      "evidenceClass": "staged-archive-vm-regression",
+      "visualProof": false,
+      "releaseProof": false,
+      "scope": {
+        "tool": "tools/test-updater-two-launch.mjs",
+        "sourceSha256": "08d25e71d1864130b4fdbaba231b3b3cdd5176d6c2e8feac9710879b57a9b5e1",
+        "artifact": "releases/staging-v1.33.48 local OTA archive",
+        "runtime": "node:vm packaged stand-in",
+        "browser": false,
+        "production": false
+      }
+    }
+  },
+  "checks": [
+    {
+      "name": "static source classification validates only as static source",
+      "ok": true
+    },
+    {
+      "name": "VM classification validates only as VM runtime",
+      "ok": true
+    },
+    {
+      "name": "local browser classification remains non-release",
+      "ok": true
+    },
+    {
+      "name": "staged archive VM classification remains non-release",
+      "ok": true
+    },
+    {
+      "name": "static source cannot claim visual proof",
+      "ok": true
+    },
+    {
+      "name": "static source cannot claim release proof",
+      "ok": true
+    },
+    {
+      "name": "VM execution cannot claim visual proof",
+      "ok": true
+    },
+    {
+      "name": "VM execution cannot claim release proof",
+      "ok": true
+    },
+    {
+      "name": "local browser regression cannot claim production release proof",
+      "ok": true
+    },
+    {
+      "name": "staged archive VM cannot claim production release proof",
+      "ok": true
+    },
+    {
+      "name": "boolean-looking strings are rejected",
+      "ok": true
+    },
+    {
+      "name": "a class cannot be relabeled as production",
+      "ok": true
+    }
+  ]
+}

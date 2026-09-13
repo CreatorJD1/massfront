@@ -6,8 +6,16 @@ const marker='/* ---- ACCOUNT FACTION RESEARCH';
 const at=source.indexOf(marker);
 if(at<0)throw new Error('account faction research layer missing');
 
-const C={console,Math,Float32Array,Int32Array,Object,Set,
+const C={console,Math,Float32Array,Int32Array,Uint8Array,Object,Set,
   MAXU:32,MODE_SWITCH:1.6,perfScale:0,stats:{t:0},testFaction:'legion',
+  /* Per-unit doctrine state. These arrays are declared ABOVE the marker, so
+     they are not part of the slice this sandbox evaluates — but the slice
+     writes them (the spawnUnit wrapper clears a unit's doctrine slots, and
+     the Syndicate phase-out reads facPhaseUsed). Without them the first
+     spawnUnit call dies with a ReferenceError before any assertion runs. */
+  facPhaseUsed:new Uint8Array(32),facEntrenchTime:new Float32Array(32),
+  facLastPosX:new Float32Array(32),facLastPosY:new Float32Array(32),
+  facOutOfCombat:new Float32Array(32),
   TYPES:[{cat:'art',size:16},{cat:'air',air:1,scout:1,size:10},{cat:'veh',size:10},{cat:'transport',air:1,airTransport:1,size:18}],
   ux:new Float32Array(32),uy:new Float32Array(32),uhp:new Float32Array(32),uhpm:new Float32Array(32),
   ucool:new Float32Array(32),umode:new Uint8Array(32),utype:new Uint8Array(32),uteam:new Uint8Array(32),

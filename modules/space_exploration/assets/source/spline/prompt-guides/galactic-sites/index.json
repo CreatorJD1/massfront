@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "indexId": "massfront_galactic_site_spline_prompt_guides_v1",
+  "status": "source_prompt_only",
+  "runtimeReady": false,
+  "authority": {
+    "manifest": "../../ground-sites/ground-site-authoring-manifest.json",
+    "siteBriefDirectory": "../../ground-sites",
+    "assetAudit": "../../../../../../../tmp/galactic-ground-site-audit/GALACTIC_GROUND_SITE_ASSET_MATRIX_2026-08-25.md",
+    "referenceTranslation": "../../../../../../../tmp/galactic-ground-site-audit/MASSFRONT_REFERENCE_ART_TRANSLATION_MATRIX_2026-08-25.md"
+  },
+  "commonContractIds": [
+    "mf_ground_site_scale_v1",
+    "mf_ground_site_clearance_v1",
+    "mf_ground_site_model_v1",
+    "mf_ground_site_material_v1",
+    "mf_ground_site_destruction_v1",
+    "mf_ground_site_lod_v1",
+    "mf_ground_site_collision_v1",
+    "mf_ground_site_export_v1",
+    "mf_ground_site_concept_gate_v1",
+    "mf_ground_site_runtime_gate_v1"
+  ],
+  "referencePolicy": "Command & Conquer 3, Supreme Commander 2, XCOM 2 and StarCraft II are visual-language references only. No asset, mesh, material, layout, decal, logo, faction design, organism or named prop may be copied, traced, extracted or used as provenance.",
+  "guides": [
+    {
+      "siteId": "aelos_caldris",
+      "mapAssetId": "gsite_aelos_caldris_customs_01",
+      "displayName": "Caldris Orbital Ring",
+      "systemId": "aelos",
+      "promptGuide": "aelos_caldris.prompt.md",
+      "sourceBrief": "../../ground-sites/aelos_caldris.md",
+      "status": "source_prompt_only",
+      "runtimeReady": false
+    },
+    {
+      "siteId": "aelos_heliograph",
+      "mapAssetId": "gsite_aelos_heliograph_relay_01",
+      "displayName": "Heliograph Relay",
+      "systemId": "aelos",
+      "promptGuide": "aelos_heliograph.prompt.md",
+      "sourceBrief": "../../ground-sites/aelos_heliograph.md",
+      "status": "source_prompt_only",
+      "runtimeReady": false
+    },
+    {
+      "siteId": "aelos_freeport",
+      "mapAssetId": "gsite_aelos_freeport_morrow_01",
+      "displayName": "Morrow Freeport",
+      "systemId": "aelos",
+      "promptGuide": "aelos_freeport.prompt.md",
+      "sourceBrief": "../../ground-sites/aelos_freeport.md",
+      "status": "source_prompt_only",
+      "runtimeReady": false
+    },
+    {
+      "siteId": "veyra_orison",
+      "mapAssetId": "gsite_veyra_orison_archive_01",
+      "displayName": "Orison Derelict",
+      "systemId": "veyra",
+      "promptGuide": "veyra_orison.prompt.md",
+      "sourceBrief": "../../ground-sites/veyra_orison.md",
+      "concept": "../../../concepts/ground-sites/orison-derelict/orison-derelict-combined-arms-concept-v1.png",
+      "status": "source_prompt_only",
+      "runtimeReady": false
+    },
+    {
+      "siteId": "veyra_lens",
+      "mapAssetId": "gsite_veyra_lens_observatory_01",
+      "displayName": "Lensing Observatory",
+      "systemId": "veyra",
+      "promptGuide": "veyra_lens.prompt.md",
+      "sourceBrief": "../../ground-sites/veyra_lens.md",
+      "status": "source_prompt_only",
+      "runtimeReady": false
+    },
+    {
+      "siteId": "veyra_ossuary",
+      "mapAssetId": "gsite_veyra_ossuary_vault_01",
+      "displayName": "Ossuary Vault",
+      "systemId": "veyra",
+      "promptGuide": "veyra_ossuary.prompt.md",
+      "sourceBrief": "../../ground-sites/veyra_ossuary.md",
+      "status": "source_prompt_only",
+      "runtimeReady": false
+    },
+    {
+      "siteId": "karak_meridian",
+      "mapAssetId": "gsite_karak_meridian_colony_01",
+      "displayName": "Meridian Colony",
+      "systemId": "karak",
+      "promptGuide": "karak_meridian.prompt.md",
+      "sourceBrief": "../../ground-sites/karak_meridian.md",
+      "concept": "../../../concepts/ground-sites/meridian-colony/meridian-colony-brood-infestation-concept-v1.png",
+      "status": "source_prompt_only",
+      "runtimeReady": false
+    },
+    {
+      "siteId": "karak_spine",
+      "mapAssetId": "gsite_karak_spine_transit_01",
+      "displayName": "Colony Transit Spine",
+      "systemId": "karak",
+      "promptGuide": "karak_spine.prompt.md",
+      "sourceBrief": "../../ground-sites/karak_spine.md",
+      "status": "source_prompt_only",
+      "runtimeReady": false
+    },
+    {
+      "siteId": "karak_hive",
+      "mapAssetId": "gsite_karak_hive_heart_01",
+      "displayName": "Karak Primary Hive",
+      "systemId": "karak",
+      "promptGuide": "karak_hive.prompt.md",
+      "sourceBrief": "../../ground-sites/karak_hive.md",
+      "status": "source_prompt_only",
+      "runtimeReady": false
+    }
+  ]
+}

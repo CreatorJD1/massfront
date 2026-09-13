@@ -1,0 +1,48 @@
+-- ============================================================================
+-- MIGRATION 0001 — social columns on `users`                    RUN ONCE, EVER
+-- ----------------------------------------------------------------------------
+--   npx wrangler d1 execute massfront-accounts \
+--     --file=migrations-legacy/0001-social-columns.sql --remote
+--
+-- WHY THIS IS NOT IN schema.sql
+-- SQLite — and therefore D1 — has no `ALTER TABLE ... ADD COLUMN IF NOT
+-- EXISTS`. There is no way to write a guarded ADD COLUMN in plain SQL, so an
+-- ALTER inside schema.sql would make that file throw on its second run and
+-- destroy the "safe to re-run" property every other statement in the project
+-- has. Splitting it out keeps schema.sql idempotent and makes the one
+-- non-idempotent step in the project explicit, named, and ordered.
+--
+-- ORDER
+--   1. schema.sql                        (idempotent, run whenever)
+--   2. this file                         (once)
+-- A fresh database needs both, in that order. schema.sql creates `users`;
+-- this file adds two columns to it.
+--
+-- RE-RUNNING THIS IS SAFE, JUST NOISY
+-- The second run fails with `duplicate column name: verified_at` and writes
+-- nothing — D1 aborts the statement, and since the first statement is the one
+-- that fails, neither ALTER re-applies. Treat that error as "already applied".
+-- If the run somehow lands between the two ALTERs (it cannot in a single file
+-- today, but if this file ever grows), re-running reports the duplicate for
+-- the column that already exists and applies the rest.
+--
+-- VERIFY IT APPLIED:
+--   npx wrangler d1 execute massfront-accounts --remote \
+--     --command "SELECT name FROM pragma_table_info('users');"
+-- ============================================================================
+
+-- Unix ms when the account's e-mail address was confirmed by code, NULL until
+-- then. This is the gate on every /social/* route: an unverified account can
+-- play the entire game and can never touch another player. Deliberately a
+-- timestamp rather than a boolean — "when" answers moderation questions that
+-- "whether" cannot, and NULL is the honest default for the accounts that
+-- predate this column.
+ALTER TABLE users ADD COLUMN verified_at INTEGER;
+
+-- Moderation switch. 1 = every /social/* route 403s for this account while the
+-- account itself keeps working (saves, sign-in, the game). A ban that also
+-- locks a player out of their own single-player save is a refund request, not
+-- a moderation action. No route sets this; it is set by hand:
+--   npx wrangler d1 execute massfront-accounts --remote \
+--     --command "UPDATE users SET social_banned=1 WHERE lower(username)='...';"
+ALTER TABLE users ADD COLUMN social_banned INTEGER NOT NULL DEFAULT 0;

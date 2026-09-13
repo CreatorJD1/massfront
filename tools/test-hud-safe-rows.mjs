@@ -27,8 +27,8 @@ body::before{content:'';position:absolute;inset:0;background:
   <div class="res" id="unitRes"><div class="ic"></div><b id="unitV">2 / 50</b></div>
   <div id="godBadge">&#x221e; GOD</div><div id="fps">60 fps</div>
   <button id="spdBtn" aria-label="Game speed">1&times;</button><button id="menuBtn" aria-label="Pause">&#x23f8;</button>
+  <div id="goalBar" style="display:flex"><span class="hudIntelChip goal">&#x1f6a9; 5 VS 27</span><span class="hudIntelChip time"><span class="clk">3:11</span></span></div>
 </div>
-<div id="goalBar" style="display:flex">&#x1f6a9; 5 VS 27 &mdash; REINFORCE <span class="clk">3:11</span></div>
 <div id="wcRow" style="display:flex"><span class="wcChip">&#x1f30b;</span><span class="wcChip">&#x1f32a;</span><span class="wcChip">&#x26a1;</span><span class="wcChip">&#x2604;</span><span class="wcMult">+115%</span></div>
 <div id="infMeter" style="display:flex">&#x1f41b; BROOD IV&nbsp; 132</div>
 <div id="heroBar" style="display:block"><div class="nm">COMMANDER &#x25aa; LV 1</div><div id="xpOuter"><div id="xpFill" style="width:40%"></div></div><div id="heroHpOuter"><div id="heroHpFill"></div></div></div>
@@ -47,19 +47,23 @@ try{
     const box=id=>{const r=document.getElementById(id).getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height,r:r.right,b:r.bottom};};
     const icon=id=>{const e=document.querySelector(id),r=e.getBoundingClientRect(),a=getComputedStyle(e,'::after');
       return {w:r.width,h:r.height,clip:a.clipPath,bg:a.backgroundImage};};
-    return {top:box('topbar'),goal:box('goalBar'),mods:box('wcRow'),threat:box('infMeter'),hero:box('heroBar'),
+    const res=document.querySelector('#topbar .res');
+    const resBox=res?{x:res.getBoundingClientRect().x,y:res.getBoundingClientRect().y,w:res.getBoundingClientRect().width,h:res.getBoundingClientRect().height,r:res.getBoundingClientRect().right,b:res.getBoundingClientRect().bottom}:null;
+    return {top:box('topbar'),goal:box('goalBar'),res:resBox,mods:box('wcRow'),threat:box('infMeter'),hero:box('heroBar'),
       toast:box('toast'),radio:box('radioAck'),card:box('unitCard'),
       speed:box('spdBtn'),pause:box('menuBtn'),mass:icon('#massIc'),energy:icon('#enIc'),units:icon('#unitRes .ic'),
       rate:getComputedStyle(document.querySelector('.rate')).display,vw:innerWidth};
   });
   const noOverlap=(a,b)=>a.r<=b.x||b.r<=a.x||a.b<=b.y||b.b<=a.y;
   const check=(m,label)=>{
-    assert(m.top.b<=m.goal.y,label+' objective overlaps the resource/control row');
-    assert(m.goal.b<=m.mods.y&&m.goal.b<=m.threat.y,label+' status row overlaps objective');
+    assert(m.res&&m.res.b<=m.goal.y+0.5,label+' intel strip overlaps the resource/control row');
+    assert(m.top.b<=m.mods.y&&m.top.b<=m.threat.y,label+' status row overlaps the top plate');
     assert(noOverlap(m.mods,m.threat),label+' modifier and threat panels overlap');
     assert(m.mods.b<=m.hero.y&&m.threat.b<=m.hero.y,label+' status row overlaps Commander bar');
     assert(m.hero.b<=m.toast.y,label+' toast overlaps the live HUD stack');
-    assert(m.hero.b<=m.radio.y,label+' radio acknowledgement overlaps the live HUD stack');
+    /* #radioAck is a leftover plate; orders now speak through the notice rail
+       and the stylesheet keeps this node display:none. Skip a 0×0 box. */
+    if(m.radio.w>2) assert(m.hero.b<=m.radio.y,label+' radio acknowledgement overlaps the live HUD stack');
     assert(m.hero.b<=m.card.y,label+' unit intel card overlaps the live HUD stack');
     assert(m.speed.w>=44&&m.speed.h>=44&&m.pause.w>=44&&m.pause.h>=44,label+' speed/pause target below 44px');
     for(const [name,r] of [['mass',m.mass],['energy',m.energy],['units',m.units]]){

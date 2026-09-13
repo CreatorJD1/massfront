@@ -24,7 +24,7 @@ const CORS = {
   'access-control-allow-origin': '*',
   'access-control-allow-methods': 'GET, HEAD, OPTIONS',
   'access-control-allow-headers': 'range, if-none-match',
-  'access-control-expose-headers': 'content-length, etag',
+  'access-control-expose-headers': 'content-length, content-range, accept-ranges, etag',
 };
 
 const json = (obj, status = 200, extra = {}) =>
@@ -128,17 +128,47 @@ export default {
       const headers = new Headers(CORS);
       head.writeHttpMetadata(headers);
       headers.set('etag', head.httpEtag);
-      headers.set('content-length', String(head.size));
+      headers.set('accept-ranges', 'bytes');
+      headers.set('vary', 'User-Agent, Range');
       /* Immutable: the version is in the path, so this bytes-for-URL mapping
          can never change. Cache it hard. */
       headers.set('cache-control', 'public, max-age=31536000, immutable');
       headers.set('x-content-type-options', 'nosniff');
       if (rel.endsWith('.js')) headers.set('content-type', 'text/javascript; charset=utf-8');
-      if (request.method === 'HEAD') return new Response(null, { headers });
+      let range=null;
+      const requested=request.headers.get('range');
+      /* Android WebView can reach this route but rejects 206 responses while
+         bridging them through CapacitorHttp on affected devices. The updater
+         explicitly accepts ignored Range as a whole immutable object up to
+         32 MiB, verifies its authoritative SHA-256, then seeds normal chunks.
+         Keep real ranges for desktop/browser clients and any larger object. */
+      const legacyAndroidWhole=head.size<=32*1024*1024 &&
+        /Android/i.test(request.headers.get('user-agent')||'');
+      if (requested) {
+        const match=/^bytes=(\d+)-(\d*)$/.exec(requested.trim());
+        if (!match) {
+          headers.set('content-range', `bytes */${head.size}`);
+          return new Response(null, { status:416, headers });
+        }
+        const start=Number(match[1]),askedEnd=match[2]===''?head.size-1:Number(match[2]);
+        const end=Math.min(askedEnd,head.size-1);
+        if (!Number.isSafeInteger(start)||!Number.isSafeInteger(end)||start<0||start>=head.size||end<start) {
+          headers.set('content-range', `bytes */${head.size}`);
+          return new Response(null, { status:416, headers });
+        }
+        if (!legacyAndroidWhole) {
+          range={offset:start,length:end-start+1};
+          headers.set('content-range', `bytes ${start}-${end}/${head.size}`);
+          headers.set('content-length', String(range.length));
+        }
+      }
+      if (!range) headers.set('content-length', String(head.size));
+      const status=range?206:200;
+      if (request.method === 'HEAD') return new Response(null, { status, headers });
 
-      const obj = await env.RELEASES.get(key);
+      const obj = await env.RELEASES.get(key,range?{range}:undefined);
       if (!obj) return json({ error: 'not_found' }, 404);
-      return new Response(obj.body, { headers });
+      return new Response(obj.body, { status, headers });
     }
 
     return json({ error: 'route_not_found' }, 404);

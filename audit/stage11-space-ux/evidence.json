@@ -1,0 +1,171 @@
+{
+  "schema": "massfront.stage11-space-ux-acceptance.v2",
+  "startedUtc": "2026-09-08T07:16:39.874Z",
+  "finishedUtc": "2026-09-08T07:17:56.062Z",
+  "repository": {
+    "root": "C:/Users/Jason/Documents/Codex/2026-08-01/massfront-rts-mobile-game-for-apple",
+    "head": "0975bf6edc5a39d3b2ec76a40a6155072c726381",
+    "branch": "cursor/strip-mass-node-bloom",
+    "dirty": true
+  },
+  "sourceStamp": "572f639f4d130bdf",
+  "sources": {
+    "index.html": {
+      "bytes": 444886,
+      "sha256": "95a9712077aa1c1f8a85ac64d92a33f262152724cdd186c5857d3f126e6e55ba"
+    },
+    "src/main.js": {
+      "bytes": 198742,
+      "sha256": "654e4e5df852ac7da2413d192920f05622097f5378fd5351de92516177762740"
+    },
+    "src/galactic-operations.js": {
+      "bytes": 69156,
+      "sha256": "ed5911b4804a9309bb115847856adb5aaa4b6626c933aafc9a58b45177d05210"
+    },
+    "src/career-faction-gate.js": {
+      "bytes": 29777,
+      "sha256": "ecafe9979ec0a9472767cbee5ed8e5cfb2b077cffead5a70b750393e2a9c5777"
+    },
+    "src/ui/hud.js": {
+      "bytes": 207210,
+      "sha256": "08b16448d0d964e7383341fc6af1703ca898e9822f316250c2766f9708d1c699"
+    },
+    "src/styles/ui.css": {
+      "bytes": 475028,
+      "sha256": "e12ede743f5597100344d853da0e18df1f0a8d9f86685daecf0712ec45d994b6"
+    },
+    "src/onboarding.js": {
+      "bytes": 28999,
+      "sha256": "dee3811bcb70aae5d6862fe16be212293ed3b2d807240100bc8cceb9b8249a87"
+    },
+    "src/tutorial.js": {
+      "bytes": 129752,
+      "sha256": "b7cbca36f00ca148df27fe25157d70ac79b3c569e3861fa704e90e2f37fa4f79"
+    },
+    "src/styles/tutorial.css": {
+      "bytes": 29039,
+      "sha256": "d60f368d3aef436e9b405ffbed22596b3aab83fc1b6d2163772b5d254c9d7507"
+    },
+    "modules/space_exploration/index.html": {
+      "bytes": 16752,
+      "sha256": "16cc086666adc53738ae288fb72b15683628f6f29e9d04c1d03c8c7e44407f89"
+    },
+    "modules/space_exploration/src/space_module.js": {
+      "bytes": 10057,
+      "sha256": "d3123b89f6e49d0164a716f0792b368f45e91bf4229eefa8dbc6cc0adc5aa205"
+    },
+    "modules/space_exploration/src/space_experience.js": {
+      "bytes": 97247,
+      "sha256": "a8ab97c4a3881d2e8020c312c839c8d22fb19eb29e2f6bbcefd6bb352da337e7"
+    },
+    "modules/space_exploration/src/core/uga_command_scene.js": {
+      "bytes": 85158,
+      "sha256": "07a5f5b034466178ff9b1e09f20ac9b012c58299826fc026b7c6e1dd24749e01"
+    },
+    "modules/space_exploration/src/core/uga_management_profile_camera.js": {
+      "bytes": 2268,
+      "sha256": "5860e6fb1a8f7a31628cb189401c63ae122188272d01e11d1a02dd4115787263"
+    },
+    "modules/space_exploration/src/ui/story_transmission_controller.js": {
+      "bytes": 19954,
+      "sha256": "0ba7eb8bb8708b8509c892f5a96b79d6095378d9271b42bb367fb2ec30cf78c2"
+    },
+    "modules/space_exploration/src/ui/campaign_hub_registry.js": {
+      "bytes": 14692,
+      "sha256": "15d998051a5da15a2ee3e2a48abb28e56d3817061b4a8333578c87dc6c1c0751"
+    },
+    "modules/space_exploration/src/ui/uga_command.js": {
+      "bytes": 125034,
+      "sha256": "2d5e51fb80d8f2161c6d13c03f7b0c9dd1b64277429f90dbe45f8eaa28dc12df"
+    },
+    "modules/space_exploration/src/ui/uga_command.css": {
+      "bytes": 91700,
+      "sha256": "3c099fca6e85307cec3568ff5de8ff0d513e3d137ab6306aeb94b6459fcf6314"
+    },
+    "tools/test-galactic-entry-intro-ticket.mjs": {
+      "bytes": 3065,
+      "sha256": "4d2b309f851eca09df1a26531721d9d6bb235adb065412eef20bc83aac800795"
+    },
+    "tools/capture-stage11-space-ux.mjs": {
+      "bytes": 75946,
+      "sha256": "11dd27dc90cd54f095502045da23926a99ddd6a90ed3805cb797d0729e339d84"
+    }
+  },
+  "gpu": [
+    {
+      "label": "fresh-base-412x900",
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4060 Laptop GPU (0x000028E0) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "vendor": "Google Inc. (NVIDIA)",
+      "version": "",
+      "shadingLanguageVersion": ""
+    }
+  ],
+  "captures": [],
+  "checks": [
+    {
+      "scope": "fresh-base-412x900",
+      "name": "hardware GPU, never SwiftShader",
+      "ok": true,
+      "detail": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4060 Laptop GPU (0x000028E0) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    },
+    {
+      "scope": "fresh-base-412x900",
+      "name": "experimental Galactic setting persisted in isolated acceptance profile",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "run",
+      "name": "acceptance capture completed",
+      "ok": false,
+      "detail": "page.waitForFunction: Timeout 60000ms exceeded.\n    at bootBase (C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\tools\\capture-stage11-space-ux.mjs:297:14)\n    at async runFreshCareerFlow (C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\tools\\capture-stage11-space-ux.mjs:666:5)\n    at async file:///C:/Users/Jason/Documents/Codex/2026-08-01/massfront-rts-mobile-game-for-apple/tools/capture-stage11-space-ux.mjs:1102:20"
+    },
+    {
+      "scope": "source-binding",
+      "name": "acceptance-owned source did not change during capture",
+      "ok": true,
+      "detail": "20 files stable"
+    }
+  ],
+  "tests": [],
+  "pageDiagnostics": [
+    {
+      "label": "fresh-career",
+      "viewport": {
+        "width": 412,
+        "height": 900
+      },
+      "navigations": [
+        "http://127.0.0.1:55604/index.html"
+      ],
+      "pageErrors": [],
+      "consoleErrors": [],
+      "requestFailures": [],
+      "expectedNavigationAborts": [],
+      "blockedExternal": [
+        "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/update.json?download=true&mfcb=mtsc6o00-m8p9nnnmble",
+        "https://huggingface.co/datasets/CREATORJD/massfront-releases/raw/main/update.json?mfcb=mtsc6o03-liyor25xmpn",
+        "https://massfront-update.jasondixon1994.workers.dev/update.json?mfcb=mtsc6o04-8kgzimdi8f3",
+        "https://huggingface.co/api/datasets/CREATORJD/massfront-releases?mfcb=mtsc6o05-7w6h186zy7j",
+        "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/packs.json?t=1788851818150",
+        "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/packs.json?t=1788851820160",
+        "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/packs.json?t=1788851824164",
+        "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/packs.json?t=1788851832179",
+        "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/packs.json?t=1788851848188"
+      ]
+    }
+  ],
+  "unproven": [
+    "A complete manual play-through of every protected tutorial objective was not performed. The completion transaction is accelerated only after the real protected match starts, and is labelled as such.",
+    "Co-op / Versus and MMO cannot be entered because no synchronized session or persistent-sector authority exists in this build.",
+    "Capture run stopped early: page.waitForFunction: Timeout 60000ms exceeded."
+  ],
+  "summary": {
+    "passed": 3,
+    "failed": 1,
+    "captures": 0,
+    "pageErrors": 0,
+    "consoleErrors": 0,
+    "localRequestFailures": 0
+  }
+}

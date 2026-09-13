@@ -1,0 +1,1873 @@
+{
+  "$schema": "./hunyuan-asset-generation-queue.v1.schema.json",
+  "schemaVersion": 1,
+  "queueId": "massfront-hunyuan-world-assets-v1",
+  "createdDate": "2026-08-25",
+  "status": "SOURCE_AUTHORING_QUEUE_ONLY",
+  "runtimeReady": false,
+  "sourceLibrary": {
+    "index": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/index.json",
+    "groupIndexes": [
+      "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/index-a.json",
+      "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/index-b.json",
+      "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/index-c.json"
+    ],
+    "planetCount": 32,
+    "locationClasses": [
+      "city_colony",
+      "outpost",
+      "military_base",
+      "refinery",
+      "relic_ruin",
+      "spaceport",
+      "pressure_dome",
+      "derelict_megastructure"
+    ],
+    "referencePolicy": "Command & Conquer 3: Tiberium Wars, Supreme Commander 2, XCOM 2 and StarCraft II guide only broad readability, hierarchy, scale and pacing. Never copy or trace protected models, maps, materials, silhouettes, symbols, organisms, palettes or named landmarks; every source must remain original MASSFRONT work with provenance."
+  },
+  "coordinateContract": {
+    "units": "meters",
+    "upAxis": "+Y",
+    "forwardAxis": "-Z",
+    "detailSnapMeters": 4,
+    "macroSnapMeters": 16,
+    "smallVehicleGateMeters": [
+      18,
+      8
+    ],
+    "xsSmallInteriorAssemblyMeters": [
+      96,
+      96
+    ]
+  },
+  "generationPolicy": {
+    "provider": "hunyuan3d",
+    "mode": "concept_image_to_3d",
+    "oneSourceRootPerExport": true,
+    "conceptFirst": true,
+    "sourceRetention": true,
+    "runtimeAdmission": "source_export_does_not_imply_runtime_ready",
+    "originalityBoundary": "Generated concepts establish original MASSFRONT art direction only. Hunyuan source meshes must not reproduce protected designs, and exported source masters require topology, scale, UV, material, collision, LOD, mobile-capture and runtime review before any catalog admission.",
+    "closeFinishedSplineTabs": true
+  },
+  "categoryTemplates": [
+    {
+      "assetCategory": "hero_building",
+      "defaultEnvelopeMeters": {
+        "x": 72,
+        "y": 36,
+        "z": 56
+      },
+      "minimumEnvelopeMeters": {
+        "x": 32,
+        "y": 12,
+        "z": 24
+      },
+      "sourceTriangleCeiling": 450000,
+      "packCompanions": [
+        "lod1",
+        "lod2",
+        "collision_proxy",
+        "destruction_proxy",
+        "material_manifest"
+      ]
+    },
+    {
+      "assetCategory": "skyscraper",
+      "defaultEnvelopeMeters": {
+        "x": 32,
+        "y": 72,
+        "z": 32
+      },
+      "minimumEnvelopeMeters": {
+        "x": 16,
+        "y": 24,
+        "z": 16
+      },
+      "sourceTriangleCeiling": 500000,
+      "packCompanions": [
+        "lod1",
+        "lod2",
+        "collision_proxy",
+        "occupied_window_mask",
+        "material_manifest"
+      ]
+    },
+    {
+      "assetCategory": "pressure_dome",
+      "defaultEnvelopeMeters": {
+        "x": 64,
+        "y": 24,
+        "z": 64
+      },
+      "minimumEnvelopeMeters": {
+        "x": 32,
+        "y": 12,
+        "z": 32
+      },
+      "sourceTriangleCeiling": 450000,
+      "packCompanions": [
+        "lod1",
+        "lod2",
+        "collision_proxy",
+        "pressure_portal_proxy",
+        "material_manifest"
+      ]
+    },
+    {
+      "assetCategory": "world_detail",
+      "defaultEnvelopeMeters": {
+        "x": 24,
+        "y": 18,
+        "z": 24
+      },
+      "minimumEnvelopeMeters": {
+        "x": 4,
+        "y": 2,
+        "z": 4
+      },
+      "sourceTriangleCeiling": 250000,
+      "packCompanions": [
+        "lod1",
+        "lod2",
+        "collision_proxy",
+        "scatter_pivot_set",
+        "material_manifest"
+      ]
+    },
+    {
+      "assetCategory": "brutish_enemy_structure",
+      "defaultEnvelopeMeters": {
+        "x": 56,
+        "y": 32,
+        "z": 56
+      },
+      "minimumEnvelopeMeters": {
+        "x": 24,
+        "y": 12,
+        "z": 24
+      },
+      "sourceTriangleCeiling": 500000,
+      "packCompanions": [
+        "lod1",
+        "lod2",
+        "collision_proxy",
+        "damage_state",
+        "contact_material_mask"
+      ]
+    },
+    {
+      "assetCategory": "interior_xs_small_map_prop",
+      "defaultEnvelopeMeters": {
+        "x": 24,
+        "y": 12,
+        "z": 24
+      },
+      "minimumEnvelopeMeters": {
+        "x": 16,
+        "y": 4,
+        "z": 16
+      },
+      "sourceTriangleCeiling": 350000,
+      "packCompanions": [
+        "lod1",
+        "lod2",
+        "collision_proxy",
+        "cover_los_proxy",
+        "roof_cutaway_group"
+      ]
+    }
+  ],
+  "planetProfiles": [
+    {
+      "order": 1,
+      "planetId": "aelos",
+      "displayName": "AELOS",
+      "runtimeCanon": true,
+      "sector": "sombrero_core",
+      "factionContexts": [
+        "nova_frontline"
+      ],
+      "biomeKey": "temperate_civic_ecumenopolis",
+      "biome": "temperate civic ecumenopolis belts threaded through green river basins, working coastal yards and an arctic high shelf",
+      "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/aelos.prompt.md",
+      "firstWaveJobId": "hy3d_w1_aelos_skyscraper"
+    },
+    {
+      "order": 2,
+      "planetId": "elysion",
+      "displayName": "ELYSION",
+      "runtimeCanon": false,
+      "sector": "sombrero_core",
+      "factionContexts": [
+        "uga_coalition"
+      ],
+      "biomeKey": "cloud_forest_mesas",
+      "biome": "sunlit cloud-forest mesas and champagne-colored inland seas separated by white limestone escarpments",
+      "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/elysion.prompt.md",
+      "firstWaveJobId": "hy3d_w1_elysion_pressure_dome"
+    },
+    {
+      "order": 3,
+      "planetId": "thalassa",
+      "displayName": "THALASSA",
+      "runtimeCanon": false,
+      "sector": "sombrero_core",
+      "factionContexts": [
+        "uga_coalition"
+      ],
+      "biomeKey": "ocean_archipelago",
+      "biome": "global ocean broken by basalt archipelagos, floating kelp farms, abyssal trenches and storm-built reef shelves",
+      "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/thalassa.prompt.md",
+      "firstWaveJobId": "hy3d_w1_thalassa_hero_building"
+    },
+    {
+      "order": 4,
+      "planetId": "viridia",
+      "displayName": "VIRIDIA",
+      "runtimeCanon": false,
+      "sector": "sombrero_core",
+      "factionContexts": [
+        "uga_coalition"
+      ],
+      "biomeKey": "luminous_fern_highlands",
+      "biome": "humid emerald highlands beneath continent-scale fern canopies, quartz rivers and luminous mineral wetlands",
+      "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/viridia.prompt.md",
+      "firstWaveJobId": "hy3d_w1_viridia_skyscraper"
+    },
+    {
+      "order": 5,
+      "planetId": "pyraeth",
+      "displayName": "PYRAETH",
+      "runtimeCanon": true,
+      "sector": "andromeda_forge",
+      "factionContexts": [
+        "crimson_dominion"
+      ],
+      "biomeKey": "storm_forge_calderas",
+      "biome": "red-black crater courts, storm-scoured factory belts, caldera arcologies and exposed orbital flats",
+      "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/pyraeth.prompt.md",
+      "firstWaveJobId": "hy3d_w1_pyraeth_hero_building"
+    },
+    {
+      "order": 6,
+      "planetId": "ferrum",
+      "displayName": "FERRUM",
+      "runtimeCanon": false,
+      "sector": "andromeda_forge",
+      "factionContexts": [
+        "syndicate"
+      ],
+      "biomeKey": "magnetite_desert",
+      "biome": "iron-oxide deserts, magnetite mesas, nickel dunes and deep blue shadow canyons",
+      "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/ferrum.prompt.md",
+      "firstWaveJobId": "hy3d_w1_ferrum_world_detail"
+    },
+    {
+      "order": 7,
+      "planetId": "cinderfall",
+      "displayName": "CINDERFALL",
+      "runtimeCanon": false,
+      "sector": "andromeda_forge",
+      "factionContexts": [
+        "crimson_dominion"
+      ],
+      "biomeKey": "volcanic_island_arc",
+      "biome": "volcanic island arcs, obsidian deltas, ash forests and lava-cut black beaches under perpetual ember rain",
+      "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/cinderfall.prompt.md",
+      "firstWaveJobId": "hy3d_w1_cinderfall_hero_building"
+    },
+    {
+      "order": 8,
+      "planetId": "talos",
+      "displayName": "TALOS",
+      "runtimeCanon": false,
+      "sector": "andromeda_forge",
+      "factionContexts": [
+        "uga_coalition"
+      ],
+      "biomeKey": "high_gravity_tablelands",
+      "biome": "high-gravity basalt tablelands, cyclopean mountain stairs and dense silver grass valleys beneath a compressed sky",
+      "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/talos.prompt.md",
+      "firstWaveJobId": "hy3d_w1_talos_hero_building"
+    },
+    {
+      "order": 9,
+      "planetId": "nordhall",
+      "displayName": "NORDHALL",
+      "runtimeCanon": true,
+      "sector": "orion_cryosphere",
+      "factionContexts": [
+        "syndicate"
+      ],
+      "biomeKey": "machine_cliff_cryosphere",
+      "biome": "ice archipelagos, artillery-scarred machine cliffs, unstable reactor rifts and polar orbital-weather peaks",
+      "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/nordhall.prompt.md",
+      "firstWaveJobId": "hy3d_w1_nordhall_skyscraper"
+    },
+    {
+      "order": 10,
+      "planetId": "nacre",
+      "displayName": "NACRE",
+      "runtimeCanon": false,
+      "sector": "orion_cryosphere",
+      "factionContexts": [
+        "uga_coalition"
+      ],
+      "biomeKey": "opaline_salt_terraces",
+      "biome": "pearlescent salt terraces, opaline badlands, shallow caustic seas and shell-like mineral reefs",
+      "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/nacre.prompt.md",
+      "firstWaveJobId": "hy3d_w1_nacre_pressure_dome"
+    },
+    {
+      "order": 11,
+      "planetId": "borealis",
+      "displayName": "BOREALIS",
+      "runtimeCanon": false,
+      "sector": "orion_cryosphere",
+      "factionContexts": [
+        "uga_coalition"
+      ],
+      "biomeKey": "cryovolcanic_tundra",
+      "biome": "low-gravity cryovolcanic tundra, black methane-ice flats, luminous geyser fields and long twilight valleys",
+      "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/borealis.prompt.md",
+      "firstWaveJobId": "hy3d_w1_borealis_world_detail"
+    },
+    {
+      "order": 12,
+      "planetId": "erebos",
+      "displayName": "EREBOS",
+      "runtimeCanon": false,
+      "sector": "orion_cryosphere",
+      "factionContexts": [
+        "neutral_frontier"
+      ],
+      "biomeKey": "tidal_lock_terminator",
+      "biome": "tidally locked super-Earth with a vitrified dayside, copper terminator ribbon, methane-frost nightside, blade-basalt uplifts and black-brine fracture lakes",
+      "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/erebos.prompt.md",
+      "firstWaveJobId": "hy3d_w1_erebos_pressure_dome"
+    },
+    {
+      "order": 13,
+      "planetId": "vespera",
+      "displayName": "VESPERA",
+      "runtimeCanon": true,
+      "sector": "helios_quarantine",
+      "factionContexts": [
+        "brood_hostile"
+      ],
+      "biomeKey": "volcanic_hiveworld",
+      "biome": "canon volcanic hiveworld of violet-brown ashlands, Caldera Nests, Infestation Fields, Magma Hatcheries and a green-black Overgrown Front",
+      "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/vespera.prompt.md",
+      "firstWaveJobId": "hy3d_w1_vespera_brutish_enemy_structure"
+    },
+    {
+      "order": 14,
+      "planetId": "karaxis",
+      "displayName": "KARAXIS",
+      "runtimeCanon": false,
+      "sector": "helios_quarantine",
+      "factionContexts": [
+        "neutral_frontier",
+        "brood_hostile"
+      ],
+      "biomeKey": "high_gravity_riftlands",
+      "biome": "high-gravity tectonic world of red iron knife-ranges, cobalt rift lakes, fault terraces and deep mantle elevators",
+      "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/karaxis.prompt.md",
+      "firstWaveJobId": "hy3d_w1_karaxis_hero_building"
+    },
+    {
+      "order": 15,
+      "planetId": "mycora",
+      "displayName": "MYCORA",
+      "runtimeCanon": false,
+      "sector": "helios_quarantine",
+      "factionContexts": [
+        "uga_coalition",
+        "brood_hostile"
+      ],
+      "biomeKey": "fungal_shelf_forest",
+      "biome": "humid dim world of continent-scale fungal forests, hollow shelf mesas, phosphorescent spore rivers and seasonal canopy blooms",
+      "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/mycora.prompt.md",
+      "firstWaveJobId": "hy3d_w1_mycora_brutish_enemy_structure"
+    },
+    {
+      "order": 16,
+      "planetId": "ichoris",
+      "displayName": "ICHORIS",
+      "runtimeCanon": false,
+      "sector": "helios_quarantine",
+      "factionContexts": [
+        "neutral_frontier",
+        "brood_hostile"
+      ],
+      "biomeKey": "ferrous_brine_tidelands",
+      "biome": "cool ocean world of black ferrous brine, rust-red tidal marshes, salt-ice shelves and long floodable causeways",
+      "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/ichoris.prompt.md",
+      "firstWaveJobId": "hy3d_w1_ichoris_brutish_enemy_structure"
+    },
+    {
+      "order": 17,
+      "planetId": "caligo",
+      "displayName": "CALIGO",
+      "runtimeCanon": false,
+      "sector": "veyra_frontier",
+      "factionContexts": [
+        "neutral_frontier"
+      ],
+      "biomeKey": "fog_sea_mesas",
+      "biome": "dense-atmosphere frontier of slate mesas, permanent silver fog seas, black fern forests and storm-cut chasms",
+      "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/caligo.prompt.md",
+      "firstWaveJobId": "hy3d_w1_caligo_skyscraper"
+    },
+    {
+      "order": 18,
+      "planetId": "lumen",
+      "displayName": "LUMEN",
+      "runtimeCanon": false,
+      "sector": "veyra_frontier",
+      "factionContexts": [
+        "neutral_frontier"
+      ],
+      "biomeKey": "heliostat_salt_plateau",
+      "biome": "dry high-albedo world of white salt plateaus, ochre shadow basins, turquoise mineral sinkholes and heliostat fields",
+      "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/lumen.prompt.md",
+      "firstWaveJobId": "hy3d_w1_lumen_skyscraper"
+    },
+    {
+      "order": 19,
+      "planetId": "ossara",
+      "displayName": "OSSARA",
+      "runtimeCanon": false,
+      "sector": "veyra_frontier",
+      "factionContexts": [
+        "uga_coalition"
+      ],
+      "biomeKey": "fossil_karst_drysea",
+      "biome": "dry world of bone-white karst, ochre dry seabeds, black flint ridges and enormous exposed fossil reef systems",
+      "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/ossara.prompt.md",
+      "firstWaveJobId": "hy3d_w1_ossara_interior_xs_small_map_prop"
+    },
+    {
+      "order": 20,
+      "planetId": "prismara",
+      "displayName": "PRISMARA",
+      "runtimeCanon": false,
+      "sector": "veyra_frontier",
+      "factionContexts": [
+        "neutral_frontier"
+      ],
+      "biomeKey": "birefringent_glacial_shelf",
+      "biome": "cold tectonic world of charcoal underplates, pale birefringent mineral shelves, clear glacial lakes and sparse faceted ridges",
+      "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/prismara.prompt.md",
+      "firstWaveJobId": "hy3d_w1_prismara_world_detail"
+    },
+    {
+      "order": 21,
+      "planetId": "zephyria",
+      "displayName": "ZEPHYRIA",
+      "runtimeCanon": false,
+      "sector": "perseus_expanse",
+      "factionContexts": [
+        "neutral_frontier"
+      ],
+      "biomeKey": "low_gravity_storm_shelf",
+      "biome": "low-gravity storm world of shallow cobalt oceans, ochre tablelands, electromagnetic mineral shelves and fast cloud rivers",
+      "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/zephyria.prompt.md",
+      "firstWaveJobId": "hy3d_w1_zephyria_hero_building"
+    },
+    {
+      "order": 22,
+      "planetId": "tempestus",
+      "displayName": "TEMPESTUS",
+      "runtimeCanon": false,
+      "sector": "perseus_expanse",
+      "factionContexts": [
+        "neutral_frontier"
+      ],
+      "biomeKey": "electric_basalt_archipelago",
+      "biome": "electrically active basalt archipelagos, cloud forests and flash-flood calderas",
+      "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/tempestus.prompt.md",
+      "firstWaveJobId": "hy3d_w1_tempestus_hero_building"
+    },
+    {
+      "order": 23,
+      "planetId": "causton",
+      "displayName": "CAUSTON",
+      "runtimeCanon": false,
+      "sector": "perseus_expanse",
+      "factionContexts": [
+        "neutral_frontier"
+      ],
+      "biomeKey": "acid_karst",
+      "biome": "acid karst, sulfur flats, alkaline reed basins and vitreous rain gullies",
+      "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/causton.prompt.md",
+      "firstWaveJobId": "hy3d_w1_causton_pressure_dome"
+    },
+    {
+      "order": 24,
+      "planetId": "pelagos",
+      "displayName": "PELAGOS",
+      "runtimeCanon": false,
+      "sector": "perseus_expanse",
+      "factionContexts": [
+        "uga_coalition"
+      ],
+      "biomeKey": "equatorial_reef_archipelago",
+      "biome": "equatorial archipelagos, floating kelp shelves, volcanic reefs and abyssal trenches",
+      "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/pelagos.prompt.md",
+      "firstWaveJobId": "hy3d_w1_pelagos_hero_building"
+    },
+    {
+      "order": 25,
+      "planetId": "karak_prime",
+      "displayName": "KARAK PRIME",
+      "runtimeCanon": false,
+      "sector": "karak_lost_colonies",
+      "factionContexts": [
+        "lost_colony",
+        "brood_hostile"
+      ],
+      "biomeKey": "ash_tundra_colony_galleries",
+      "biome": "ash tundra, pale salt forests, dead agricultural belts and subsurface colony galleries",
+      "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/karak_prime.prompt.md",
+      "firstWaveJobId": "hy3d_w1_karak_prime_interior_xs_small_map_prop"
+    },
+    {
+      "order": 26,
+      "planetId": "sablemarch",
+      "displayName": "SABLEMARCH",
+      "runtimeCanon": false,
+      "sector": "karak_lost_colonies",
+      "factionContexts": [
+        "lost_colony"
+      ],
+      "biomeKey": "obsidian_terminator_dunes",
+      "biome": "tidally locked obsidian dunes, copper twilight scrub and glacial night basins",
+      "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/sablemarch.prompt.md",
+      "firstWaveJobId": "hy3d_w1_sablemarch_skyscraper"
+    },
+    {
+      "order": 27,
+      "planetId": "dredge",
+      "displayName": "DREDGE",
+      "runtimeCanon": false,
+      "sector": "karak_lost_colonies",
+      "factionContexts": [
+        "lost_colony"
+      ],
+      "biomeKey": "flooded_strip_mines",
+      "biome": "flooded strip mines, peat deltas, spoil mesas and methane wetlands",
+      "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/dredge.prompt.md",
+      "firstWaveJobId": "hy3d_w1_dredge_hero_building"
+    },
+    {
+      "order": 28,
+      "planetId": "umbra",
+      "displayName": "UMBRA",
+      "runtimeCanon": false,
+      "sector": "karak_lost_colonies",
+      "factionContexts": [
+        "lost_colony"
+      ],
+      "biomeKey": "moonless_cryofog_canyons",
+      "biome": "moonless basalt canyons, cryofog basins and bioluminescent lichen shelves",
+      "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/umbra.prompt.md",
+      "firstWaveJobId": "hy3d_w1_umbra_interior_xs_small_map_prop"
+    },
+    {
+      "order": 29,
+      "planetId": "qadesh",
+      "displayName": "QADESH",
+      "runtimeCanon": false,
+      "sector": "outer_reach",
+      "factionContexts": [
+        "neutral_frontier"
+      ],
+      "biomeKey": "irrigated_ochre_canyons",
+      "biome": "wind-cut ochre canyons, white salt plateaus and narrow irrigated valley ribbons",
+      "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/qadesh.prompt.md",
+      "firstWaveJobId": "hy3d_w1_qadesh_skyscraper"
+    },
+    {
+      "order": 30,
+      "planetId": "helion",
+      "displayName": "HELION",
+      "runtimeCanon": false,
+      "sector": "outer_reach",
+      "factionContexts": [
+        "neutral_frontier"
+      ],
+      "biomeKey": "irradiated_mirror_steppe",
+      "biome": "irradiated golden steppe, black lava shields, molten-salt valleys and mirror fields",
+      "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/helion.prompt.md",
+      "firstWaveJobId": "hy3d_w1_helion_world_detail"
+    },
+    {
+      "order": 31,
+      "planetId": "gravem",
+      "displayName": "GRAVEM",
+      "runtimeCanon": false,
+      "sector": "outer_reach",
+      "factionContexts": [
+        "neutral_frontier"
+      ],
+      "biomeKey": "compressed_high_gravity_plateau",
+      "biome": "high-gravity iron plateaus, compressed cloud forests and tectonic trenches",
+      "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/gravem.prompt.md",
+      "firstWaveJobId": "hy3d_w1_gravem_hero_building"
+    },
+    {
+      "order": 32,
+      "planetId": "asterion",
+      "displayName": "ASTERION",
+      "runtimeCanon": false,
+      "sector": "outer_reach",
+      "factionContexts": [
+        "neutral_frontier"
+      ],
+      "biomeKey": "crystalline_alpine_ringfall",
+      "biome": "crystalline alpine ranges, violet tundra, mirror lakes and ringfall impact valleys",
+      "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/asterion.prompt.md",
+      "firstWaveJobId": "hy3d_w1_asterion_skyscraper"
+    }
+  ],
+  "firstWave": {
+    "strategy": "Generate one identity-defining Hunyuan source master for every planet before expanding any planet into a large kit; this bounds review load while proving all 32 biome and faction languages.",
+    "jobCount": 32,
+    "coveredAssetCategories": [
+      "hero_building",
+      "skyscraper",
+      "pressure_dome",
+      "world_detail",
+      "brutish_enemy_structure",
+      "interior_xs_small_map_prop"
+    ],
+    "jobs": [
+      {
+        "jobId": "hy3d_w1_aelos_skyscraper",
+        "wave": "W1_PLANET_SEED",
+        "priority": 1,
+        "planetId": "aelos",
+        "factionContexts": [
+          "nova_frontline"
+        ],
+        "biomeKey": "temperate_civic_ecumenopolis",
+        "locationClass": "city_colony",
+        "siteId": "aelos_north_capital_ward",
+        "siteName": "Capital Ward",
+        "assetCategory": "skyscraper",
+        "packId": "hpk_aelos_city_colony_w1_v1",
+        "conceptDependency": {
+          "required": true,
+          "status": "MISSING_BLOCKING",
+          "approvalStatus": "UNREVIEWED",
+          "path": "source-media/concepts/hunyuan/aelos/aelos_north_capital_ward-skyscraper-concept-v1.png",
+          "sha256": null,
+          "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/aelos.prompt.md",
+          "sectionSiteId": "aelos_north_capital_ward"
+        },
+        "targetEnvelopeMeters": {
+          "x": 32,
+          "y": 72,
+          "z": 32
+        },
+        "source": {
+          "splineDocumentName": "MF_HY3D_AELOS_SKYSCRAPER_V1",
+          "rootName": "MF_AELOS_NORTH_CAPITAL_WARD_SKYSCRAPER_LOD0_SOURCE",
+          "exportName": "mf_aelos_north_capital_ward_skyscraper_source.glb",
+          "sourceDirectory": "modules/space_exploration/assets/source/spline/hunyuan/aelos/aelos_north_capital_ward/skyscraper"
+        },
+        "status": "BLOCKED_CONCEPT"
+      },
+      {
+        "jobId": "hy3d_w1_elysion_pressure_dome",
+        "wave": "W1_PLANET_SEED",
+        "priority": 2,
+        "planetId": "elysion",
+        "factionContexts": [
+          "uga_coalition"
+        ],
+        "biomeKey": "cloud_forest_mesas",
+        "locationClass": "pressure_dome",
+        "siteId": "elysion_cumulus_conservatory",
+        "siteName": "Cumulus Conservatory",
+        "assetCategory": "pressure_dome",
+        "packId": "hpk_elysion_pressure_dome_w1_v1",
+        "conceptDependency": {
+          "required": true,
+          "status": "READY",
+          "approvalStatus": "APPROVED",
+          "path": "source-media/concepts/hunyuan/elysion/elysion_cumulus_conservatory-pressure_dome-concept-v1.png",
+          "sha256": "47e2382f7d73e992bc10981512f64bf404c1cff9fe3f298928b6818a419a0ece",
+          "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/elysion.prompt.md",
+          "sectionSiteId": "elysion_cumulus_conservatory"
+        },
+        "targetEnvelopeMeters": {
+          "x": 64,
+          "y": 24,
+          "z": 64
+        },
+        "source": {
+          "splineDocumentName": "MF_HY3D_ELYSION_PRESSURE_DOME_V1",
+          "rootName": "MF_ELYSION_CUMULUS_CONSERVATORY_PRESSURE_DOME_LOD0_SOURCE",
+          "exportName": "mf_elysion_cumulus_conservatory_pressure_dome_source.glb",
+          "sourceDirectory": "modules/space_exploration/assets/source/spline/hunyuan/elysion/elysion_cumulus_conservatory/pressure_dome"
+        },
+        "status": "READY_FOR_HUNYUAN"
+      },
+      {
+        "jobId": "hy3d_w1_thalassa_hero_building",
+        "wave": "W1_PLANET_SEED",
+        "priority": 2,
+        "planetId": "thalassa",
+        "factionContexts": [
+          "uga_coalition"
+        ],
+        "biomeKey": "ocean_archipelago",
+        "locationClass": "city_colony",
+        "siteId": "thalassa_pelagia_stack",
+        "siteName": "Pelagia Stack",
+        "assetCategory": "hero_building",
+        "packId": "hpk_thalassa_city_colony_w1_v1",
+        "conceptDependency": {
+          "required": true,
+          "status": "MISSING_BLOCKING",
+          "approvalStatus": "UNREVIEWED",
+          "path": "source-media/concepts/hunyuan/thalassa/thalassa_pelagia_stack-hero_building-concept-v1.png",
+          "sha256": null,
+          "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/thalassa.prompt.md",
+          "sectionSiteId": "thalassa_pelagia_stack"
+        },
+        "targetEnvelopeMeters": {
+          "x": 72,
+          "y": 36,
+          "z": 56
+        },
+        "source": {
+          "splineDocumentName": "MF_HY3D_THALASSA_HERO_BUILDING_V1",
+          "rootName": "MF_THALASSA_PELAGIA_STACK_HERO_BUILDING_LOD0_SOURCE",
+          "exportName": "mf_thalassa_pelagia_stack_hero_building_source.glb",
+          "sourceDirectory": "modules/space_exploration/assets/source/spline/hunyuan/thalassa/thalassa_pelagia_stack/hero_building"
+        },
+        "status": "BLOCKED_CONCEPT"
+      },
+      {
+        "jobId": "hy3d_w1_viridia_skyscraper",
+        "wave": "W1_PLANET_SEED",
+        "priority": 2,
+        "planetId": "viridia",
+        "factionContexts": [
+          "uga_coalition"
+        ],
+        "biomeKey": "luminous_fern_highlands",
+        "locationClass": "city_colony",
+        "siteId": "viridia_canopy_concord",
+        "siteName": "Canopy Concord",
+        "assetCategory": "skyscraper",
+        "packId": "hpk_viridia_city_colony_w1_v1",
+        "conceptDependency": {
+          "required": true,
+          "status": "MISSING_BLOCKING",
+          "approvalStatus": "UNREVIEWED",
+          "path": "source-media/concepts/hunyuan/viridia/viridia_canopy_concord-skyscraper-concept-v1.png",
+          "sha256": null,
+          "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/viridia.prompt.md",
+          "sectionSiteId": "viridia_canopy_concord"
+        },
+        "targetEnvelopeMeters": {
+          "x": 32,
+          "y": 72,
+          "z": 32
+        },
+        "source": {
+          "splineDocumentName": "MF_HY3D_VIRIDIA_SKYSCRAPER_V1",
+          "rootName": "MF_VIRIDIA_CANOPY_CONCORD_SKYSCRAPER_LOD0_SOURCE",
+          "exportName": "mf_viridia_canopy_concord_skyscraper_source.glb",
+          "sourceDirectory": "modules/space_exploration/assets/source/spline/hunyuan/viridia/viridia_canopy_concord/skyscraper"
+        },
+        "status": "BLOCKED_CONCEPT"
+      },
+      {
+        "jobId": "hy3d_w1_pyraeth_hero_building",
+        "wave": "W1_PLANET_SEED",
+        "priority": 1,
+        "planetId": "pyraeth",
+        "factionContexts": [
+          "crimson_dominion"
+        ],
+        "biomeKey": "storm_forge_calderas",
+        "locationClass": "military_base",
+        "siteId": "pyraeth_belt_promethean_base",
+        "siteName": "Promethean Base",
+        "assetCategory": "hero_building",
+        "packId": "hpk_pyraeth_military_base_w1_v1",
+        "conceptDependency": {
+          "required": true,
+          "status": "MISSING_BLOCKING",
+          "approvalStatus": "UNREVIEWED",
+          "path": "source-media/concepts/hunyuan/pyraeth/pyraeth_belt_promethean_base-hero_building-concept-v1.png",
+          "sha256": null,
+          "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/pyraeth.prompt.md",
+          "sectionSiteId": "pyraeth_belt_promethean_base"
+        },
+        "targetEnvelopeMeters": {
+          "x": 72,
+          "y": 36,
+          "z": 56
+        },
+        "source": {
+          "splineDocumentName": "MF_HY3D_PYRAETH_HERO_BUILDING_V1",
+          "rootName": "MF_PYRAETH_BELT_PROMETHEAN_BASE_HERO_BUILDING_LOD0_SOURCE",
+          "exportName": "mf_pyraeth_belt_promethean_base_hero_building_source.glb",
+          "sourceDirectory": "modules/space_exploration/assets/source/spline/hunyuan/pyraeth/pyraeth_belt_promethean_base/hero_building"
+        },
+        "status": "BLOCKED_CONCEPT"
+      },
+      {
+        "jobId": "hy3d_w1_ferrum_world_detail",
+        "wave": "W1_PLANET_SEED",
+        "priority": 2,
+        "planetId": "ferrum",
+        "factionContexts": [
+          "syndicate"
+        ],
+        "biomeKey": "magnetite_desert",
+        "locationClass": "refinery",
+        "siteId": "ferrum_redline_separator",
+        "siteName": "Redline Separator",
+        "assetCategory": "world_detail",
+        "packId": "hpk_ferrum_refinery_w1_v1",
+        "conceptDependency": {
+          "required": true,
+          "status": "MISSING_BLOCKING",
+          "approvalStatus": "UNREVIEWED",
+          "path": "source-media/concepts/hunyuan/ferrum/ferrum_redline_separator-world_detail-concept-v1.png",
+          "sha256": null,
+          "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/ferrum.prompt.md",
+          "sectionSiteId": "ferrum_redline_separator"
+        },
+        "targetEnvelopeMeters": {
+          "x": 24,
+          "y": 18,
+          "z": 24
+        },
+        "source": {
+          "splineDocumentName": "MF_HY3D_FERRUM_WORLD_DETAIL_V1",
+          "rootName": "MF_FERRUM_REDLINE_SEPARATOR_WORLD_DETAIL_LOD0_SOURCE",
+          "exportName": "mf_ferrum_redline_separator_world_detail_source.glb",
+          "sourceDirectory": "modules/space_exploration/assets/source/spline/hunyuan/ferrum/ferrum_redline_separator/world_detail"
+        },
+        "status": "BLOCKED_CONCEPT"
+      },
+      {
+        "jobId": "hy3d_w1_cinderfall_hero_building",
+        "wave": "W1_PLANET_SEED",
+        "priority": 2,
+        "planetId": "cinderfall",
+        "factionContexts": [
+          "crimson_dominion"
+        ],
+        "biomeKey": "volcanic_island_arc",
+        "locationClass": "refinery",
+        "siteId": "cinderfall_magma_tap",
+        "siteName": "Magma Tap Refinery",
+        "assetCategory": "hero_building",
+        "packId": "hpk_cinderfall_refinery_w1_v1",
+        "conceptDependency": {
+          "required": true,
+          "status": "MISSING_BLOCKING",
+          "approvalStatus": "UNREVIEWED",
+          "path": "source-media/concepts/hunyuan/cinderfall/cinderfall_magma_tap-hero_building-concept-v1.png",
+          "sha256": null,
+          "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/cinderfall.prompt.md",
+          "sectionSiteId": "cinderfall_magma_tap"
+        },
+        "targetEnvelopeMeters": {
+          "x": 72,
+          "y": 36,
+          "z": 56
+        },
+        "source": {
+          "splineDocumentName": "MF_HY3D_CINDERFALL_HERO_BUILDING_V1",
+          "rootName": "MF_CINDERFALL_MAGMA_TAP_HERO_BUILDING_LOD0_SOURCE",
+          "exportName": "mf_cinderfall_magma_tap_hero_building_source.glb",
+          "sourceDirectory": "modules/space_exploration/assets/source/spline/hunyuan/cinderfall/cinderfall_magma_tap/hero_building"
+        },
+        "status": "BLOCKED_CONCEPT"
+      },
+      {
+        "jobId": "hy3d_w1_talos_hero_building",
+        "wave": "W1_PLANET_SEED",
+        "priority": 2,
+        "planetId": "talos",
+        "factionContexts": [
+          "uga_coalition"
+        ],
+        "biomeKey": "high_gravity_tablelands",
+        "locationClass": "military_base",
+        "siteId": "talos_anvil_redoubt",
+        "siteName": "Anvil Redoubt",
+        "assetCategory": "hero_building",
+        "packId": "hpk_talos_military_base_w1_v1",
+        "conceptDependency": {
+          "required": true,
+          "status": "MISSING_BLOCKING",
+          "approvalStatus": "UNREVIEWED",
+          "path": "source-media/concepts/hunyuan/talos/talos_anvil_redoubt-hero_building-concept-v1.png",
+          "sha256": null,
+          "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/talos.prompt.md",
+          "sectionSiteId": "talos_anvil_redoubt"
+        },
+        "targetEnvelopeMeters": {
+          "x": 72,
+          "y": 36,
+          "z": 56
+        },
+        "source": {
+          "splineDocumentName": "MF_HY3D_TALOS_HERO_BUILDING_V1",
+          "rootName": "MF_TALOS_ANVIL_REDOUBT_HERO_BUILDING_LOD0_SOURCE",
+          "exportName": "mf_talos_anvil_redoubt_hero_building_source.glb",
+          "sourceDirectory": "modules/space_exploration/assets/source/spline/hunyuan/talos/talos_anvil_redoubt/hero_building"
+        },
+        "status": "BLOCKED_CONCEPT"
+      },
+      {
+        "jobId": "hy3d_w1_nordhall_skyscraper",
+        "wave": "W1_PLANET_SEED",
+        "priority": 1,
+        "planetId": "nordhall",
+        "factionContexts": [
+          "syndicate"
+        ],
+        "biomeKey": "machine_cliff_cryosphere",
+        "locationClass": "city_colony",
+        "siteId": "nordhall_cliff_arcology_steps_colony",
+        "siteName": "Arcology Steps Colony",
+        "assetCategory": "skyscraper",
+        "packId": "hpk_nordhall_city_colony_w1_v1",
+        "conceptDependency": {
+          "required": true,
+          "status": "READY",
+          "approvalStatus": "APPROVED",
+          "path": "source-media/concepts/hunyuan/nordhall/nordhall_cliff_arcology_steps_colony-skyscraper-concept-v1.png",
+          "sha256": "fdd7b8050db39fd50f9559b98d2a4ea749005d75dc6c30ce5ceb483821ab2f61",
+          "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/nordhall.prompt.md",
+          "sectionSiteId": "nordhall_cliff_arcology_steps_colony"
+        },
+        "targetEnvelopeMeters": {
+          "x": 32,
+          "y": 72,
+          "z": 32
+        },
+        "source": {
+          "splineDocumentName": "MF_HY3D_NORDHALL_SKYSCRAPER_V1",
+          "rootName": "MF_NORDHALL_CLIFF_ARCOLOGY_STEPS_COLONY_SKYSCRAPER_LOD0_SOURCE",
+          "exportName": "mf_nordhall_cliff_arcology_steps_colony_skyscraper_source.glb",
+          "sourceDirectory": "modules/space_exploration/assets/source/spline/hunyuan/nordhall/nordhall_cliff_arcology_steps_colony/skyscraper"
+        },
+        "status": "READY_FOR_HUNYUAN"
+      },
+      {
+        "jobId": "hy3d_w1_nacre_pressure_dome",
+        "wave": "W1_PLANET_SEED",
+        "priority": 2,
+        "planetId": "nacre",
+        "factionContexts": [
+          "uga_coalition"
+        ],
+        "biomeKey": "opaline_salt_terraces",
+        "locationClass": "pressure_dome",
+        "siteId": "nacre_pearlward_dome",
+        "siteName": "Pearlward Dome",
+        "assetCategory": "pressure_dome",
+        "packId": "hpk_nacre_pressure_dome_w1_v1",
+        "conceptDependency": {
+          "required": true,
+          "status": "MISSING_BLOCKING",
+          "approvalStatus": "UNREVIEWED",
+          "path": "source-media/concepts/hunyuan/nacre/nacre_pearlward_dome-pressure_dome-concept-v1.png",
+          "sha256": null,
+          "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/nacre.prompt.md",
+          "sectionSiteId": "nacre_pearlward_dome"
+        },
+        "targetEnvelopeMeters": {
+          "x": 64,
+          "y": 24,
+          "z": 64
+        },
+        "source": {
+          "splineDocumentName": "MF_HY3D_NACRE_PRESSURE_DOME_V1",
+          "rootName": "MF_NACRE_PEARLWARD_DOME_PRESSURE_DOME_LOD0_SOURCE",
+          "exportName": "mf_nacre_pearlward_dome_pressure_dome_source.glb",
+          "sourceDirectory": "modules/space_exploration/assets/source/spline/hunyuan/nacre/nacre_pearlward_dome/pressure_dome"
+        },
+        "status": "BLOCKED_CONCEPT"
+      },
+      {
+        "jobId": "hy3d_w1_borealis_world_detail",
+        "wave": "W1_PLANET_SEED",
+        "priority": 2,
+        "planetId": "borealis",
+        "factionContexts": [
+          "uga_coalition"
+        ],
+        "biomeKey": "cryovolcanic_tundra",
+        "locationClass": "outpost",
+        "siteId": "borealis_ghostlight_post",
+        "siteName": "Ghostlight Post",
+        "assetCategory": "world_detail",
+        "packId": "hpk_borealis_outpost_w1_v1",
+        "conceptDependency": {
+          "required": true,
+          "status": "MISSING_BLOCKING",
+          "approvalStatus": "UNREVIEWED",
+          "path": "source-media/concepts/hunyuan/borealis/borealis_ghostlight_post-world_detail-concept-v1.png",
+          "sha256": null,
+          "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/borealis.prompt.md",
+          "sectionSiteId": "borealis_ghostlight_post"
+        },
+        "targetEnvelopeMeters": {
+          "x": 24,
+          "y": 18,
+          "z": 24
+        },
+        "source": {
+          "splineDocumentName": "MF_HY3D_BOREALIS_WORLD_DETAIL_V1",
+          "rootName": "MF_BOREALIS_GHOSTLIGHT_POST_WORLD_DETAIL_LOD0_SOURCE",
+          "exportName": "mf_borealis_ghostlight_post_world_detail_source.glb",
+          "sourceDirectory": "modules/space_exploration/assets/source/spline/hunyuan/borealis/borealis_ghostlight_post/world_detail"
+        },
+        "status": "BLOCKED_CONCEPT"
+      },
+      {
+        "jobId": "hy3d_w1_erebos_pressure_dome",
+        "wave": "W1_PLANET_SEED",
+        "priority": 2,
+        "planetId": "erebos",
+        "factionContexts": [
+          "neutral_frontier"
+        ],
+        "biomeKey": "tidal_lock_terminator",
+        "locationClass": "pressure_dome",
+        "siteId": "erebos_penumbra_habitat_pressure_dome",
+        "siteName": "Penumbra Habitat",
+        "assetCategory": "pressure_dome",
+        "packId": "hpk_erebos_pressure_dome_w1_v1",
+        "conceptDependency": {
+          "required": true,
+          "status": "MISSING_BLOCKING",
+          "approvalStatus": "UNREVIEWED",
+          "path": "source-media/concepts/hunyuan/erebos/erebos_penumbra_habitat_pressure_dome-pressure_dome-concept-v1.png",
+          "sha256": null,
+          "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/erebos.prompt.md",
+          "sectionSiteId": "erebos_penumbra_habitat_pressure_dome"
+        },
+        "targetEnvelopeMeters": {
+          "x": 64,
+          "y": 24,
+          "z": 64
+        },
+        "source": {
+          "splineDocumentName": "MF_HY3D_EREBOS_PRESSURE_DOME_V1",
+          "rootName": "MF_EREBOS_PENUMBRA_HABITAT_PRESSURE_DOME_PRESSURE_DOME_LOD0_SOURCE",
+          "exportName": "mf_erebos_penumbra_habitat_pressure_dome_pressure_dome_source.glb",
+          "sourceDirectory": "modules/space_exploration/assets/source/spline/hunyuan/erebos/erebos_penumbra_habitat_pressure_dome/pressure_dome"
+        },
+        "status": "BLOCKED_CONCEPT"
+      },
+      {
+        "jobId": "hy3d_w1_vespera_brutish_enemy_structure",
+        "wave": "W1_PLANET_SEED",
+        "priority": 1,
+        "planetId": "vespera",
+        "factionContexts": [
+          "brood_hostile"
+        ],
+        "biomeKey": "volcanic_hiveworld",
+        "locationClass": "refinery",
+        "siteId": "vespera_refinery_megaforge_refinery",
+        "siteName": "Megaforge Hatchery Refinery",
+        "assetCategory": "brutish_enemy_structure",
+        "packId": "hpk_vespera_refinery_w1_v1",
+        "conceptDependency": {
+          "required": true,
+          "status": "READY",
+          "approvalStatus": "APPROVED",
+          "path": "source-media/concepts/hunyuan/vespera/vespera_refinery_megaforge_refinery-brutish_enemy_structure-concept-v2.png",
+          "sha256": "172a6099b6029efcaa0b3dcebcc565bece44d00e4d4baec63aa16d72bd0d7c93",
+          "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/vespera.prompt.md",
+          "sectionSiteId": "vespera_refinery_megaforge_refinery"
+        },
+        "targetEnvelopeMeters": {
+          "x": 56,
+          "y": 32,
+          "z": 56
+        },
+        "source": {
+          "splineDocumentName": "MF_HY3D_VESPERA_BRUTISH_ENEMY_STRUCTURE_V1",
+          "rootName": "MF_VESPERA_REFINERY_MEGAFORGE_REFINERY_BRUTISH_ENEMY_STRUCTURE_LOD0_SOURCE",
+          "exportName": "mf_vespera_refinery_megaforge_refinery_brutish_enemy_structure_source.glb",
+          "sourceDirectory": "modules/space_exploration/assets/source/spline/hunyuan/vespera/vespera_refinery_megaforge_refinery/brutish_enemy_structure"
+        },
+        "status": "READY_FOR_HUNYUAN"
+      },
+      {
+        "jobId": "hy3d_w1_karaxis_hero_building",
+        "wave": "W1_PLANET_SEED",
+        "priority": 2,
+        "planetId": "karaxis",
+        "factionContexts": [
+          "neutral_frontier",
+          "brood_hostile"
+        ],
+        "biomeKey": "high_gravity_riftlands",
+        "locationClass": "military_base",
+        "siteId": "karaxis_bastion_nine_military_base",
+        "siteName": "Bastion Nine",
+        "assetCategory": "hero_building",
+        "packId": "hpk_karaxis_military_base_w1_v1",
+        "conceptDependency": {
+          "required": true,
+          "status": "MISSING_BLOCKING",
+          "approvalStatus": "UNREVIEWED",
+          "path": "source-media/concepts/hunyuan/karaxis/karaxis_bastion_nine_military_base-hero_building-concept-v1.png",
+          "sha256": null,
+          "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/karaxis.prompt.md",
+          "sectionSiteId": "karaxis_bastion_nine_military_base"
+        },
+        "targetEnvelopeMeters": {
+          "x": 72,
+          "y": 36,
+          "z": 56
+        },
+        "source": {
+          "splineDocumentName": "MF_HY3D_KARAXIS_HERO_BUILDING_V1",
+          "rootName": "MF_KARAXIS_BASTION_NINE_MILITARY_BASE_HERO_BUILDING_LOD0_SOURCE",
+          "exportName": "mf_karaxis_bastion_nine_military_base_hero_building_source.glb",
+          "sourceDirectory": "modules/space_exploration/assets/source/spline/hunyuan/karaxis/karaxis_bastion_nine_military_base/hero_building"
+        },
+        "status": "BLOCKED_CONCEPT"
+      },
+      {
+        "jobId": "hy3d_w1_mycora_brutish_enemy_structure",
+        "wave": "W1_PLANET_SEED",
+        "priority": 2,
+        "planetId": "mycora",
+        "factionContexts": [
+          "uga_coalition",
+          "brood_hostile"
+        ],
+        "biomeKey": "fungal_shelf_forest",
+        "locationClass": "derelict_megastructure",
+        "siteId": "mycora_hollow_worldtree_derelict_megastructure",
+        "siteName": "Hollow Worldtree Array",
+        "assetCategory": "brutish_enemy_structure",
+        "packId": "hpk_mycora_derelict_megastructure_w1_v1",
+        "conceptDependency": {
+          "required": true,
+          "status": "MISSING_BLOCKING",
+          "approvalStatus": "UNREVIEWED",
+          "path": "source-media/concepts/hunyuan/mycora/mycora_hollow_worldtree_derelict_megastructure-brutish_enemy_structure-concept-v1.png",
+          "sha256": null,
+          "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/mycora.prompt.md",
+          "sectionSiteId": "mycora_hollow_worldtree_derelict_megastructure"
+        },
+        "targetEnvelopeMeters": {
+          "x": 56,
+          "y": 32,
+          "z": 56
+        },
+        "source": {
+          "splineDocumentName": "MF_HY3D_MYCORA_BRUTISH_ENEMY_STRUCTURE_V1",
+          "rootName": "MF_MYCORA_HOLLOW_WORLDTREE_DERELICT_MEGASTRUCTURE_BRUTISH_ENEMY_STRUCTURE_LOD0_SOURCE",
+          "exportName": "mf_mycora_hollow_worldtree_derelict_megastructure_brutish_enemy_structure_source.glb",
+          "sourceDirectory": "modules/space_exploration/assets/source/spline/hunyuan/mycora/mycora_hollow_worldtree_derelict_megastructure/brutish_enemy_structure"
+        },
+        "status": "BLOCKED_CONCEPT"
+      },
+      {
+        "jobId": "hy3d_w1_ichoris_brutish_enemy_structure",
+        "wave": "W1_PLANET_SEED",
+        "priority": 2,
+        "planetId": "ichoris",
+        "factionContexts": [
+          "neutral_frontier",
+          "brood_hostile"
+        ],
+        "biomeKey": "ferrous_brine_tidelands",
+        "locationClass": "derelict_megastructure",
+        "siteId": "ichoris_sunken_harvester_derelict_megastructure",
+        "siteName": "Sunken Pelagic Harvester",
+        "assetCategory": "brutish_enemy_structure",
+        "packId": "hpk_ichoris_derelict_megastructure_w1_v1",
+        "conceptDependency": {
+          "required": true,
+          "status": "MISSING_BLOCKING",
+          "approvalStatus": "UNREVIEWED",
+          "path": "source-media/concepts/hunyuan/ichoris/ichoris_sunken_harvester_derelict_megastructure-brutish_enemy_structure-concept-v1.png",
+          "sha256": null,
+          "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/ichoris.prompt.md",
+          "sectionSiteId": "ichoris_sunken_harvester_derelict_megastructure"
+        },
+        "targetEnvelopeMeters": {
+          "x": 56,
+          "y": 32,
+          "z": 56
+        },
+        "source": {
+          "splineDocumentName": "MF_HY3D_ICHORIS_BRUTISH_ENEMY_STRUCTURE_V1",
+          "rootName": "MF_ICHORIS_SUNKEN_HARVESTER_DERELICT_MEGASTRUCTURE_BRUTISH_ENEMY_STRUCTURE_LOD0_SOURCE",
+          "exportName": "mf_ichoris_sunken_harvester_derelict_megastructure_brutish_enemy_structure_source.glb",
+          "sourceDirectory": "modules/space_exploration/assets/source/spline/hunyuan/ichoris/ichoris_sunken_harvester_derelict_megastructure/brutish_enemy_structure"
+        },
+        "status": "BLOCKED_CONCEPT"
+      },
+      {
+        "jobId": "hy3d_w1_caligo_skyscraper",
+        "wave": "W1_PLANET_SEED",
+        "priority": 3,
+        "planetId": "caligo",
+        "factionContexts": [
+          "neutral_frontier"
+        ],
+        "biomeKey": "fog_sea_mesas",
+        "locationClass": "city_colony",
+        "siteId": "caligo_fogstep_city_colony",
+        "siteName": "Fogstep City",
+        "assetCategory": "skyscraper",
+        "packId": "hpk_caligo_city_colony_w1_v1",
+        "conceptDependency": {
+          "required": true,
+          "status": "MISSING_BLOCKING",
+          "approvalStatus": "UNREVIEWED",
+          "path": "source-media/concepts/hunyuan/caligo/caligo_fogstep_city_colony-skyscraper-concept-v1.png",
+          "sha256": null,
+          "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/caligo.prompt.md",
+          "sectionSiteId": "caligo_fogstep_city_colony"
+        },
+        "targetEnvelopeMeters": {
+          "x": 32,
+          "y": 72,
+          "z": 32
+        },
+        "source": {
+          "splineDocumentName": "MF_HY3D_CALIGO_SKYSCRAPER_V1",
+          "rootName": "MF_CALIGO_FOGSTEP_CITY_COLONY_SKYSCRAPER_LOD0_SOURCE",
+          "exportName": "mf_caligo_fogstep_city_colony_skyscraper_source.glb",
+          "sourceDirectory": "modules/space_exploration/assets/source/spline/hunyuan/caligo/caligo_fogstep_city_colony/skyscraper"
+        },
+        "status": "BLOCKED_CONCEPT"
+      },
+      {
+        "jobId": "hy3d_w1_lumen_skyscraper",
+        "wave": "W1_PLANET_SEED",
+        "priority": 3,
+        "planetId": "lumen",
+        "factionContexts": [
+          "neutral_frontier"
+        ],
+        "biomeKey": "heliostat_salt_plateau",
+        "locationClass": "city_colony",
+        "siteId": "lumen_heliostat_city_colony",
+        "siteName": "Heliostat Crown City",
+        "assetCategory": "skyscraper",
+        "packId": "hpk_lumen_city_colony_w1_v1",
+        "conceptDependency": {
+          "required": true,
+          "status": "MISSING_BLOCKING",
+          "approvalStatus": "UNREVIEWED",
+          "path": "source-media/concepts/hunyuan/lumen/lumen_heliostat_city_colony-skyscraper-concept-v1.png",
+          "sha256": null,
+          "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/lumen.prompt.md",
+          "sectionSiteId": "lumen_heliostat_city_colony"
+        },
+        "targetEnvelopeMeters": {
+          "x": 32,
+          "y": 72,
+          "z": 32
+        },
+        "source": {
+          "splineDocumentName": "MF_HY3D_LUMEN_SKYSCRAPER_V1",
+          "rootName": "MF_LUMEN_HELIOSTAT_CITY_COLONY_SKYSCRAPER_LOD0_SOURCE",
+          "exportName": "mf_lumen_heliostat_city_colony_skyscraper_source.glb",
+          "sourceDirectory": "modules/space_exploration/assets/source/spline/hunyuan/lumen/lumen_heliostat_city_colony/skyscraper"
+        },
+        "status": "BLOCKED_CONCEPT"
+      },
+      {
+        "jobId": "hy3d_w1_ossara_interior_xs_small_map_prop",
+        "wave": "W1_PLANET_SEED",
+        "priority": 3,
+        "planetId": "ossara",
+        "factionContexts": [
+          "uga_coalition"
+        ],
+        "biomeKey": "fossil_karst_drysea",
+        "locationClass": "relic_ruin",
+        "siteId": "ossara_leviathan_relic_ruin",
+        "siteName": "Leviathan Ossuary",
+        "assetCategory": "interior_xs_small_map_prop",
+        "packId": "hpk_ossara_relic_ruin_w1_v1",
+        "conceptDependency": {
+          "required": true,
+          "status": "MISSING_BLOCKING",
+          "approvalStatus": "UNREVIEWED",
+          "path": "source-media/concepts/hunyuan/ossara/ossara_leviathan_relic_ruin-interior_xs_small_map_prop-concept-v1.png",
+          "sha256": null,
+          "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/ossara.prompt.md",
+          "sectionSiteId": "ossara_leviathan_relic_ruin"
+        },
+        "targetEnvelopeMeters": {
+          "x": 24,
+          "y": 12,
+          "z": 24
+        },
+        "source": {
+          "splineDocumentName": "MF_HY3D_OSSARA_INTERIOR_XS_SMALL_MAP_PROP_V1",
+          "rootName": "MF_OSSARA_LEVIATHAN_RELIC_RUIN_INTERIOR_XS_SMALL_MAP_PROP_LOD0_SOURCE",
+          "exportName": "mf_ossara_leviathan_relic_ruin_interior_xs_small_map_prop_source.glb",
+          "sourceDirectory": "modules/space_exploration/assets/source/spline/hunyuan/ossara/ossara_leviathan_relic_ruin/interior_xs_small_map_prop"
+        },
+        "status": "BLOCKED_CONCEPT"
+      },
+      {
+        "jobId": "hy3d_w1_prismara_world_detail",
+        "wave": "W1_PLANET_SEED",
+        "priority": 3,
+        "planetId": "prismara",
+        "factionContexts": [
+          "neutral_frontier"
+        ],
+        "biomeKey": "birefringent_glacial_shelf",
+        "locationClass": "refinery",
+        "siteId": "prismara_fluxglass_refinery",
+        "siteName": "Fluxglass Works",
+        "assetCategory": "world_detail",
+        "packId": "hpk_prismara_refinery_w1_v1",
+        "conceptDependency": {
+          "required": true,
+          "status": "MISSING_BLOCKING",
+          "approvalStatus": "UNREVIEWED",
+          "path": "source-media/concepts/hunyuan/prismara/prismara_fluxglass_refinery-world_detail-concept-v1.png",
+          "sha256": null,
+          "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/prismara.prompt.md",
+          "sectionSiteId": "prismara_fluxglass_refinery"
+        },
+        "targetEnvelopeMeters": {
+          "x": 24,
+          "y": 18,
+          "z": 24
+        },
+        "source": {
+          "splineDocumentName": "MF_HY3D_PRISMARA_WORLD_DETAIL_V1",
+          "rootName": "MF_PRISMARA_FLUXGLASS_REFINERY_WORLD_DETAIL_LOD0_SOURCE",
+          "exportName": "mf_prismara_fluxglass_refinery_world_detail_source.glb",
+          "sourceDirectory": "modules/space_exploration/assets/source/spline/hunyuan/prismara/prismara_fluxglass_refinery/world_detail"
+        },
+        "status": "BLOCKED_CONCEPT"
+      },
+      {
+        "jobId": "hy3d_w1_zephyria_hero_building",
+        "wave": "W1_PLANET_SEED",
+        "priority": 3,
+        "planetId": "zephyria",
+        "factionContexts": [
+          "neutral_frontier"
+        ],
+        "biomeKey": "low_gravity_storm_shelf",
+        "locationClass": "spaceport",
+        "siteId": "zephyria_skykeel_spaceport",
+        "siteName": "Skykeel Spaceport",
+        "assetCategory": "hero_building",
+        "packId": "hpk_zephyria_spaceport_w1_v1",
+        "conceptDependency": {
+          "required": true,
+          "status": "MISSING_BLOCKING",
+          "approvalStatus": "UNREVIEWED",
+          "path": "source-media/concepts/hunyuan/zephyria/zephyria_skykeel_spaceport-hero_building-concept-v1.png",
+          "sha256": null,
+          "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/zephyria.prompt.md",
+          "sectionSiteId": "zephyria_skykeel_spaceport"
+        },
+        "targetEnvelopeMeters": {
+          "x": 72,
+          "y": 36,
+          "z": 56
+        },
+        "source": {
+          "splineDocumentName": "MF_HY3D_ZEPHYRIA_HERO_BUILDING_V1",
+          "rootName": "MF_ZEPHYRIA_SKYKEEL_SPACEPORT_HERO_BUILDING_LOD0_SOURCE",
+          "exportName": "mf_zephyria_skykeel_spaceport_hero_building_source.glb",
+          "sourceDirectory": "modules/space_exploration/assets/source/spline/hunyuan/zephyria/zephyria_skykeel_spaceport/hero_building"
+        },
+        "status": "BLOCKED_CONCEPT"
+      },
+      {
+        "jobId": "hy3d_w1_tempestus_hero_building",
+        "wave": "W1_PLANET_SEED",
+        "priority": 3,
+        "planetId": "tempestus",
+        "factionContexts": [
+          "neutral_frontier"
+        ],
+        "biomeKey": "electric_basalt_archipelago",
+        "locationClass": "military_base",
+        "siteId": "tempestus_thunder_bastion",
+        "siteName": "Thunder Bastion",
+        "assetCategory": "hero_building",
+        "packId": "hpk_tempestus_military_base_w1_v1",
+        "conceptDependency": {
+          "required": true,
+          "status": "MISSING_BLOCKING",
+          "approvalStatus": "UNREVIEWED",
+          "path": "source-media/concepts/hunyuan/tempestus/tempestus_thunder_bastion-hero_building-concept-v1.png",
+          "sha256": null,
+          "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/tempestus.prompt.md",
+          "sectionSiteId": "tempestus_thunder_bastion"
+        },
+        "targetEnvelopeMeters": {
+          "x": 72,
+          "y": 36,
+          "z": 56
+        },
+        "source": {
+          "splineDocumentName": "MF_HY3D_TEMPESTUS_HERO_BUILDING_V1",
+          "rootName": "MF_TEMPESTUS_THUNDER_BASTION_HERO_BUILDING_LOD0_SOURCE",
+          "exportName": "mf_tempestus_thunder_bastion_hero_building_source.glb",
+          "sourceDirectory": "modules/space_exploration/assets/source/spline/hunyuan/tempestus/tempestus_thunder_bastion/hero_building"
+        },
+        "status": "BLOCKED_CONCEPT"
+      },
+      {
+        "jobId": "hy3d_w1_causton_pressure_dome",
+        "wave": "W1_PLANET_SEED",
+        "priority": 3,
+        "planetId": "causton",
+        "factionContexts": [
+          "neutral_frontier"
+        ],
+        "biomeKey": "acid_karst",
+        "locationClass": "pressure_dome",
+        "siteId": "causton_alkali_crown",
+        "siteName": "Alkali Crown",
+        "assetCategory": "pressure_dome",
+        "packId": "hpk_causton_pressure_dome_w1_v1",
+        "conceptDependency": {
+          "required": true,
+          "status": "MISSING_BLOCKING",
+          "approvalStatus": "UNREVIEWED",
+          "path": "source-media/concepts/hunyuan/causton/causton_alkali_crown-pressure_dome-concept-v1.png",
+          "sha256": null,
+          "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/causton.prompt.md",
+          "sectionSiteId": "causton_alkali_crown"
+        },
+        "targetEnvelopeMeters": {
+          "x": 64,
+          "y": 24,
+          "z": 64
+        },
+        "source": {
+          "splineDocumentName": "MF_HY3D_CAUSTON_PRESSURE_DOME_V1",
+          "rootName": "MF_CAUSTON_ALKALI_CROWN_PRESSURE_DOME_LOD0_SOURCE",
+          "exportName": "mf_causton_alkali_crown_pressure_dome_source.glb",
+          "sourceDirectory": "modules/space_exploration/assets/source/spline/hunyuan/causton/causton_alkali_crown/pressure_dome"
+        },
+        "status": "BLOCKED_CONCEPT"
+      },
+      {
+        "jobId": "hy3d_w1_pelagos_hero_building",
+        "wave": "W1_PLANET_SEED",
+        "priority": 3,
+        "planetId": "pelagos",
+        "factionContexts": [
+          "uga_coalition"
+        ],
+        "biomeKey": "equatorial_reef_archipelago",
+        "locationClass": "city_colony",
+        "siteId": "pelagos_nacre_reach",
+        "siteName": "Nacre Reach",
+        "assetCategory": "hero_building",
+        "packId": "hpk_pelagos_city_colony_w1_v1",
+        "conceptDependency": {
+          "required": true,
+          "status": "MISSING_BLOCKING",
+          "approvalStatus": "UNREVIEWED",
+          "path": "source-media/concepts/hunyuan/pelagos/pelagos_nacre_reach-hero_building-concept-v1.png",
+          "sha256": null,
+          "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/pelagos.prompt.md",
+          "sectionSiteId": "pelagos_nacre_reach"
+        },
+        "targetEnvelopeMeters": {
+          "x": 72,
+          "y": 36,
+          "z": 56
+        },
+        "source": {
+          "splineDocumentName": "MF_HY3D_PELAGOS_HERO_BUILDING_V1",
+          "rootName": "MF_PELAGOS_NACRE_REACH_HERO_BUILDING_LOD0_SOURCE",
+          "exportName": "mf_pelagos_nacre_reach_hero_building_source.glb",
+          "sourceDirectory": "modules/space_exploration/assets/source/spline/hunyuan/pelagos/pelagos_nacre_reach/hero_building"
+        },
+        "status": "BLOCKED_CONCEPT"
+      },
+      {
+        "jobId": "hy3d_w1_karak_prime_interior_xs_small_map_prop",
+        "wave": "W1_PLANET_SEED",
+        "priority": 3,
+        "planetId": "karak_prime",
+        "factionContexts": [
+          "lost_colony",
+          "brood_hostile"
+        ],
+        "biomeKey": "ash_tundra_colony_galleries",
+        "locationClass": "derelict_megastructure",
+        "siteId": "karak_prime_null_choir",
+        "siteName": "Null Choir Array",
+        "assetCategory": "interior_xs_small_map_prop",
+        "packId": "hpk_karak_prime_derelict_megastructure_w1_v1",
+        "conceptDependency": {
+          "required": true,
+          "status": "MISSING_BLOCKING",
+          "approvalStatus": "UNREVIEWED",
+          "path": "source-media/concepts/hunyuan/karak_prime/karak_prime_null_choir-interior_xs_small_map_prop-concept-v1.png",
+          "sha256": null,
+          "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/karak_prime.prompt.md",
+          "sectionSiteId": "karak_prime_null_choir"
+        },
+        "targetEnvelopeMeters": {
+          "x": 24,
+          "y": 12,
+          "z": 24
+        },
+        "source": {
+          "splineDocumentName": "MF_HY3D_KARAK_PRIME_INTERIOR_XS_SMALL_MAP_PROP_V1",
+          "rootName": "MF_KARAK_PRIME_NULL_CHOIR_INTERIOR_XS_SMALL_MAP_PROP_LOD0_SOURCE",
+          "exportName": "mf_karak_prime_null_choir_interior_xs_small_map_prop_source.glb",
+          "sourceDirectory": "modules/space_exploration/assets/source/spline/hunyuan/karak_prime/karak_prime_null_choir/interior_xs_small_map_prop"
+        },
+        "status": "BLOCKED_CONCEPT"
+      },
+      {
+        "jobId": "hy3d_w1_sablemarch_skyscraper",
+        "wave": "W1_PLANET_SEED",
+        "priority": 4,
+        "planetId": "sablemarch",
+        "factionContexts": [
+          "lost_colony"
+        ],
+        "biomeKey": "obsidian_terminator_dunes",
+        "locationClass": "city_colony",
+        "siteId": "sablemarch_gloam_meridian",
+        "siteName": "Gloam Meridian",
+        "assetCategory": "skyscraper",
+        "packId": "hpk_sablemarch_city_colony_w1_v1",
+        "conceptDependency": {
+          "required": true,
+          "status": "MISSING_BLOCKING",
+          "approvalStatus": "UNREVIEWED",
+          "path": "source-media/concepts/hunyuan/sablemarch/sablemarch_gloam_meridian-skyscraper-concept-v1.png",
+          "sha256": null,
+          "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/sablemarch.prompt.md",
+          "sectionSiteId": "sablemarch_gloam_meridian"
+        },
+        "targetEnvelopeMeters": {
+          "x": 32,
+          "y": 72,
+          "z": 32
+        },
+        "source": {
+          "splineDocumentName": "MF_HY3D_SABLEMARCH_SKYSCRAPER_V1",
+          "rootName": "MF_SABLEMARCH_GLOAM_MERIDIAN_SKYSCRAPER_LOD0_SOURCE",
+          "exportName": "mf_sablemarch_gloam_meridian_skyscraper_source.glb",
+          "sourceDirectory": "modules/space_exploration/assets/source/spline/hunyuan/sablemarch/sablemarch_gloam_meridian/skyscraper"
+        },
+        "status": "BLOCKED_CONCEPT"
+      },
+      {
+        "jobId": "hy3d_w1_dredge_hero_building",
+        "wave": "W1_PLANET_SEED",
+        "priority": 4,
+        "planetId": "dredge",
+        "factionContexts": [
+          "lost_colony"
+        ],
+        "biomeKey": "flooded_strip_mines",
+        "locationClass": "refinery",
+        "siteId": "dredge_titan_maw",
+        "siteName": "Titan Maw Excavation",
+        "assetCategory": "hero_building",
+        "packId": "hpk_dredge_refinery_w1_v1",
+        "conceptDependency": {
+          "required": true,
+          "status": "MISSING_BLOCKING",
+          "approvalStatus": "UNREVIEWED",
+          "path": "source-media/concepts/hunyuan/dredge/dredge_titan_maw-hero_building-concept-v1.png",
+          "sha256": null,
+          "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/dredge.prompt.md",
+          "sectionSiteId": "dredge_titan_maw"
+        },
+        "targetEnvelopeMeters": {
+          "x": 72,
+          "y": 36,
+          "z": 56
+        },
+        "source": {
+          "splineDocumentName": "MF_HY3D_DREDGE_HERO_BUILDING_V1",
+          "rootName": "MF_DREDGE_TITAN_MAW_HERO_BUILDING_LOD0_SOURCE",
+          "exportName": "mf_dredge_titan_maw_hero_building_source.glb",
+          "sourceDirectory": "modules/space_exploration/assets/source/spline/hunyuan/dredge/dredge_titan_maw/hero_building"
+        },
+        "status": "BLOCKED_CONCEPT"
+      },
+      {
+        "jobId": "hy3d_w1_umbra_interior_xs_small_map_prop",
+        "wave": "W1_PLANET_SEED",
+        "priority": 4,
+        "planetId": "umbra",
+        "factionContexts": [
+          "lost_colony"
+        ],
+        "biomeKey": "moonless_cryofog_canyons",
+        "locationClass": "relic_ruin",
+        "siteId": "umbra_eclipse_monastery",
+        "siteName": "Eclipse Monastery",
+        "assetCategory": "interior_xs_small_map_prop",
+        "packId": "hpk_umbra_relic_ruin_w1_v1",
+        "conceptDependency": {
+          "required": true,
+          "status": "MISSING_BLOCKING",
+          "approvalStatus": "UNREVIEWED",
+          "path": "source-media/concepts/hunyuan/umbra/umbra_eclipse_monastery-interior_xs_small_map_prop-concept-v1.png",
+          "sha256": null,
+          "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/umbra.prompt.md",
+          "sectionSiteId": "umbra_eclipse_monastery"
+        },
+        "targetEnvelopeMeters": {
+          "x": 24,
+          "y": 12,
+          "z": 24
+        },
+        "source": {
+          "splineDocumentName": "MF_HY3D_UMBRA_INTERIOR_XS_SMALL_MAP_PROP_V1",
+          "rootName": "MF_UMBRA_ECLIPSE_MONASTERY_INTERIOR_XS_SMALL_MAP_PROP_LOD0_SOURCE",
+          "exportName": "mf_umbra_eclipse_monastery_interior_xs_small_map_prop_source.glb",
+          "sourceDirectory": "modules/space_exploration/assets/source/spline/hunyuan/umbra/umbra_eclipse_monastery/interior_xs_small_map_prop"
+        },
+        "status": "BLOCKED_CONCEPT"
+      },
+      {
+        "jobId": "hy3d_w1_qadesh_skyscraper",
+        "wave": "W1_PLANET_SEED",
+        "priority": 4,
+        "planetId": "qadesh",
+        "factionContexts": [
+          "neutral_frontier"
+        ],
+        "biomeKey": "irrigated_ochre_canyons",
+        "locationClass": "city_colony",
+        "siteId": "qadesh_seven_wells",
+        "siteName": "Seven Wells Enclave",
+        "assetCategory": "skyscraper",
+        "packId": "hpk_qadesh_city_colony_w1_v1",
+        "conceptDependency": {
+          "required": true,
+          "status": "MISSING_BLOCKING",
+          "approvalStatus": "UNREVIEWED",
+          "path": "source-media/concepts/hunyuan/qadesh/qadesh_seven_wells-skyscraper-concept-v1.png",
+          "sha256": null,
+          "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/qadesh.prompt.md",
+          "sectionSiteId": "qadesh_seven_wells"
+        },
+        "targetEnvelopeMeters": {
+          "x": 32,
+          "y": 72,
+          "z": 32
+        },
+        "source": {
+          "splineDocumentName": "MF_HY3D_QADESH_SKYSCRAPER_V1",
+          "rootName": "MF_QADESH_SEVEN_WELLS_SKYSCRAPER_LOD0_SOURCE",
+          "exportName": "mf_qadesh_seven_wells_skyscraper_source.glb",
+          "sourceDirectory": "modules/space_exploration/assets/source/spline/hunyuan/qadesh/qadesh_seven_wells/skyscraper"
+        },
+        "status": "BLOCKED_CONCEPT"
+      },
+      {
+        "jobId": "hy3d_w1_helion_world_detail",
+        "wave": "W1_PLANET_SEED",
+        "priority": 4,
+        "planetId": "helion",
+        "factionContexts": [
+          "neutral_frontier"
+        ],
+        "biomeKey": "irradiated_mirror_steppe",
+        "locationClass": "derelict_megastructure",
+        "siteId": "helion_dyson_petal",
+        "siteName": "Broken Dyson Petal",
+        "assetCategory": "world_detail",
+        "packId": "hpk_helion_derelict_megastructure_w1_v1",
+        "conceptDependency": {
+          "required": true,
+          "status": "MISSING_BLOCKING",
+          "approvalStatus": "UNREVIEWED",
+          "path": "source-media/concepts/hunyuan/helion/helion_dyson_petal-world_detail-concept-v1.png",
+          "sha256": null,
+          "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/helion.prompt.md",
+          "sectionSiteId": "helion_dyson_petal"
+        },
+        "targetEnvelopeMeters": {
+          "x": 24,
+          "y": 18,
+          "z": 24
+        },
+        "source": {
+          "splineDocumentName": "MF_HY3D_HELION_WORLD_DETAIL_V1",
+          "rootName": "MF_HELION_DYSON_PETAL_WORLD_DETAIL_LOD0_SOURCE",
+          "exportName": "mf_helion_dyson_petal_world_detail_source.glb",
+          "sourceDirectory": "modules/space_exploration/assets/source/spline/hunyuan/helion/helion_dyson_petal/world_detail"
+        },
+        "status": "BLOCKED_CONCEPT"
+      },
+      {
+        "jobId": "hy3d_w1_gravem_hero_building",
+        "wave": "W1_PLANET_SEED",
+        "priority": 4,
+        "planetId": "gravem",
+        "factionContexts": [
+          "neutral_frontier"
+        ],
+        "biomeKey": "compressed_high_gravity_plateau",
+        "locationClass": "military_base",
+        "siteId": "gravem_deepwall",
+        "siteName": "Deepwall Citadel",
+        "assetCategory": "hero_building",
+        "packId": "hpk_gravem_military_base_w1_v1",
+        "conceptDependency": {
+          "required": true,
+          "status": "MISSING_BLOCKING",
+          "approvalStatus": "UNREVIEWED",
+          "path": "source-media/concepts/hunyuan/gravem/gravem_deepwall-hero_building-concept-v1.png",
+          "sha256": null,
+          "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/gravem.prompt.md",
+          "sectionSiteId": "gravem_deepwall"
+        },
+        "targetEnvelopeMeters": {
+          "x": 72,
+          "y": 36,
+          "z": 56
+        },
+        "source": {
+          "splineDocumentName": "MF_HY3D_GRAVEM_HERO_BUILDING_V1",
+          "rootName": "MF_GRAVEM_DEEPWALL_HERO_BUILDING_LOD0_SOURCE",
+          "exportName": "mf_gravem_deepwall_hero_building_source.glb",
+          "sourceDirectory": "modules/space_exploration/assets/source/spline/hunyuan/gravem/gravem_deepwall/hero_building"
+        },
+        "status": "BLOCKED_CONCEPT"
+      },
+      {
+        "jobId": "hy3d_w1_asterion_skyscraper",
+        "wave": "W1_PLANET_SEED",
+        "priority": 4,
+        "planetId": "asterion",
+        "factionContexts": [
+          "neutral_frontier"
+        ],
+        "biomeKey": "crystalline_alpine_ringfall",
+        "locationClass": "city_colony",
+        "siteId": "asterion_cartographers_crown",
+        "siteName": "Cartographers Crown",
+        "assetCategory": "skyscraper",
+        "packId": "hpk_asterion_city_colony_w1_v1",
+        "conceptDependency": {
+          "required": true,
+          "status": "MISSING_BLOCKING",
+          "approvalStatus": "UNREVIEWED",
+          "path": "source-media/concepts/hunyuan/asterion/asterion_cartographers_crown-skyscraper-concept-v1.png",
+          "sha256": null,
+          "promptGuide": "modules/space_exploration/assets/source/spline/prompt-guides/planet-expansion-32/asterion.prompt.md",
+          "sectionSiteId": "asterion_cartographers_crown"
+        },
+        "targetEnvelopeMeters": {
+          "x": 32,
+          "y": 72,
+          "z": 32
+        },
+        "source": {
+          "splineDocumentName": "MF_HY3D_ASTERION_SKYSCRAPER_V1",
+          "rootName": "MF_ASTERION_CARTOGRAPHERS_CROWN_SKYSCRAPER_LOD0_SOURCE",
+          "exportName": "mf_asterion_cartographers_crown_skyscraper_source.glb",
+          "sourceDirectory": "modules/space_exploration/assets/source/spline/hunyuan/asterion/asterion_cartographers_crown/skyscraper"
+        },
+        "status": "BLOCKED_CONCEPT"
+      }
+    ]
+  },
+  "expansionRules": [
+    {
+      "ruleId": "expand_verified_planet_categories",
+      "trigger": "a first-wave job reaches SOURCE_VERIFIED",
+      "action": "enqueue the same planet across its five missing asset categories using its indexed site prompts",
+      "batchLimit": 6,
+      "constraints": [
+        "retain the planet biomeKey and factionContexts",
+        "require a separately approved concept for every new Hunyuan source",
+        "never count palette swaps as a new model"
+      ]
+    },
+    {
+      "ruleId": "expand_verified_location_classes",
+      "trigger": "two category sources for a planet reach SOURCE_VERIFIED",
+      "action": "enqueue one seed for each uncovered location class before producing cosmetic variants",
+      "batchLimit": 8,
+      "constraints": [
+        "use the exact indexed siteId and prompt section",
+        "preserve combined-arms gates routes and objective courts",
+        "do not clone another planet layout"
+      ]
+    },
+    {
+      "ruleId": "assemble_modular_city_kit",
+      "trigger": "a hero_building or skyscraper source reaches SOURCE_VERIFIED",
+      "action": "derive a coherent socket-tested kit of podium roads corners junctions tunnels endcaps and damage states",
+      "batchLimit": 8,
+      "constraints": [
+        "snap exterior modules to the 4 m and 16 m grids",
+        "roads and towers must tile into believable districts",
+        "derived runtime meshes retain the Hunyuan source and concept provenance"
+      ]
+    },
+    {
+      "ruleId": "assemble_xs_small_interior",
+      "trigger": "an interior_xs_small_map_prop source reaches SOURCE_VERIFIED",
+      "action": "author companion props and assemble a minimum 96 by 96 meter combined-arms interior test layout",
+      "batchLimit": 8,
+      "constraints": [
+        "retain an 18 by 8 meter small-vehicle gate",
+        "support soldiers small vehicles and mechs rather than soldier-only corridors",
+        "publish collision cover LOS roof-cutaway and portal proxies"
+      ]
+    },
+    {
+      "ruleId": "brood_overlay_boundary",
+      "trigger": "a planet includes brood_hostile faction context",
+      "action": "enqueue hostile non-humanoid invasion contact and consumed-structure sources as removable stages",
+      "batchLimit": 4,
+      "constraints": [
+        "Brood is never a playable humanoid faction",
+        "keep clean settlement geometry as a separate source",
+        "adapt infestation contact to local geology and ecology"
+      ]
+    },
+    {
+      "ruleId": "source_to_runtime_admission",
+      "trigger": "a source export and its pack companions pass source verification",
+      "action": "create a separate runtime-candidate task without changing this source queue status",
+      "batchLimit": 4,
+      "constraints": [
+        "require matched phone-first captures and hashes",
+        "require triangle texture collision navigation and destruction budgets",
+        "close the finished saved and exported Spline tab before opening the next source document"
+      ]
+    }
+  ]
+}

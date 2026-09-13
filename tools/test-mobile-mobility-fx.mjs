@@ -10,20 +10,31 @@ const speed=name=>{
   need(m,`missing ${name} speed`);return +m[1];
 };
 
-need(speed('Striker')===38,'Striker infantry mobility regressed');
-need(speed('Pyro')===36,'Pyro infantry mobility regressed');
-need(speed('Rhino')===27,'Rhino tank mobility regressed');
-need(speed('Goliath')===22,'Goliath heavy mobility regressed');
+/* These are the current measured balance speeds. The old 38/36/27/22 gate
+   predated the mobile combat rebalance and would silently double movement if
+   "fixed" in runtime just to satisfy this source check. */
+need(speed('Striker')===21,'Striker infantry mobility drifted from current balance');
+need(speed('Pyro')===18,'Pyro infantry mobility drifted from current balance');
+need(speed('Rhino')===13,'Rhino tank mobility drifted from current balance');
+need(speed('Goliath')===10,'Goliath heavy mobility drifted from current balance');
 need(/const ROAD_SPD=1\.12;/.test(gl),'road acceleration exceeds mobile readability target');
 need(/m===3\?1\.18/.test(sim),'assault-move acceleration exceeds target');
 for(const marker of ['10 movement dust','addParticle(10','perfScale>0.18'])
   need(sim.includes(marker),`movement dust path missing ${marker}`);
 for(const marker of ['const movementFx=ftype[i]===10','ty===10','movementFx&&((i+tick)&3)'])
   need(render.includes(marker),`movement dust render path missing ${marker}`);
-need(render.includes("else if(unitKit==='horde'"),'Brood fallback is not scoped to the rendered unit');
-need(!render.includes("else if(AI.fac==='horde'"),'enemy faction still changes the player Kestrel model');
+need(/const unitKit=uteam\[i\]===0\?ownKit:uteam\[i\]===2\?'horde':/.test(render),
+  'Brood fallback is not scoped to the rendered unit');
+/* The enemy kit is loop-invariant and was correctly hoisted out of the per-unit
+   loop, so the inline ternary this used to match is gone. Assert the two halves
+   of the property instead: it is resolved from the AI's OWN faction, and team 1
+   is what uses it. */
+need(/const enemyKit=\([^)]*AI\.fac[\s\S]{0,120}FACTIONS\[AI\.fac\]\.kit:null/.test(render),
+  'enemy unit kit is not resolved from its own faction');
+need(/uteam\[i\]===1\?enemyKit:/.test(render),
+  'enemy units no longer draw from the resolved enemy kit');
 
 const infantryRoadMarch=speed('Striker')*1.12*1.18;
 const tankRoadMarch=speed('Rhino')*1.12*1.18;
-need(infantryRoadMarch<51&&tankRoadMarch<36,'stacked mobility exceeds cinematic readability cap');
+need(infantryRoadMarch<30&&tankRoadMarch<20,'stacked mobility exceeds current mobile readability cap');
 console.log(`Mobile mobility QA passed: infantry ${infantryRoadMarch.toFixed(1)}, tank ${tankRoadMarch.toFixed(1)} units/s on road assault-move; movement dust retained.`);

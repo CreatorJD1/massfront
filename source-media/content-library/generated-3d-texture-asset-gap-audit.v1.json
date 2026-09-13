@@ -1,0 +1,909 @@
+{
+  "schemaVersion": 1,
+  "reportId": "massfront-generated-3d-texture-asset-gap-audit-v1",
+  "auditDate": "2026-08-26",
+  "status": "SOURCE_ONLY_INVENTORY",
+  "runtimeMutated": false,
+  "repository": {
+    "head": "c4090cc5785e6c30b342f58beca52d34585e9bfc",
+    "branch": "cursor/strip-mass-node-bloom",
+    "dirty": true,
+    "preAuditPorcelainEntryCount": 2545,
+    "note": "The shared dirty worktree was preserved. This audit owns only this JSON report and its Markdown companion."
+  },
+  "scope": {
+    "included": [
+      "source-media/content-library",
+      "source-media/concepts/hunyuan",
+      "modules/space_exploration/assets/source/spline/hunyuan",
+      "modules/space_exploration/assets/source/spline/ground-sites",
+      "modules/space_exploration/assets/source/spline/processed",
+      "modules/space_exploration/assets/source/spline/characters",
+      "modules/space_exploration/assets/source/uga/interior-library",
+      "modules/space_exploration/assets/textures/planets",
+      "modules/space_exploration/assets/textures/uga",
+      "modules/space_exploration/assets/models",
+      "modules/space_exploration/dist/exploration-content-manifest-v1.json"
+    ],
+    "excluded": [
+      "modules/space_exploration/tmp",
+      "modules/space_exploration/_archive",
+      "derived cloud-deploy copies",
+      "personnel portrait images except where a character-model relationship is relevant",
+      "base-game runtime source mutation"
+    ]
+  },
+  "authoritativeSources": [
+    "source-media/content-library/hunyuan-spline-generation-ledger.v1.json",
+    "source-media/content-library/hunyuan-asset-generation-queue.v1.json",
+    "source-media/content-library/hunyuan-city-outpost-layout-generation-queue.v1.json",
+    "source-media/content-library/model-pack-catalog.v1.json",
+    "source-media/content-library/interior-tactical-model-packs.v1.json",
+    "source-media/content-library/texture-theme-catalog.v1.json",
+    "source-media/content-library/city-outpost-modular-layout-blueprints.v1.json",
+    "modules/space_exploration/assets/source/spline/ground-sites/ground-site-authoring-manifest.json",
+    "modules/space_exploration/assets/source/uga/interior-library/nexus-vii-material-decal-manifest.json",
+    "modules/space_exploration/dist/exploration-content-manifest-v1.json"
+  ],
+  "statusDefinitions": {
+    "RUNTIME_EXISTING": "Present in a current runtime asset directory or runtime content manifest, but not necessarily visually approved by this source-only audit.",
+    "VERIFIED_SOURCE_ONLY": "Hash-verified source candidate that is not runtime-ready.",
+    "RECLASSIFIED_SOURCE_ONLY": "Hash-verified source candidate retained under a different role because the generated result failed its intended role.",
+    "PROCESSED_BLOCKED": "Derived LOD/collision outputs exist, but human review explicitly blocks runtime promotion.",
+    "REJECTED_EVIDENCE_ONLY": "Retained only as provenance or failure evidence and forbidden from registration.",
+    "PLANNED_ONLY": "Catalog, prompt, brief, or contract exists, but the corresponding production asset does not.",
+    "DATA_ONLY": "Gameplay/site data exists without dedicated tactical geometry, navigation, collision, materials, or runtime capture.",
+    "UNKNOWN": "Required evidence is absent or too weak to support a pass claim."
+  },
+  "summary": {
+    "glbFilesInspected": 30,
+    "uniqueGlbHashes": 27,
+    "exactDuplicateGlbFileInstances": 3,
+    "exactDuplicateHashGroups": 3,
+    "glbBytesInspected": 621925532,
+    "runtimeModelFilesPresent": 4,
+    "runtimeManifestAdmittedModelFiles": 3,
+    "hunyuanCanonicalLedgerAssets": 7,
+    "hunyuanAcceptedAsIntendedSourceCandidates": 3,
+    "hunyuanReclassifiedSourceCandidates": 3,
+    "hunyuanRejectedCandidates": 1,
+    "hunyuanRuntimeReadyAssets": 0,
+    "hunyuanRuntimeEvidenceUnknownAssets": 7,
+    "processedCandidateKits": 3,
+    "processedRuntimeApprovedKits": 0,
+    "producedUgaMaterialFamilies1024": 13,
+    "producedUgaMaterialProductionMaps1024": 91,
+    "producedPlanetSurfaceFamilies1024x512": 6,
+    "producedPlanetSurfaceProductionMaps1024x512": 54,
+    "plannedTextureThemePacks2048": 30,
+    "plannedNexusInteriorMaterialAndDecalFamilies2048": 34,
+    "planetPromptProfiles": 32,
+    "planetLocationPromptCount": 256,
+    "planetTotalPromptCount": 288,
+    "interiorTacticalPackDefinitions": 6,
+    "interiorTacticalMemberDefinitions": 90,
+    "interiorTacticalMapTemplates": 4,
+    "interiorTacticalSourceModels": 0,
+    "galacticGroundSiteSeeds": 9,
+    "galacticGroundSitesWithAnyDedicatedModelSource": 1,
+    "galacticGroundSitesWithRuntimeTacticalGeometry": 0,
+    "baseCanonPlanets": 4,
+    "baseCanonRegions": 16,
+    "baseLocationPresetDefinitions": 32,
+    "baseLocationPresetRuntimeReady": 0
+  },
+  "canonicalFamilies": [
+    {
+      "familyId": "concept_direction_library",
+      "kind": "concept-art",
+      "status": "SOURCE_REFERENCE",
+      "counts": {
+        "cataloguedConcepts": 20,
+        "approved": 18,
+        "rejected": 2,
+        "plannedBriefs": 8,
+        "hunyuanConceptPngs": 8,
+        "moduleConceptPngs": 12
+      },
+      "runtimeReadyCount": 0,
+      "applicability": {
+        "planets": ["aelos", "elysion", "nordhall", "vespera", "karak"],
+        "regions": ["caldris", "cumulus_conservatory", "cliff_arcology_steps", "megaforge_refinery", "meridian_colony", "orison_derelict", "nexus_vii"],
+        "factions": ["uga", "nova", "dominion", "syndicate", "brood_hostile"]
+      },
+      "notes": "Concept images are art-direction references only. Their pixels are not production textures and an approved concept does not prove geometry."
+    },
+    {
+      "familyId": "runtime_ship_and_contact_models",
+      "kind": "3d-model",
+      "status": "RUNTIME_EXISTING",
+      "counts": {
+        "filesPresent": 4,
+        "manifestAdmitted": 3,
+        "manifestExcludedOrUnreconciled": 1
+      },
+      "runtimeReadyCount": 3,
+      "paths": [
+        "modules/space_exploration/assets/models/massfront-showcase-contacts.glb",
+        "modules/space_exploration/assets/models/nexus-vii-civilization-ship.glb",
+        "modules/space_exploration/assets/models/uga-civilization-ark.glb",
+        "modules/space_exploration/assets/models/uga-command-cutaway.glb"
+      ],
+      "applicability": {
+        "planets": ["galactic_space"],
+        "regions": ["nexus_vii", "exploration_contacts"],
+        "factions": ["uga"]
+      },
+      "unverified": [
+        "uga-civilization-ark.glb is present but absent from the current exploration content manifest",
+        "the source-only audit did not reproduce visual, LOD, or mobile performance approval for these runtime files",
+        "uga-command-cutaway.glb is one 81,372,160-byte scene rather than a reusable per-district kit"
+      ]
+    },
+    {
+      "familyId": "hunyuan_architecture_source_masters",
+      "kind": "3d-model",
+      "status": "VERIFIED_SOURCE_ONLY",
+      "counts": {
+        "canonicalAssets": 7,
+        "acceptedAsIntended": 3,
+        "reclassified": 3,
+        "rejected": 1,
+        "runtimeReady": 0,
+        "fileInstancesIncludingRawAndProcessingMirrors": 12
+      },
+      "runtimeReadyCount": 0,
+      "applicability": {
+        "planets": ["aelos", "elysion", "vespera", "multi_planet"],
+        "regions": ["aelos_caldris", "elysion_cumulus_conservatory", "vespera_refinery_megaforge_refinery", "city_outpost_layout_kits"],
+        "factions": ["uga", "nova", "dominion", "syndicate", "brood_hostile"]
+      },
+      "blockers": [
+        "all seven entries have UNKNOWN runtime evidence",
+        "all require source-matched mobile captures and package/performance evidence",
+        "generated single-material meshes need semantic material separation",
+        "sources are generally 373k-498k triangles and need approved retopology/LOD/collision work"
+      ]
+    },
+    {
+      "familyId": "processed_hunyuan_model_kits",
+      "kind": "3d-model-derivatives",
+      "status": "PROCESSED_BLOCKED",
+      "counts": {
+        "canonicalKits": 3,
+        "lodFiles": 9,
+        "collisionFiles": 3,
+        "runtimeApproved": 0
+      },
+      "assetIds": [
+        "gsite_aelos_caldris_control_tower_tall_v1",
+        "gsite_aelos_caldris_inspection_gantry_v1",
+        "mf_elysion_cumulus_conservatory_pressure_dome_v1"
+      ],
+      "applicability": {
+        "planets": ["aelos", "elysion"],
+        "regions": ["caldris", "cumulus_conservatory"],
+        "factions": ["uga", "nova", "dominion", "syndicate"]
+      },
+      "blockers": [
+        "control tower: degenerate geometry, underexposed evidence, and no mobile evidence",
+        "inspection gantry: 4K embedded textures, invalid aperture-filling convex collision, incomplete Spline identity, and no mobile evidence",
+        "pressure dome: closed required portal, source degenerates, invalid whole-dome convex collision, and no mobile evidence"
+      ]
+    },
+    {
+      "familyId": "aelos_caldris_modular_city_pack",
+      "kind": "3d-model-pack",
+      "status": "SOURCE_CANDIDATE",
+      "counts": {
+        "catalogMemberDefinitions": 16,
+        "catalogMembersWithDirectSourcePath": 1,
+        "additionalGeneratedLedgerCandidates": 2,
+        "runtimeReady": 0
+      },
+      "applicability": {
+        "planets": ["aelos"],
+        "regions": ["aelos_caldris", "aelos_north", "aelos_basin", "aelos_coast", "aelos_ridge"],
+        "factions": ["uga_civic", "nova", "dominion", "syndicate"]
+      },
+      "blockers": [
+        "roads, corners, junctions, pressure corridors, endcaps, foundations, and damage states remain concept/planned only",
+        "the model-pack catalog still labels generated control-tower and gantry members as CONCEPT_READY",
+        "no member is runtime-ready"
+      ]
+    },
+    {
+      "familyId": "city_outpost_layout_kit",
+      "kind": "3d-model-pack",
+      "status": "SOURCE_AUTHORING_IN_PROGRESS",
+      "counts": {
+        "queueJobs": 13,
+        "completedSourceCandidatesInFamily": 2,
+        "acceptedAsIntended": 1,
+        "reclassified": 1,
+        "runtimeReady": 0
+      },
+      "assetIds": [
+        "mf_city_outpost_gatehouse_command_tower",
+        "mf_city_outpost_operations_block"
+      ],
+      "applicability": {
+        "planets": ["aelos", "pyraeth", "nordhall", "vespera", "multi_planet_frontier"],
+        "regions": ["all_16_base_regions_with_distinct_foundation_and_material_bindings"],
+        "factions": ["uga", "nova", "dominion", "syndicate", "lost_civilization_with_brood_overlay"]
+      },
+      "blockers": [
+        "the gatehouse does not satisfy the true broad command-hub job",
+        "the operations block source is complete but the queue still says GENERATING",
+        "no primary-road topology family exists as geometry",
+        "no socket assembly, collision/navigation, semantic material, LOD, or mobile runtime approval exists"
+      ]
+    },
+    {
+      "familyId": "interior_tactical_xs_small_packs",
+      "kind": "3d-model-pack",
+      "status": "PLANNED_ONLY",
+      "counts": {
+        "packDefinitions": 6,
+        "memberDefinitions": 90,
+        "membersPerPack": 15,
+        "mapTemplates": 4,
+        "sourceModels": 0,
+        "runtimeReady": 0
+      },
+      "mapTemplateIds": [
+        "interior_xs_breach_40x40",
+        "interior_xs_linear_48x32",
+        "interior_small_loop_64x64",
+        "interior_small_multilevel_80x64"
+      ],
+      "applicability": {
+        "planets": ["nexus_vii", "aelos", "pyraeth", "nordhall", "veyra", "karak"],
+        "regions": ["strike_logistics", "caldris_customs", "pyraeth_foundry", "nordhall_reactor_vault", "orison_derelict", "meridian_breach"],
+        "factions": ["uga", "nova", "dominion", "syndicate", "neutral_ancient", "brood_hostile"]
+      },
+      "notes": "The contracts support infantry, small vehicles, and mechs. They are not soldier-only maps, but no member currently has a source GLB."
+    },
+    {
+      "familyId": "uga_anime_human_source",
+      "kind": "character-3d-model",
+      "status": "REJECTED_EVIDENCE_ONLY",
+      "counts": {
+        "sourceModels": 1,
+        "triangles": 375004,
+        "rigs": 0,
+        "animationClips": 0,
+        "runtimeReady": 0
+      },
+      "applicability": {
+        "planets": ["nexus_vii"],
+        "regions": ["ship_cutscenes", "ship_interior", "commander_portrait_pipeline"],
+        "factions": ["uga"]
+      },
+      "blockers": [
+        "stretched and sliced topology",
+        "clean rebuild required rather than automatic decimation",
+        "retopology, rig, animations, LODs, PBR/cel materials, and mobile evidence are absent"
+      ]
+    },
+    {
+      "familyId": "nexus_vii_existing_room_materials",
+      "kind": "texture-material-pack",
+      "status": "PRODUCED_UNRECONCILED",
+      "counts": {
+        "materialFamilies": 13,
+        "productionChannelImages1024x1024": 91,
+        "sourceMasterImages1536x1536": 11,
+        "previewImages1254x1254": 11,
+        "listedInCurrentExplorationContentManifest": 0
+      },
+      "materialFamilies": [
+        "uga-city-architecture",
+        "uga-civic-medical",
+        "uga-command-navigation",
+        "uga-deck-floor",
+        "uga-diplomatic",
+        "uga-hull",
+        "uga-industrial",
+        "uga-interior",
+        "uga-interior-transit",
+        "uga-operations",
+        "uga-pressure-wall",
+        "uga-science",
+        "uga-window-glazing"
+      ],
+      "applicability": {
+        "planets": ["nexus_vii"],
+        "regions": ["all_11_ship_districts"],
+        "factions": ["uga", "resident_nova", "resident_dominion", "resident_syndicate"]
+      },
+      "unverified": [
+        "production size is 1024 rather than the newer 2048 authoring contract",
+        "the current exploration content manifest lists no assets/textures/uga files",
+        "district-specific binding and current mobile visual approval were not proven by this inventory"
+      ]
+    },
+    {
+      "familyId": "nexus_vii_next_generation_material_decal_contract",
+      "kind": "texture-material-pack",
+      "status": "PLANNED_ONLY",
+      "counts": {
+        "physicalBaseFamilies2048": 18,
+        "trimSheets2048": 8,
+        "decalAtlases2048": 8,
+        "districtBindings": 11,
+        "produced": 0
+      },
+      "applicability": {
+        "planets": ["nexus_vii"],
+        "regions": ["deck_a", "deck_b", "deck_c", "all_11_ship_districts"],
+        "factions": ["uga", "resident_nova", "resident_dominion", "resident_syndicate"]
+      },
+      "notes": "This contract correctly separates floors, pressure walls, transit glazing, machinery, civic composites, facility trims, and decals from exterior hull material, but every declared source remains planned_unproduced."
+    },
+    {
+      "familyId": "exploration_planet_surface_textures",
+      "kind": "planet-texture-pack",
+      "status": "RUNTIME_EXISTING",
+      "counts": {
+        "planetFamilies": 6,
+        "productionMaps1024x512": 54,
+        "sourceMasters1774x887": 6,
+        "runtimeManifestMaps": 36
+      },
+      "families": [
+        {"body": "caldris", "systemOrPlanet": "aelos", "factions": ["uga", "nova"]},
+        {"body": "ithara", "systemOrPlanet": "aelos", "factions": ["uga", "nova"]},
+        {"body": "orison", "systemOrPlanet": "veyra", "factions": ["neutral_ancient", "nova", "syndicate"]},
+        {"body": "nacre", "systemOrPlanet": "veyra", "factions": ["neutral_frontier", "uga"]},
+        {"body": "meridian", "systemOrPlanet": "karak", "factions": ["lost_colony", "uga", "brood_hostile"]},
+        {"body": "tethys", "systemOrPlanet": "karak", "factions": ["lost_colony", "brood_hostile"]}
+      ],
+      "unverified": [
+        "these are globe-rendering textures, not ground-map tileable material packs",
+        "they do not cover the 32-planet prompt library",
+        "the source masters are 1774x887 and production maps are 1024x512, not 2K square"
+      ]
+    },
+    {
+      "familyId": "global_2k_texture_theme_catalog",
+      "kind": "texture-material-plan",
+      "status": "PLANNED_ONLY",
+      "counts": {
+        "packs": 30,
+        "mapDomainPacks": 20,
+        "cityDomainPacks": 5,
+        "shipSectionDomainPacks": 5,
+        "approvedEvidence": 0
+      },
+      "applicability": {
+        "planets": ["aelos", "pyraeth", "nordhall", "vespera"],
+        "regions": ["all_16_base_regions"],
+        "factions": ["nova", "dominion", "syndicate", "brood_hostile", "uga"]
+      },
+      "notes": "Every pack is declared seamless/tileable 2048x2048 with mobile seam proof requirements, but all 30 remain PLANNED and have no approved evidence."
+    },
+    {
+      "familyId": "planet_32_prompt_library",
+      "kind": "authoring-prompt-library",
+      "status": "PLANNED_ONLY",
+      "counts": {
+        "planetProfiles": 32,
+        "existingCanonPlanets": 4,
+        "expansionProposalPlanets": 28,
+        "orbitalPrompts": 32,
+        "locationPrompts": 256,
+        "totalPrompts": 288,
+        "firstWaveJobs": 32,
+        "firstWaveBlockedConcept": 29,
+        "firstWaveMarkedReadyForHunyuan": 3
+      },
+      "applicability": {
+        "locationClasses": ["city_colony", "outpost", "military_base", "refinery", "relic_ruin", "spaceport", "pressure_dome", "derelict_megastructure"],
+        "factions": ["nova_frontline", "crimson_dominion", "syndicate", "uga_coalition", "neutral_frontier", "lost_colony", "brood_hostile"]
+      },
+      "notes": "The queue is not current: Elysion and Vespera jobs are still marked READY_FOR_HUNYUAN even though both were attempted and registered in the generation ledger."
+    },
+    {
+      "familyId": "galactic_ground_site_seed_library",
+      "kind": "ground-site-authoring",
+      "status": "DATA_ONLY",
+      "counts": {
+        "sites": 9,
+        "locationPresets": 14,
+        "sitesWithAnyModelSource": 1,
+        "sitesWithDedicatedTextureSource": 0,
+        "sitesWithRuntimeGeometry": 0
+      },
+      "siteIds": ["aelos_caldris", "aelos_heliograph", "aelos_freeport", "veyra_orison", "veyra_lens", "veyra_ossuary", "karak_meridian", "karak_spine", "karak_hive"],
+      "applicability": {
+        "planets": ["aelos", "veyra", "karak"],
+        "factions": ["uga", "nova", "dominion", "syndicate", "brood_hostile"]
+      },
+      "notes": "Only Caldris has any dedicated source GLB. All nine runtimeStatus records keep tacticalGeometry, navigation, collision, dedicatedMaterials, and runtimeCapture false."
+    },
+    {
+      "familyId": "base_planet_region_location_presets",
+      "kind": "world-kit-plan",
+      "status": "PLANNED_ONLY",
+      "counts": {
+        "planets": 4,
+        "regions": 16,
+        "locationClasses": 8,
+        "presetDefinitions": 32,
+        "plannedIdentityModels": 64,
+        "plannedPbrFamilies2048": 32,
+        "plannedDecalEntries": 96,
+        "runtimeReady": 0
+      },
+      "applicability": {
+        "planets": ["aelos", "pyraeth", "nordhall", "vespera"],
+        "regions": ["aelos_north", "aelos_basin", "aelos_coast", "aelos_ridge", "pyraeth_crater", "pyraeth_belt", "pyraeth_caldera", "pyraeth_flats", "nordhall_isles", "nordhall_cliff", "nordhall_frost", "nordhall_peaks", "vespera_spire", "vespera_dunes", "vespera_refinery", "vespera_plateau"],
+        "factions": ["nova", "crimson_dominion", "syndicate", "lost_civilization", "brood_hostile"]
+      }
+    }
+  ],
+  "generatedAssets": [
+    {
+      "assetId": "gsite_aelos_caldris_control_tower_tall",
+      "status": "VERIFIED_SOURCE_ONLY",
+      "intendedCategory": "skyscraper",
+      "acceptedCategory": "skyscraper",
+      "triangles": 373680,
+      "planet": "aelos",
+      "region": "aelos_caldris",
+      "factions": ["uga_civic", "nova", "dominion", "syndicate"],
+      "sourcePath": "modules/space_exploration/assets/source/spline/ground-sites/aelos_caldris/hunyuan/gsite-aelos-caldris-control-tower-tall-source-v1.glb",
+      "runtimeReady": false
+    },
+    {
+      "assetId": "gsite_aelos_caldris_customs_depot",
+      "status": "RECLASSIFIED_SOURCE_ONLY",
+      "intendedCategory": "structural_module",
+      "acceptedCategory": "world_detail",
+      "triangles": 374034,
+      "planet": "aelos",
+      "region": "aelos_caldris",
+      "factions": ["uga_civic", "nova", "dominion", "syndicate"],
+      "sourcePath": "modules/space_exploration/assets/source/spline/ground-sites/aelos_caldris/hunyuan/gsite-aelos-caldris-customs-depot-source-v1.glb",
+      "runtimeReady": false,
+      "reason": "Required vehicle portals were closed."
+    },
+    {
+      "assetId": "gsite_aelos_caldris_inspection_gantry",
+      "status": "VERIFIED_SOURCE_ONLY",
+      "intendedCategory": "functional_machine",
+      "acceptedCategory": "functional_machine",
+      "triangles": 498292,
+      "planet": "aelos",
+      "region": "aelos_caldris",
+      "factions": ["uga_civic", "nova", "dominion", "syndicate"],
+      "sourcePath": "modules/space_exploration/assets/source/spline/ground-sites/aelos_caldris/hunyuan/gsite-aelos-caldris-inspection-gantry-source-v1.glb",
+      "runtimeReady": false
+    },
+    {
+      "assetId": "mf_elysion_cumulus_conservatory_pressure_dome",
+      "status": "RECLASSIFIED_SOURCE_ONLY",
+      "intendedCategory": "pressure_dome",
+      "acceptedCategory": "world_detail",
+      "triangles": 374876,
+      "planet": "elysion",
+      "region": "elysion_cumulus_conservatory",
+      "factions": ["uga_coalition"],
+      "sourcePath": "modules/space_exploration/assets/source/spline/hunyuan/elysion/elysion_cumulus_conservatory/pressure_dome/mf_elysion_cumulus_conservatory_pressure_dome_source.glb",
+      "runtimeReady": false,
+      "reason": "The required traversable service portal appears closed."
+    },
+    {
+      "assetId": "mf_vespera_megaforge_brutish_structure_rejected",
+      "status": "REJECTED_EVIDENCE_ONLY",
+      "intendedCategory": "brutish_enemy_structure",
+      "acceptedCategory": null,
+      "triangles": 373558,
+      "planet": "vespera",
+      "region": "vespera_refinery_megaforge_refinery",
+      "factions": ["brood_hostile"],
+      "sourcePath": "modules/space_exploration/assets/source/spline/hunyuan/vespera/vespera_refinery_megaforge_refinery/rejected-candidates/mf_vespera_megaforge_brutish_structure_rejected_source_v1.glb",
+      "runtimeReady": false,
+      "reason": "Creature-like face, limbs, and tentacles do not read as industrial infestation architecture."
+    },
+    {
+      "assetId": "mf_city_outpost_gatehouse_command_tower",
+      "status": "RECLASSIFIED_SOURCE_ONLY",
+      "intendedCategory": "civic_command_hub",
+      "acceptedCategory": "fortified_outpost_gatehouse",
+      "triangles": 373060,
+      "planet": "multi_planet",
+      "region": "city_outpost_layout_kits",
+      "factions": ["uga", "nova", "dominion", "syndicate"],
+      "sourcePath": "modules/space_exploration/assets/source/spline/hunyuan/city_outpost_layout_kits/outpost_gatehouse_command_tower/mf_city_outpost_gatehouse_command_tower_source.glb",
+      "runtimeReady": false,
+      "reason": "The silhouette is a tall gatehouse/command tower, not the requested broad command hub."
+    },
+    {
+      "assetId": "mf_city_outpost_operations_block",
+      "status": "VERIFIED_SOURCE_ONLY",
+      "intendedCategory": "outpost_core",
+      "acceptedCategory": "outpost_core",
+      "triangles": 374298,
+      "planet": "multi_planet",
+      "region": "city_outpost_layout_kits",
+      "factions": ["uga", "nova", "dominion", "syndicate"],
+      "sourcePath": "modules/space_exploration/assets/source/spline/hunyuan/city_outpost_layout_kits/outpost_operations_block/mf_city_outpost_operations_block_source.glb",
+      "runtimeReady": false,
+      "notes": "Normalized to 32x20x32 m. Socket, collision, navigation, semantic material, LOD, and mobile evidence gates remain open."
+    }
+  ],
+  "exactDuplicateGroups": [
+    {
+      "sha256": "332ef639646021e499958aa6692634f31af918f12c12d371aab17bf6fe611ff0",
+      "canonicalAssetId": "gsite_aelos_caldris_control_tower_tall",
+      "classification": "EXPECTED_PROCESSING_SOURCE_MIRROR",
+      "paths": [
+        "modules/space_exploration/assets/source/spline/ground-sites/aelos_caldris/hunyuan/gsite-aelos-caldris-control-tower-tall-source-v1.glb",
+        "modules/space_exploration/assets/source/spline/ground-sites/aelos_caldris/processed/control-tower-tall-v1/source/gsite-aelos-caldris-control-tower-tall-source-v1.glb"
+      ]
+    },
+    {
+      "sha256": "8514b00845b09bf764ece0ede56c4c29408360b905f79af109b8b1476ceb8f54",
+      "canonicalAssetId": "mf_elysion_cumulus_conservatory_pressure_dome",
+      "classification": "EXPECTED_PROCESSING_SOURCE_MIRROR",
+      "paths": [
+        "modules/space_exploration/assets/source/spline/hunyuan/elysion/elysion_cumulus_conservatory/pressure_dome/mf_elysion_cumulus_conservatory_pressure_dome_source.glb",
+        "modules/space_exploration/assets/source/spline/processed/elysion-pressure-dome-v1/source/mf-elysion-cumulus-conservatory-pressure-dome-source.glb"
+      ]
+    },
+    {
+      "sha256": "cec01fd1cba4eba411b900f790c97a7e4a828100cfffc9bd218ad9c0976925b8",
+      "canonicalAssetId": "gsite_aelos_caldris_inspection_gantry",
+      "classification": "EXPECTED_PROCESSING_SOURCE_MIRROR",
+      "paths": [
+        "modules/space_exploration/assets/source/spline/ground-sites/aelos_caldris/hunyuan/gsite-aelos-caldris-inspection-gantry-source-v1.glb",
+        "modules/space_exploration/assets/source/spline/ground-sites/aelos_caldris/processed/inspection-gantry-v1/source/gsite-aelos-caldris-inspection-gantry-source-v1.glb"
+      ]
+    }
+  ],
+  "nonDuplicateAuthoringVariants": [
+    {
+      "canonicalAssetId": "mf_city_outpost_gatehouse_command_tower",
+      "rawSplinePath": "modules/space_exploration/assets/source/spline/hunyuan/city_outpost_layout_kits/outpost_gatehouse_command_tower/mf_city_outpost_gatehouse_command_tower_raw-spline.glb",
+      "cleanSourcePath": "modules/space_exploration/assets/source/spline/hunyuan/city_outpost_layout_kits/outpost_gatehouse_command_tower/mf_city_outpost_gatehouse_command_tower_source.glb",
+      "countAsCanonicalAssets": 1
+    },
+    {
+      "canonicalAssetId": "mf_city_outpost_operations_block",
+      "rawSplinePath": "modules/space_exploration/assets/source/spline/hunyuan/city_outpost_layout_kits/outpost_operations_block/mf_city_outpost_operations_block_raw-spline.glb",
+      "cleanSourcePath": "modules/space_exploration/assets/source/spline/hunyuan/city_outpost_layout_kits/outpost_operations_block/mf_city_outpost_operations_block_source.glb",
+      "countAsCanonicalAssets": 1
+    }
+  ],
+  "catalogContradictions": [
+    {
+      "severity": "HIGH",
+      "catalog": "source-media/content-library/hunyuan-asset-generation-queue.v1.json",
+      "finding": "Elysion and Vespera jobs remain READY_FOR_HUNYUAN although both have generated GLBs and ledger decisions; Elysion was reclassified and Vespera was rejected."
+    },
+    {
+      "severity": "HIGH",
+      "catalog": "source-media/content-library/hunyuan-city-outpost-layout-generation-queue.v1.json",
+      "finding": "The operations block remains GENERATING although its cleaned source, hash, and accepted source-ledger entry exist."
+    },
+    {
+      "severity": "MEDIUM",
+      "catalog": "source-media/content-library/model-pack-catalog.v1.json",
+      "finding": "The Caldris control tower and inspection gantry remain CONCEPT_READY despite existing Hunyuan source masters and ledger entries."
+    },
+    {
+      "severity": "MEDIUM",
+      "catalog": "source-media/content-library/city-outpost-modular-layout-blueprints.v1.json",
+      "finding": "The operations-block readiness record still says pending final source completion although the current ledger records source acceptance. Runtime admission remains correctly false."
+    },
+    {
+      "severity": "MEDIUM",
+      "catalog": "modules/space_exploration/assets/source/spline/ground-sites/aelos_caldris.md",
+      "finding": "The brief's final paragraph claims no Spline scene or model source exists, while the same directory's provenance file and aelos-caldris-source.glb prove a source exists."
+    }
+  ],
+  "factionCoverage": [
+    {
+      "faction": "uga",
+      "acceptedOrRuntimeCoverage": "NEXUS-VII runtime ship/cutaway assets, one accepted outpost operations source, one reclassified gatehouse, and one reclassified Elysion dome landmark",
+      "missing": "individual room kits, clean rigged human characters, faction construction structures, complete tactical interior kits, and current 2K district material/decal families"
+    },
+    {
+      "faction": "nova",
+      "acceptedOrRuntimeCoverage": "Three Caldris source candidates can support a UGA/Nova civic environment, but none is runtime-ready or Nova-bound semantically",
+      "missing": "dedicated Nova skyscraper/podium language, production structures, roads, damage states, decals, and validated runtime materials"
+    },
+    {
+      "faction": "crimson_dominion",
+      "acceptedOrRuntimeCoverage": "No dedicated generated Hunyuan model",
+      "missing": "Pyraeth military/foundry heroes, industrial blocks, roads, pressure-city structures, damage states, and tactical interiors"
+    },
+    {
+      "faction": "syndicate",
+      "acceptedOrRuntimeCoverage": "Nordhall skyscraper concept and prompt are ready, but no dedicated generated source GLB exists",
+      "missing": "Nordhall arcology tower, reactor-vault interiors, automation infrastructure, roads, damage states, and semantic materials"
+    },
+    {
+      "faction": "brood_hostile",
+      "acceptedOrRuntimeCoverage": "Zero accepted generated architecture; the sole Vespera candidate is rejected",
+      "missing": "non-creature industrial infestation architecture, living infrastructure, hive/ruin state families, terrain-contact growth, and original material/decal programs"
+    },
+    {
+      "faction": "neutral_frontier_and_lost_colonies",
+      "acceptedOrRuntimeCoverage": "Prompt and concept coverage only",
+      "missing": "all dedicated generated structures, world-detail props, location heroes, damage states, and tactical interior kits"
+    }
+  ],
+  "planetFactionApplicability": {
+    "nova_frontline": ["aelos"],
+    "crimson_dominion": ["pyraeth", "cinderfall"],
+    "syndicate": ["ferrum", "nordhall"],
+    "uga_coalition": ["elysion", "thalassa", "viridia", "talos", "nacre", "borealis", "mycora", "ossara", "pelagos"],
+    "neutral_frontier": ["erebos", "karaxis", "ichoris", "caligo", "lumen", "prismara", "zephyria", "tempestus", "causton", "qadesh", "helion", "gravem", "asterion"],
+    "brood_hostile": ["vespera", "karaxis", "mycora", "ichoris", "karak_prime"],
+    "lost_colony": ["karak_prime", "sablemarch", "dredge", "umbra"]
+  },
+  "antiModelSoupRules": [
+    "A playable site selects one planet material grammar, one resident-faction silhouette binding, one location-class kit, and one authored damage or infestation state. Do not draw unrelated hero assets from multiple planet packs.",
+    "Generate isolated interoperable modules, never a complete random Hunyuan city diorama. Every module must declare scale, pivot, footprint, socket faces, clearances, material regions, collision intent, and LOD role before generation.",
+    "Complete transit topology before adding landmarks: straight, corner, T, X/plaza, endcap/adapter, local road, service lane, pedestrian concourse, and wall gate.",
+    "A palette swap is not a faction or planet variant. Geometry rhythm, silhouette, access logic, damage language, material response, decals, and terrain contact must differ where lore says they differ.",
+    "Use a 70/20/10 composition target: approximately 70% repeatable infrastructure and low/mid modules, 20% identity buildings and utilities, and no more than 10% unique hero landmarks in a typical district.",
+    "World-detail assets attach only to authored service, utility, curb, roof, or plot sockets. Do not scatter props randomly into navigation, turning, landing, objective, or shot-clearance volumes.",
+    "Road and concourse socket planes remain flat, identical, and obstruction-free. Curbs, lights, rails, pipes, decals, debris, and vegetation stop before the socket plane.",
+    "Brood is a non-playable, non-humanoid hostile ecology. Brood architecture must read as functional living infrastructure rather than a creature, face, tentacle pile, or recolored resident building.",
+    "Pressure domes, hangars, gates, and gantries must preserve their declared traversable portals in source geometry, LODs, and compound collision. A closed generated aperture is a reclassification or rejection, not a visual pass.",
+    "Raw Spline exports, cleaned sources, processing mirrors, LODs, collision, and damage variants are lifecycle forms of one canonical asset and must not be counted as separate library members.",
+    "Do not promote single-material Hunyuan meshes directly. Split semantic structural, facade, roof, contact, glazing, emissive, damage, and infestation regions before runtime admission.",
+    "Every completed pack needs a deterministic assembly example at phone RTS camera scale, including at least one intact, damaged, and infested/disabled composition where applicable."
+  ],
+  "rankedNext20MissingKitAssets": [
+    {
+      "rank": 1,
+      "assetId": "mf_hi_road_primary_straight_32_01",
+      "family": "primary_road",
+      "category": "tileable_transit",
+      "targetEnvelopeMeters": [32, 0.6, 32],
+      "planetApplicability": ["aelos", "pyraeth", "nordhall", "vespera"],
+      "regionApplicability": ["all_16_base_regions_with_distinct_material_and_contact_bindings"],
+      "factionApplicability": ["nova", "dominion", "syndicate", "lost_civilization_with_brood_overlay"],
+      "reason": "Highest-use calibration piece for every city/outpost network.",
+      "antiModelSoupRule": "One neutral structural topology may be shared, but pavement, curbs, service details, damage, and foundation contact are bound per planet/faction."
+    },
+    {
+      "rank": 2,
+      "assetId": "mf_hi_road_primary_corner_32_01",
+      "family": "primary_road",
+      "category": "tileable_transit",
+      "targetEnvelopeMeters": [32, 0.6, 32],
+      "planetApplicability": ["aelos", "pyraeth", "nordhall", "vespera"],
+      "regionApplicability": ["all_16_base_regions"],
+      "factionApplicability": ["nova", "dominion", "syndicate", "lost_civilization_with_brood_overlay"],
+      "reason": "Enables legal loops and blocks without bending or overlapping straight meshes.",
+      "antiModelSoupRule": "Match straight-road socket profile exactly and keep the 18 m turn clear; no decorative island."
+    },
+    {
+      "rank": 3,
+      "assetId": "mf_hi_road_primary_t_32_01",
+      "family": "primary_road",
+      "category": "tileable_transit",
+      "targetEnvelopeMeters": [32, 0.6, 32],
+      "planetApplicability": ["aelos", "pyraeth", "nordhall", "vespera"],
+      "regionApplicability": ["all_16_base_regions"],
+      "factionApplicability": ["nova", "dominion", "syndicate", "lost_civilization_with_brood_overlay"],
+      "reason": "Creates controlled district branches and outpost spurs.",
+      "antiModelSoupRule": "Use the identical 18 m socket and plate rhythm from ranks 1-2; do not generate a unique plaza landmark on the junction."
+    },
+    {
+      "rank": 4,
+      "assetId": "mf_hi_road_primary_x_plaza_48_01",
+      "family": "primary_road",
+      "category": "tileable_transit_plaza",
+      "targetEnvelopeMeters": [48, 0.6, 48],
+      "planetApplicability": ["aelos", "pyraeth", "nordhall", "vespera"],
+      "regionApplicability": ["all_16_base_regions"],
+      "factionApplicability": ["nova", "dominion", "syndicate", "lost_civilization_with_brood_overlay"],
+      "reason": "Supplies an authored no-building intersection and fixes cross-street placement failures.",
+      "antiModelSoupRule": "Keep the central 28x28 m hardstand empty and traversable; no statue, tower, median, or random prop mass."
+    },
+    {
+      "rank": 5,
+      "assetId": "mf_hi_road_primary_endcap_adapter_32x16_01",
+      "family": "primary_road",
+      "category": "transit_adapter",
+      "targetEnvelopeMeters": [32, 0.6, 16],
+      "planetApplicability": ["aelos", "pyraeth", "nordhall", "vespera"],
+      "regionApplicability": ["all_16_base_regions"],
+      "factionApplicability": ["nova", "dominion", "syndicate", "lost_civilization_with_brood_overlay"],
+      "reason": "Terminates primary routes or converts them to the local 12 m network without visual dead ends.",
+      "antiModelSoupRule": "Use one explicit transition in width and surface hierarchy; never hide a mismatched road seam with loose props."
+    },
+    {
+      "rank": 6,
+      "assetId": "mf_hi_road_local_straight_16_01",
+      "family": "local_road",
+      "category": "tileable_transit",
+      "targetEnvelopeMeters": [16, 0.4, 16],
+      "planetApplicability": ["aelos", "pyraeth", "nordhall", "vespera", "frontier_colonies"],
+      "regionApplicability": ["civic_blocks", "industrial_blocks", "outpost_service_rings"],
+      "factionApplicability": ["uga", "nova", "dominion", "syndicate", "lost_colony"],
+      "reason": "Provides believable secondary access between major routes and building plots.",
+      "antiModelSoupRule": "Local roads are subordinate in width, lighting, and markings; do not reuse primary-road scale inside every block."
+    },
+    {
+      "rank": 7,
+      "assetId": "mf_hi_lane_service_straight_16_01",
+      "family": "service_lane",
+      "category": "tileable_service_access",
+      "targetEnvelopeMeters": [8, 0.4, 16],
+      "planetApplicability": ["aelos", "pyraeth", "nordhall", "vespera", "frontier_colonies"],
+      "regionApplicability": ["rear_service_faces", "refineries", "cargo_yards", "outpost_utilities"],
+      "factionApplicability": ["uga", "nova", "dominion", "syndicate", "lost_colony"],
+      "reason": "Makes buildings read as serviced infrastructure rather than isolated sculptures.",
+      "antiModelSoupRule": "Connect only to declared rear/service sockets and keep it visually subordinate to public roads."
+    },
+    {
+      "rank": 8,
+      "assetId": "mf_hi_concourse_ped_straight_16_01",
+      "family": "pedestrian_concourse",
+      "category": "tileable_pedestrian_connector",
+      "targetEnvelopeMeters": [6, 4, 16],
+      "planetApplicability": ["aelos", "pyraeth", "nordhall", "elysion", "nexus_vii"],
+      "regionApplicability": ["cities", "colonies", "pressure_domes", "ship_districts"],
+      "factionApplicability": ["uga", "nova", "dominion", "syndicate"],
+      "reason": "Establishes human-scale circulation and supports later glass-tunnel variants.",
+      "antiModelSoupRule": "Use one socket cage but author distinct open, pressure-sealed, and glass-tunnel material/silhouette variants per environment."
+    },
+    {
+      "rank": 9,
+      "assetId": "mf_hi_wall_gate_32_01",
+      "family": "perimeter_access",
+      "category": "gate",
+      "targetEnvelopeMeters": [32, 14, 8],
+      "planetApplicability": ["aelos", "pyraeth", "nordhall", "vespera"],
+      "regionApplicability": ["outposts", "military_bases", "refineries", "quarantine_sites"],
+      "factionApplicability": ["nova", "dominion", "syndicate", "uga_containment", "lost_civilization"],
+      "reason": "Connects the gatehouse and perimeter walls to the validated primary road.",
+      "antiModelSoupRule": "Portal remains 18 m clear in open state; collision uses compound jamb/overhead proxies, never a full convex hull."
+    },
+    {
+      "rank": 10,
+      "assetId": "mf_hi_logistics_depot_01",
+      "family": "outpost_logistics",
+      "category": "building",
+      "targetEnvelopeMeters": [48, 20, 32],
+      "planetApplicability": ["aelos", "pyraeth", "nordhall", "frontier_colonies"],
+      "regionApplicability": ["cargo_yards", "outpost_service_ring", "spaceports", "refineries"],
+      "factionApplicability": ["uga", "nova", "dominion", "syndicate", "lost_colony"],
+      "reason": "Adds a repeatable functional destination for roads, cargo corridors, and service lanes.",
+      "antiModelSoupRule": "Expose public, cargo, and rear-service faces; do not turn it into an unrelated hero landmark."
+    },
+    {
+      "rank": 11,
+      "assetId": "mf_hi_true_broad_command_hub_64_01",
+      "family": "city_outpost_command",
+      "category": "hero_building",
+      "targetEnvelopeMeters": [64, 36, 64],
+      "planetApplicability": ["aelos", "pyraeth", "nordhall", "frontier_capitals"],
+      "regionApplicability": ["city_civic_core", "outpost_command_court", "military_base_command"],
+      "factionApplicability": ["uga", "nova", "dominion", "syndicate"],
+      "reason": "The current generated gatehouse is not the requested broad stepped command hub.",
+      "antiModelSoupRule": "One hub per layout, four deliberate connection faces, and a broad low/mid massing distinct from the existing tall gatehouse."
+    },
+    {
+      "rank": 12,
+      "assetId": "mf_hi_refinery_spine_32x64_01",
+      "family": "industrial_refinery",
+      "category": "building_and_process_spine",
+      "targetEnvelopeMeters": [32, 28, 64],
+      "planetApplicability": ["pyraeth", "ferrum", "cinderfall", "dredge", "vespera"],
+      "regionApplicability": ["pyraeth_belt", "pyraeth_caldera", "vespera_refinery", "planet_specific_refinery_sites"],
+      "factionApplicability": ["crimson_dominion", "syndicate", "lost_colony", "brood_hostile_overlay"],
+      "reason": "Creates the missing refinery identity spine and a home for later pipe/tank/world-detail kits.",
+      "antiModelSoupRule": "Process flow must be legible from intake to separator to output; planet variants change machinery and hazard language, not just color."
+    },
+    {
+      "rank": 13,
+      "assetId": "mf_hi_industrial_ruin_32_01",
+      "family": "damage_and_ruin",
+      "category": "authored_ruin",
+      "targetEnvelopeMeters": [32, 18, 32],
+      "planetApplicability": ["aelos", "pyraeth", "nordhall", "vespera", "orison", "karak"],
+      "regionApplicability": ["destroyed_cities", "industrial_sites", "derelicts", "infested_colonies"],
+      "factionApplicability": ["uga", "nova", "dominion", "syndicate", "lost_colony", "brood_hostile"],
+      "reason": "Supplies deterministic damaged/collapsed silhouettes instead of random debris piles.",
+      "antiModelSoupRule": "Derive from a named intact family and preserve one navigation route; do not use a generic ruin across every planet."
+    },
+    {
+      "rank": 14,
+      "assetId": "mf_elysion_cumulus_pressure_dome_traversable_v2",
+      "family": "pressure_dome",
+      "category": "hero_building",
+      "targetEnvelopeMeters": [64, 24, 64],
+      "planetApplicability": ["elysion"],
+      "regionApplicability": ["elysion_cumulus_conservatory"],
+      "factionApplicability": ["uga_coalition"],
+      "reason": "The existing dome is a sealed landmark and fails the traversable pressure-dome contract.",
+      "antiModelSoupRule": "Regenerate or remodel an explicit 18x8 m open service portal and distinct shell/rib/interior regions; do not count the sealed dome as this asset."
+    },
+    {
+      "rank": 15,
+      "assetId": "mf_aelos_capital_ward_skyscraper_podium_01",
+      "family": "city_tall_nova",
+      "category": "skyscraper",
+      "targetEnvelopeMeters": [32, 72, 32],
+      "planetApplicability": ["aelos"],
+      "regionApplicability": ["aelos_north", "aelos_basin", "aelos_coast", "aelos_ridge"],
+      "factionApplicability": ["nova_frontline", "uga_civic"],
+      "reason": "Adds a dedicated Nova/Aelos tall silhouette beyond the Caldris control tower.",
+      "antiModelSoupRule": "Use the 32 m podium and road/concourse sockets; repeat at most twice per block with authored height and facade variants."
+    },
+    {
+      "rank": 16,
+      "assetId": "mf_nordhall_cliff_arcology_skyscraper_01",
+      "family": "city_tall_syndicate",
+      "category": "skyscraper",
+      "targetEnvelopeMeters": [32, 72, 32],
+      "planetApplicability": ["nordhall"],
+      "regionApplicability": ["nordhall_cliff", "nordhall_frost", "nordhall_isles", "nordhall_peaks"],
+      "factionApplicability": ["syndicate"],
+      "reason": "The approved Nordhall concept has no exported source model.",
+      "antiModelSoupRule": "Use glacial machine-vault structure, service access, and cliff/frost contact variants; do not recolor the Aelos tower."
+    },
+    {
+      "rank": 17,
+      "assetId": "mf_pyraeth_promethean_base_hero_01",
+      "family": "dominion_military_foundry",
+      "category": "military_base_hero",
+      "targetEnvelopeMeters": [72, 36, 56],
+      "planetApplicability": ["pyraeth"],
+      "regionApplicability": ["pyraeth_belt", "pyraeth_caldera", "pyraeth_crater", "pyraeth_flats"],
+      "factionApplicability": ["crimson_dominion"],
+      "reason": "Dominion currently has no dedicated generated architecture source.",
+      "antiModelSoupRule": "Tie armor yards, motor court, heat shielding, and pressure access to Pyraeth; no generic gatehouse with red paint."
+    },
+    {
+      "rank": 18,
+      "assetId": "mf_vespera_megaforge_brood_industrial_structure_v2",
+      "family": "brood_industrial_infestation",
+      "category": "brutish_enemy_structure",
+      "targetEnvelopeMeters": [64, 36, 64],
+      "planetApplicability": ["vespera"],
+      "regionApplicability": ["vespera_refinery", "vespera_spire", "vespera_dunes", "vespera_plateau"],
+      "factionApplicability": ["brood_hostile"],
+      "reason": "The only generated Vespera candidate is rejected as a creature/face rather than architecture.",
+      "antiModelSoupRule": "Show load-bearing calcified ribs, process cavities, root foundations, service/artery portals, and functional state changes; exclude faces, limbs, and creature poses."
+    },
+    {
+      "rank": 19,
+      "assetId": "mf_hi_world_detail_utility_cluster_8_01",
+      "family": "world_detail",
+      "category": "socketed_prop_cluster",
+      "targetEnvelopeMeters": [8, 12, 8],
+      "planetApplicability": ["aelos", "pyraeth", "nordhall", "vespera", "frontier_planets"],
+      "regionApplicability": ["utility_plots", "rooftops", "service_yards", "road_edges_outside_clearance"],
+      "factionApplicability": ["uga", "nova", "dominion", "syndicate", "lost_colony", "brood_hostile_variant"],
+      "reason": "Adds water/atmosphere service, transformer, valve, vent, and comms detail without random prop scatter.",
+      "antiModelSoupRule": "Create named utility variants on an 8 m socket cage and place them only through authored utility sockets and biome masks."
+    },
+    {
+      "rank": 20,
+      "assetId": "int_uga_n7_deployer_lane_8x8",
+      "family": "interior_tactical_uga",
+      "category": "mixed_mobility_corridor",
+      "targetEnvelopeMeters": [8, 6, 8],
+      "planetApplicability": ["nexus_vii"],
+      "regionApplicability": ["ship_strike_expedition_bay", "ship_logistics_cargo", "ship_mission_operations"],
+      "factionApplicability": ["uga"],
+      "reason": "First geometry anchor for XS/SMALL interiors that support infantry, small vehicles, and mechs.",
+      "antiModelSoupRule": "Preserve identical 8x6 m mixed-mobility sockets, protected 4 m personnel flanks, and a clear base-deployer/mech route; generate a module, not a complete room diorama."
+    }
+  ],
+  "completionVerdict": {
+    "goalAssetLibraryComplete": false,
+    "reason": "The repository contains valuable source candidates, concepts, and contracts, but most requested families are still prompts or planned definitions. No Hunyuan ledger asset is runtime-ready; roads and interoperable connectors are absent; Dominion and accepted Brood architecture coverage are zero; 90 interior members have no geometry; and 29 of 32 first-wave planet jobs remain concept-blocked.",
+    "nextAction": "Generate the ranked transit topology first, then validate deterministic assemblies before adding more hero buildings. Keep every generated output source-only until semantic materials, sockets, collision/navigation, LODs, damage states, mobile captures, and package/performance gates pass."
+  }
+}

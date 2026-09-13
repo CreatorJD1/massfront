@@ -1,0 +1,301 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://massfront.local/schemas/hunyuan-asset-generation-queue.v1.schema.json",
+  "title": "MASSFRONT Hunyuan World Asset Generation Queue V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "queueId",
+    "createdDate",
+    "status",
+    "runtimeReady",
+    "sourceLibrary",
+    "coordinateContract",
+    "generationPolicy",
+    "categoryTemplates",
+    "planetProfiles",
+    "firstWave",
+    "expansionRules"
+  ],
+  "properties": {
+    "$schema": { "type": "string", "minLength": 1 },
+    "schemaVersion": { "const": 1 },
+    "queueId": { "const": "massfront-hunyuan-world-assets-v1" },
+    "createdDate": { "type": "string", "pattern": "^20[0-9]{2}-[0-9]{2}-[0-9]{2}$" },
+    "status": { "const": "SOURCE_AUTHORING_QUEUE_ONLY" },
+    "runtimeReady": { "const": false },
+    "sourceLibrary": { "$ref": "#/$defs/sourceLibrary" },
+    "coordinateContract": { "$ref": "#/$defs/coordinateContract" },
+    "generationPolicy": { "$ref": "#/$defs/generationPolicy" },
+    "categoryTemplates": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": { "$ref": "#/$defs/categoryTemplate" }
+    },
+    "planetProfiles": {
+      "type": "array",
+      "minItems": 32,
+      "maxItems": 32,
+      "items": { "$ref": "#/$defs/planetProfile" }
+    },
+    "firstWave": { "$ref": "#/$defs/firstWave" },
+    "expansionRules": {
+      "type": "array",
+      "minItems": 5,
+      "items": { "$ref": "#/$defs/expansionRule" }
+    }
+  },
+  "$defs": {
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+    },
+    "identifier": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+    "factionContext": {
+      "enum": [
+        "nova_frontline",
+        "crimson_dominion",
+        "syndicate",
+        "uga_coalition",
+        "neutral_frontier",
+        "lost_colony",
+        "brood_hostile"
+      ]
+    },
+    "locationClass": {
+      "enum": [
+        "city_colony",
+        "outpost",
+        "military_base",
+        "refinery",
+        "relic_ruin",
+        "spaceport",
+        "pressure_dome",
+        "derelict_megastructure"
+      ]
+    },
+    "assetCategory": {
+      "enum": [
+        "hero_building",
+        "skyscraper",
+        "pressure_dome",
+        "world_detail",
+        "brutish_enemy_structure",
+        "interior_xs_small_map_prop"
+      ]
+    },
+    "envelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y", "z"],
+      "properties": {
+        "x": { "type": "number", "exclusiveMinimum": 0 },
+        "y": { "type": "number", "exclusiveMinimum": 0 },
+        "z": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "sourceLibrary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["index", "groupIndexes", "planetCount", "locationClasses", "referencePolicy"],
+      "properties": {
+        "index": { "$ref": "#/$defs/relativePath" },
+        "groupIndexes": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": { "$ref": "#/$defs/relativePath" },
+          "uniqueItems": true
+        },
+        "planetCount": { "const": 32 },
+        "locationClasses": {
+          "type": "array",
+          "minItems": 8,
+          "maxItems": 8,
+          "items": { "$ref": "#/$defs/locationClass" },
+          "uniqueItems": true
+        },
+        "referencePolicy": { "type": "string", "minLength": 40 }
+      }
+    },
+    "coordinateContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["units", "upAxis", "forwardAxis", "detailSnapMeters", "macroSnapMeters", "smallVehicleGateMeters", "xsSmallInteriorAssemblyMeters"],
+      "properties": {
+        "units": { "const": "meters" },
+        "upAxis": { "const": "+Y" },
+        "forwardAxis": { "const": "-Z" },
+        "detailSnapMeters": { "const": 4 },
+        "macroSnapMeters": { "const": 16 },
+        "smallVehicleGateMeters": {
+          "type": "array",
+          "prefixItems": [{ "const": 18 }, { "const": 8 }],
+          "items": false
+        },
+        "xsSmallInteriorAssemblyMeters": {
+          "type": "array",
+          "prefixItems": [{ "type": "number", "minimum": 96 }, { "type": "number", "minimum": 96 }],
+          "items": false
+        }
+      }
+    },
+    "generationPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider", "mode", "oneSourceRootPerExport", "conceptFirst", "sourceRetention", "runtimeAdmission", "originalityBoundary", "closeFinishedSplineTabs"],
+      "properties": {
+        "provider": { "const": "hunyuan3d" },
+        "mode": { "const": "concept_image_to_3d" },
+        "oneSourceRootPerExport": { "const": true },
+        "conceptFirst": { "const": true },
+        "sourceRetention": { "const": true },
+        "runtimeAdmission": { "const": "source_export_does_not_imply_runtime_ready" },
+        "originalityBoundary": { "type": "string", "minLength": 80 },
+        "closeFinishedSplineTabs": { "const": true }
+      }
+    },
+    "categoryTemplate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["assetCategory", "defaultEnvelopeMeters", "minimumEnvelopeMeters", "sourceTriangleCeiling", "packCompanions"],
+      "properties": {
+        "assetCategory": { "$ref": "#/$defs/assetCategory" },
+        "defaultEnvelopeMeters": { "$ref": "#/$defs/envelope" },
+        "minimumEnvelopeMeters": { "$ref": "#/$defs/envelope" },
+        "sourceTriangleCeiling": { "type": "integer", "minimum": 10000 },
+        "packCompanions": {
+          "type": "array",
+          "minItems": 3,
+          "items": { "$ref": "#/$defs/identifier" },
+          "uniqueItems": true
+        }
+      }
+    },
+    "planetProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["order", "planetId", "displayName", "runtimeCanon", "sector", "factionContexts", "biomeKey", "biome", "promptGuide", "firstWaveJobId"],
+      "properties": {
+        "order": { "type": "integer", "minimum": 1, "maximum": 32 },
+        "planetId": { "$ref": "#/$defs/identifier" },
+        "displayName": { "type": "string", "minLength": 2 },
+        "runtimeCanon": { "type": "boolean" },
+        "sector": { "$ref": "#/$defs/identifier" },
+        "factionContexts": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/factionContext" },
+          "uniqueItems": true
+        },
+        "biomeKey": { "$ref": "#/$defs/identifier" },
+        "biome": { "type": "string", "minLength": 20 },
+        "promptGuide": { "$ref": "#/$defs/relativePath" },
+        "firstWaveJobId": { "$ref": "#/$defs/identifier" }
+      }
+    },
+    "conceptDependency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required", "status", "approvalStatus", "path", "sha256", "promptGuide", "sectionSiteId"],
+      "properties": {
+        "required": { "const": true },
+        "status": { "enum": ["MISSING_BLOCKING", "READY"] },
+        "approvalStatus": { "enum": ["UNREVIEWED", "CANDIDATE_REVIEW", "APPROVED", "REJECTED"] },
+        "path": { "$ref": "#/$defs/relativePath" },
+        "sha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
+        "promptGuide": { "$ref": "#/$defs/relativePath" },
+        "sectionSiteId": { "$ref": "#/$defs/identifier" }
+      }
+    },
+    "sourceContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["splineDocumentName", "rootName", "exportName", "sourceDirectory"],
+      "properties": {
+        "splineDocumentName": { "type": "string", "pattern": "^MF_HY3D_[A-Z0-9_]+_V1$" },
+        "rootName": { "type": "string", "pattern": "^MF_[A-Z0-9_]+_LOD0_SOURCE$" },
+        "exportName": { "type": "string", "pattern": "^mf_[a-z0-9_]+_source\\.glb$" },
+        "sourceDirectory": { "$ref": "#/$defs/relativePath" }
+      }
+    },
+    "job": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["jobId", "wave", "priority", "planetId", "factionContexts", "biomeKey", "locationClass", "siteId", "siteName", "assetCategory", "packId", "conceptDependency", "targetEnvelopeMeters", "source", "status"],
+      "properties": {
+        "jobId": { "$ref": "#/$defs/identifier" },
+        "wave": { "const": "W1_PLANET_SEED" },
+        "priority": { "type": "integer", "minimum": 1, "maximum": 4 },
+        "planetId": { "$ref": "#/$defs/identifier" },
+        "factionContexts": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/factionContext" },
+          "uniqueItems": true
+        },
+        "biomeKey": { "$ref": "#/$defs/identifier" },
+        "locationClass": { "$ref": "#/$defs/locationClass" },
+        "siteId": { "$ref": "#/$defs/identifier" },
+        "siteName": { "type": "string", "minLength": 2 },
+        "assetCategory": { "$ref": "#/$defs/assetCategory" },
+        "packId": { "$ref": "#/$defs/identifier" },
+        "conceptDependency": { "$ref": "#/$defs/conceptDependency" },
+        "targetEnvelopeMeters": { "$ref": "#/$defs/envelope" },
+        "source": { "$ref": "#/$defs/sourceContract" },
+        "status": {
+          "enum": [
+            "BLOCKED_CONCEPT",
+            "READY_FOR_HUNYUAN",
+            "GENERATING",
+            "SOURCE_EXPORTED",
+            "SOURCE_VERIFIED",
+            "REJECTED",
+            "CANCELLED"
+          ]
+        }
+      }
+    },
+    "firstWave": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["strategy", "jobCount", "coveredAssetCategories", "jobs"],
+      "properties": {
+        "strategy": { "type": "string", "minLength": 40 },
+        "jobCount": { "const": 32 },
+        "coveredAssetCategories": {
+          "type": "array",
+          "minItems": 6,
+          "maxItems": 6,
+          "items": { "$ref": "#/$defs/assetCategory" },
+          "uniqueItems": true
+        },
+        "jobs": {
+          "type": "array",
+          "minItems": 32,
+          "maxItems": 32,
+          "items": { "$ref": "#/$defs/job" }
+        }
+      }
+    },
+    "expansionRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ruleId", "trigger", "action", "batchLimit", "constraints"],
+      "properties": {
+        "ruleId": { "$ref": "#/$defs/identifier" },
+        "trigger": { "type": "string", "minLength": 4 },
+        "action": { "type": "string", "minLength": 12 },
+        "batchLimit": { "type": "integer", "minimum": 1, "maximum": 8 },
+        "constraints": {
+          "type": "array",
+          "minItems": 2,
+          "items": { "type": "string", "minLength": 8 }
+        }
+      }
+    }
+  }
+}

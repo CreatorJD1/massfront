@@ -22,14 +22,15 @@ const hasMaterial=(mesh,id)=>{for(let i=11;i<mesh.v.length;i+=12)if(Math.abs(mes
 for(const spec of [
   {id:'Legion',file:'src/engine/models-legion.js',map:'BLD_MDL_LEGION',tur:'BLD_TUR_MDL_LEGION',
     tiers:'BLD_TIER_MDL_LEGION',tracking:['hellstorm','nova','missilebastion'],
-    panel:'LEG_PANEL',edge:'LEG_EDGE',dark:'LEG_ARM_D',glow:'LEG_HOT'},
+    panel:'LEG_PANEL',edge:'LEG_EDGE',dark:'LEG_ARM_D',glow:'LEG_HOT',packs:'DOM_LEGION_STRUCTURE_PACKS'},
   {id:'Machine',file:'src/engine/models-machine.js',map:'BLD_MDL_MACHINE',tur:'BLD_TUR_MDL_MACHINE',
     tiers:'BLD_TIER_MDL_MACHINE',tracking:['bastion','gravitywell'],
-    panel:'MAC_PANEL',edge:'MAC_EDGE',dark:'MAC_ARM_D',glow:'MAC_GLOW'},
+    panel:'MAC_PANEL',edge:'MAC_EDGE',dark:'MAC_ARM_D',glow:'MAC_GLOW',packs:'SYN_MACHINE_STRUCTURE_PACKS'},
 ]){
   vm.runInContext(fs.readFileSync(path.join(root,spec.file),'utf8'),ctx,{filename:spec.file});
   const get=expr=>vm.runInContext(expr,ctx),map=get(spec.map),tur=get(spec.tur);
   const tiers=get(spec.tiers);
+  const packs=spec.packs?get(spec.packs):null;
   const panel=get(spec.panel),edge=get(spec.edge),dark=get(spec.dark),glow=get(spec.glow);
   if(lum(panel)-lum(dark)<.22)throw new Error(`${spec.id}: panel/core value separation is too small`);
   if(lum(edge)-lum(panel)<.12)throw new Error(`${spec.id}: edge/panel value separation is too small`);
@@ -43,7 +44,15 @@ for(const spec of [
     let at=0;for(const p of parts){merged.v.set(p.v,at);at+=p.v.length;}
     if(!hasColour(merged,panel))throw new Error(`${spec.id}/${key}: no deliberate midtone panel`);
     if(!hasColour(merged,glow))throw new Error(`${spec.id}/${key}: no restrained emissive navigation accent`);
-    if(!hasMaterial(merged,get('MAT.TWR_COAT'))||!hasMaterial(merged,get('MAT.TWR_ARMOR')))
+    /* Both production semantic passes deliberately remap the generic coat
+       and armor slots to faction PBR materials. Test the rendered material
+       IDs, not the pre-pass selectors; mex was the first asset whose correct
+       remap exposed the stale generic-ID assertion. */
+    const pack=packs&&packs[key],coatId=pack&&pack.surfaces&&pack.surfaces[get('MAT.TWR_COAT')];
+    const armorId=pack&&pack.surfaces&&pack.surfaces[get('MAT.TWR_ARMOR')];
+    const expectedCoat=coatId===undefined?get('MAT.TWR_COAT'):coatId;
+    const expectedArmor=armorId===undefined?get('MAT.TWR_ARMOR'):armorId;
+    if(!hasMaterial(merged,expectedCoat)||!hasMaterial(merged,expectedArmor))
       throw new Error(`${spec.id}/${key}: dark core and armor zones are not materially separated`);
     if(merged.v.length/12>=12000)throw new Error(`${spec.id}/${key}: exceeds mobile vertex budget`);
   }

@@ -1,0 +1,1769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>MASSFRONT — 3D Capital Ship Space Exploration & Strategic Layer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800;900&family=Rajdhani:wght@600;700;800&display=swap');
+
+  :root {
+    --bg-dark: #000308;
+    --panel-bg: rgba(4, 12, 22, 0.94);
+    --border-bright: #1f4a72;
+    --border-accent: rgba(90, 212, 255, 0.45);
+    --text-main: #e8f4ff;
+    --text-muted: #729ec8;
+    --neon-blue: #00f0ff;
+    --neon-cyan: #5ad4ff;
+    --neon-gold: #ffd676;
+    --neon-purple: #c46bff;
+    --neon-green: #7dff9a;
+    --neon-red: #ff5252;
+    --font-heading: 'Orbitron', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-body: 'Rajdhani', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+  html, body {
+    width: 100%; height: 100%; background: #000204; color: var(--text-main);
+    font-family: var(--font-body); overflow: hidden; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+  }
+
+  /* Top Global Ribbon */
+  .top-dev-ribbon {
+    width: 100%; max-width: 900px; padding: 6px 14px; display: flex;
+    justify-content: space-between; align-items: center; z-index: 100;
+  }
+  .dev-ribbon-title {
+    font-family: var(--font-heading); font-size: 11px; font-weight: 900;
+    color: var(--neon-cyan); letter-spacing: 0.12em; text-shadow: 0 0 10px rgba(90, 212, 255, 0.5);
+  }
+  .dev-ribbon-controls { display: flex; gap: 8px; align-items: center; }
+  .dev-btn {
+    background: rgba(8, 20, 36, 0.9); border: 1px solid var(--neon-cyan);
+    color: var(--neon-cyan); font-family: var(--font-heading); font-size: 8.5px;
+    font-weight: 800; padding: 4px 9px; border-radius: 6px; cursor: pointer;
+    backdrop-filter: blur(8px);
+  }
+  .dev-btn:hover, .dev-btn:active { background: rgba(0, 240, 255, 0.25); color: #fff; }
+
+  /* Phone Outer Frame */
+  .sandbox-frame {
+    width: 412px; height: 860px; background: var(--bg-dark);
+    border: 1px solid #1c3652; border-radius: 28px; position: relative;
+    overflow: hidden; display: flex; flex-direction: column;
+    box-shadow: 0 25px 80px rgba(0,0,0,0.95), 0 0 50px rgba(0, 240, 255, 0.15);
+    transition: all 0.3s ease;
+  }
+
+  .sandbox-frame.fullscreen {
+    width: 100vw !important; height: 100vh !important; border-radius: 0 !important;
+    border: none !important; position: fixed; inset: 0; z-index: 500;
+  }
+
+  /* 3D Canvas Viewport */
+  #spaceCanvas {
+    position: absolute; inset: 0; width: 100%; height: 100%; display: block;
+    z-index: 1; pointer-events: auto; touch-action: none;
+  }
+
+  /* CRT Scanline Overlay */
+  .scanline-overlay {
+    position: absolute; inset: 0; z-index: 2; pointer-events: none;
+    background: linear-gradient(rgba(0, 240, 255, 0.015) 50%, transparent 50%) 0 0 / 100% 3px,
+                radial-gradient(circle at center, transparent 65%, rgba(0, 4, 10, 0.8) 100%);
+  }
+
+  /* 3D In-Space Tactical HUD Brackets */
+  #hudBracketsLayer {
+    position: absolute; inset: 0; pointer-events: none; z-index: 4;
+  }
+  .hud-bracket {
+    position: absolute; transform: translate(-50%, -50%); pointer-events: none;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    transition: opacity 0.1s;
+  }
+  .bracket-box {
+    width: 20px; height: 20px; border: 1.5px solid rgba(90, 212, 255, 0.65);
+    border-radius: 4px; display: grid; place-items: center; font-size: 8px; color: var(--neon-cyan);
+    background: rgba(3, 8, 16, 0.5);
+  }
+  .hud-bracket.selected .bracket-box {
+    border-color: var(--neon-gold); box-shadow: 0 0 12px rgba(255, 214, 118, 0.8); color: var(--neon-gold);
+  }
+  .hud-bracket.hostile .bracket-box {
+    border-color: var(--neon-red); color: var(--neon-red); box-shadow: 0 0 12px rgba(255, 82, 82, 0.8);
+  }
+  .bracket-label {
+    font-family: var(--font-heading); font-size: 7.5px; font-weight: 800; color: #d4e8f8;
+    white-space: nowrap; background: rgba(3, 8, 16, 0.88); padding: 1px 6px; border-radius: 3px;
+    border: 1px solid rgba(90, 212, 255, 0.25);
+  }
+  .bracket-dist {
+    font-family: var(--font-heading); font-size: 7px; font-weight: 800; color: var(--neon-gold);
+  }
+
+  /* Top Navigation Bar */
+  .hierarchy-stepper {
+    position: absolute; top: 0; left: 0; right: 0; z-index: 15;
+    padding: 10px 14px 6px;
+    background: linear-gradient(180deg, rgba(2, 6, 14, 0.98) 0%, rgba(2, 6, 14, 0.85) 85%, transparent 100%);
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1px solid rgba(90, 212, 255, 0.2); pointer-events: auto;
+  }
+  .nav-breadcrumbs {
+    display: flex; align-items: center; gap: 6px; font-family: var(--font-heading);
+    font-size: 8.5px; font-weight: 900; letter-spacing: 0.08em;
+  }
+  .crumb { color: var(--text-muted); cursor: pointer; transition: color 0.15s; }
+  .crumb:hover { color: var(--neon-cyan); }
+  .crumb.active { color: #fff; text-shadow: 0 0 8px rgba(255, 255, 255, 0.6); }
+  .crumb-sep { color: rgba(90, 212, 255, 0.4); font-size: 9px; }
+
+  .flagship-badge {
+    display: flex; align-items: center; gap: 6px; background: rgba(8, 24, 42, 0.85);
+    border: 1px solid var(--border-accent); padding: 3px 8px; border-radius: 6px;
+  }
+  .flagship-badge small { font-family: var(--font-heading); font-size: 7px; font-weight: 800; color: var(--neon-cyan); }
+  .flagship-badge b { font-family: var(--font-heading); font-size: 8.5px; font-weight: 900; color: #fff; }
+
+  /* System Subheader */
+  .system-meta-header {
+    position: absolute; top: 44px; left: 14px; z-index: 10;
+    pointer-events: none; display: flex; flex-direction: column; gap: 2px;
+  }
+  .system-meta-header small { color: var(--neon-cyan); font-family: var(--font-heading); font-size: 8px; font-weight: 800; letter-spacing: 0.15em; }
+  .system-meta-header b { color: #fff; font-family: var(--font-heading); font-size: 14px; font-weight: 900; letter-spacing: 0.08em; text-shadow: 0 0 10px rgba(90, 212, 255, 0.5); }
+
+  /* EVE Online Tactical Overview Sidebar (Collapsed by default on mobile) */
+  .overview-panel {
+    position: absolute; top: 88px; right: 12px; bottom: 150px;
+    width: min(230px, 48vw); z-index: 10;
+    background: var(--panel-bg); border: 1px solid var(--border-accent);
+    border-radius: 10px; display: flex; flex-direction: column; overflow: hidden;
+    backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+    transition: transform 0.25s cubic-bezier(0.2,0.8,0.2,1);
+  }
+  .overview-panel.collapsed { transform: translateX(calc(100% + 20px)); }
+  .overview-head {
+    padding: 7px 10px; background: rgba(8, 22, 38, 0.9);
+    border-bottom: 1px solid rgba(90, 212, 255, 0.2);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .overview-head span { font-family: var(--font-heading); font-size: 8.5px; font-weight: 900; letter-spacing: 0.12em; color: var(--neon-cyan); }
+  .overview-head button { background: none; border: none; color: var(--neon-cyan); cursor: pointer; font-size: 11px; }
+
+  .filter-tabs {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px;
+    padding: 3px 5px; background: rgba(3, 8, 16, 0.7); border-bottom: 1px solid rgba(90, 212, 255, 0.15);
+  }
+  .filter-btn {
+    background: transparent; border: 1px solid transparent; color: #7294aa;
+    font-family: var(--font-heading); font-size: 7.5px; font-weight: 800; padding: 4px 1px;
+    border-radius: 4px; text-align: center; cursor: pointer;
+  }
+  .filter-btn.active { background: rgba(90, 212, 255, 0.22); color: #fff; border-color: rgba(90, 212, 255, 0.4); }
+
+  .overview-list { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 2px 0; }
+  .overview-list::-webkit-scrollbar { width: 3px; background: rgba(0,0,0,0.3); }
+  .overview-list::-webkit-scrollbar-thumb { background: #26516e; border-radius: 2px; }
+
+  .overview-row {
+    display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: 6px;
+    align-items: center; padding: 6px 8px; cursor: pointer;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+  }
+  .overview-row:hover, .overview-row:active { background: rgba(90, 212, 255, 0.15); }
+  .overview-row.selected { background: rgba(90, 212, 255, 0.25); border-left: 3px solid var(--neon-cyan); }
+  .overview-row.hostile { border-left: 3px solid var(--neon-red); }
+  .row-icon { width: 16px; height: 16px; display: grid; place-items: center; font-size: 10px; }
+  .row-info { display: flex; flex-direction: column; overflow: hidden; }
+  .row-info b { font-family: var(--font-heading); font-size: 8px; font-weight: 800; color: #eaf6ff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row-info small { font-size: 7px; font-weight: 700; color: var(--text-muted); }
+  .row-dist { font-family: var(--font-heading); font-size: 8px; font-weight: 900; color: var(--neon-gold); }
+
+  .overview-toggle-btn {
+    position: absolute; top: 88px; right: 12px; z-index: 9;
+    width: 28px; height: 28px; border-radius: 6px; background: rgba(4, 11, 20, 0.9);
+    border: 1px solid rgba(90, 212, 255, 0.3); color: var(--neon-cyan); font-size: 12px;
+    display: none; place-items: center; cursor: pointer;
+  }
+  .overview-panel.collapsed ~ .overview-toggle-btn { display: grid; }
+
+  /* Virtual Flight Joystick (Bottom Left) */
+  .flight-stick-zone {
+    position: absolute; bottom: 18px; left: 16px; width: 90px; height: 90px;
+    border-radius: 50%; background: rgba(4, 14, 26, 0.7);
+    border: 1.5px solid rgba(90, 212, 255, 0.45); z-index: 12;
+    touch-action: none; pointer-events: auto; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 25px rgba(0,0,0,0.8);
+  }
+  .stick-knob {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #5ad4ff 0%, #16466e 80%);
+    border: 1.5px solid #a8e8ff; box-shadow: 0 0 12px rgba(90, 212, 255, 0.7);
+    pointer-events: none; transform: translate(0, 0);
+  }
+
+  /* Virtual Throttle Slider (Bottom Right) */
+  .flight-throttle-zone {
+    position: absolute; bottom: 18px; right: 16px; width: 42px; height: 105px;
+    background: rgba(4, 14, 26, 0.75); border: 1.5px solid rgba(90, 212, 255, 0.45);
+    border-radius: 12px; z-index: 12; display: flex; flex-direction: column;
+    align-items: center; justify-content: space-between; padding: 6px 0; touch-action: none;
+    box-shadow: 0 0 25px rgba(0,0,0,0.8);
+  }
+  .throttle-track { width: 6px; height: 70px; background: rgba(255,255,255,0.12); border-radius: 3px; position: relative; }
+  .throttle-fill { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(0deg, var(--neon-cyan), var(--neon-green)); border-radius: 3px; height: 0%; }
+  .throttle-handle { position: absolute; width: 26px; height: 14px; background: var(--neon-cyan); border-radius: 4px; left: -10px; bottom: 0%; box-shadow: 0 0 10px var(--neon-cyan); cursor: grab; }
+  .throttle-label { font-family: var(--font-heading); font-size: 7px; font-weight: 900; color: var(--neon-cyan); }
+
+  /* Center Bottom Command & Target Bar */
+  .command-dock {
+    position: absolute; bottom: 14px; left: 114px; right: 65px; z-index: 10;
+    display: flex; flex-direction: column; gap: 4px; pointer-events: none;
+  }
+  .command-dock * { pointer-events: auto; }
+
+  .target-card {
+    background: var(--panel-bg); border: 1px solid var(--border-accent); border-radius: 9px;
+    padding: 5px 8px; backdrop-filter: blur(8px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.6); display: flex; flex-direction: column; gap: 2px;
+  }
+  .target-top { display: flex; justify-content: space-between; align-items: center; }
+  .target-top b { font-family: var(--font-heading); font-size: 8.5px; font-weight: 900; color: #fff; letter-spacing: 0.04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px; }
+  .target-top span { font-family: var(--font-heading); font-size: 8px; font-weight: 900; color: var(--neon-gold); }
+  .target-sub { font-size: 7px; font-weight: 700; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .action-buttons { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; }
+  .act-btn {
+    background: rgba(14, 34, 56, 0.85); border: 1px solid rgba(90, 212, 255, 0.3);
+    color: #d8f0ff; border-radius: 4px; padding: 5px 2px;
+    font-family: var(--font-heading); font-size: 7.5px; font-weight: 900; text-align: center; cursor: pointer;
+  }
+  .act-btn:active { transform: scale(0.94); background: rgba(90, 212, 255, 0.3); }
+  .act-btn.warp { background: linear-gradient(180deg, #1b5b82 0%, #0d3852 100%); border-color: var(--neon-blue); color: #fff; box-shadow: 0 0 8px rgba(0, 240, 255, 0.3); }
+  .act-btn.scan { background: linear-gradient(180deg, #6b268f 0%, #3e1256 100%); border-color: var(--neon-purple); color: #fff; box-shadow: 0 0 8px rgba(196, 107, 255, 0.3); }
+  .act-btn.deploy { background: linear-gradient(180deg, #991b1b 0%, #5f1010 100%); border-color: var(--neon-red); color: #fff; box-shadow: 0 0 8px rgba(255, 82, 82, 0.4); }
+
+  .telemetry-strip {
+    display: flex; justify-content: space-between; align-items: center;
+    background: rgba(3, 8, 16, 0.85); border: 1px solid rgba(90, 212, 255, 0.25);
+    padding: 3px 8px; border-radius: 6px; font-family: var(--font-heading); font-size: 7px; color: #6dbcdb;
+  }
+  .telemetry-strip b { color: #fff; }
+
+  /* OVERLAYS & MODALS */
+  .modal-overlay {
+    position: absolute; inset: 0; z-index: 30; background: rgba(1, 4, 10, 0.96);
+    display: none; flex-direction: column; backdrop-filter: blur(12px);
+  }
+  .modal-overlay.active { display: flex; }
+
+  .modal-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 16px 10px;
+    background: linear-gradient(180deg, rgba(8, 20, 36, 0.98) 0%, rgba(3, 8, 16, 0.9) 100%);
+    border-bottom: 1px solid rgba(90, 212, 255, 0.3);
+  }
+  .modal-header b { font-family: var(--font-heading); font-size: 14px; font-weight: 900; color: #fff; letter-spacing: 0.1em; text-shadow: 0 0 12px rgba(90, 212, 255, 0.6); }
+  .modal-header small { font-family: var(--font-heading); color: var(--neon-cyan); font-size: 8px; font-weight: 800; display: block; }
+  .modal-close-btn {
+    background: rgba(220, 50, 50, 0.25); border: 1px solid rgba(255, 90, 90, 0.5);
+    color: #ff9e9e; border-radius: 6px; padding: 5px 10px; font-family: var(--font-heading);
+    font-size: 8.5px; font-weight: 900; cursor: pointer;
+  }
+
+  .modal-body { flex: 1; position: relative; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+
+  /* Galaxy Map Cards */
+  .galaxy-grid { display: flex; flex-direction: column; gap: 10px; }
+  .galaxy-card {
+    background: var(--panel-bg); border: 1px solid var(--border-accent); border-radius: 10px;
+    padding: 12px; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; gap: 6px;
+  }
+  .galaxy-card:hover { border-color: var(--neon-cyan); box-shadow: 0 0 16px rgba(90, 212, 255, 0.3); }
+  .galaxy-card-top { display: flex; justify-content: space-between; align-items: center; }
+  .galaxy-card-top b { font-family: var(--font-heading); font-size: 13px; font-weight: 900; color: #fff; }
+  .galaxy-card p { font-size: 9.5px; font-weight: 700; color: var(--text-muted); line-height: 1.35; }
+  .galaxy-card-footer { display: flex; justify-content: space-between; font-family: var(--font-heading); font-size: 8px; color: var(--neon-cyan); }
+
+  /* 3-Tier Scanning View */
+  .scan-tier-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+  .tier-tab {
+    background: rgba(10, 26, 44, 0.85); border: 1px solid var(--border-accent);
+    color: var(--text-muted); font-family: var(--font-heading); font-size: 8px; font-weight: 800;
+    padding: 6px 4px; border-radius: 5px; text-align: center; cursor: pointer;
+  }
+  .tier-tab.active { background: rgba(90, 212, 255, 0.25); color: #fff; border-color: var(--neon-cyan); }
+  .scan-viewport { height: 250px; position: relative; border-radius: 10px; overflow: hidden; background: #01050e; border: 1px solid var(--border-bright); }
+  #scanGlobeCanvas { width: 100%; height: 100%; display: block; }
+  .scan-reticle-ring {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 120px; height: 120px; border: 1.5px dashed rgba(90, 212, 255, 0.6);
+    border-radius: 50%; pointer-events: none; display: grid; place-items: center;
+  }
+  .scan-reticle-ring:before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--neon-cyan); box-shadow: 0 0 10px var(--neon-cyan); }
+
+  .intel-dossier-card {
+    background: rgba(6, 18, 32, 0.95); border: 1px solid var(--border-accent); border-radius: 10px;
+    padding: 12px; display: flex; flex-direction: column; gap: 8px;
+  }
+  .intel-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .intel-box { background: rgba(3, 8, 16, 0.8); border: 1px solid rgba(90, 212, 255, 0.2); padding: 6px 8px; border-radius: 6px; }
+  .intel-box span { font-family: var(--font-heading); font-size: 7px; font-weight: 800; color: #6dbcdb; display: block; }
+  .intel-box b { font-family: var(--font-heading); font-size: 10px; font-weight: 900; color: #fff; margin-top: 1px; display: block; }
+  .intel-box.extreme b { color: var(--neon-red); text-shadow: 0 0 8px rgba(255, 82, 82, 0.6); }
+
+  .doctrine-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+  .doc-tag { font-family: var(--font-heading); font-size: 7.5px; font-weight: 800; padding: 2px 6px; border-radius: 4px; background: rgba(90, 212, 255, 0.15); border: 1px solid var(--neon-cyan); color: #fff; }
+
+  /* Commander Matrix */
+  .commander-select-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .cmd-card {
+    background: rgba(6, 18, 32, 0.9); border: 1px solid rgba(90, 212, 255, 0.3); border-radius: 8px;
+    padding: 8px; cursor: pointer; display: flex; flex-direction: column; gap: 4px;
+  }
+  .cmd-card:hover { border-color: var(--neon-cyan); }
+  .cmd-card.active { border-color: var(--neon-gold); background: rgba(14, 38, 64, 0.95); box-shadow: 0 0 14px rgba(255, 214, 118, 0.4); }
+  .cmd-card-name { font-family: var(--font-heading); font-size: 9.5px; font-weight: 900; color: #fff; }
+  .cmd-card-role { font-size: 8px; font-weight: 800; color: var(--neon-cyan); }
+  .cmd-card-ability { font-size: 7.5px; color: var(--neon-gold); font-weight: 700; line-height: 1.25; }
+
+  .team-slots-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+  .team-slot {
+    background: rgba(3, 8, 16, 0.85); border: 1px solid var(--neon-green);
+    padding: 6px 4px; border-radius: 6px; text-align: center; font-family: var(--font-heading); font-size: 7.5px;
+    background: rgba(12, 40, 24, 0.85); color: #fff;
+  }
+
+  .deploy-options-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+  .deploy-opt-box { background: rgba(3, 8, 16, 0.85); border: 1px solid var(--border-bright); border-radius: 6px; padding: 6px; }
+  .deploy-opt-box span { font-family: var(--font-heading); font-size: 6.5px; font-weight: 800; color: #6dbcdb; display: block; }
+  .deploy-opt-box select { width: 100%; background: transparent; border: none; color: #fff; font-family: var(--font-heading); font-size: 8px; font-weight: 900; margin-top: 2px; outline: none; cursor: pointer; }
+
+  .deploy-launch-btn {
+    padding: 12px; border-radius: 8px; cursor: pointer;
+    background: linear-gradient(180deg, #b91c1c 0%, #7f1d1d 100%);
+    border: 1px solid var(--neon-red); color: #fff; font-family: var(--font-heading);
+    font-size: 12px; font-weight: 900; letter-spacing: 0.12em; text-align: center;
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
+  }
+  .deploy-launch-btn:active { transform: scale(0.97); }
+
+  /* RTS Battle Tactical Simulation */
+  #rtsBattleModal .modal-body { justify-content: center; align-items: center; text-align: center; }
+  .rts-radar-circle {
+    width: 140px; height: 140px; border-radius: 50%; border: 2px solid var(--neon-cyan);
+    position: relative; display: grid; place-items: center; margin: 10px auto;
+    box-shadow: 0 0 25px rgba(0, 240, 255, 0.3); background: radial-gradient(circle, rgba(0, 240, 255, 0.1) 0%, transparent 70%);
+  }
+  .rts-radar-sweep {
+    position: absolute; inset: 0; border-radius: 50%;
+    background: conic-gradient(from 0deg, rgba(0, 240, 255, 0.4) 0deg, transparent 90deg);
+    animation: radarSpin 2s linear infinite;
+  }
+  @keyframes radarSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+  /* After Action Report */
+  .resolution-card {
+    background: rgba(6, 18, 32, 0.95); border: 1px solid var(--neon-green); border-radius: 10px;
+    padding: 14px; display: flex; flex-direction: column; gap: 10px;
+  }
+  .res-consequence-row { display: flex; justify-content: space-between; font-family: var(--font-heading); font-size: 9px; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .res-consequence-row b { color: #fff; }
+  .res-consequence-row span { color: var(--neon-green); }
+
+  .toast-banner {
+    position: absolute; bottom: 85px; left: 50%; transform: translateX(-50%);
+    background: rgba(5, 14, 26, 0.95); border: 1px solid var(--neon-cyan);
+    border-radius: 6px; padding: 6px 14px; font-family: var(--font-heading); font-size: 9px; font-weight: 800;
+    color: #fff; z-index: 45; pointer-events: none; opacity: 0; transition: opacity 0.25s;
+    box-shadow: 0 0 15px rgba(0, 240, 255, 0.4); text-align: center; white-space: nowrap;
+  }
+  .toast-banner.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="top-dev-ribbon">
+  <div class="dev-ribbon-title">MASSFRONT · 3D CAPITAL SHIP EXPLORATION</div>
+  <div class="dev-ribbon-controls">
+    <button type="button" class="dev-btn" id="btnOpenGalaxy">🌌 GALAXY MAP</button>
+    <button type="button" class="dev-btn" id="btnToggleFullscreen">⛶ FULLSCREEN</button>
+  </div>
+</div>
+
+<div class="sandbox-frame" id="sandboxFrame">
+
+  <!-- Hierarchy Nav Stepper Header -->
+  <div class="hierarchy-stepper">
+    <div class="nav-breadcrumbs">
+      <span class="crumb" id="crumbGalaxy">GALAXY</span>
+      <span class="crumb-sep">▶</span>
+      <span class="crumb active" id="crumbSystem">SOMBRERO-I</span>
+      <span class="crumb-sep">▶</span>
+      <span class="crumb" id="crumbPlanet">PLANET</span>
+      <span class="crumb-sep">▶</span>
+      <span class="crumb" id="crumbDeploy">DEPLOY</span>
+    </div>
+    <div class="flagship-badge">
+      <small>FLAGSHIP</small>
+      <b>NCX-221 USS ZEUS</b>
+    </div>
+  </div>
+
+  <!-- System Subheader -->
+  <div class="system-meta-header">
+    <small id="sysSec">0.8 SEC · NOVA CIVILIZED HUB</small>
+    <b id="sysName">SOMBRERO-I</b>
+  </div>
+
+  <!-- 3D Space Canvas Viewport -->
+  <canvas id="spaceCanvas"></canvas>
+  <div class="scanline-overlay"></div>
+  <div id="hudBracketsLayer"></div>
+
+  <div class="toast-banner" id="toastBanner">WARP DRIVE SPOOLING...</div>
+
+  <!-- Virtual Flight Joystick (Bottom Left) -->
+  <div class="flight-stick-zone" id="flightStickZone">
+    <div class="stick-knob" id="stickKnob"></div>
+  </div>
+
+  <!-- Virtual Throttle Slider (Bottom Right) -->
+  <div class="flight-throttle-zone" id="flightThrottleZone">
+    <div class="throttle-label">MAX</div>
+    <div class="throttle-track" id="throttleTrack">
+      <div class="throttle-fill" id="throttleFill"></div>
+      <div class="throttle-handle" id="throttleHandle"></div>
+    </div>
+    <div class="throttle-label">STOP</div>
+  </div>
+
+  <!-- EVE Tactical Overview Sidebar (Collapsed by default on mobile) -->
+  <div class="overview-panel collapsed" id="overviewPanel">
+    <div class="overview-head">
+      <span>TACTICAL OVERVIEW</span>
+      <button type="button" id="btnCollapseOverview">▶</button>
+    </div>
+    <div class="filter-tabs">
+      <button type="button" class="filter-btn active" data-f="ALL">ALL</button>
+      <button type="button" class="filter-btn" data-f="PLANETS">WORLDS</button>
+      <button type="button" class="filter-btn" data-f="CONTACTS">CONTACTS</button>
+      <button type="button" class="filter-btn" data-f="THREATS">THREATS</button>
+    </div>
+    <div class="overview-list" id="overviewList"></div>
+  </div>
+  <button type="button" class="overview-toggle-btn" id="btnExpandOverview">◀</button>
+
+  <!-- Bottom Command Dock -->
+  <div class="command-dock">
+    <div class="target-card">
+      <div class="target-top">
+        <b id="tgtName">NO TARGET</b>
+        <span id="tgtDist">--</span>
+      </div>
+      <div class="target-sub" id="tgtSub">Use Stick/Throttle to fly or select destination</div>
+      <div class="action-buttons" id="actionButtons">
+        <button type="button" class="act-btn" id="actAlign">ALIGN</button>
+        <button type="button" class="act-btn warp" id="actWarp">WARP</button>
+        <button type="button" class="act-btn" id="actOrbit">ORBIT</button>
+        <button type="button" class="act-btn" id="actStop">STOP</button>
+      </div>
+    </div>
+
+    <div class="telemetry-strip">
+      <span>SPEED: <b id="telemSpeed">0 m/s</b></span>
+      <span>WARP: <b style="color:var(--neon-green);">ONLINE (4 RINGS)</b></span>
+      <span>HEADING: <b id="telemHeading">032°</b></span>
+    </div>
+  </div>
+
+  <!-- 1. GALAXY MAP MODAL -->
+  <div class="modal-overlay" id="galaxyModal">
+    <div class="modal-header">
+      <div>
+        <small>INTERSTELLAR STRATEGIC CLUSTER</small>
+        <b>GALAXY WAR TABLE</b>
+      </div>
+      <button type="button" class="modal-close-btn" id="btnCloseGalaxy">✕ CLOSE</button>
+    </div>
+    <div class="modal-body">
+      <div class="galaxy-grid">
+        <div class="galaxy-card" data-sys="sombrero">
+          <div class="galaxy-card-top">
+            <b>1. SOMBRERO-I (Civilized Hub)</b>
+            <span style="color:var(--neon-cyan)">0.8 SEC · TFC NOVA</span>
+          </div>
+          <p>Expeditionary headquarters. Heavy merchant convoys, naval staging yards, recruit outposts, and baseline intelligence contracts.</p>
+          <div class="galaxy-card-footer">
+            <span>WORLDS: 2</span>
+            <span>CONTACTS: 8</span>
+            <span>THREAT: LOW</span>
+          </div>
+        </div>
+
+        <div class="galaxy-card" data-sys="orion">
+          <div class="galaxy-card-top">
+            <b>2. ORION ARC (Frontier Grid)</b>
+            <span style="color:var(--neon-green)">0.5 SEC · SYNDICATE</span>
+          </div>
+          <p>Automated frontier sector. Uncharted sensor anomalies, derelict precursor structures, and high-risk extraction opportunities.</p>
+          <div class="galaxy-card-footer">
+            <span>WORLDS: 2</span>
+            <span>CONTACTS: 12</span>
+            <span>THREAT: MEDIUM</span>
+          </div>
+        </div>
+
+        <div class="galaxy-card" data-sys="helios">
+          <div class="galaxy-card-top">
+            <b>3. HELIOS CORE / KHARON (Brood Outbreak)</b>
+            <span style="color:var(--neon-red)">0.0 NULL · QUARANTINE</span>
+          </div>
+          <p>Hostile bio-infestation zone. Deserted shipping lanes, corrupted distress beacons, and massive subterranean Brood hive signatures.</p>
+          <div class="galaxy-card-footer">
+            <span>WORLDS: 2</span>
+            <span>CONTACTS: 14</span>
+            <span>THREAT: SEVERE</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. PLANETARY 3-TIER INTELLIGENCE SCANNING MODAL -->
+  <div class="modal-overlay" id="planetScanModal">
+    <div class="modal-header">
+      <div>
+        <small>HIGH-ORBIT PLANETARY INTELLIGENCE</small>
+        <b id="scanPlanetTitle">KHARON III</b>
+      </div>
+      <button type="button" class="modal-close-btn" id="btnScanClose">✕ ORBIT EXIT</button>
+    </div>
+    <div class="modal-body">
+      <div class="scan-tier-tabs">
+        <div class="tier-tab active" data-tier="1">1. ORBITAL SURVEY</div>
+        <div class="tier-tab" data-tier="2">2. REGIONAL SCAN</div>
+        <div class="tier-tab" data-tier="3">3. PRECISION PROBE</div>
+      </div>
+
+      <div class="scan-viewport">
+        <canvas id="scanGlobeCanvas"></canvas>
+        <div class="scan-reticle-ring"></div>
+      </div>
+
+      <div class="intel-dossier-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <b style="font-family:var(--font-heading);font-size:11px;" id="scanIntelStageTitle">ORBITAL SURVEY COMPLETE</b>
+          <span style="font-family:var(--font-heading);font-size:9px;color:var(--neon-gold);" id="scanIntelConfidence">CONFIDENCE: 65%</span>
+        </div>
+        <p style="font-size:9px;color:var(--text-muted);line-height:1.35;" id="scanIntelSummary">
+          Orbital imaging confirms major surface settlement. Zero civilian comms traffic detected. Dense fungal crust spreading over southern valleys.
+        </p>
+        <div style="display:flex;gap:8px;margin-top:4px;">
+          <button type="button" class="dev-btn" style="flex:1;" id="btnPerformRegionalScan">🔍 DIRECTED REGIONAL SCAN</button>
+          <button type="button" class="dev-btn" style="flex:1;" id="btnLaunchProbe">🚀 LAUNCH PROBE</button>
+        </div>
+      </div>
+
+      <button type="button" class="deploy-launch-btn" id="btnOpenDossier">PROCEED TO OPERATIONAL INTELLIGENCE ▶</button>
+    </div>
+  </div>
+
+  <!-- 3. REGION & THREAT DOSSIER MODAL -->
+  <div class="modal-overlay" id="regionDossierModal">
+    <div class="modal-header">
+      <div>
+        <small>OPERATION INTELLIGENCE BRIEFING</small>
+        <b>OPERATION: SILENT HIVE</b>
+      </div>
+      <button type="button" class="modal-close-btn" id="btnCloseDossier">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="intel-dossier-card">
+        <div style="display:flex;justify-content:space-between;">
+          <div>
+            <span style="font-family:var(--font-heading);font-size:7px;color:#6dbcdb;">TARGET WORLD & SECTOR</span>
+            <b style="font-family:var(--font-heading);font-size:12px;color:#fff;">KHARON III · SOUTH CHASM</b>
+          </div>
+          <span style="font-family:var(--font-heading);font-size:10px;color:var(--neon-red);font-weight:900;">THREAT: SEVERE</span>
+        </div>
+
+        <div class="intel-grid" style="margin-top:4px;">
+          <div class="intel-box extreme">
+            <span>BROOD DENSITY</span>
+            <b>EXTREME (94%)</b>
+          </div>
+          <div class="intel-box">
+            <span>TERRAIN TYPE</span>
+            <b>DENSE FUNGAL CHASM</b>
+          </div>
+          <div class="intel-box">
+            <span>PRIMARY HIVE</span>
+            <b>LOCATED (SECTOR 4)</b>
+          </div>
+          <div class="intel-box">
+            <span>SUBTERRANEAN BIO</span>
+            <b>ACTIVE (SWARM QUEEN)</b>
+          </div>
+        </div>
+
+        <div style="margin-top:4px;">
+          <span style="font-family:var(--font-heading);font-size:7.5px;color:#6dbcdb;display:block;">RECOMMENDED DOCTRINES</span>
+          <div class="doctrine-tags">
+            <span class="doc-tag">🔥 FLAME PURGE</span>
+            <span class="doc-tag">🛡 BIO-CONTAINMENT</span>
+            <span class="doc-tag">💣 SIEGE BOMBARDMENT</span>
+            <span class="doc-tag">📡 SCOUT DRONES</span>
+          </div>
+        </div>
+      </div>
+
+      <button type="button" class="deploy-launch-btn" id="btnOpenCommanderMatrix">CONFIGURE COMMANDER & STRIKE TEAM ▶</button>
+    </div>
+  </div>
+
+  <!-- 4. COMMANDER DEPLOYMENT MATRIX MODAL -->
+  <div class="modal-overlay" id="commanderMatrixModal">
+    <div class="modal-header">
+      <div>
+        <small>HIRED COMMANDER & DEPLOYMENT MATRIX</small>
+        <b>COMMAND DEPLOYMENT</b>
+      </div>
+      <button type="button" class="modal-close-btn" id="btnCloseMatrix">✕</button>
+    </div>
+    <div class="modal-body">
+      <span style="font-family:var(--font-heading);font-size:8px;color:#6dbcdb;font-weight:800;">SELECT OPERATIONAL COMMANDER</span>
+      <div class="commander-select-grid">
+        <div class="cmd-card active" data-cmd="kael">
+          <div class="cmd-card-name">KAEL VOSS (LVL 14)</div>
+          <div class="cmd-card-role">Heavy Assault / Siege</div>
+          <div class="cmd-card-ability">✦ Unlocks Tactical Artillery & Heavy Drops</div>
+        </div>
+
+        <div class="cmd-card" data-cmd="elara">
+          <div class="cmd-card-name">ELARA KAI (LVL 12)</div>
+          <div class="cmd-card-role">Reconnaissance / Spec-Ops</div>
+          <div class="cmd-card-ability">✦ Unlocks Stealth Infiltration & Drones</div>
+        </div>
+
+        <div class="cmd-card" data-cmd="tarek">
+          <div class="cmd-card-name">TAREK STONE (LVL 15)</div>
+          <div class="cmd-card-role">Armored Vanguard</div>
+          <div class="cmd-card-ability">✦ Unlocks Armor Convoys & Repair Rigs</div>
+        </div>
+
+        <div class="cmd-card" data-cmd="vaelis">
+          <div class="cmd-card-name">DR. VAELIS (LVL 11)</div>
+          <div class="cmd-card-role">Anti-Brood Specialist</div>
+          <div class="cmd-card-ability">✦ Unlocks Flame Doctrine & Bio-Scanners</div>
+        </div>
+      </div>
+
+      <span style="font-family:var(--font-heading);font-size:8px;color:#6dbcdb;font-weight:800;margin-top:4px;">COMMAND TEAM SUPPORT SPECIALISTS</span>
+      <div class="team-slots-grid">
+        <div class="team-slot filled"><b>Siege Eng.</b><br><small style="color:#7dff9a">READY</small></div>
+        <div class="team-slot filled"><b>Field Medic</b><br><small style="color:#7dff9a">READY</small></div>
+        <div class="team-slot filled"><b>Bio-Tech</b><br><small style="color:#7dff9a">READY</small></div>
+        <div class="team-slot filled"><b>Demolitions</b><br><small style="color:#7dff9a">READY</small></div>
+      </div>
+
+      <span style="font-family:var(--font-heading);font-size:8px;color:#6dbcdb;font-weight:800;margin-top:4px;">DEPLOYMENT CONFIGURATION</span>
+      <div class="deploy-options-grid">
+        <div class="deploy-opt-box">
+          <span>LANDING ZONE</span>
+          <select id="selLZ">
+            <option>SOUTH VALLEY</option>
+            <option>HIGH RIDGE</option>
+            <option>FACTORY RUINS</option>
+          </select>
+        </div>
+        <div class="deploy-opt-box">
+          <span>ORBITAL SUPPORT</span>
+          <select id="selSupport">
+            <option>ORBITAL ARTILLERY</option>
+            <option>RECON DRONE SWEEP</option>
+            <option>SUPPLY AIRDROP</option>
+          </select>
+        </div>
+        <div class="deploy-opt-box">
+          <span>DOCTRINE</span>
+          <select id="selDoctrine">
+            <option>FLAME PURGE</option>
+            <option>AGGRESSIVE PUSH</option>
+            <option>CONTAINMENT</option>
+          </select>
+        </div>
+      </div>
+
+      <button type="button" class="deploy-launch-btn" id="btnExecuteDeploy">⚔ LAUNCH RTS DEPLOYMENT</button>
+    </div>
+  </div>
+
+  <!-- 5. TACTICAL RTS ENGAGEMENT SIMULATION MODAL -->
+  <div class="modal-overlay" id="rtsBattleModal">
+    <div class="modal-header">
+      <div>
+        <small>TACTICAL RTS ENGAGEMENT ACTIVE</small>
+        <b>OPERATION: SILENT HIVE IN PROGRESS</b>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div class="rts-radar-circle">
+        <div class="rts-radar-sweep"></div>
+        <span style="font-family:var(--font-heading);font-size:10px;font-weight:900;color:var(--neon-cyan);z-index:2;">ENGAGING</span>
+      </div>
+      <b style="font-family:var(--font-heading);font-size:14px;color:#fff;" id="rtsStatusText">DROPSHIP INSERTION CONFIRMED</b>
+      <p style="font-size:9px;color:var(--text-muted);margin-top:4px;" id="rtsSubText">Orbital fire support established · Purging primary bio-spire</p>
+    </div>
+  </div>
+
+  <!-- 6. RESOLUTION & PERSISTENT CONSEQUENCES MODAL -->
+  <div class="modal-overlay" id="resolutionModal">
+    <div class="modal-header">
+      <div>
+        <small>AFTER-ACTION RESOLUTION</small>
+        <b>OPERATION RESOLVED: VICTORY</b>
+      </div>
+      <button type="button" class="modal-close-btn" id="btnCloseResolution">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="resolution-card">
+        <b style="font-family:var(--font-heading);font-size:12px;color:var(--neon-green);">HIVE CORE NEUTRALIZED</b>
+        <p style="font-size:9.5px;color:var(--text-muted);line-height:1.35;">
+          Commander Kael Voss secured the primary bio-spire. Civilian evacuation corridor established. Brood presence in sector suppressed.
+        </p>
+
+        <div style="display:flex;flex-direction:column;gap:4px;margin-top:6px;">
+          <div class="res-consequence-row">
+            <b>COMMANDER KAEL VOSS</b>
+            <span>+1,850 XP (LEVEL 15 REACHED)</span>
+          </div>
+          <div class="res-consequence-row">
+            <b>COMBAT ENGINEER</b>
+            <span style="color:var(--neon-gold)">LIGHT INJURIES (1 CYCLE REPAIR)</span>
+          </div>
+          <div class="res-consequence-row">
+            <b>FIELD MEDIC</b>
+            <span>+LOYALTY (COMMENDATION)</span>
+          </div>
+          <div class="res-consequence-row">
+            <b>RECOVERED BIO-SAMPLES</b>
+            <span>+4 BROOD TISSUE CORES</span>
+          </div>
+          <div class="res-consequence-row">
+            <b>SECTOR THREAT LEVEL</b>
+            <span style="color:var(--neon-cyan)">REDUCED 71% ➔ 42%</span>
+          </div>
+        </div>
+      </div>
+
+      <button type="button" class="deploy-launch-btn" id="btnReturnToGalaxy">RETURN TO STRATEGIC EXPLORATION ▶</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* --------------------------------------------------------------------------
+   3D CAPITAL SHIP (NCX-221 USS ZEUS) FLIGHT & EXPLORATION ENGINE
+   -------------------------------------------------------------------------- */
+(function(){
+  'use strict';
+
+  const SYSTEMS = {
+    sombrero: {
+      id: 'sombrero', name: 'SOMBRERO-I', star: 'FRONTLINE PRIME', starColor: '#fff4cc', starRadius: 40,
+      security: '0.8 SEC · NOVA CIVILIZED HUB', desc: 'Expeditionary command anchor. Heavy civilian traffic and naval shipyards.',
+      planets: [
+        { id: 'aelos', name: 'AELOS PRIME', sub: 'TFC Homeworld', radius: 28, orbitDist: 220, orbitSpeed: 0.0005, orbitAngle: 0.8, color: '#5ad4ff', cloudColor: '#e0f7ff', rings: false, threat: 'LOW' },
+        { id: 'aelos_minor', name: 'AELOS MINOR', sub: 'Cryo Station', radius: 15, orbitDist: 360, orbitSpeed: 0.00035, orbitAngle: 2.2, color: '#a8d8ff', cloudColor: '#ffffff', rings: true, threat: 'LOW' }
+      ],
+      contacts: [
+        { id: 'c_civ_1', name: 'Nova Merchant Convoys', type: 'Civilian Traffic', dist: 140, angle: 1.4, icon: '🚀' },
+        { id: 'c_dock_1', name: 'Naval Shipyard NCX-01', type: 'Station', dist: 260, angle: 3.8, icon: '🏛' }
+      ]
+    },
+    orion: {
+      id: 'orion', name: 'ORION ARC', star: 'GRID SUN', starColor: '#9effeb', starRadius: 42,
+      security: '0.5 SEC · SYNDICATE FRONTIER', desc: 'Automated frontier grid. Derelict mega-structures and anomalous signals.',
+      planets: [
+        { id: 'nordhall', name: 'NORDHALL VAST', sub: 'Syndicate Core', radius: 25, orbitDist: 250, orbitSpeed: 0.00045, orbitAngle: 3.1, color: '#7dff9a', cloudColor: '#c2ffd4', rings: true, threat: 'MEDIUM' }
+      ],
+      contacts: [
+        { id: 'c_derelict_1', name: 'Derelict Precursor Array', type: 'Uncharted Wreck', dist: 180, angle: 4.2, icon: '🛰' },
+        { id: 'c_patrol_1', name: 'Syndicate Drone Fleet', type: 'Automated Patrol', dist: 310, angle: 0.9, icon: '🛸' }
+      ]
+    },
+    helios: {
+      id: 'helios', name: 'HELIOS CORE / KHARON', star: 'HIVE STAR', starColor: '#f2a6ff', starRadius: 38,
+      security: '0.0 NULL · BROOD QUARANTINE', desc: 'Severe biological outbreak. Bio-corrupted hulls and deep subterranean spires.',
+      planets: [
+        { id: 'kharon', name: 'KHARON III', sub: 'Infested Colony', radius: 30, orbitDist: 260, orbitSpeed: 0.0004, orbitAngle: 1.2, color: '#c46bff', cloudColor: '#ffb3fa', rings: true, threat: 'SEVERE' }
+      ],
+      contacts: [
+        { id: 'c_bio_wreck', name: 'Bio-Encrusted Transport', type: 'Corrupted Wreck', dist: 170, angle: 2.7, icon: '☣' },
+        { id: 'c_swarm_patrol', name: 'Brood Bio-Leviathan', type: 'Hostile Swarm', dist: 360, angle: 5.1, icon: '👾' }
+      ]
+    }
+  };
+
+  const S = {
+    sysKey: 'sombrero',
+    sys: SYSTEMS.sombrero,
+    // 3D NCX-221 Dreadnought Flagship
+    ship: {
+      x: 0, y: 0, z: 120,
+      vx: 0, vy: 0, vz: 0,
+      yaw: 0.3, pitch: 0, roll: 0,
+      targetYaw: 0.3, targetPitch: 0,
+      speed: 0, throttle: 0, maxSpeed: 240,
+      turnRate: 2.2,
+      warpState: 0, warpDest: null, warpSpeed: 950
+    },
+    cam: { yaw: 0.3, pitch: 0.38, dist: 145, fov: 60 },
+    stick: { active: false, x: 0, y: 0 },
+    touchCam: { dragging: false, lastX: 0, lastY: 0 },
+    target: null, targetKind: null,
+    overviewFilter: 'ALL',
+    scan: { active: false, planet: null, tier: 1 },
+    selectedCmd: 'kael',
+    asteroids: [], starsBg: [], thrusterParticles: []
+  };
+
+  // Web Audio Synthesizer
+  let audioCtx = null;
+  function playSound(type) {
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      const now = audioCtx.currentTime;
+
+      if (type === 'warp') {
+        osc.frequency.setValueAtTime(60, now);
+        osc.frequency.exponentialRampToValueAtTime(540, now + 0.9);
+        gain.gain.setValueAtTime(0.35, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.9);
+        osc.start(now); osc.stop(now + 0.9);
+      } else if (type === 'engine') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(90, now);
+        gain.gain.setValueAtTime(0.12, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.4);
+        osc.start(now); osc.stop(now + 0.4);
+      } else if (type === 'deploy') {
+        osc.frequency.setValueAtTime(160, now);
+        osc.frequency.exponentialRampToValueAtTime(45, now + 0.6);
+        gain.gain.setValueAtTime(0.4, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.6);
+        osc.start(now); osc.stop(now + 0.6);
+      } else {
+        osc.frequency.setValueAtTime(360, now);
+        gain.gain.setValueAtTime(0.15, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.1);
+        osc.start(now); osc.stop(now + 0.1);
+      }
+    } catch(e){}
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toastBanner');
+    if (t) {
+      t.textContent = msg; t.classList.add('show');
+      clearTimeout(t._timer); t._timer = setTimeout(() => t.classList.remove('show'), 2400);
+    }
+  }
+
+  function spDist3(x1, y1, z1, x2, y2, z2) {
+    const dx = x2 - x1, dy = y2 - y1, dz = z2 - z1;
+    return Math.sqrt(dx*dx + dy*dy + dz*dz);
+  }
+  function spLerp(a, b, t) { return a + (b - a) * t; }
+  function spClamp(v, min, max) { return v < min ? min : (v > max ? max : v); }
+  function spNormalizeAngle(a) {
+    while (a > Math.PI) a -= Math.PI * 2;
+    while (a < -Math.PI) a += Math.PI * 2;
+    return a;
+  }
+
+  // Exact 3D Perspective & View Matrix Projection
+  function spProject(px, py, pz, cam, width, height) {
+    const dx = px - cam.x, dy = py - cam.y, dz = pz - cam.z;
+    const cosY = Math.cos(cam.yaw), sinY = Math.sin(cam.yaw);
+    const x1 = dx * cosY - dz * sinY;
+    const z1 = dx * sinY + dz * cosY;
+
+    const cosP = Math.cos(cam.pitch), sinP = Math.sin(cam.pitch);
+    const y2 = dy * cosP + z1 * sinP;
+    const z2 = -dy * sinP + z1 * cosP;
+
+    if (z2 <= 1.0) return null;
+    const aspect = width / height;
+    const fovRad = (cam.fov * Math.PI) / 180;
+    const f = 1.0 / Math.tan(fovRad / 2);
+    const sx = (width / 2) + (x1 * f / (z2 * aspect)) * (width / 2);
+    const sy = (height / 2) - (y2 * f / z2) * (height / 2);
+    return { x: sx, y: sy, z: z2, visible: (sx >= -150 && sx <= width + 150 && sy >= -150 && sy <= height + 150) };
+  }
+
+  // Transform 3D local vertex to World space
+  function transformShipVertex(lx, ly, lz, sh) {
+    const cy = Math.cos(sh.yaw), sy = Math.sin(sh.yaw);
+    const cp = Math.cos(sh.pitch), sp = Math.sin(sh.pitch);
+    const cr = Math.cos(sh.roll), sr = Math.sin(sh.roll);
+
+    // Roll (around Z)
+    const x1 = lx * cr - ly * sr;
+    const y1 = lx * sr + ly * cr;
+    const z1 = lz;
+
+    // Pitch (around X)
+    const x2 = x1;
+    const y2 = y1 * cp - z1 * sp;
+    const z2 = y1 * sp + z1 * cp;
+
+    // Yaw (around Y)
+    const wx = x2 * cy + z2 * sy + sh.x;
+    const wy = y2 + sh.y;
+    const wz = -x2 * sy + z2 * cy + sh.z;
+
+    return { x: wx, y: wy, z: wz };
+  }
+
+  function initStarfield() {
+    S.starsBg = [];
+    for (let i = 0; i < 320; i++) {
+      const u = Math.random(), v = Math.random();
+      const theta = u * 2.0 * Math.PI, phi = Math.acos(2.0 * v - 1.0);
+      const r = 1500 + Math.random() * 500, sinPhi = Math.sin(phi);
+      S.starsBg.push({
+        x: r * sinPhi * Math.cos(theta), y: r * Math.cos(phi), z: r * sinPhi * Math.sin(theta),
+        size: 0.8 + Math.random() * 2.2, brightness: 0.3 + Math.random() * 0.7,
+        color: Math.random() > 0.8 ? '#aadcff' : (Math.random() > 0.6 ? '#ffd299' : '#ffffff')
+      });
+    }
+  }
+
+  function initSystemAsteroids(sys) {
+    S.asteroids = [];
+    for (let i = 0; i < 48; i++) {
+      const ang = (i / 48) * Math.PI * 2 + (Math.random() - 0.5) * 0.2;
+      const rad = 160 + (Math.random() - 0.5) * 40;
+      const elev = (Math.random() - 0.5) * 25;
+      S.asteroids.push({
+        x: Math.cos(ang) * rad, y: elev, z: Math.sin(ang) * rad,
+        radius: 3.5 + Math.random() * 5.5, color: '#8b9bb0', rot: Math.random() * Math.PI * 2,
+        rotSpeed: (Math.random() - 0.5) * 0.02
+      });
+    }
+  }
+
+  function updateSystemPositions(sys) {
+    if (sys.planets) {
+      sys.planets.forEach(P => {
+        P.x = Math.cos(P.orbitAngle) * P.orbitDist;
+        P.y = 0;
+        P.z = Math.sin(P.orbitAngle) * P.orbitDist;
+      });
+    }
+    if (sys.contacts) {
+      sys.contacts.forEach(C => {
+        C.x = Math.cos(C.angle) * C.dist;
+        C.y = 0;
+        C.z = Math.sin(C.angle) * C.dist;
+      });
+    }
+  }
+
+  function loadSystem(sysKey) {
+    const sys = SYSTEMS[sysKey] || SYSTEMS.sombrero;
+    S.sysKey = sysKey; S.sys = sys;
+    document.getElementById('sysName').textContent = sys.name;
+    document.getElementById('sysSec').textContent = sys.security;
+    document.getElementById('crumbSystem').textContent = sys.name;
+    updateSystemPositions(sys);
+    initSystemAsteroids(sys);
+    renderOverviewList();
+  }
+
+  // 3D FLIGHT STEERING & DYNAMICS
+  function stepFlight(dt) {
+    const sh = S.ship;
+
+    // Joystick flight steering
+    if (S.stick.active) {
+      sh.yaw += S.stick.x * sh.turnRate * dt;
+      sh.pitch = spClamp(sh.pitch - S.stick.y * sh.turnRate * 0.8 * dt, -0.8, 0.8);
+      sh.roll = spLerp(sh.roll, S.stick.x * 0.7, dt * 6);
+    } else {
+      sh.roll = spLerp(sh.roll, 0, dt * 4);
+    }
+
+    // Warp Auto Navigation
+    if (sh.warpState === 1) {
+      let dy = spNormalizeAngle(sh.targetYaw - sh.yaw);
+      let dp = spNormalizeAngle(sh.targetPitch - sh.pitch);
+      sh.yaw += spClamp(dy, -sh.turnRate * dt, sh.turnRate * dt);
+      sh.pitch += spClamp(dp, -sh.turnRate * dt, sh.turnRate * dt);
+      sh.throttle = spLerp(sh.throttle, 0.8, dt * 2);
+      if (Math.abs(dy) < 0.12 && Math.abs(dp) < 0.12) {
+        sh.warpState = 2;
+        showToast('NCX-221 IN WARP TRANSIT');
+      }
+    } else if (sh.warpState === 2) {
+      sh.speed = spLerp(sh.speed, sh.warpSpeed, dt * 4);
+      const dx = sh.warpDest.x - sh.x, dy = sh.warpDest.y - sh.y, dz = sh.warpDest.z - sh.z;
+      const d = Math.hypot(dx, dy, dz);
+      if (d < 35) sh.warpState = 3;
+      else {
+        sh.x += (dx / d) * sh.speed * dt; sh.y += (dy / d) * sh.speed * dt; sh.z += (dz / d) * sh.speed * dt;
+      }
+    } else if (sh.warpState === 3) {
+      sh.speed = spLerp(sh.speed, 0, dt * 4);
+      if (sh.speed < 15) {
+        sh.speed = 0; sh.throttle = 0; sh.warpState = 0;
+        showToast('WARP EXIT — LOCAL KEPLERIAN ORBIT');
+      }
+    } else {
+      // Standard Flight Propulsion
+      const targetSpeed = sh.throttle * sh.maxSpeed;
+      sh.speed = spLerp(sh.speed, targetSpeed, dt * 2.5);
+
+      const fwdX = Math.sin(sh.yaw) * Math.cos(sh.pitch);
+      const fwdY = -Math.sin(sh.pitch);
+      const fwdZ = Math.cos(sh.yaw) * Math.cos(sh.pitch);
+
+      sh.vx = fwdX * sh.speed;
+      sh.vy = fwdY * sh.speed;
+      sh.vz = fwdZ * sh.speed;
+
+      sh.x += sh.vx * dt;
+      sh.y += sh.vy * dt;
+      sh.z += sh.vz * dt;
+    }
+
+    // Spawn 3D Plasma Thruster Particles
+    if (sh.speed > 5) {
+      const fwdX = Math.sin(sh.yaw) * Math.cos(sh.pitch);
+      const fwdY = -Math.sin(sh.pitch);
+      const fwdZ = Math.cos(sh.yaw) * Math.cos(sh.pitch);
+      for (let p = 0; p < 2; p++) {
+        S.thrusterParticles.push({
+          x: sh.x - fwdX * 24 + (Math.random() - 0.5) * 4,
+          y: sh.y - fwdY * 24 + (Math.random() - 0.5) * 2,
+          z: sh.z - fwdZ * 24 + (Math.random() - 0.5) * 4,
+          vx: -fwdX * (sh.speed * 0.4 + 20) + (Math.random() - 0.5) * 5,
+          vy: -fwdY * (sh.speed * 0.4 + 20) + (Math.random() - 0.5) * 5,
+          vz: -fwdZ * (sh.speed * 0.4 + 20) + (Math.random() - 0.5) * 5,
+          life: 1.0, decay: 2.5 + Math.random() * 2.0,
+          color: sh.warpState > 0 ? '#7dff9a' : '#00f0ff'
+        });
+      }
+    }
+
+    // Step Thruster Particles
+    for (let i = S.thrusterParticles.length - 1; i >= 0; i--) {
+      const pt = S.thrusterParticles[i];
+      pt.x += pt.vx * dt; pt.y += pt.vy * dt; pt.z += pt.vz * dt;
+      pt.life -= pt.decay * dt;
+      if (pt.life <= 0) S.thrusterParticles.splice(i, 1);
+    }
+
+    // Orbit Planar Bodies
+    if (S.sys && S.sys.planets) {
+      S.sys.planets.forEach(P => {
+        P.orbitAngle += P.orbitSpeed * dt * 60;
+        P.x = Math.cos(P.orbitAngle) * P.orbitDist;
+        P.y = 0; P.z = Math.sin(P.orbitAngle) * P.orbitDist;
+      });
+    }
+
+    // Camera Chase Smoothing
+    const targetCamDist = sh.warpState > 0 ? 180 : 135;
+    S.cam.dist = spLerp(S.cam.dist, targetCamDist, dt * 3);
+    S.cam.yaw = spLerp(S.cam.yaw, sh.yaw, dt * 3.5);
+    S.cam.pitch = spLerp(S.cam.pitch, 0.38 + sh.pitch * 0.4, dt * 3.5);
+
+    // Update Telemetry UI
+    document.getElementById('telemSpeed').textContent = Math.round(sh.speed * 6) + ' m/s';
+    const hdg = Math.round(((sh.yaw * 180 / Math.PI) % 360 + 360) % 360);
+    document.getElementById('telemHeading').textContent = String(hdg).padStart(3, '0') + '°';
+  }
+
+  // 3D DRAW SCENE & FULL 3D PROCEDURAL NCX-221 CAPITAL DREADNOUGHT MESH
+  function drawScene(ctx, w, h) {
+    ctx.clearRect(0, 0, w, h);
+    const sh = S.ship, c = S.cam;
+    const sinY = Math.sin(c.yaw), cosY = Math.cos(c.yaw);
+    const sinP = Math.sin(c.pitch), cosP = Math.cos(c.pitch);
+
+    // Position camera behind and elevated above the ship for dramatic 3/4 view
+    const cx = sh.x - sinY * cosP * c.dist;
+    const cy = sh.y + sinP * c.dist + 18;
+    const cz = sh.z - cosY * cosP * c.dist;
+    const camObj = { x: cx, y: cy, z: cz, yaw: c.yaw, pitch: c.pitch, fov: c.fov };
+
+    // 1. Starfield
+    S.starsBg.forEach(star => {
+      const p = spProject(star.x + sh.x * 0.05, star.y + sh.y * 0.05, star.z + sh.z * 0.05, camObj, w, h);
+      if (p && p.visible) {
+        ctx.fillStyle = star.color; ctx.globalAlpha = star.brightness;
+        ctx.beginPath(); ctx.arc(p.x, p.y, star.size, 0, Math.PI * 2); ctx.fill();
+      }
+    });
+    ctx.globalAlpha = 1.0;
+
+    // 2. Central Radiant Star
+    const starP = spProject(0, 0, 0, camObj, w, h);
+    if (starP && starP.visible) {
+      const r = Math.max(10, (S.sys.starRadius * 400) / starP.z);
+      const grad = ctx.createRadialGradient(starP.x, starP.y, 4, starP.x, starP.y, r * 2.2);
+      grad.addColorStop(0, '#ffffff'); grad.addColorStop(0.3, S.sys.starColor);
+      grad.addColorStop(0.7, 'rgba(255,140,50,0.25)'); grad.addColorStop(1, 'transparent');
+      ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(starP.x, starP.y, r * 2.2, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // 3. Orbital Tracks
+    ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(90, 212, 255, 0.12)';
+    if (S.sys && S.sys.planets) {
+      S.sys.planets.forEach(P => {
+        ctx.beginPath();
+        for (let a = 0; a <= Math.PI * 2 + 0.1; a += 0.25) {
+          const px = Math.cos(a) * P.orbitDist, pz = Math.sin(a) * P.orbitDist;
+          const pt = spProject(px, 0, pz, camObj, w, h);
+          if (pt && pt.visible) { if (a === 0) ctx.moveTo(pt.x, pt.y); else ctx.lineTo(pt.x, pt.y); }
+        }
+        ctx.stroke();
+      });
+    }
+
+    // 4. Asteroid Belts (3D Shaded Rocks)
+    S.asteroids.forEach(ast => {
+      ast.rot += ast.rotSpeed;
+      const pt = spProject(ast.x, ast.y, ast.z, camObj, w, h);
+      if (pt && pt.visible) {
+        const ar = Math.max(2, (ast.radius * 320) / pt.z);
+        const rockGrad = ctx.createRadialGradient(pt.x - ar * 0.3, pt.y - ar * 0.3, ar * 0.1, pt.x, pt.y, ar);
+        rockGrad.addColorStop(0, '#bcccdb'); rockGrad.addColorStop(0.6, '#56667a'); rockGrad.addColorStop(1, '#0e1622');
+        ctx.fillStyle = rockGrad; ctx.beginPath(); ctx.arc(pt.x, pt.y, ar, 0, Math.PI * 2); ctx.fill();
+      }
+    });
+
+    // 5. Planetary Bodies
+    if (S.sys && S.sys.planets) {
+      S.sys.planets.forEach(P => {
+        const pt = spProject(P.x, P.y, P.z, camObj, w, h);
+        if (pt && pt.visible) {
+          const pr = Math.max(8, (P.radius * 380) / pt.z);
+          // Atmospheric Glow
+          const atmo = ctx.createRadialGradient(pt.x, pt.y, pr * 0.85, pt.x, pt.y, pr * 1.35);
+          atmo.addColorStop(0, P.color); atmo.addColorStop(1, 'transparent');
+          ctx.fillStyle = atmo; ctx.beginPath(); ctx.arc(pt.x, pt.y, pr * 1.35, 0, Math.PI * 2); ctx.fill();
+
+          // Planet Body with Day/Night Terminator
+          const body = ctx.createRadialGradient(pt.x - pr * 0.35, pt.y - pr * 0.35, pr * 0.1, pt.x, pt.y, pr);
+          body.addColorStop(0, P.cloudColor); body.addColorStop(0.5, P.color); body.addColorStop(1, '#02050c');
+          ctx.fillStyle = body; ctx.beginPath(); ctx.arc(pt.x, pt.y, pr, 0, Math.PI * 2); ctx.fill();
+
+          if (P.rings) {
+            ctx.strokeStyle = 'rgba(200, 230, 255, 0.35)'; ctx.lineWidth = Math.max(1, pr * 0.18);
+            ctx.beginPath(); ctx.ellipse(pt.x, pt.y, pr * 2.2, pr * 0.65, 0.3, 0, Math.PI * 2); ctx.stroke();
+          }
+        }
+      });
+    }
+
+    // 6. Thruster Particles
+    S.thrusterParticles.forEach(pt => {
+      const p = spProject(pt.x, pt.y, pt.z, camObj, w, h);
+      if (p && p.visible) {
+        ctx.fillStyle = pt.color; ctx.globalAlpha = pt.life;
+        ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(1.5, 4 * pt.life), 0, Math.PI * 2); ctx.fill();
+      }
+    });
+    ctx.globalAlpha = 1.0;
+
+    // 7. NCX-221 USS ZEUS 3D DREADNOUGHT MULTI-PART POLYGONAL MESH
+    drawNcx221Flagship3D(ctx, sh, camObj, w, h);
+
+    updateHudBrackets(camObj, w, h);
+  }
+
+  // Authentic 3D NCX-221 Dreadnought Renderer (True 3D Geometry)
+  function drawNcx221Flagship3D(ctx, sh, cam, w, h) {
+    // Helper to project local ship 3D point to screen
+    function pLocal(lx, ly, lz) {
+      const wPt = transformShipVertex(lx, ly, lz, sh);
+      return spProject(wPt.x, wPt.y, wPt.z, cam, w, h);
+    }
+
+    // Helper to draw 3D Quad
+    function draw3DQuad(p1, p2, p3, p4, fillStyle, strokeStyle, strokeW = 1) {
+      const s1 = pLocal(p1[0], p1[1], p1[2]);
+      const s2 = pLocal(p2[0], p2[1], p2[2]);
+      const s3 = pLocal(p3[0], p3[1], p3[2]);
+      const s4 = pLocal(p4[0], p4[1], p4[2]);
+      if (!s1 || !s2 || !s3 || !s4) return;
+
+      ctx.beginPath();
+      ctx.moveTo(s1.x, s1.y);
+      ctx.lineTo(s2.x, s2.y);
+      ctx.lineTo(s3.x, s3.y);
+      ctx.lineTo(s4.x, s4.y);
+      ctx.closePath();
+
+      if (fillStyle) { ctx.fillStyle = fillStyle; ctx.fill(); }
+      if (strokeStyle) { ctx.strokeStyle = strokeStyle; ctx.lineWidth = strokeW; ctx.stroke(); }
+    }
+
+    // Helper to draw 3D 16-Segment Toroidal Ring
+    function draw3DWarpRing(zOffset, radiusX, radiusY, isCyanGlow) {
+      const segs = 16;
+      const pts = [];
+      for (let i = 0; i < segs; i++) {
+        const theta = (i / segs) * Math.PI * 2;
+        const rx = Math.cos(theta) * radiusX;
+        const ry = Math.sin(theta) * radiusY;
+        const sp = pLocal(rx, ry, zOffset);
+        if (sp) pts.push(sp);
+      }
+
+      if (pts.length < segs) return;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+      ctx.closePath();
+
+      if (isCyanGlow) {
+        ctx.strokeStyle = '#00f0ff';
+        ctx.lineWidth = 3.5;
+        ctx.shadowColor = '#00f0ff';
+        ctx.shadowBlur = 18;
+        ctx.stroke();
+
+        // Field Coils Accent markers
+        const coil1 = pts[0], coil2 = pts[Math.floor(segs/2)];
+        ctx.fillStyle = '#ff3333'; ctx.beginPath(); ctx.arc(coil1.x, coil1.y, 3, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#33ffff'; ctx.beginPath(); ctx.arc(coil2.x, coil2.y, 3, 0, Math.PI*2); ctx.fill();
+      } else {
+        ctx.strokeStyle = '#26516e'; ctx.lineWidth = 2; ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 1. AFT ENGINE NACELLES & CYLINDRICAL SPINE (Z = -25 to +5)
+    // ─────────────────────────────────────────────────────────────
+    // Aft Fuselage Box (Top, Bottom, Sides)
+    draw3DQuad([-5, 4, -25], [5, 4, -25], [6, 4, 5], [-6, 4, 5], '#304866', '#5ad4ff', 1.5);
+    draw3DQuad([-5, -4, -25], [5, -4, -25], [6, -4, 5], [-6, -4, 5], '#152332', '#1f4a72', 1);
+    draw3DQuad([-5, -4, -25], [-5, 4, -25], [-6, 4, 5], [-6, -4, 5], '#1c2d40', '#3b6a90', 1);
+    draw3DQuad([5, -4, -25], [5, 4, -25], [6, 4, 5], [6, -4, 5], '#263a52', '#3b6a90', 1);
+
+    // Twin Aft Propulsion Nacelles & Plasma Flares
+    draw3DQuad([-10, 2, -30], [-6, 2, -30], [-5, 2, -10], [-9, 2, -10], '#243b54', '#5ad4ff', 1.5);
+    draw3DQuad([6, 2, -30], [10, 2, -30], [9, 2, -10], [5, 2, -10], '#243b54', '#5ad4ff', 1.5);
+
+    if (sh.speed > 5 || sh.warpState > 0) {
+      const eLeft = pLocal(-8, 2, -32);
+      const eRight = pLocal(8, 2, -32);
+      if (eLeft && eRight) {
+        ctx.fillStyle = sh.warpState > 0 ? '#7dff9a' : '#00f0ff';
+        ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 24;
+        ctx.beginPath();
+        ctx.arc(eLeft.x, eLeft.y, 6 + Math.random() * 3, 0, Math.PI * 2);
+        ctx.arc(eRight.x, eRight.y, 6 + Math.random() * 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 2. 4 GLOWING CYAN WARP TOROIDAL RINGS (Z = -18, -10, -2, +6)
+    // ─────────────────────────────────────────────────────────────
+    draw3DWarpRing(-18, 12, 8, true);
+    draw3DWarpRing(-10, 12.5, 8.5, true);
+    draw3DWarpRing(-2, 13, 9, true);
+    draw3DWarpRing(6, 13.5, 9.5, true);
+
+    // ─────────────────────────────────────────────────────────────
+    // 3. OPEN GANTRY DECK & CITY CATWALKS (Z = 5 to 20)
+    // ─────────────────────────────────────────────────────────────
+    draw3DQuad([-8, 0, 5], [8, 0, 5], [10, 0, 20], [-10, 0, 20], '#071220', '#1f4a72', 1);
+    for (let gz = 8; gz <= 18; gz += 3) {
+      const g1 = pLocal(-8, 0, gz), g2 = pLocal(8, 0, gz);
+      if (g1 && g2) {
+        ctx.strokeStyle = 'rgba(90, 212, 255, 0.45)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(g1.x, g1.y); ctx.lineTo(g2.x, g2.y); ctx.stroke();
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 4. SPHERICAL COMMAND BRIDGE (Z = 22, X = 0, Y = 0)
+    // ─────────────────────────────────────────────────────────────
+    const bridgeCenter = pLocal(0, 0, 22);
+    if (bridgeCenter) {
+      const bRad = Math.max(6, 380 / bridgeCenter.z);
+      const bGrad = ctx.createRadialGradient(bridgeCenter.x - bRad*0.3, bridgeCenter.y - bRad*0.3, bRad*0.1, bridgeCenter.x, bridgeCenter.y, bRad);
+      bGrad.addColorStop(0, '#ffffff');
+      bGrad.addColorStop(0.3, '#d4e8f8');
+      bGrad.addColorStop(0.7, '#486b88');
+      bGrad.addColorStop(1, '#0c1824');
+      ctx.fillStyle = bGrad; ctx.strokeStyle = '#1f4a72'; ctx.lineWidth = 1.5;
+
+      ctx.beginPath(); ctx.arc(bridgeCenter.x, bridgeCenter.y, bRad, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+      // Glowing Optical Bridge Eye
+      ctx.fillStyle = '#ff2222'; ctx.beginPath(); ctx.arc(bridgeCenter.x, bridgeCenter.y, bRad * 0.35, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#00f0ff'; ctx.beginPath(); ctx.arc(bridgeCenter.x, bridgeCenter.y, bRad * 0.18, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 5. UPPER & LOWER CATAMARAN SAUCER HULL JAWS (Z = 12 to 32)
+    // ─────────────────────────────────────────────────────────────
+    // Upper Saucer Prow Top Plate
+    draw3DQuad([-14, 5, 12], [14, 5, 12], [9, 4, 30], [-9, 4, 30], '#3a5678', '#5ad4ff', 2);
+    draw3DQuad([-9, 4, 30], [9, 4, 30], [0, 3, 36], [0, 3, 36], '#486e9a', '#5ad4ff', 2);
+
+    // Lower Saucer Plate
+    draw3DQuad([-14, -5, 12], [14, -5, 12], [9, -4, 30], [-9, -4, 30], '#182738', '#1f4a72', 1.5);
+    draw3DQuad([-9, -4, 30], [9, -4, 30], [0, -3, 36], [0, -3, 36], '#142030', '#1f4a72', 1.5);
+
+    // Hull Registry Text "NCX-221 USS ZEUS" on Upper Plate
+    const regPt = pLocal(0, 5.2, 20);
+    if (regPt) {
+      ctx.fillStyle = '#ff5252';
+      ctx.font = `bold ${Math.max(7, 240 / regPt.z)}px Orbitron`;
+      ctx.textAlign = 'center';
+      ctx.fillText('NCX-221 USS ZEUS', regPt.x, regPt.y);
+    }
+
+    // Navigation Wingtip Strobe Beacons
+    const nLeft = pLocal(-14, 5, 12), nRight = pLocal(14, 5, 12);
+    if (nLeft && nRight) {
+      ctx.fillStyle = '#ff3b30'; ctx.beginPath(); ctx.arc(nLeft.x, nLeft.y, 3.5, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#00f0ff'; ctx.beginPath(); ctx.arc(nRight.x, nRight.y, 3.5, 0, Math.PI*2); ctx.fill();
+    }
+  }
+
+  function updateHudBrackets(camObj, w, h) {
+    const layer = document.getElementById('hudBracketsLayer');
+    if (!layer) return;
+    let html = '';
+    const sh = S.ship;
+    const allObjects = [];
+    if (S.sys) {
+      if (S.sys.planets) S.sys.planets.forEach(P => allObjects.push({ ...P, kind: 'planet', label: P.name, isHostile: P.threat === 'SEVERE' }));
+      if (S.sys.contacts) S.sys.contacts.forEach(C => allObjects.push({ ...C, kind: 'contact', label: C.name, isHostile: C.type.includes('Hostile') || C.type.includes('Bio') }));
+    }
+
+    allObjects.forEach(obj => {
+      const pt = spProject(obj.x, obj.y, obj.z, camObj, w, h);
+      if (pt && pt.visible) {
+        const dist = spDist3(sh.x, sh.y, sh.z, obj.x, obj.y, obj.z);
+        const distStr = dist > 500 ? (dist / 100).toFixed(1) + ' AU' : Math.round(dist * 10) + ' km';
+        const isSel = S.target && S.target.id === obj.id;
+        const iconChar = obj.kind === 'planet' ? '●' : (obj.isHostile ? '⚠' : '◆');
+        html += `
+          <div class="hud-bracket ${isSel ? 'selected' : ''} ${obj.isHostile ? 'hostile' : ''}" style="left:${pt.x}px;top:${pt.y}px;">
+            <div class="bracket-box">${iconChar}</div>
+            <span class="bracket-label">${obj.label}</span>
+            <span class="bracket-dist">${distStr}</span>
+          </div>
+        `;
+      }
+    });
+    layer.innerHTML = html;
+  }
+
+  function renderOverviewList() {
+    const list = document.getElementById('overviewList');
+    if (!list || !S.sys) return;
+    const sh = S.ship, filter = S.overviewFilter;
+    let items = [];
+
+    if (S.sys.planets && (filter === 'ALL' || filter === 'PLANETS')) {
+      S.sys.planets.forEach(P => items.push({ id: P.id, name: P.name, sub: P.sub, dist: spDist3(sh.x, sh.y, sh.z, P.x, P.y, P.z), kind: 'planet', obj: P, icon: '🪐', isHostile: P.threat === 'SEVERE' }));
+    }
+    if (S.sys.contacts && (filter === 'ALL' || filter === 'CONTACTS' || (filter === 'THREATS' && (S.sys.contacts.some(c=>c.type.includes('Hostile')))))) {
+      S.sys.contacts.forEach(C => items.push({ id: C.id, name: C.name, sub: C.type, dist: spDist3(sh.x, sh.y, sh.z, C.x, C.y, C.z), kind: 'contact', obj: C, icon: C.icon || '🚀', isHostile: C.type.includes('Hostile') || C.type.includes('Bio') }));
+    }
+
+    items.sort((a, b) => a.dist - b.dist);
+    list.innerHTML = items.map(it => {
+      const isSel = S.target && S.target.id === it.id;
+      const distStr = it.dist > 500 ? (it.dist / 100).toFixed(1) + ' AU' : Math.round(it.dist * 10) + ' km';
+      return `
+        <div class="overview-row ${isSel ? 'selected' : ''} ${it.isHostile ? 'hostile' : ''}" data-id="${it.id}">
+          <div class="row-icon">${it.icon}</div>
+          <div class="row-info"><b>${it.name}</b><small>${it.sub}</small></div>
+          <div class="row-dist">${distStr}</div>
+        </div>
+      `;
+    }).join('');
+
+    list.querySelectorAll('.overview-row').forEach(el => {
+      el.addEventListener('pointerdown', ev => {
+        ev.stopPropagation();
+        const found = items.find(it => it.id === el.dataset.id);
+        if (found) selectTarget(found.obj, found.kind);
+      });
+    });
+  }
+
+  function selectTarget(obj, kind) {
+    S.target = obj; S.targetKind = kind;
+    const nameEl = document.getElementById('tgtName');
+    const distEl = document.getElementById('tgtDist');
+    const subEl = document.getElementById('tgtSub');
+    const actBox = document.getElementById('actionButtons');
+
+    if (!obj) {
+      nameEl.textContent = 'NO TARGET'; distEl.textContent = '--'; subEl.textContent = 'Use Stick/Throttle to fly or select destination';
+      return;
+    }
+
+    const dist = spDist3(S.ship.x, S.ship.y, S.ship.z, obj.x, obj.y, obj.z);
+    nameEl.textContent = obj.name;
+    distEl.textContent = dist > 500 ? (dist / 100).toFixed(1) + ' AU' : Math.round(dist * 10) + ' km';
+    subEl.textContent = obj.sub || obj.type || kind.toUpperCase();
+
+    let acts = '<button type="button" class="act-btn" id="actAlign">ALIGN</button>'
+             + '<button type="button" class="act-btn warp" id="actWarp">WARP</button>';
+    if (kind === 'planet') acts += '<button type="button" class="act-btn scan" id="actScan">SCAN</button><button type="button" class="act-btn deploy" id="actDeploy">DEPLOY</button>';
+    else acts += '<button type="button" class="act-btn" id="actOrbit">ORBIT</button><button type="button" class="act-btn" id="actStop">STOP</button>';
+
+    actBox.innerHTML = acts;
+    bindActions();
+    renderOverviewList();
+    playSound('ui');
+  }
+
+  function alignTo(tgtX, tgtY, tgtZ) {
+    const sh = S.ship;
+    const dx = tgtX - sh.x, dy = tgtY - sh.y, dz = tgtZ - sh.z;
+    sh.targetYaw = Math.atan2(dx, dz);
+    sh.targetPitch = Math.atan2(-dy, Math.hypot(dx, dz));
+    playSound('ui');
+    showToast('NCX-221 ALIGNING TO INTERCEPT VECTOR');
+  }
+
+  function startWarpTo(tgt) {
+    if (!tgt) return;
+    const sh = S.ship;
+    if (sh.warpState !== 0) return;
+    sh.warpDest = tgt;
+    alignTo(tgt.x, tgt.y, tgt.z);
+    sh.warpState = 1;
+    playSound('warp');
+    showToast('WARP DRIVE COILS CHARGING (4 RINGS ONLINE)...');
+  }
+
+  function bindActions() {
+    const aAlign = document.getElementById('actAlign');
+    const aWarp = document.getElementById('actWarp');
+    const aOrbit = document.getElementById('actOrbit');
+    const aStop = document.getElementById('actStop');
+    const aScan = document.getElementById('actScan');
+    const aDeploy = document.getElementById('actDeploy');
+
+    if (aAlign) aAlign.onclick = () => { if (S.target) alignTo(S.target.x, S.target.y, S.target.z); };
+    if (aWarp) aWarp.onclick = () => { if (S.target) startWarpTo(S.target); };
+    if (aOrbit) aOrbit.onclick = () => { S.ship.throttle = 0.3; playSound('ui'); showToast('ESTABLISHING KEPLERIAN ORBIT'); };
+    if (aStop) aStop.onclick = () => { S.ship.throttle = 0; S.ship.speed = 0; playSound('ui'); showToast('RETRO-THRUSTERS ENGAGED'); updateThrottleUI(0); };
+    if (aScan) aScan.onclick = () => { if (S.target && S.targetKind === 'planet') openPlanetScanner(S.target); };
+    if (aDeploy) aDeploy.onclick = () => { if (S.target && S.targetKind === 'planet') openDossier(S.target); };
+  }
+
+  // 3-Tier Scanning System
+  function openPlanetScanner(planet) {
+    S.scan.active = true; S.scan.planet = planet; S.scan.tier = 1;
+    document.getElementById('planetScanModal').classList.add('active');
+    document.getElementById('scanPlanetTitle').textContent = planet.name;
+    document.getElementById('crumbPlanet').textContent = planet.name;
+    document.getElementById('crumbPlanet').classList.add('active');
+    document.getElementById('crumbSystem').classList.remove('active');
+    updateScanTierUI(1);
+    playSound('ui');
+  }
+
+  function closePlanetScanner() {
+    S.scan.active = false; S.scan.planet = null;
+    document.getElementById('planetScanModal').classList.remove('active');
+    document.getElementById('crumbPlanet').classList.remove('active');
+    document.getElementById('crumbSystem').classList.add('active');
+    playSound('ui');
+  }
+
+  function updateScanTierUI(tier) {
+    S.scan.tier = tier;
+    document.querySelectorAll('.tier-tab').forEach(tab => {
+      tab.classList.toggle('active', parseInt(tab.dataset.tier) === tier);
+    });
+
+    const titleEl = document.getElementById('scanIntelStageTitle');
+    const confEl = document.getElementById('scanIntelConfidence');
+    const sumEl = document.getElementById('scanIntelSummary');
+
+    if (tier === 1) {
+      titleEl.textContent = 'TIER 1: ORBITAL SURVEY COMPLETE';
+      confEl.textContent = 'CONFIDENCE: 45%';
+      sumEl.textContent = 'Macro scan complete. Biome topology logged. Orbital spaceports identified. Zero civilian radio broadcasts from surface centers.';
+    } else if (tier === 2) {
+      titleEl.textContent = 'TIER 2: REGIONAL SCAN COMPLETE';
+      confEl.textContent = 'CONFIDENCE: 75%';
+      sumEl.textContent = 'Thermal sweep reveals massive bio-spires spreading through South Valley. Subterranean heat signatures consistent with Brood Hive Queen.';
+    } else {
+      titleEl.textContent = 'TIER 3: PRECISION PROBE DEPLOYED';
+      confEl.textContent = 'CONFIDENCE: 98%';
+      sumEl.textContent = 'Probe telemetry locked: Primary Hive entrance pinpointed. Anti-air spore towers located. 17 trapped civilian survivors broadcasting SOS on emergency band.';
+    }
+  }
+
+  function openDossier(planet) {
+    closePlanetScanner();
+    document.getElementById('regionDossierModal').classList.add('active');
+    playSound('ui');
+  }
+
+  function openCommanderMatrix() {
+    document.getElementById('regionDossierModal').classList.remove('active');
+    document.getElementById('commanderMatrixModal').classList.add('active');
+    document.getElementById('crumbDeploy').classList.add('active');
+    playSound('ui');
+  }
+
+  function executeDeployment() {
+    document.getElementById('commanderMatrixModal').classList.remove('active');
+    document.getElementById('rtsBattleModal').classList.add('active');
+    playSound('deploy');
+    showToast('COMMANDER DEPLOYMENT INITIATED — COMMENCING RTS DROP');
+
+    setTimeout(() => {
+      document.getElementById('rtsStatusText').textContent = 'ORBITAL ARTILLERY STRIKE INCOMING';
+      document.getElementById('rtsSubText').textContent = 'Heavy breaching charges detonated · Breaching Hive Queen Chamber';
+      playSound('warp');
+    }, 1200);
+
+    setTimeout(() => {
+      document.getElementById('rtsBattleModal').classList.remove('active');
+      document.getElementById('resolutionModal').classList.add('active');
+      playSound('ui');
+    }, 2400);
+  }
+
+  function drawPlanetScanGlobe() {
+    if (!S.scan.active || !S.scan.planet) return;
+    const cvs = document.getElementById('scanGlobeCanvas');
+    if (!cvs) return;
+    const ctx = cvs.getContext('2d');
+    const w = cvs.width = cvs.clientWidth || 300, h = cvs.height = cvs.clientHeight || 250;
+    ctx.clearRect(0, 0, w, h);
+    const P = S.scan.planet, cx = w / 2, cy = h / 2, r = Math.min(w, h) * 0.38;
+
+    const atmo = ctx.createRadialGradient(cx, cy, r * 0.85, cx, cy, r * 1.25);
+    atmo.addColorStop(0, P.color); atmo.addColorStop(1, 'transparent');
+    ctx.fillStyle = atmo; ctx.beginPath(); ctx.arc(cx, cy, r * 1.25, 0, Math.PI * 2); ctx.fill();
+
+    const globe = ctx.createRadialGradient(cx - r * 0.35, cy - r * 0.35, r * 0.1, cx, cy, r);
+    globe.addColorStop(0, P.cloudColor); globe.addColorStop(0.6, P.color); globe.addColorStop(1, '#02050c');
+    ctx.fillStyle = globe; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+
+    if (P.threat === 'SEVERE') {
+      ctx.fillStyle = 'rgba(255, 40, 100, 0.35)';
+      ctx.beginPath(); ctx.arc(cx + r * 0.2, cy + r * 0.25, r * 0.35, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  // Virtual Flight Joystick Controls
+  const stickZone = document.getElementById('flightStickZone');
+  const stickKnob = document.getElementById('stickKnob');
+
+  function handleStick(clientX, clientY) {
+    const rect = stickZone.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    let dx = (clientX - centerX) / (rect.width / 2);
+    let dy = (clientY - centerY) / (rect.height / 2);
+    const dist = Math.hypot(dx, dy);
+    if (dist > 1) { dx /= dist; dy /= dist; }
+    S.stick.active = true;
+    S.stick.x = dx; S.stick.y = dy;
+    stickKnob.style.transform = `translate(${dx * 26}px, ${dy * 26}px)`;
+  }
+
+  stickZone.addEventListener('pointerdown', ev => {
+    ev.stopPropagation(); stickZone.setPointerCapture(ev.pointerId);
+    handleStick(ev.clientX, ev.clientY);
+  });
+  stickZone.addEventListener('pointermove', ev => {
+    if (S.stick.active) handleStick(ev.clientX, ev.clientY);
+  });
+  stickZone.addEventListener('pointerup', () => {
+    S.stick.active = false; S.stick.x = 0; S.stick.y = 0;
+    stickKnob.style.transform = 'translate(0, 0)';
+  });
+  stickZone.addEventListener('pointercancel', () => {
+    S.stick.active = false; S.stick.x = 0; S.stick.y = 0;
+    stickKnob.style.transform = 'translate(0, 0)';
+  });
+
+  // Virtual Throttle Slider Controls
+  const throttleZone = document.getElementById('flightThrottleZone');
+  const throttleFill = document.getElementById('throttleFill');
+  const throttleHandle = document.getElementById('throttleHandle');
+  let throttleDragging = false;
+
+  function updateThrottleUI(val) {
+    S.ship.throttle = spClamp(val, 0, 1);
+    const pct = S.ship.throttle * 100;
+    throttleFill.style.height = pct + '%';
+    throttleHandle.style.bottom = pct + '%';
+  }
+
+  function handleThrottle(clientY) {
+    const rect = document.getElementById('throttleTrack').getBoundingClientRect();
+    const pos = (rect.bottom - clientY) / rect.height;
+    updateThrottleUI(pos);
+  }
+
+  throttleZone.addEventListener('pointerdown', ev => {
+    ev.stopPropagation(); throttleDragging = true;
+    throttleZone.setPointerCapture(ev.pointerId);
+    handleThrottle(ev.clientY);
+    playSound('engine');
+  });
+  throttleZone.addEventListener('pointermove', ev => {
+    if (throttleDragging) handleThrottle(ev.clientY);
+  });
+  throttleZone.addEventListener('pointerup', () => throttleDragging = false);
+
+  // Keyboard Controls (WASD + Space + Shift)
+  window.addEventListener('keydown', ev => {
+    const k = ev.key.toLowerCase();
+    if (k === 'w' || k === 'arrowup') S.ship.throttle = Math.min(1, S.ship.throttle + 0.15);
+    if (k === 's' || k === 'arrowdown') S.ship.throttle = Math.max(0, S.ship.throttle - 0.15);
+    if (k === 'a' || k === 'arrowleft') S.ship.yaw -= 0.08;
+    if (k === 'd' || k === 'arrowright') S.ship.yaw += 0.08;
+    if (k === ' ') { S.ship.throttle = 0; S.ship.speed = 0; showToast('FULL STOP'); }
+    updateThrottleUI(S.ship.throttle);
+  });
+
+  // Free Camera Drag on Canvas
+  const cvs = document.getElementById('spaceCanvas');
+  cvs.addEventListener('pointerdown', ev => {
+    S.touchCam.dragging = true; S.touchCam.lastX = ev.clientX; S.touchCam.lastY = ev.clientY;
+  });
+  window.addEventListener('pointermove', ev => {
+    if (S.touchCam.dragging) {
+      const dx = ev.clientX - S.touchCam.lastX, dy = ev.clientY - S.touchCam.lastY;
+      S.touchCam.lastX = ev.clientX; S.touchCam.lastY = ev.clientY;
+      S.cam.yaw -= dx * 0.005;
+      S.cam.pitch = spClamp(S.cam.pitch + dy * 0.005, -0.8, 0.8);
+    }
+  });
+  window.addEventListener('pointerup', () => S.touchCam.dragging = false);
+  cvs.addEventListener('wheel', ev => {
+    ev.preventDefault(); S.cam.dist = spClamp(S.cam.dist + (ev.deltaY > 0 ? 25 : -25), 60, 400);
+  }, { passive: false });
+
+  // Top Ribbon & Fullscreen
+  document.getElementById('btnToggleFullscreen').onclick = () => {
+    document.getElementById('sandboxFrame').classList.toggle('fullscreen');
+  };
+  document.getElementById('btnOpenGalaxy').onclick = () => {
+    document.getElementById('galaxyModal').classList.add('active');
+    playSound('ui');
+  };
+  document.getElementById('btnCloseGalaxy').onclick = () => {
+    document.getElementById('galaxyModal').classList.remove('active');
+    playSound('ui');
+  };
+  document.getElementById('crumbGalaxy').onclick = () => {
+    document.getElementById('galaxyModal').classList.add('active');
+    playSound('ui');
+  };
+
+  document.querySelectorAll('.galaxy-card').forEach(card => {
+    card.onclick = () => {
+      const sysKey = card.dataset.sys;
+      loadSystem(sysKey);
+      document.getElementById('galaxyModal').classList.remove('active');
+      playSound('warp');
+      showToast('WARP ROUTE ENGAGED: ' + SYSTEMS[sysKey].name);
+    };
+  });
+
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      S.overviewFilter = btn.dataset.f;
+      renderOverviewList();
+    };
+  });
+  document.getElementById('btnCollapseOverview').onclick = () => document.getElementById('overviewPanel').classList.add('collapsed');
+  document.getElementById('btnExpandOverview').onclick = () => document.getElementById('overviewPanel').classList.remove('collapsed');
+
+  // Scanning Modal Events
+  document.getElementById('btnScanClose').onclick = closePlanetScanner;
+  document.getElementById('btnPerformRegionalScan').onclick = () => { updateScanTierUI(2); playSound('ui'); showToast('REGIONAL SCAN DISPATCHED'); };
+  document.getElementById('btnLaunchProbe').onclick = () => { updateScanTierUI(3); playSound('deploy'); showToast('PRECISION PROBE DEPLOYED'); };
+  document.getElementById('btnOpenDossier').onclick = () => openDossier(S.scan.planet);
+
+  // Dossier & Commander Matrix Events
+  document.getElementById('btnCloseDossier').onclick = () => document.getElementById('regionDossierModal').classList.remove('active');
+  document.getElementById('btnOpenCommanderMatrix').onclick = openCommanderMatrix;
+  document.getElementById('btnCloseMatrix').onclick = () => document.getElementById('commanderMatrixModal').classList.remove('active');
+
+  // Commander Card Selection
+  document.querySelectorAll('.cmd-card').forEach(card => {
+    card.onclick = () => {
+      document.querySelectorAll('.cmd-card').forEach(c => c.classList.remove('active'));
+      card.classList.add('active');
+      S.selectedCmd = card.dataset.cmd;
+      playSound('ui');
+    };
+  });
+
+  document.getElementById('btnExecuteDeploy').onclick = executeDeployment;
+  document.getElementById('btnCloseResolution').onclick = () => document.getElementById('resolutionModal').classList.remove('active');
+  document.getElementById('btnReturnToGalaxy').onclick = () => {
+    document.getElementById('resolutionModal').classList.remove('active');
+    document.getElementById('galaxyModal').classList.add('active');
+    playSound('ui');
+  };
+
+  // Main Render Loop
+  let lastT = 0;
+  function loop(t) {
+    if (!lastT) lastT = t;
+    let dt = (t - lastT) / 1000; lastT = t;
+    if (dt > 0.1) dt = 0.1;
+
+    stepFlight(dt);
+
+    const w = cvs.width = cvs.clientWidth || window.innerWidth;
+    const h = cvs.height = cvs.clientHeight || window.innerHeight;
+    const ctx = cvs.getContext('2d');
+    if (ctx) drawScene(ctx, w, h);
+
+    if (S.scan.active) drawPlanetScanGlobe();
+
+    requestAnimationFrame(loop);
+  }
+
+  initStarfield();
+  loadSystem('sombrero');
+  updateThrottleUI(0);
+  requestAnimationFrame(loop);
+})();
+</script>
+
+</body>
+</html>

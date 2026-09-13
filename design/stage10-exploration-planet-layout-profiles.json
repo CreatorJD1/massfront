@@ -1,0 +1,706 @@
+{
+  "schemaVersion": 1,
+  "catalogId": "massfront-stage10-exploration-planet-layout-profiles-v1",
+  "status": "AUTHORING_ONLY",
+  "sourceOnly": true,
+  "runtimeReady": false,
+  "identityAuthority": {
+    "kind": "EXACT_SHOWCASE_SYSTEMS_PLANET_BODIES",
+    "source": "modules/space_exploration/src/systems/showcase_systems.js",
+    "theatreCrossReference": "assets/data/theatreprofiles-stage10.js",
+    "matchingPolicy": "CASE_SENSITIVE_EXACT_ID_ONLY",
+    "aliasesAllowed": false,
+    "inferredIdentitiesAllowed": false,
+    "exactPlanetIds": [
+      "aelos_caldris",
+      "aelos_ithara",
+      "veyra_orison",
+      "veyra_nacre",
+      "karak_meridian",
+      "karak_tethys"
+    ]
+  },
+  "identitySlots": [
+    {
+      "slot": 1,
+      "identityStatus": "SOURCE_MATCHED",
+      "planetId": "aelos_caldris",
+      "name": "Caldris"
+    },
+    {
+      "slot": 2,
+      "identityStatus": "SOURCE_MATCHED",
+      "planetId": "aelos_ithara",
+      "name": "Ithara"
+    },
+    {
+      "slot": 3,
+      "identityStatus": "SOURCE_MATCHED",
+      "planetId": "veyra_orison",
+      "name": "Orison"
+    },
+    {
+      "slot": 4,
+      "identityStatus": "SOURCE_MATCHED",
+      "planetId": "veyra_nacre",
+      "name": "Nacre"
+    },
+    {
+      "slot": 5,
+      "identityStatus": "SOURCE_MATCHED",
+      "planetId": "karak_meridian",
+      "name": "Meridian K-4"
+    },
+    {
+      "slot": 6,
+      "identityStatus": "SOURCE_MATCHED",
+      "planetId": "karak_tethys",
+      "name": "Tethys Foundry"
+    },
+    {
+      "slot": 7,
+      "identityStatus": "PENDING_CANON_NAME",
+      "planetId": null,
+      "name": null
+    },
+    {
+      "slot": 8,
+      "identityStatus": "PENDING_CANON_NAME",
+      "planetId": null,
+      "name": null
+    }
+  ],
+  "factRecommendationPolicy": {
+    "sourceFactMeaning": "A value copied exactly from an identified source record.",
+    "planningRecommendationMeaning": "A non-runtime authoring suggestion that is not canon, not an asset claim, and requires evidence and human approval.",
+    "recommendationsMayCreateIdentity": false,
+    "recommendationsMayClaimModelsOrTextures": false,
+    "recommendationsMayClaimLocationsOrSovereignty": false,
+    "recommendationsAreCanon": false
+  },
+  "sizeClassFacts": {
+    "XS": {
+      "maximumSpanMeters": 48,
+      "sourceRole": "short restricted-force tactical location"
+    },
+    "SMALL": {
+      "maximumSpanMeters": 80,
+      "sourceRole": "restricted-force tactical location"
+    },
+    "STANDARD": {
+      "maximumSpanMeters": 2600,
+      "sourceRole": "surface combined-arms battlefield"
+    }
+  },
+  "unitEnvelopeFacts": {
+    "infantry_only": {
+      "allowed": [
+        "infantry",
+        "support_drone"
+      ],
+      "forbidden": [
+        "small_vehicle",
+        "mech",
+        "heavy_vehicle",
+        "artillery",
+        "air",
+        "naval",
+        "titan"
+      ],
+      "maximumMassClass": "personnel",
+      "maximumFootprintMeters": 2.5
+    },
+    "small_unit_combined": {
+      "allowed": [
+        "infantry",
+        "support_drone",
+        "small_vehicle",
+        "mech"
+      ],
+      "forbidden": [
+        "heavy_vehicle",
+        "heavy_mech",
+        "artillery",
+        "air",
+        "naval",
+        "titan"
+      ],
+      "maximumMassClass": "light",
+      "mechClass": "light-only",
+      "maximumFootprintMeters": 8
+    },
+    "surface_combined_arms": {
+      "allowed": [
+        "infantry",
+        "vehicle",
+        "heavy",
+        "artillery",
+        "air",
+        "naval"
+      ],
+      "forbidden": [],
+      "maximumMassClass": "campaign",
+      "useRestriction": "NOT_AVAILABLE_TO_A_PROFILE_WITHOUT_EXACT_STANDARD_SURFACE_TOPOLOGY"
+    }
+  },
+  "globalMapSupportFacts": {
+    "interiorTactical": {
+      "source": "assets/data/theatreprofiles-stage10.js",
+      "sizeClasses": [
+        "XS",
+        "SMALL"
+      ],
+      "allowedUnitEnvelopes": [
+        "infantry_only",
+        "small_unit_combined"
+      ],
+      "supportLevel": "GLOBAL_DOMAIN_ONLY_NOT_PLANET_RUNTIME_BINDING"
+    },
+    "standardSurface": {
+      "source": "assets/data/battlefieldtopology-stage10.js",
+      "exactSupportedPlanetIds": [],
+      "supportLevel": "NO_EXACT_SHOWCASE_PLANET_SURFACE_TOPOLOGY",
+      "note": "Existing STANDARD topology records target other authored region identities and are not promoted to these six planets."
+    }
+  },
+  "requiredEvidenceProfile": {
+    "profileId": "stage10-exploration-planet-layout-evidence-v1",
+    "gates": [
+      {
+        "gateId": "identity-authority",
+        "requirement": "Planet ID, name, parent system, biome, and discovery records match the exact SHOWCASE_SYSTEMS planet body."
+      },
+      {
+        "gateId": "biome-layout-human-approval",
+        "requirement": "A human approves the recommended biome and layout family without treating it as canon."
+      },
+      {
+        "gateId": "topology-route-profile",
+        "requirement": "Authored topology proves bounds, insertion, objectives, extraction, alternate routes, and turning clearances."
+      },
+      {
+        "gateId": "unit-envelope-navigation",
+        "requirement": "Navigation and collision tests prove every allowed class and reject every forbidden class."
+      },
+      {
+        "gateId": "generated-asset-provenance",
+        "requirement": "Any future model or texture has source provenance, originality review, and an explicit accepted asset record."
+      },
+      {
+        "gateId": "lod-collision-navigation",
+        "requirement": "LOD, simplified collision, navigation, occlusion, and deterministic destruction evidence pass for the selected map concept."
+      },
+      {
+        "gateId": "mobile-performance-captures",
+        "requirement": "Portrait and landscape device captures prove tactical readability, stable silhouettes, draw budget, and no shimmer."
+      },
+      {
+        "gateId": "floating-platform-engineering",
+        "requirement": "If a sea platform is proposed, evidence covers waterline, anchoring or buoyancy, wave response, naval clearance, amphibious or bridge links, collision and navigation, deterministic rubble or sinking, LOD, and performance."
+      },
+      {
+        "gateId": "canon-human-approval",
+        "requirement": "A human explicitly approves any future canon, sovereignty, named location, or runtime registration change."
+      }
+    ]
+  },
+  "profiles": [
+    {
+      "planetId": "aelos_caldris",
+      "status": "AUTHORING_RECOMMENDATION_ONLY",
+      "runtimeReady": false,
+      "sourceFacts": {
+        "sourceObject": "SHOWCASE_SYSTEMS.aelos.planets[0]",
+        "systemId": "aelos",
+        "name": "Caldris",
+        "biome": "terrestrial",
+        "subLabel": "OCEANIC HABITAT · UGA BIOSPHERE PRESERVE",
+        "radius": 28,
+        "rings": false,
+        "scanFlag": "EXPLICIT_TRUE",
+        "discoveryRecords": [
+          {
+            "id": "caldris_alloy_shelf",
+            "type": "alloys"
+          },
+          {
+            "id": "caldris_pelagic_archive",
+            "type": "researchPoints"
+          }
+        ],
+        "surfaceWaterEvidence": "EXPLICIT_OCEANIC_AND_PELAGIC_TERMINOLOGY",
+        "freeFloatingStructureEvidence": "NOT_ESTABLISHED"
+      },
+      "planningRecommendations": {
+        "surfaceBiomeFamily": "oceanic-terrestrial",
+        "layoutFamilies": [
+          "coastal-shelf-network",
+          "archipelago-causeways",
+          "platform-and-quay-network"
+        ],
+        "poiCategories": [
+          "alloy-resource",
+          "research-discovery"
+        ],
+        "floatingSeaPlatforms": {
+          "status": "CONDITIONAL_AUTHORING_RECOMMENDATION",
+          "fixedOffshoreApplicability": "CONDITIONAL",
+          "freeFloatingApplicability": "CONDITIONAL_REQUIRES_FULL_ENGINEERING_EVIDENCE",
+          "generatedPlatformAssetsKnown": false
+        }
+      },
+      "mapSizeConcepts": [
+        {
+          "sizeClass": "XS",
+          "domain": "interior_tactical",
+          "sourceSupport": "GLOBAL_DOMAIN_ONLY",
+          "recommendationStatus": "CONDITIONAL_AUTHORING_CONCEPT",
+          "unitEnvelopeRefs": [
+            "infantry_only",
+            "small_unit_combined"
+          ],
+          "planetRuntimeBinding": false
+        },
+        {
+          "sizeClass": "SMALL",
+          "domain": "interior_tactical",
+          "sourceSupport": "GLOBAL_DOMAIN_ONLY",
+          "recommendationStatus": "CONDITIONAL_AUTHORING_CONCEPT",
+          "unitEnvelopeRefs": [
+            "infantry_only",
+            "small_unit_combined"
+          ],
+          "planetRuntimeBinding": false
+        },
+        {
+          "sizeClass": "STANDARD",
+          "domain": "surface_battlefield",
+          "sourceSupport": "NO_EXACT_PLANET_SURFACE_TOPOLOGY",
+          "recommendationStatus": "DEFERRED",
+          "unitEnvelopeRefs": [],
+          "planetRuntimeBinding": false
+        }
+      ],
+      "evidenceState": {
+        "profileId": "stage10-exploration-planet-layout-evidence-v1",
+        "identityAuthority": "SOURCE_MATCHED",
+        "floatingPlatformEngineering": "REQUIRED_BEFORE_PLATFORM_AUTHORING",
+        "otherRequiredGates": "MISSING",
+        "artifactPaths": []
+      }
+    },
+    {
+      "planetId": "aelos_ithara",
+      "status": "AUTHORING_RECOMMENDATION_ONLY",
+      "runtimeReady": false,
+      "sourceFacts": {
+        "sourceObject": "SHOWCASE_SYSTEMS.aelos.planets[1]",
+        "systemId": "aelos",
+        "name": "Ithara",
+        "biome": "golden_jade",
+        "subLabel": "TEMPERATE SUPER-EARTH · DIPLOMATIC RESERVE",
+        "radius": 22,
+        "rings": true,
+        "scanFlag": "NOT_DECLARED",
+        "discoveryRecords": [
+          {
+            "id": "ithara_embassy_signal",
+            "type": "components"
+          }
+        ],
+        "surfaceWaterEvidence": "NOT_EXPLICIT",
+        "freeFloatingStructureEvidence": "NOT_ESTABLISHED"
+      },
+      "planningRecommendations": {
+        "surfaceBiomeFamily": "temperate-golden-jade",
+        "layoutFamilies": [
+          "terraced-reserve",
+          "open-basin-corridors"
+        ],
+        "poiCategories": [
+          "component-recovery"
+        ],
+        "floatingSeaPlatforms": {
+          "status": "DEFERRED_NO_SOURCE_WATER_BASIS",
+          "fixedOffshoreApplicability": "NOT_RECOMMENDED_WITH_CURRENT_SOURCE",
+          "freeFloatingApplicability": "NOT_RECOMMENDED_WITH_CURRENT_SOURCE",
+          "generatedPlatformAssetsKnown": false
+        }
+      },
+      "mapSizeConcepts": [
+        {
+          "sizeClass": "XS",
+          "domain": "interior_tactical",
+          "sourceSupport": "GLOBAL_DOMAIN_ONLY",
+          "recommendationStatus": "CONDITIONAL_AUTHORING_CONCEPT",
+          "unitEnvelopeRefs": [
+            "infantry_only",
+            "small_unit_combined"
+          ],
+          "planetRuntimeBinding": false
+        },
+        {
+          "sizeClass": "SMALL",
+          "domain": "interior_tactical",
+          "sourceSupport": "GLOBAL_DOMAIN_ONLY",
+          "recommendationStatus": "CONDITIONAL_AUTHORING_CONCEPT",
+          "unitEnvelopeRefs": [
+            "infantry_only",
+            "small_unit_combined"
+          ],
+          "planetRuntimeBinding": false
+        },
+        {
+          "sizeClass": "STANDARD",
+          "domain": "surface_battlefield",
+          "sourceSupport": "NO_EXACT_PLANET_SURFACE_TOPOLOGY",
+          "recommendationStatus": "DEFERRED",
+          "unitEnvelopeRefs": [],
+          "planetRuntimeBinding": false
+        }
+      ],
+      "evidenceState": {
+        "profileId": "stage10-exploration-planet-layout-evidence-v1",
+        "identityAuthority": "SOURCE_MATCHED",
+        "floatingPlatformEngineering": "NOT_APPLICABLE_WITH_CURRENT_RECOMMENDATION",
+        "otherRequiredGates": "MISSING",
+        "artifactPaths": []
+      }
+    },
+    {
+      "planetId": "veyra_orison",
+      "status": "AUTHORING_RECOMMENDATION_ONLY",
+      "runtimeReady": false,
+      "sourceFacts": {
+        "sourceObject": "SHOWCASE_SYSTEMS.veyra.planets[0]",
+        "systemId": "veyra",
+        "name": "Orison",
+        "biome": "volcanic",
+        "subLabel": "TIDALLY LOCKED RELIC WORLD · ACTIVE SHEAR",
+        "radius": 20,
+        "rings": false,
+        "scanFlag": "NOT_DECLARED",
+        "discoveryRecords": [
+          {
+            "id": "orison_drive_fragment",
+            "type": "researchPoints"
+          },
+          {
+            "id": "orison_bio_vault",
+            "type": "bioSamples"
+          }
+        ],
+        "surfaceWaterEvidence": "NOT_EXPLICIT",
+        "freeFloatingStructureEvidence": "NOT_ESTABLISHED"
+      },
+      "planningRecommendations": {
+        "surfaceBiomeFamily": "volcanic-relic",
+        "layoutFamilies": [
+          "shear-scar-terraces",
+          "volcanic-safe-causeways"
+        ],
+        "poiCategories": [
+          "research-discovery",
+          "bio-sample-site"
+        ],
+        "floatingSeaPlatforms": {
+          "status": "DEFERRED_NO_SOURCE_WATER_BASIS",
+          "fixedOffshoreApplicability": "NOT_RECOMMENDED_WITH_CURRENT_SOURCE",
+          "freeFloatingApplicability": "NOT_RECOMMENDED_WITH_CURRENT_SOURCE",
+          "generatedPlatformAssetsKnown": false
+        }
+      },
+      "mapSizeConcepts": [
+        {
+          "sizeClass": "XS",
+          "domain": "interior_tactical",
+          "sourceSupport": "GLOBAL_DOMAIN_ONLY",
+          "recommendationStatus": "CONDITIONAL_AUTHORING_CONCEPT",
+          "unitEnvelopeRefs": [
+            "infantry_only",
+            "small_unit_combined"
+          ],
+          "planetRuntimeBinding": false
+        },
+        {
+          "sizeClass": "SMALL",
+          "domain": "interior_tactical",
+          "sourceSupport": "GLOBAL_DOMAIN_ONLY",
+          "recommendationStatus": "CONDITIONAL_AUTHORING_CONCEPT",
+          "unitEnvelopeRefs": [
+            "infantry_only",
+            "small_unit_combined"
+          ],
+          "planetRuntimeBinding": false
+        },
+        {
+          "sizeClass": "STANDARD",
+          "domain": "surface_battlefield",
+          "sourceSupport": "NO_EXACT_PLANET_SURFACE_TOPOLOGY",
+          "recommendationStatus": "DEFERRED",
+          "unitEnvelopeRefs": [],
+          "planetRuntimeBinding": false
+        }
+      ],
+      "evidenceState": {
+        "profileId": "stage10-exploration-planet-layout-evidence-v1",
+        "identityAuthority": "SOURCE_MATCHED",
+        "floatingPlatformEngineering": "NOT_APPLICABLE_WITH_CURRENT_RECOMMENDATION",
+        "otherRequiredGates": "MISSING",
+        "artifactPaths": []
+      }
+    },
+    {
+      "planetId": "veyra_nacre",
+      "status": "AUTHORING_RECOMMENDATION_ONLY",
+      "runtimeReady": false,
+      "sourceFacts": {
+        "sourceObject": "SHOWCASE_SYSTEMS.veyra.planets[1]",
+        "systemId": "veyra",
+        "name": "Nacre",
+        "biome": "cyber_purple",
+        "subLabel": "CRYOVOLCANIC MOON · ANCIENT TRANSMISSION",
+        "radius": 16,
+        "rings": true,
+        "scanFlag": "EXPLICIT_TRUE",
+        "discoveryRecords": [
+          {
+            "id": "nacre_cartography_core",
+            "type": "components"
+          }
+        ],
+        "surfaceWaterEvidence": "NOT_EXPLICIT",
+        "freeFloatingStructureEvidence": "NOT_ESTABLISHED"
+      },
+      "planningRecommendations": {
+        "surfaceBiomeFamily": "cryovolcanic-cyber",
+        "layoutFamilies": [
+          "ice-rift-radial",
+          "frozen-vent-corridors"
+        ],
+        "poiCategories": [
+          "component-recovery"
+        ],
+        "floatingSeaPlatforms": {
+          "status": "DEFERRED_NO_SOURCE_WATER_BASIS",
+          "fixedOffshoreApplicability": "NOT_RECOMMENDED_WITH_CURRENT_SOURCE",
+          "freeFloatingApplicability": "NOT_RECOMMENDED_WITH_CURRENT_SOURCE",
+          "generatedPlatformAssetsKnown": false
+        }
+      },
+      "mapSizeConcepts": [
+        {
+          "sizeClass": "XS",
+          "domain": "interior_tactical",
+          "sourceSupport": "GLOBAL_DOMAIN_ONLY",
+          "recommendationStatus": "CONDITIONAL_AUTHORING_CONCEPT",
+          "unitEnvelopeRefs": [
+            "infantry_only",
+            "small_unit_combined"
+          ],
+          "planetRuntimeBinding": false
+        },
+        {
+          "sizeClass": "SMALL",
+          "domain": "interior_tactical",
+          "sourceSupport": "GLOBAL_DOMAIN_ONLY",
+          "recommendationStatus": "CONDITIONAL_AUTHORING_CONCEPT",
+          "unitEnvelopeRefs": [
+            "infantry_only",
+            "small_unit_combined"
+          ],
+          "planetRuntimeBinding": false
+        },
+        {
+          "sizeClass": "STANDARD",
+          "domain": "surface_battlefield",
+          "sourceSupport": "NO_EXACT_PLANET_SURFACE_TOPOLOGY",
+          "recommendationStatus": "DEFERRED",
+          "unitEnvelopeRefs": [],
+          "planetRuntimeBinding": false
+        }
+      ],
+      "evidenceState": {
+        "profileId": "stage10-exploration-planet-layout-evidence-v1",
+        "identityAuthority": "SOURCE_MATCHED",
+        "floatingPlatformEngineering": "NOT_APPLICABLE_WITH_CURRENT_RECOMMENDATION",
+        "otherRequiredGates": "MISSING",
+        "artifactPaths": []
+      }
+    },
+    {
+      "planetId": "karak_meridian",
+      "status": "AUTHORING_RECOMMENDATION_ONLY",
+      "runtimeReady": false,
+      "sourceFacts": {
+        "sourceObject": "SHOWCASE_SYSTEMS.karak.planets[0]",
+        "systemId": "karak",
+        "name": "Meridian K-4",
+        "biome": "terrestrial",
+        "subLabel": "COLONY WORLD · ALL NETWORKS SILENT",
+        "radius": 27,
+        "rings": false,
+        "scanFlag": "EXPLICIT_TRUE",
+        "discoveryRecords": [
+          {
+            "id": "meridian_lost_transponder",
+            "type": "researchPoints"
+          },
+          {
+            "id": "meridian_hive_complex",
+            "type": "bioSamples"
+          }
+        ],
+        "surfaceWaterEvidence": "NOT_EXPLICIT",
+        "freeFloatingStructureEvidence": "NOT_ESTABLISHED"
+      },
+      "planningRecommendations": {
+        "surfaceBiomeFamily": "terrestrial-colony",
+        "layoutFamilies": [
+          "silent-colony-grid",
+          "fortified-transit-corridors"
+        ],
+        "poiCategories": [
+          "research-discovery",
+          "bio-sample-site"
+        ],
+        "floatingSeaPlatforms": {
+          "status": "DEFERRED_NO_SOURCE_WATER_BASIS",
+          "fixedOffshoreApplicability": "NOT_RECOMMENDED_WITH_CURRENT_SOURCE",
+          "freeFloatingApplicability": "NOT_RECOMMENDED_WITH_CURRENT_SOURCE",
+          "generatedPlatformAssetsKnown": false
+        }
+      },
+      "mapSizeConcepts": [
+        {
+          "sizeClass": "XS",
+          "domain": "interior_tactical",
+          "sourceSupport": "GLOBAL_DOMAIN_ONLY",
+          "recommendationStatus": "CONDITIONAL_AUTHORING_CONCEPT",
+          "unitEnvelopeRefs": [
+            "infantry_only",
+            "small_unit_combined"
+          ],
+          "planetRuntimeBinding": false
+        },
+        {
+          "sizeClass": "SMALL",
+          "domain": "interior_tactical",
+          "sourceSupport": "GLOBAL_DOMAIN_ONLY",
+          "recommendationStatus": "CONDITIONAL_AUTHORING_CONCEPT",
+          "unitEnvelopeRefs": [
+            "infantry_only",
+            "small_unit_combined"
+          ],
+          "planetRuntimeBinding": false
+        },
+        {
+          "sizeClass": "STANDARD",
+          "domain": "surface_battlefield",
+          "sourceSupport": "NO_EXACT_PLANET_SURFACE_TOPOLOGY",
+          "recommendationStatus": "DEFERRED",
+          "unitEnvelopeRefs": [],
+          "planetRuntimeBinding": false
+        }
+      ],
+      "evidenceState": {
+        "profileId": "stage10-exploration-planet-layout-evidence-v1",
+        "identityAuthority": "SOURCE_MATCHED",
+        "floatingPlatformEngineering": "NOT_APPLICABLE_WITH_CURRENT_RECOMMENDATION",
+        "otherRequiredGates": "MISSING",
+        "artifactPaths": []
+      }
+    },
+    {
+      "planetId": "karak_tethys",
+      "status": "AUTHORING_RECOMMENDATION_ONLY",
+      "runtimeReady": false,
+      "sourceFacts": {
+        "sourceObject": "SHOWCASE_SYSTEMS.karak.planets[1]",
+        "systemId": "karak",
+        "name": "Tethys Foundry",
+        "biome": "volcanic",
+        "subLabel": "AUTOMATED EXTRACTION WORLD · EMERGENCY SHUTDOWN",
+        "radius": 19,
+        "rings": true,
+        "scanFlag": "NOT_DECLARED",
+        "discoveryRecords": [
+          {
+            "id": "tethys_component_cache",
+            "type": "components"
+          }
+        ],
+        "surfaceWaterEvidence": "NOT_EXPLICIT",
+        "freeFloatingStructureEvidence": "NOT_ESTABLISHED"
+      },
+      "planningRecommendations": {
+        "surfaceBiomeFamily": "volcanic-extraction",
+        "layoutFamilies": [
+          "extraction-grid",
+          "foundry-causeways"
+        ],
+        "poiCategories": [
+          "component-recovery"
+        ],
+        "floatingSeaPlatforms": {
+          "status": "DEFERRED_NO_SOURCE_WATER_BASIS",
+          "fixedOffshoreApplicability": "NOT_RECOMMENDED_WITH_CURRENT_SOURCE",
+          "freeFloatingApplicability": "NOT_RECOMMENDED_WITH_CURRENT_SOURCE",
+          "generatedPlatformAssetsKnown": false
+        }
+      },
+      "mapSizeConcepts": [
+        {
+          "sizeClass": "XS",
+          "domain": "interior_tactical",
+          "sourceSupport": "GLOBAL_DOMAIN_ONLY",
+          "recommendationStatus": "CONDITIONAL_AUTHORING_CONCEPT",
+          "unitEnvelopeRefs": [
+            "infantry_only",
+            "small_unit_combined"
+          ],
+          "planetRuntimeBinding": false
+        },
+        {
+          "sizeClass": "SMALL",
+          "domain": "interior_tactical",
+          "sourceSupport": "GLOBAL_DOMAIN_ONLY",
+          "recommendationStatus": "CONDITIONAL_AUTHORING_CONCEPT",
+          "unitEnvelopeRefs": [
+            "infantry_only",
+            "small_unit_combined"
+          ],
+          "planetRuntimeBinding": false
+        },
+        {
+          "sizeClass": "STANDARD",
+          "domain": "surface_battlefield",
+          "sourceSupport": "NO_EXACT_PLANET_SURFACE_TOPOLOGY",
+          "recommendationStatus": "DEFERRED",
+          "unitEnvelopeRefs": [],
+          "planetRuntimeBinding": false
+        }
+      ],
+      "evidenceState": {
+        "profileId": "stage10-exploration-planet-layout-evidence-v1",
+        "identityAuthority": "SOURCE_MATCHED",
+        "floatingPlatformEngineering": "NOT_APPLICABLE_WITH_CURRENT_RECOMMENDATION",
+        "otherRequiredGates": "MISSING",
+        "artifactPaths": []
+      }
+    }
+  ],
+  "runtimeRegistration": {
+    "manifest": false,
+    "boot": false,
+    "loader": false,
+    "runtimeActivationAllowed": false
+  },
+  "assetClaims": {
+    "models": [],
+    "textures": [],
+    "generatedLocations": [],
+    "sovereigntyAssignments": [],
+    "canonAdditions": []
+  }
+}

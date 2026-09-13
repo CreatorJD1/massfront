@@ -25,12 +25,10 @@ const browser = await launchPwBrowser({
   args: ['--use-angle=d3d11','--ignore-gpu-blocklist','--enable-gpu','--disable-gpu-sandbox'] });
 const page = await browser.newPage({ viewport: { width: 412, height: 915 }, hasTouch: true, deviceScaleFactor: 2 });
 const errors = [];
-const OPTIONAL = /tacticons\.png/;
 page.on('pageerror', e => errors.push('PAGEERR ' + e.message));
 page.on('console', m => {
   if (m.type() !== 'error') return;
   const where = (m.location() || {}).url || '';
-  if (OPTIONAL.test(where) || OPTIONAL.test(m.text())) return;
   errors.push('CONSOLE ' + m.text().slice(0, 160) + ' <- ' + where.slice(-45));
 });
 

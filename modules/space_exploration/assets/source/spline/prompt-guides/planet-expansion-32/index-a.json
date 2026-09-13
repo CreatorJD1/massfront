@@ -1,0 +1,661 @@
+{
+  "schemaVersion": 1,
+  "indexId": "massfront_planet_expansion_32_group_a_v1",
+  "generatedDate": "2026-08-25",
+  "status": "SOURCE_AUTHORING_PROMPTS_ONLY",
+  "runtimeReady": false,
+  "group": "A",
+  "expectedPlanetCount": 11,
+  "promptsPerPlanet": 9,
+  "locationClasses": [
+    "city_colony",
+    "outpost",
+    "military_base",
+    "refinery",
+    "relic_ruin",
+    "spaceport",
+    "pressure_dome",
+    "derelict_megastructure"
+  ],
+  "referencePolicy": "C&C3 Tiberium Wars, Supreme Commander 2, XCOM 2 and StarCraft II are visual-language references only; copying or tracing protected assets is forbidden.",
+  "planets": [
+    {
+      "order": 1,
+      "planetId": "aelos",
+      "displayName": "AELOS",
+      "sectorGroup": "Sombrero Core",
+      "file": "aelos.prompt.md",
+      "runtimeCanon": true,
+      "runtimeReady": false,
+      "biome": "temperate civic ecumenopolis belts threaded through green river basins, working coastal yards and an arctic high shelf",
+      "atmosphere": "clean nitrogen-oxygen sky with a restrained blue-cyan limb, thin white weather bands and visible city-light arcs on the night side",
+      "hazards": "river flood gates, high-shelf icing, coastal surge and damaged civic power—not planetary collapse",
+      "orbitalSilhouette": "blue-green sphere, bright managed coastlines, four inhabited infrastructure arcs, a pale high-shelf cap, no rings",
+      "terrainMaterialGrammar": "cool civic concrete, planted drainage, dark wet asphalt, pale transit composite, cyan occupied glazing, maintained steel and restrained municipal markings",
+      "factionLoreContext": "Nova/TFC beginner theatre and living capital. Civilians, logistics and transit remain functional; destruction is localized and legible.",
+      "promptCount": 9,
+      "sites": [
+        {
+          "locationClass": "city_colony",
+          "siteId": "aelos_north_capital_ward",
+          "siteName": "Capital Ward"
+        },
+        {
+          "locationClass": "outpost",
+          "siteId": "aelos_basin_greenbelt_outpost",
+          "siteName": "Greenbelt Outpost"
+        },
+        {
+          "locationClass": "military_base",
+          "siteId": "aelos_north_circumference_bastion",
+          "siteName": "Circumference Bastion"
+        },
+        {
+          "locationClass": "refinery",
+          "siteId": "aelos_basin_heartland_refinery",
+          "siteName": "Heartland Refinery"
+        },
+        {
+          "locationClass": "relic_ruin",
+          "siteId": "aelos_ridge_divide_relic",
+          "siteName": "Great Divide Relic"
+        },
+        {
+          "locationClass": "spaceport",
+          "siteId": "aelos_coast_admiralty_spaceport",
+          "siteName": "Admiralty Spaceport"
+        },
+        {
+          "locationClass": "pressure_dome",
+          "siteId": "aelos_coast_pelagic_dome",
+          "siteName": "Pelagic Dome"
+        },
+        {
+          "locationClass": "derelict_megastructure",
+          "siteId": "aelos_ridge_shelf_megastructure",
+          "siteName": "High Shelf Megastructure"
+        }
+      ]
+    },
+    {
+      "order": 2,
+      "planetId": "elysion",
+      "displayName": "ELYSION",
+      "sectorGroup": "Sombrero Core",
+      "file": "elysion.prompt.md",
+      "runtimeCanon": false,
+      "runtimeReady": false,
+      "biome": "sunlit cloud-forest mesas and champagne-colored inland seas separated by white limestone escarpments",
+      "atmosphere": "deep oxygen-rich turquoise atmosphere with tall pearl thunderheads and a warm gold terminator",
+      "hazards": "mesa-edge rockfall, hypercell downbursts, flash-flood canyons and lightning-charged cloud banks",
+      "orbitalSilhouette": "turquoise oceans, ivory mesa chains, emerald cloud forests and a distinctive broken halo of high-altitude storm anvils",
+      "terrainMaterialGrammar": "ivory limestone, warm pale concrete, teal ceramic, brushed champagne alloy, dark rain channels and amber weather glass",
+      "factionLoreContext": "UGA diplomatic retreat and meteorology reserve where Coalition enclaves share elevated settlements above protected cloud forests.",
+      "promptCount": 9,
+      "sites": [
+        {
+          "locationClass": "city_colony",
+          "siteId": "elysion_aureate_steps",
+          "siteName": "Aureate Steps"
+        },
+        {
+          "locationClass": "outpost",
+          "siteId": "elysion_cloudline_watch",
+          "siteName": "Cloudline Watch"
+        },
+        {
+          "locationClass": "military_base",
+          "siteId": "elysion_thunderhead_redoubt",
+          "siteName": "Thunderhead Redoubt"
+        },
+        {
+          "locationClass": "refinery",
+          "siteId": "elysion_cascade_harvester",
+          "siteName": "Cascade Harvester"
+        },
+        {
+          "locationClass": "relic_ruin",
+          "siteId": "elysion_oracle_of_rain",
+          "siteName": "Oracle of Rain"
+        },
+        {
+          "locationClass": "spaceport",
+          "siteId": "elysion_stratos_gate",
+          "siteName": "Stratos Gate"
+        },
+        {
+          "locationClass": "pressure_dome",
+          "siteId": "elysion_cumulus_conservatory",
+          "siteName": "Cumulus Conservatory"
+        },
+        {
+          "locationClass": "derelict_megastructure",
+          "siteId": "elysion_broken_weather_choir",
+          "siteName": "Broken Weather Choir"
+        }
+      ]
+    },
+    {
+      "order": 3,
+      "planetId": "thalassa",
+      "displayName": "THALASSA",
+      "sectorGroup": "Sombrero Core",
+      "file": "thalassa.prompt.md",
+      "runtimeCanon": false,
+      "runtimeReady": false,
+      "biome": "global ocean broken by basalt archipelagos, floating kelp farms, abyssal trenches and storm-built reef shelves",
+      "atmosphere": "dense blue-grey maritime atmosphere with spiral silver storms, turquoise equatorial shallows and violet night lightning",
+      "hazards": "rogue waves, salt corrosion, deck flooding, hydrothermal vents and collapsing reef shelves",
+      "orbitalSilhouette": "deep cobalt water world with turquoise reef necklaces, sparse black islands and one enormous silver cyclone eye",
+      "terrainMaterialGrammar": "salt-etched marine steel, black basalt, blue pressure glass, wet anti-slip deck, pale buoyancy ceramic and copper biofouling barriers",
+      "factionLoreContext": "UGA oceanographic frontier and Coalition food reserve; settlements are modular, amphibious and connected by heavy causeways.",
+      "promptCount": 9,
+      "sites": [
+        {
+          "locationClass": "city_colony",
+          "siteId": "thalassa_pelagia_stack",
+          "siteName": "Pelagia Stack"
+        },
+        {
+          "locationClass": "outpost",
+          "siteId": "thalassa_bluehook_station",
+          "siteName": "Bluehook Station"
+        },
+        {
+          "locationClass": "military_base",
+          "siteId": "thalassa_breakwater_keep",
+          "siteName": "Breakwater Keep"
+        },
+        {
+          "locationClass": "refinery",
+          "siteId": "thalassa_abyssal_upwell",
+          "siteName": "Abyssal Upwell"
+        },
+        {
+          "locationClass": "relic_ruin",
+          "siteId": "thalassa_drowned_meridian",
+          "siteName": "Drowned Meridian"
+        },
+        {
+          "locationClass": "spaceport",
+          "siteId": "thalassa_orbitide_apron",
+          "siteName": "Orbitide Apron"
+        },
+        {
+          "locationClass": "pressure_dome",
+          "siteId": "thalassa_bathys_habitat",
+          "siteName": "Bathys Habitat"
+        },
+        {
+          "locationClass": "derelict_megastructure",
+          "siteId": "thalassa_leviathan_elevator",
+          "siteName": "Leviathan Elevator"
+        }
+      ]
+    },
+    {
+      "order": 4,
+      "planetId": "viridia",
+      "displayName": "VIRIDIA",
+      "sectorGroup": "Sombrero Core",
+      "file": "viridia.prompt.md",
+      "runtimeCanon": false,
+      "runtimeReady": false,
+      "biome": "humid emerald highlands beneath continent-scale fern canopies, quartz rivers and luminous mineral wetlands",
+      "atmosphere": "green-blue humid limb with broad white monsoon bands and faint magenta mineral auroras",
+      "hazards": "monsoon floods, corrosive pollen, root heave, sinkholes and quartz-river electrical discharge",
+      "orbitalSilhouette": "emerald continents cut by silver quartz rivers, dark canopy basins and magenta wetland glints",
+      "terrainMaterialGrammar": "dark basalt soil, pale quartz aggregate, moss-resistant green ceramic, copper mesh, smoked glass and bright drainage channels",
+      "factionLoreContext": "Coalition xenobotany preserve with strict ecological corridors; settlements rise above the canopy floor rather than flatten it.",
+      "promptCount": 9,
+      "sites": [
+        {
+          "locationClass": "city_colony",
+          "siteId": "viridia_canopy_concord",
+          "siteName": "Canopy Concord"
+        },
+        {
+          "locationClass": "outpost",
+          "siteId": "viridia_lantern_fern_post",
+          "siteName": "Lantern Fern Post"
+        },
+        {
+          "locationClass": "military_base",
+          "siteId": "viridia_greenwall_garrison",
+          "siteName": "Greenwall Garrison"
+        },
+        {
+          "locationClass": "refinery",
+          "siteId": "viridia_quartzflow_works",
+          "siteName": "Quartzflow Works"
+        },
+        {
+          "locationClass": "relic_ruin",
+          "siteId": "viridia_rootbound_scriptorium",
+          "siteName": "Rootbound Scriptorium"
+        },
+        {
+          "locationClass": "spaceport",
+          "siteId": "viridia_crownleaf_port",
+          "siteName": "Crownleaf Port"
+        },
+        {
+          "locationClass": "pressure_dome",
+          "siteId": "viridia_clearwater_biosphere",
+          "siteName": "Clearwater Biosphere"
+        },
+        {
+          "locationClass": "derelict_megastructure",
+          "siteId": "viridia_silent_canopy_engine",
+          "siteName": "Silent Canopy Engine"
+        }
+      ]
+    },
+    {
+      "order": 5,
+      "planetId": "pyraeth",
+      "displayName": "PYRAETH",
+      "sectorGroup": "Andromeda Forge",
+      "file": "pyraeth.prompt.md",
+      "runtimeCanon": true,
+      "runtimeReady": false,
+      "biome": "red-black crater courts, storm-scoured factory belts, caldera arcologies and exposed orbital flats",
+      "atmosphere": "dense red-orange storm limb, dark ash bands and violent gold-white lightning along the terminator",
+      "hazards": "electrical superstorms, thermal vents, ash abrasion, pressure loss and foundry heat",
+      "orbitalSilhouette": "iron-red sphere with black industrial belts, luminous calderas and rotating storm scars, no organic surface read",
+      "terrainMaterialGrammar": "iron basalt, red pressure ceramic, black blast steel, smoked amber glass, scorched apron concrete and disciplined Dominion hazard marks",
+      "factionLoreContext": "Crimson Dominion homeworld; monumental pressure infrastructure and mech production express hierarchy, endurance and controlled violence.",
+      "promptCount": 9,
+      "sites": [
+        {
+          "locationClass": "city_colony",
+          "siteId": "pyraeth_caldera_ignis_arcology",
+          "siteName": "Ignis Arcology"
+        },
+        {
+          "locationClass": "outpost",
+          "siteId": "pyraeth_flats_blackwind_outpost",
+          "siteName": "Blackwind Outpost"
+        },
+        {
+          "locationClass": "military_base",
+          "siteId": "pyraeth_belt_promethean_base",
+          "siteName": "Promethean Base"
+        },
+        {
+          "locationClass": "refinery",
+          "siteId": "pyraeth_belt_iron_pyre_refinery",
+          "siteName": "Iron Pyre Refinery"
+        },
+        {
+          "locationClass": "relic_ruin",
+          "siteId": "pyraeth_crater_court_of_iron_ruin",
+          "siteName": "Court of Iron Ruin"
+        },
+        {
+          "locationClass": "spaceport",
+          "siteId": "pyraeth_flats_hub_delta_spaceport",
+          "siteName": "Hub Delta Spaceport"
+        },
+        {
+          "locationClass": "pressure_dome",
+          "siteId": "pyraeth_crater_buried_court_dome",
+          "siteName": "Buried Court Dome"
+        },
+        {
+          "locationClass": "derelict_megastructure",
+          "siteId": "pyraeth_caldera_crucible_megastructure",
+          "siteName": "Crucible Megastructure"
+        }
+      ]
+    },
+    {
+      "order": 6,
+      "planetId": "ferrum",
+      "displayName": "FERRUM",
+      "sectorGroup": "Andromeda Forge",
+      "file": "ferrum.prompt.md",
+      "runtimeCanon": false,
+      "runtimeReady": false,
+      "biome": "iron-oxide deserts, magnetite mesas, nickel dunes and deep blue shadow canyons",
+      "atmosphere": "thin copper haze with sharp cobalt horizon and sweeping green magnetic auroras",
+      "hazards": "magnetic storms, conductive dust, compass failure, rail-charge discharge and canyon collapse",
+      "orbitalSilhouette": "rust-red world striped by black magnetite ranges, cobalt crater shadows and thin green auroral horns",
+      "terrainMaterialGrammar": "layered rust stone, black magnetite, gunmetal infrastructure, cobalt ceramic insulation, conductive copper mesh and pale dust seals",
+      "factionLoreContext": "Syndicate resource frontier where autonomous rail cities harvest rare metals under severe electromagnetic weather.",
+      "promptCount": 9,
+      "sites": [
+        {
+          "locationClass": "city_colony",
+          "siteId": "ferrum_polarity_city",
+          "siteName": "Polarity City"
+        },
+        {
+          "locationClass": "outpost",
+          "siteId": "ferrum_compass_zero",
+          "siteName": "Compass Zero Outpost"
+        },
+        {
+          "locationClass": "military_base",
+          "siteId": "ferrum_lodestone_fort",
+          "siteName": "Lodestone Fort"
+        },
+        {
+          "locationClass": "refinery",
+          "siteId": "ferrum_redline_separator",
+          "siteName": "Redline Separator"
+        },
+        {
+          "locationClass": "relic_ruin",
+          "siteId": "ferrum_silent_compass",
+          "siteName": "Silent Compass Ruin"
+        },
+        {
+          "locationClass": "spaceport",
+          "siteId": "ferrum_railhead_orbit",
+          "siteName": "Railhead Orbit"
+        },
+        {
+          "locationClass": "pressure_dome",
+          "siteId": "ferrum_faraday_habitat",
+          "siteName": "Faraday Habitat"
+        },
+        {
+          "locationClass": "derelict_megastructure",
+          "siteId": "ferrum_great_inductor",
+          "siteName": "Great Inductor"
+        }
+      ]
+    },
+    {
+      "order": 7,
+      "planetId": "cinderfall",
+      "displayName": "CINDERFALL",
+      "sectorGroup": "Andromeda Forge",
+      "file": "cinderfall.prompt.md",
+      "runtimeCanon": false,
+      "runtimeReady": false,
+      "biome": "volcanic island arcs, obsidian deltas, ash forests and lava-cut black beaches under perpetual ember rain",
+      "atmosphere": "charcoal atmosphere with orange volcanic plumes, crimson limb glow and ash-ringed polar vortices",
+      "hazards": "lava advance, ash burial, pyroclastic wind, toxic vents and sudden caldera subsidence",
+      "orbitalSilhouette": "black-red planet with branching orange lava deltas, grey ash continents and multiple towering plume shadows",
+      "terrainMaterialGrammar": "black obsidian, vesicular basalt, heat-white ceramic, dark refractory alloy, smoked red glass and ashproof seals",
+      "factionLoreContext": "Dominion frontier proving ground and geothermal power reserve, settled in mobile heat-resistant enclaves rather than grand capitals.",
+      "promptCount": 9,
+      "sites": [
+        {
+          "locationClass": "city_colony",
+          "siteId": "cinderfall_emberhaven",
+          "siteName": "Emberhaven"
+        },
+        {
+          "locationClass": "outpost",
+          "siteId": "cinderfall_ashneedle_post",
+          "siteName": "Ashneedle Post"
+        },
+        {
+          "locationClass": "military_base",
+          "siteId": "cinderfall_caldera_guard",
+          "siteName": "Caldera Guard"
+        },
+        {
+          "locationClass": "refinery",
+          "siteId": "cinderfall_magma_tap",
+          "siteName": "Magma Tap Refinery"
+        },
+        {
+          "locationClass": "relic_ruin",
+          "siteId": "cinderfall_glass_cathedral",
+          "siteName": "Glass Cathedral Ruin"
+        },
+        {
+          "locationClass": "spaceport",
+          "siteId": "cinderfall_cooled_apron",
+          "siteName": "Cooled Apron"
+        },
+        {
+          "locationClass": "pressure_dome",
+          "siteId": "cinderfall_slagglass_dome",
+          "siteName": "Slagglass Dome"
+        },
+        {
+          "locationClass": "derelict_megastructure",
+          "siteId": "cinderfall_world_furnace",
+          "siteName": "World Furnace"
+        }
+      ]
+    },
+    {
+      "order": 8,
+      "planetId": "talos",
+      "displayName": "TALOS",
+      "sectorGroup": "Andromeda Forge",
+      "file": "talos.prompt.md",
+      "runtimeCanon": false,
+      "runtimeReady": false,
+      "biome": "high-gravity basalt tablelands, cyclopean mountain stairs and dense silver grass valleys beneath a compressed sky",
+      "atmosphere": "thick indigo lower atmosphere, pale silver cloud decks and a flattened amber horizon caused by high gravity",
+      "hazards": "slope failure, crushing storms, structural fatigue, dense fog and high-gravity vehicle rollover",
+      "orbitalSilhouette": "dark slate planet with vast stepped plateaus, silver valley seams and tightly wrapped cloud bands",
+      "terrainMaterialGrammar": "massive basalt block, thick ribbed concrete, low-profile steel, silver grass mat, amber load glass and oversized bearing surfaces",
+      "factionLoreContext": "UGA heavy-engineering test world where all architecture demonstrates load paths, redundancy and short robust spans.",
+      "promptCount": 9,
+      "sites": [
+        {
+          "locationClass": "city_colony",
+          "siteId": "talos_bearing_city",
+          "siteName": "Bearing City"
+        },
+        {
+          "locationClass": "outpost",
+          "siteId": "talos_plumbline_station",
+          "siteName": "Plumbline Station"
+        },
+        {
+          "locationClass": "military_base",
+          "siteId": "talos_anvil_redoubt",
+          "siteName": "Anvil Redoubt"
+        },
+        {
+          "locationClass": "refinery",
+          "siteId": "talos_deepweight_works",
+          "siteName": "Deepweight Works"
+        },
+        {
+          "locationClass": "relic_ruin",
+          "siteId": "talos_first_pillar",
+          "siteName": "First Pillar Ruin"
+        },
+        {
+          "locationClass": "spaceport",
+          "siteId": "talos_low_arc_field",
+          "siteName": "Low Arc Field"
+        },
+        {
+          "locationClass": "pressure_dome",
+          "siteId": "talos_atlas_vault",
+          "siteName": "Atlas Vault"
+        },
+        {
+          "locationClass": "derelict_megastructure",
+          "siteId": "talos_stair_of_worlds",
+          "siteName": "Stair of Worlds"
+        }
+      ]
+    },
+    {
+      "order": 9,
+      "planetId": "nordhall",
+      "displayName": "NORDHALL",
+      "sectorGroup": "Orion Cryosphere",
+      "file": "nordhall.prompt.md",
+      "runtimeCanon": true,
+      "runtimeReady": false,
+      "biome": "ice archipelagos, artillery-scarred machine cliffs, unstable reactor rifts and polar orbital-weather peaks",
+      "atmosphere": "cold blue-green limb, thin white ice clouds and non-organic green orbital-weather arcs",
+      "hazards": "ice fracture, blizzard whiteout, cryogenic coolant, meteor storms and automated industrial failures",
+      "orbitalSilhouette": "blue-white glacial sphere with dark machine grids, fractured archipelagos and geometric green orbital-weather traces",
+      "terrainMaterialGrammar": "blue ice, dark automation alloy, pale cryo ceramic, conductive green glass, rime-streaked concrete and precise machine markings",
+      "factionLoreContext": "Syndicate robotic theatre; autonomous factories endure orbital weather and old frontline damage without organic visual language.",
+      "promptCount": 9,
+      "sites": [
+        {
+          "locationClass": "city_colony",
+          "siteId": "nordhall_cliff_arcology_steps_colony",
+          "siteName": "Arcology Steps Colony"
+        },
+        {
+          "locationClass": "outpost",
+          "siteId": "nordhall_isles_core_vault_outpost",
+          "siteName": "Core Vault Outpost"
+        },
+        {
+          "locationClass": "military_base",
+          "siteId": "nordhall_cliff_citadel_base",
+          "siteName": "Citadel Base"
+        },
+        {
+          "locationClass": "refinery",
+          "siteId": "nordhall_frost_pale_trench_refinery",
+          "siteName": "Pale Trench Refinery"
+        },
+        {
+          "locationClass": "relic_ruin",
+          "siteId": "nordhall_peaks_valkyrie_relic",
+          "siteName": "Valkyrie Relic"
+        },
+        {
+          "locationClass": "spaceport",
+          "siteId": "nordhall_isles_frostwake_spaceport",
+          "siteName": "Frostwake Spaceport"
+        },
+        {
+          "locationClass": "pressure_dome",
+          "siteId": "nordhall_peaks_skyshield_dome",
+          "siteName": "Skyshield Dome"
+        },
+        {
+          "locationClass": "derelict_megastructure",
+          "siteId": "nordhall_frost_reactor_megastructure",
+          "siteName": "Reactor Megastructure"
+        }
+      ]
+    },
+    {
+      "order": 10,
+      "planetId": "nacre",
+      "displayName": "NACRE",
+      "sectorGroup": "Orion Cryosphere",
+      "file": "nacre.prompt.md",
+      "runtimeCanon": false,
+      "runtimeReady": false,
+      "biome": "pearlescent salt terraces, opaline badlands, shallow caustic seas and shell-like mineral reefs",
+      "atmosphere": "milky lavender atmosphere with iridescent cloud bands and a pale cyan limb",
+      "hazards": "caustic fog, salt heave, mirror glare, brittle mineral collapse and corrosive tidal spray",
+      "orbitalSilhouette": "white-lavender world with mother-of-pearl continental swirls, cyan caustic seas and iridescent crescent bands",
+      "terrainMaterialGrammar": "layered nacre mineral, matte white saltcrete, violet corrosion alloy, cyan sealed glass, dark gasket composite and prismatic ceramic accents",
+      "factionLoreContext": "Coalition chemistry and optics frontier whose settlements protect delicate mineral reefs while harvesting rare photonic compounds.",
+      "promptCount": 9,
+      "sites": [
+        {
+          "locationClass": "city_colony",
+          "siteId": "nacre_lustre_city",
+          "siteName": "Lustre City"
+        },
+        {
+          "locationClass": "outpost",
+          "siteId": "nacre_prism_watch",
+          "siteName": "Prism Watch"
+        },
+        {
+          "locationClass": "military_base",
+          "siteId": "nacre_shellguard_keep",
+          "siteName": "Shellguard Keep"
+        },
+        {
+          "locationClass": "refinery",
+          "siteId": "nacre_photonic_works",
+          "siteName": "Photonic Works"
+        },
+        {
+          "locationClass": "relic_ruin",
+          "siteId": "nacre_tidemirror_archive",
+          "siteName": "Tidemirror Archive"
+        },
+        {
+          "locationClass": "spaceport",
+          "siteId": "nacre_iridescent_apron",
+          "siteName": "Iridescent Apron"
+        },
+        {
+          "locationClass": "pressure_dome",
+          "siteId": "nacre_pearlward_dome",
+          "siteName": "Pearlward Dome"
+        },
+        {
+          "locationClass": "derelict_megastructure",
+          "siteId": "nacre_broken_spectrum",
+          "siteName": "Broken Spectrum"
+        }
+      ]
+    },
+    {
+      "order": 11,
+      "planetId": "borealis",
+      "displayName": "BOREALIS",
+      "sectorGroup": "Orion Cryosphere",
+      "file": "borealis.prompt.md",
+      "runtimeCanon": false,
+      "runtimeReady": false,
+      "biome": "low-gravity cryovolcanic tundra, black methane-ice flats, luminous geyser fields and long twilight valleys",
+      "atmosphere": "thin navy atmosphere filled by immense green-violet auroral curtains and pale methane haze",
+      "hazards": "cryogeyser eruptions, brittle black ice, methane fog, electrostatic auroras and low-gravity debris trajectories",
+      "orbitalSilhouette": "midnight-blue world with black ice continents, cyan cryovolcanic cracks and two enormous green-violet auroral ovals",
+      "terrainMaterialGrammar": "black ice, blue cryobasalt, pale aerogel composite, violet conductive film, low-mass trusswork and cyan thermal markers",
+      "factionLoreContext": "UGA deep-range science and fuel frontier; unlike industrial Nordhall, Borealis is sparse, low gravity and dominated by luminous cryovolcanism.",
+      "promptCount": 9,
+      "sites": [
+        {
+          "locationClass": "city_colony",
+          "siteId": "borealis_twilight_line",
+          "siteName": "Twilight Line Colony"
+        },
+        {
+          "locationClass": "outpost",
+          "siteId": "borealis_ghostlight_post",
+          "siteName": "Ghostlight Post"
+        },
+        {
+          "locationClass": "military_base",
+          "siteId": "borealis_nightwatch_array",
+          "siteName": "Nightwatch Array"
+        },
+        {
+          "locationClass": "refinery",
+          "siteId": "borealis_coldflare_plant",
+          "siteName": "Coldflare Plant"
+        },
+        {
+          "locationClass": "relic_ruin",
+          "siteId": "borealis_aurora_ossuary",
+          "siteName": "Aurora Ossuary"
+        },
+        {
+          "locationClass": "spaceport",
+          "siteId": "borealis_longnight_port",
+          "siteName": "Longnight Port"
+        },
+        {
+          "locationClass": "pressure_dome",
+          "siteId": "borealis_cryolumen_habitat",
+          "siteName": "Cryolumen Habitat"
+        },
+        {
+          "locationClass": "derelict_megastructure",
+          "siteId": "borealis_crown_of_night",
+          "siteName": "Crown of Night"
+        }
+      ]
+    }
+  ]
+}

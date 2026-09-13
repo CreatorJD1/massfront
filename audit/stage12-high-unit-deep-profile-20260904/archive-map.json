@@ -1,0 +1,70 @@
+{
+  "schema": "massfront-archive-relocation-map-v1",
+  "note": "Diagnostic/evidence JSON are immutable copies retaining original producer paths. Use these archive-relative paths. Hash equality verifies byte-preserving relocation only, not a performance PASS.",
+  "files": [
+    {
+      "record": "diagnostic.json",
+      "original": "1v4_continental_conquest_500u_desktop-v3_start.png",
+      "archive": "start.png",
+      "bytes": 1311724,
+      "sha256": "b0a9c2c795803b82fd132de147b4fa624e922ad773c916a35c9ed62a451d372a",
+      "matchesRecordedHash": true
+    },
+    {
+      "record": "diagnostic.json",
+      "original": "1v4_continental_conquest_500u_desktop-v3_mid.png",
+      "archive": "mid.png",
+      "bytes": 1448542,
+      "sha256": "571ad7ab9502195c51eb16d703b9da15ad4ab25a5fb2d6a330a213bbf8074827",
+      "matchesRecordedHash": true
+    },
+    {
+      "record": "diagnostic.json",
+      "original": "1v4_continental_conquest_500u_desktop-v3_end.png",
+      "archive": "end.png",
+      "bytes": 1470527,
+      "sha256": "e687f58b23551468665cd80b59382a584840511cc4a804c822aa01c66c18af21",
+      "matchesRecordedHash": true
+    },
+    {
+      "record": "diagnostic.json",
+      "original": "tmp/perf-lab/current/diagnostics/1v4_continental_conquest_500u_desktop-v3_sample1.cpuprofile",
+      "archive": "sample1.cpuprofile",
+      "bytes": 144743,
+      "sha256": "69576a265aa7a5296152946f69fdb6c2f568f005d49cf9af18f21f4e533cd4a3",
+      "matchesRecordedHash": true
+    },
+    {
+      "record": "diagnostic.json",
+      "original": "tmp/perf-lab/current/diagnostics/1v4_continental_conquest_500u_desktop-v3_sample2.cpuprofile",
+      "archive": "sample2.cpuprofile",
+      "bytes": 109296,
+      "sha256": "c1a25ec8e12416f641d0fe4b5bbde4221aea8a336c95f8684cb0d08abcd47cee",
+      "matchesRecordedHash": true
+    },
+    {
+      "record": "final/evidence.json",
+      "original": "1v4_continental_conquest_500u_desktop-v3_start.png",
+      "archive": "final/start.png",
+      "bytes": 1317539,
+      "sha256": "4e48bbea6b5aef0ea5b733af775ce4ed7e9e3ec185735773b2141e09a4f74afb",
+      "matchesRecordedHash": true
+    },
+    {
+      "record": "final/evidence.json",
+      "original": "1v4_continental_conquest_500u_desktop-v3_mid.png",
+      "archive": "final/mid.png",
+      "bytes": 1374734,
+      "sha256": "b6deff7e7febcbf77484400fc97b2b74beeaf01d6e3671c0de06355ac5ef6919",
+      "matchesRecordedHash": true
+    },
+    {
+      "record": "final/evidence.json",
+      "original": "1v4_continental_conquest_500u_desktop-v3_end.png",
+      "archive": "final/end.png",
+      "bytes": 1463798,
+      "sha256": "d07d459b18abd1ec44e9a1f3ac4787624a52185a83b0a3b8fda9b083bd91e803",
+      "matchesRecordedHash": true
+    }
+  ]
+}

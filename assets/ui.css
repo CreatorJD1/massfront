@@ -1,0 +1,17 @@
+/* MASSFRONT touch-safety overlay. Kept separate from the authored visual skin
+   so action ergonomics can be audited without changing the design language. */
+:where(button,[role="button"],input,select,textarea){
+  touch-action:manipulation;
+}
+@media (pointer:coarse){
+  :where(button,[role="button"],input,select,textarea){
+    min-width:44px;
+    min-height:44px;
+  }
+  :where(#heroRow,#orderRow,#viewRow,#groupRow,#hudDeckTabs,.setupFoot,.warFoot,.accDlgBtns,.tabRow){
+    gap:max(6px,var(--mf-control-gap,0px));
+  }
+}
+:where(button,[role="button"])[data-mf-risk="destructive"]{
+  --mf-risk-color:#ff735f;
+}

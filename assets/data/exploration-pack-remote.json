@@ -1,0 +1,10 @@
+{
+  "schema": "MassfrontExplorationPackRemoteV2",
+  "kind": "ExplorationPackRemote",
+  "version": "1.33.88",
+  "base": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/content-r1/",
+  "manifest": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/content-r1/exploration-content-manifest-v2.json",
+  "manifestSha256": "0709e508bf93da9c869910c130fb00229abd8f2c6ac6991cab9f3ff751302e6c",
+  "manifestBytes": 246328,
+  "downloadQuery": ""
+}

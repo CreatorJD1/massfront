@@ -1,0 +1,95 @@
+{
+  "generatedAt": "2026-09-01T06:44:49.788Z",
+  "evidenceClass": "vm-functional",
+  "visualProof": false,
+  "releaseProof": false,
+  "sourceHash": "21e1719fd075e7b633b3151d7da087f3c77e03aa9050f46075124b4c4530e395",
+  "passed": 16,
+  "total": 16,
+  "checks": [
+    {
+      "name": "growable writer preserves the legacy canonical byte stream",
+      "ok": true,
+      "detail": "bytes=1179942"
+    },
+    {
+      "name": "same authoritative state produces the same strict SHA-256",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "each digest brackets only synchronous state construction for diagnostics",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "one-bit live-unit mutation changes the digest",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "building authority mutation changes the digest",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "economy mutation changes the digest",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "live projectile mutation changes the digest",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "hazard clock mutation changes the digest",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "queued deformation mutation changes the digest",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "authoritative passability mutation changes the digest",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "camera, particles, audio and performance state are excluded",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "malformed authoritative state fails closed",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "unavailable gameplay state fails closed",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "bundle manifest orders state hash after hazards and before social UI",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "boot manifest loads state hash immediately after hazards",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "source does not reference presentation authorities",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "knownOmissions": [
+    "Applied terrain heightfield is not hashed; passability and pending deformation authority are hashed.",
+    "The existing simulation still contains nondeterministic Math.random and render-clock mutation; this digest detects divergence but does not establish deterministic lockstep."
+  ]
+}

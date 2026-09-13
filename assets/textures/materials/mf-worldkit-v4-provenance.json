@@ -1,0 +1,80 @@
+{
+  "asset": "mf-worldkit-v4",
+  "generator": "OpenAI built-in image generation",
+  "prompt": "Create one original square 2x2 source sheet for a premium sci-fi RTS military outpost material set. Each quadrant is a separate perfectly top-down orthographic material swatch, filling its quadrant edge-to-edge with no frame, no gap, no labels, no text, no logos, no objects, no buildings, no perspective, and neutral flat studio lighting with no baked directional shadows. Top-left: cool charcoal gunmetal roof deck with broad modular armor plates, restrained recessed panel seams, tiny fasteners, subtle brushed grain, readable at 50-100 pixels. Top-right: cool blue-grey reinforced composite facade with large coherent bays, sparse bevels and clean inset service access lines, no windows and no white/chalk concrete. Bottom-left: dark service vent and louvre material with a small number of broad vents, heat-darkened but clean, no grime blobs. Bottom-right: reinforced trim/edge material with long dark structural rails, restrained hazard-yellow micro accents under 5 percent of area, no stripes dominating the tile. AAA real-time strategy PBR source-art quality, crisp medium-scale detail, strong material separation, subtle microtexture, no photogrammetry clutter, no rust, no brown dirt, no giant square stamps. Every quadrant should be designed to become seamless/tileable after deterministic periodic baking, with matching color and feature flow near its own opposite edges. This must be wholly original and not imitate or copy any existing game asset.",
+  "raw_source_shipped": false,
+  "source_dimensions": [
+    1254,
+    1254
+  ],
+  "runtime_dimensions": [
+    1024,
+    1024
+  ],
+  "material_cell_dimensions": [
+    512,
+    512
+  ],
+  "quadrants": {
+    "gunmetal": 0,
+    "composite": 1,
+    "vent": 2,
+    "trim": 3
+  },
+  "bake": "8px source inset, Lanczos to 512, half-period wrap with 48px cosine seam correction, wrapped central-difference tangent normals",
+  "channels": {
+    "baseao": "RGB albedo, A ambient occlusion",
+    "nre": "RG tangent normal XY, B roughness, A emissive",
+    "masks": "R metallic, GB reserved/team masks, A edge response"
+  },
+  "metrics": {
+    "gunmetal": {
+      "mean_rgb": [
+        58.763,
+        61.857,
+        66.527
+      ],
+      "std_luma": 0.07177,
+      "mean_roughness": 0.60943,
+      "mean_ao": 0.89638,
+      "emissive_coverage": 0.0,
+      "edge_mean_error_rgb": 3.696
+    },
+    "composite": {
+      "mean_rgb": [
+        78.516,
+        88.555,
+        100.954
+      ],
+      "std_luma": 0.08793,
+      "mean_roughness": 0.54946,
+      "mean_ao": 0.89861,
+      "emissive_coverage": 0.0,
+      "edge_mean_error_rgb": 5.5952
+    },
+    "vent": {
+      "mean_rgb": [
+        39.817,
+        41.717,
+        44.53
+      ],
+      "std_luma": 0.10394,
+      "mean_roughness": 0.72929,
+      "mean_ao": 0.89012,
+      "emissive_coverage": 0.0,
+      "edge_mean_error_rgb": 11.9651
+    },
+    "trim": {
+      "mean_rgb": [
+        53.015,
+        53.894,
+        54.561
+      ],
+      "std_luma": 0.0943,
+      "mean_roughness": 0.48937,
+      "mean_ao": 0.8944,
+      "emissive_coverage": 0.010845,
+      "edge_mean_error_rgb": 5.9087
+    }
+  }
+}

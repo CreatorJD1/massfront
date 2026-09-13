@@ -45,6 +45,203 @@ const intelGhostIdx=[];
 let intelGhostStamp=-1;
 const intelHasGhost=[0,0,0];
 
+/* Last-known contacts are a derived command-intel ledger, not gameplay or save
+   authority. `stats.t` is the only clock: replays therefore age the same way
+   at every render rate and pausing the renderer cannot create or expire intel.
+   Unit slot + generation is the stable identity because slots are recycled. */
+const INTEL_CONTACT_CAP=256;
+const INTEL_CONTACT_TTL={visual:10,radar:18,scan:14,aerial:16,manual:10};
+const INTEL_CONTACT_CONF={visual:1,radar:.72,scan:.86,aerial:.92,manual:.65};
+const intelContacts=[];
+let intelContactClock=0;
+
+function intelContactNow(){
+  return typeof stats!=='undefined'&&stats&&Number.isFinite(stats.t)?stats.t:0;
+}
+function intelContactAdvanceClock(now){
+  now=Number.isFinite(now)?now:intelContactNow();
+  if(now>intelContactClock) intelContactClock=now;
+  return intelContactClock;
+}
+function intelContactDefaults(source){
+  source=typeof source==='string'&&source?source:'manual';
+  return {source,
+    confidence:INTEL_CONTACT_CONF[source]===undefined?INTEL_CONTACT_CONF.manual:INTEL_CONTACT_CONF[source],
+    ttl:INTEL_CONTACT_TTL[source]===undefined?INTEL_CONTACT_TTL.manual:INTEL_CONTACT_TTL[source]};
+}
+function intelContactSnapshot(C){
+  return {team:C.team,target:C.target,generation:C.generation,x:C.x,y:C.y,
+    source:C.source,confidence:C.confidence,age:C.age,timestamp:C.timestamp,
+    expiresAt:C.expiresAt};
+}
+function intelContactTick(now){
+  now=intelContactAdvanceClock(now);
+  for(let i=intelContacts.length-1;i>=0;i--){
+    const C=intelContacts[i];
+    /* A living slot with another generation is a different chassis. A dead
+       slot with the same generation remains valid last-known intelligence. */
+    if(C.target<0||C.target>=MAXU||(ualive[C.target]&&ugen[C.target]!==C.generation)){
+      intelContacts.splice(i,1);continue;
+    }
+    C.age=Math.max(0,now-C.timestamp);
+    const span=Math.max(.000001,C.expiresAt-C.timestamp);
+    C.confidence=C.baseConfidence*clamp((C.expiresAt-now)/span,0,1);
+    if(now>=C.expiresAt||C.confidence<=0) intelContacts.splice(i,1);
+  }
+  return intelContacts.length;
+}
+function intelContactFind(team,target,generation){
+  for(let i=0;i<intelContacts.length;i++){
+    const C=intelContacts[i];
+    if(C.team===team&&C.target===target&&(generation===undefined||C.generation===generation)) return i;
+  }
+  return -1;
+}
+function intelContactWorse(A,B){
+  return A.confidence<B.confidence||
+    (A.confidence===B.confidence&&(A.timestamp<B.timestamp||
+    (A.timestamp===B.timestamp&&(A.team<B.team||
+    (A.team===B.team&&(A.target<B.target||
+    (A.target===B.target&&A.generation<B.generation)))))));
+}
+/* Minimal later-integration seam. Supplying x/y/generation/time is optional
+   for live units, but lets a fixed-step caller publish a sampled observation
+   without the renderer mutating the record. Stale updates never rewind it. */
+function intelContactUpdate(team,target,source,confidence,ttl,x,y,generation,now){
+  team=team|0;target=target|0;
+  if(team<0||team>30||target<0||target>=MAXU) return null;
+  const sampledAt=Number.isFinite(now)?now:intelContactNow();
+  const staleSample=sampledAt<intelContactClock;
+  now=intelContactAdvanceClock(sampledAt);
+  generation=Number.isFinite(generation)?generation|0:ugen[target]|0;
+  if(ualive[target]&&ugen[target]!==generation) return null;
+  x=Number.isFinite(x)?x:+ux[target];y=Number.isFinite(y)?y:+uy[target];
+  if(!Number.isFinite(x)||!Number.isFinite(y)) return null;
+  const D=intelContactDefaults(source);
+  source=D.source;
+  confidence=Number.isFinite(confidence)?clamp(confidence,0,1):D.confidence;
+  ttl=Number.isFinite(ttl)?Math.max(.001,ttl):D.ttl;
+  if(confidence<=0) return null;
+  intelContactTick(now);
+  /* A recycled target slot cannot retain two generations for one observer. */
+  for(let i=intelContacts.length-1;i>=0;i--){
+    const C=intelContacts[i];
+    if(C.team===team&&C.target===target&&C.generation!==generation) intelContacts.splice(i,1);
+  }
+  let at=intelContactFind(team,target,generation),C=at>=0?intelContacts[at]:null;
+  /* Late packets/probe calls may describe an older simulation tick. They are
+     allowed to age the ledger to the current monotonic clock, but never to
+     refresh confidence or replace the newer sampled position. */
+  if(staleSample) return C?intelContactSnapshot(C):null;
+  if(C&&now<C.timestamp) return intelContactSnapshot(C);
+  if(C&&now===C.timestamp&&confidence<C.baseConfidence) return intelContactSnapshot(C);
+  if(!C){
+    if(intelContacts.length>=INTEL_CONTACT_CAP){
+      /* Deterministic pressure trim: weakest first, then oldest, then the
+         lowest stable identity. Active observations are not insertion-order
+         random and equal runs retain the same contact set. */
+      let worst=0;
+      for(let i=1;i<intelContacts.length;i++) if(intelContactWorse(intelContacts[i],intelContacts[worst])) worst=i;
+      const incoming={confidence,timestamp:now,team,target,generation};
+      if(intelContactWorse(incoming,intelContacts[worst])) return null;
+      intelContacts.splice(worst,1);
+    }
+    C={team,target,generation,x,y,source,confidence,baseConfidence:confidence,
+      age:0,timestamp:now,expiresAt:now+ttl};
+    intelContacts.push(C);
+  }else{
+    C.x=x;C.y=y;C.source=source;C.confidence=confidence;C.baseConfidence=confidence;
+    C.age=0;C.timestamp=now;C.expiresAt=now+ttl;
+  }
+  return intelContactSnapshot(C);
+}
+function intelContactGet(team,target,generation){
+  team=team|0;target=target|0;intelContactTick();
+  if(generation===undefined&&target>=0&&target<MAXU&&ualive[target]) generation=ugen[target]|0;
+  const at=intelContactFind(team,target,generation);
+  return at<0?null:intelContactSnapshot(intelContacts[at]);
+}
+function intelContactList(team,minConfidence){
+  team=team|0;minConfidence=Number.isFinite(minConfidence)?minConfidence:0;
+  intelContactTick();
+  return intelContacts.filter(C=>C.team===team&&C.confidence>=minConfidence)
+    .sort((A,B)=>A.target-B.target||A.generation-B.generation)
+    .map(intelContactSnapshot);
+}
+function intelArtillerySolution(team,request,now){
+  team=team|0;request=request&&typeof request==='object'?request:{};
+  now=intelContactAdvanceClock(now);
+  intelContactTick(now);
+  if(request.source==='player'&&Number.isFinite(request.x)&&Number.isFinite(request.y)){
+    return {eligible:true,team,target:-1,generation:-1,
+      x:clamp(request.x,0,MAP),y:clamp(request.y,0,MAP),source:'player',
+      confidence:1,age:0,timestamp:now,expiresAt:now};
+  }
+  const target=request.target|0;
+  if(target<0||target>=MAXU) return {eligible:false,team,reason:'invalid-target'};
+  const generation=Number.isFinite(request.generation)?request.generation|0:
+    (ualive[target]?ugen[target]|0:undefined);
+  const at=intelContactFind(team,target,generation);
+  if(at<0) return {eligible:false,team,target,generation,reason:'missing-contact'};
+  const C=intelContacts[at];
+  return {eligible:true,team,target:C.target,generation:C.generation,x:C.x,y:C.y,
+    source:C.source,confidence:C.confidence,age:C.age,timestamp:C.timestamp,
+    expiresAt:C.expiresAt};
+}
+function intelArtilleryScatterRadius(solution,weaponRadius){
+  if(!solution||!solution.eligible) return 0;
+  weaponRadius=Number.isFinite(weaponRadius)?Math.max(1,weaponRadius):64;
+  const sourceBias=solution.source==='visual'?.08:solution.source==='player'?.12:
+    solution.source==='aerial'?.14:solution.source==='scan'?.2:solution.source==='radar'?.28:.34;
+  const confidence=clamp(Number.isFinite(solution.confidence)?solution.confidence:0,0,1);
+  const ttl=Math.max(.001,(Number.isFinite(solution.expiresAt)?solution.expiresAt:0)-
+    (Number.isFinite(solution.timestamp)?solution.timestamp:0));
+  const ageRatio=clamp((Number.isFinite(solution.age)?solution.age:ttl)/ttl,0,1);
+  return weaponRadius*(sourceBias+(1-confidence)*.65+ageRatio*.25);
+}
+function intelArtilleryHash32(value){
+  value=(value|0)+0x6d2b79f5;
+  value=Math.imul(value^(value>>>15),value|1);
+  value^=value+Math.imul(value^(value>>>7),value|61);
+  return (value^(value>>>14))>>>0;
+}
+function intelArtilleryScatterPoint(solution,weaponRadius,shellIndex,seed){
+  if(!solution||!solution.eligible) return {x:NaN,y:NaN,radius:0};
+  const radius=intelArtilleryScatterRadius(solution,weaponRadius);
+  const identity=Math.imul((solution.target|0)+2,0x45d9f3b)^Math.imul((solution.generation|0)+2,0x119de1f3)^
+    Math.imul(Math.round(solution.x*16)|0,0x27d4eb2d)^Math.imul(Math.round(solution.y*16)|0,0x165667b1);
+  const h0=intelArtilleryHash32(identity^(seed|0)^Math.imul((shellIndex|0)+1,0x9e3779b1));
+  const h1=intelArtilleryHash32(h0^0x85ebca6b);
+  const angle=h0/4294967296*Math.PI*2;
+  const distance=Math.sqrt(h1/4294967296)*radius;
+  return {x:clamp(solution.x+Math.cos(angle)*distance,0,MAP),
+    y:clamp(solution.y+Math.sin(angle)*distance,0,MAP),radius};
+}
+function intelContactRefreshSensors(){
+  const active=typeof fogGameplayActive!=='function'||fogGameplayActive();
+  const now=intelContactNow();
+  intelContactTick(now);
+  if(!active) return;
+  for(let i=0;i<unitHigh;i++){
+    if(!ualive[i]||(typeof uCrash!=='undefined'&&uCrash[i])) continue;
+    const cell=intelCell(ux[i],uy[i]);
+    for(let observer=0;observer<=1;observer++){
+      if(uteam[i]===observer) continue;
+      const bit=intelSensorBit(observer);
+      /* fogCov is deliberately player-only. Team one still receives its real
+         uplink/techlab radar contacts; no imaginary AI visual grid is added. */
+      const visual=observer===0&&!!fogCov[cell]&&
+        (umode[i]!==4||intelDetectedAt(ux[i],uy[i],observer));
+      const radar=!!(fogRadar[cell]&bit)&&umode[i]!==4;
+      if(visual) intelContactUpdate(observer,i,'visual',undefined,undefined,
+        ux[i],uy[i],ugen[i],now);
+      else if(radar) intelContactUpdate(observer,i,'radar',undefined,undefined,
+        ux[i],uy[i],ugen[i],now);
+    }
+  }
+}
+function intelContactReset(){ intelContacts.length=0;intelContactClock=0; }
+
 function intelVisionScale(r){
   let s=r;
   if(typeof WC!=='undefined'){
@@ -153,12 +350,14 @@ function intelStampSensors(){
   }
   intelGhostStamp=-1;
   intelGhostRefresh();
+  intelContactRefreshSensors();
 }
 function intelReset(){
   fogRadar.fill(0); fogDetect.fill(0);
   intelGhostIdx.length=0;
   intelHasGhost[0]=intelHasGhost[1]=intelHasGhost[2]=0;
   intelGhostStamp=-1;
+  intelContactReset();
 }
 
 (function mfIntelInstall(){

@@ -15,6 +15,7 @@ if(planets.length!==4) throw new Error(`expected 4 planets, found ${planets.leng
 for(const [planetId,planet] of planets){
   if(planet.regions.length!==4) throw new Error(`${planetId}: expected 4 regions, found ${planet.regions.length}`);
   for(const region of planet.regions){
+    const regionThemes=Array.isArray(region.themes)?region.themes:[region.theme||planet.theme];
     if(region.maps.length!==3) throw new Error(`${region.id}: expected 3 maps, found ${region.maps.length}`);
     const sizes=region.maps.map(id=>{
       if(seen.has(id)) throw new Error(`${id}: reused by more than one region`);
@@ -22,7 +23,7 @@ for(const [planetId,planet] of planets){
       const map=MAPDEFS[id];
       if(!map) throw new Error(`${region.id}: missing MAPDEFS.${id}`);
       if(map.region!==region.id) throw new Error(`${id}: region metadata is ${map.region}`);
-      if(map.theme!==planet.theme) throw new Error(`${id}: theme metadata is ${map.theme}`);
+      if(!regionThemes.includes(map.theme)) throw new Error(`${id}: theme metadata is ${map.theme}; region declares ${regionThemes.join('/')}`);
       return map.size;
     });
     if(sizes.join(',')!=='compact,standard,large')

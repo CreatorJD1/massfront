@@ -1,0 +1,463 @@
+{
+  "$schema": "./hunyuan-spline-generation-ledger.v1.schema.json",
+  "schemaVersion": 1,
+  "ledgerId": "massfront-hunyuan-spline-source-generation-v1",
+  "ledgerDate": "2026-08-26",
+  "sourceOnly": true,
+  "runtimeReady": false,
+  "evidencePolicy": {
+    "generatedDoesNotMeanAccepted": true,
+    "sourceAcceptedDoesNotMeanRuntimeReady": true,
+    "missingEvidenceStatus": "UNKNOWN"
+  },
+  "entries": [
+    {
+      "recordId": "hy3d_aelos_caldris_control_tower_tall_v1",
+      "planetId": "aelos",
+      "siteId": "aelos_caldris",
+      "assetId": "gsite_aelos_caldris_control_tower_tall",
+      "intendedCategory": "skyscraper",
+      "intendedRole": "tall civic control tower landmark for the Caldris orbital-ring city kit",
+      "generation": {
+        "provider": "hunyuan3d",
+        "mode": "concept_image_to_3d",
+        "provenanceStatus": "COMPLETE",
+        "conceptGenerationId": "cefec610-890c-485d-9ca1-ca640619bdf3",
+        "conceptImageAssetId": "17a897ba-b7e6-41e4-9ad6-12e6376ca76d",
+        "generatedMeshParentId": "b4651b84-ba85-4d4f-aff2-5c907106171e",
+        "generatedMeshNodeId": "e60bdcd5-de44-4fee-aea7-6c1b5771b2bc"
+      },
+      "spline": {
+        "documentName": "GSITE_AELOS_CALDRIS_CONTROL_TOWER_TALL_V1",
+        "documentNameEvidence": "VERIFIED_IN_SPLINE",
+        "rootName": "GSITE_AELOS_CALDRIS_CONTROL_TOWER_TALL",
+        "meshName": "MF_AELOS_CALDRIS_CONTROL_TOWER_TALL_LOD0_SOURCE",
+        "parentNodeId": "b4651b84-ba85-4d4f-aff2-5c907106171e",
+        "meshNodeId": "e60bdcd5-de44-4fee-aea7-6c1b5771b2bc",
+        "publicUrl": "https://my.spline.design/gsiteaeloscaldriscontroltowertallv1-bk8QmwfvmmOHc0bry9h8syda/"
+      },
+      "acceptance": {
+        "state": "ACCEPTED_AS_INTENDED_SOURCE_CANDIDATE",
+        "acceptedCategory": "skyscraper",
+        "acceptedRole": "tall civic control tower landmark",
+        "acceptedAsOriginallyIntended": true,
+        "decisionReason": "The generated source preserves a clear tapered civic-tower silhouette and the intended Caldris material language. It remains a high-poly source master, not a runtime asset."
+      },
+      "sourceMaster": {
+        "status": "EXPORTED_HASH_VERIFIED",
+        "format": "glb",
+        "glbPath": "modules/space_exploration/assets/source/spline/ground-sites/aelos_caldris/hunyuan/gsite-aelos-caldris-control-tower-tall-source-v1.glb",
+        "sha256": "332ef639646021e499958aa6692634f31af918f12c12d371aab17bf6fe611ff0",
+        "byteLength": 14730676,
+        "measuredTriangles": 373680,
+        "rawSplineBounds": [59.05, 211.24, 59.61],
+        "rawBoundsUnit": "spline_scene_units"
+      },
+      "runtimeReady": false,
+      "runtimeAdmissionBlockers": [
+        "normalized game scale is not yet approved",
+        "LOD and collision outputs are not yet approved",
+        "mobile source-matched captures are missing",
+        "runtime material and package-budget review is missing"
+      ],
+      "evidence": {
+        "status": "PARTIAL_SOURCE_EVIDENCE",
+        "liveVisualReview": true,
+        "persistedSourceCapturePath": null,
+        "persistedSourceCaptureSha256": null,
+        "sourceHashVerified": true,
+        "runtimeEvidenceStatus": "UNKNOWN",
+        "runtimeCapturePaths": [],
+        "notes": "The live Spline viewport was reviewed and the repository GLB hash was verified. No persisted matched source capture or runtime/device evidence is registered, so runtime evidence remains UNKNOWN."
+      }
+    },
+    {
+      "recordId": "hy3d_aelos_caldris_customs_depot_v1",
+      "planetId": "aelos",
+      "siteId": "aelos_caldris",
+      "assetId": "gsite_aelos_caldris_customs_depot",
+      "intendedCategory": "structural_module",
+      "intendedRole": "drive-through customs inspection hall with an open vehicle aperture",
+      "generation": {
+        "provider": "hunyuan3d",
+        "mode": "concept_image_to_3d",
+        "provenanceStatus": "COMPLETE",
+        "conceptGenerationId": "475785e3-bea0-4989-97a6-d42888a8d089",
+        "conceptImageAssetId": "059bdfef-bf75-49a3-851c-382eac77192b",
+        "generatedMeshParentId": "7beee138-d678-45d6-b4d2-c45b464444f1",
+        "generatedMeshNodeId": "b9b8631e-5d8d-48c8-9d6f-9347df91f54d"
+      },
+      "spline": {
+        "documentName": "GSITE_AELOS_CALDRIS_CUSTOMS_DEPOT_V1",
+        "documentNameEvidence": "VERIFIED_IN_SPLINE",
+        "rootName": "GSITE_AELOS_CALDRIS_CUSTOMS_DEPOT",
+        "meshName": "MF_AELOS_CALDRIS_CUSTOMS_DEPOT_LOD0_SOURCE",
+        "parentNodeId": "7beee138-d678-45d6-b4d2-c45b464444f1",
+        "meshNodeId": "b9b8631e-5d8d-48c8-9d6f-9347df91f54d",
+        "publicUrl": null
+      },
+      "acceptance": {
+        "state": "RECLASSIFIED_SOURCE_CANDIDATE",
+        "acceptedCategory": "world_detail",
+        "acceptedRole": "customs depot or maintenance-support building",
+        "acceptedAsOriginallyIntended": false,
+        "decisionReason": "Hunyuan closed the required vehicle portals. The mesh therefore fails the inspection-hall contract but remains useful as a closed customs depot or maintenance-support source candidate."
+      },
+      "sourceMaster": {
+        "status": "EXPORTED_HASH_VERIFIED",
+        "format": "glb",
+        "glbPath": "modules/space_exploration/assets/source/spline/ground-sites/aelos_caldris/hunyuan/gsite-aelos-caldris-customs-depot-source-v1.glb",
+        "sha256": "6f3016d4096d7b18ce3f3d835d4825663c4dfb4e0b2e0dbdea8be6016b466cbd",
+        "byteLength": 14391452,
+        "measuredTriangles": 374034,
+        "rawSplineBounds": [180.66, 69.2, 132.02],
+        "rawBoundsUnit": "spline_scene_units"
+      },
+      "runtimeReady": false,
+      "runtimeAdmissionBlockers": [
+        "the generated mesh does not satisfy the intended open-aperture inspection-hall contract",
+        "normalized game scale is not yet approved",
+        "LOD, collision, mobile capture, material, and package-budget evidence are missing"
+      ],
+      "evidence": {
+        "status": "PARTIAL_SOURCE_EVIDENCE",
+        "liveVisualReview": true,
+        "persistedSourceCapturePath": null,
+        "persistedSourceCaptureSha256": null,
+        "sourceHashVerified": true,
+        "runtimeEvidenceStatus": "UNKNOWN",
+        "runtimeCapturePaths": [],
+        "notes": "The live Spline review proved the vehicle aperture was closed and justified reclassification. The repository GLB hash is verified, but no persisted matched source capture or runtime/device evidence is registered, so runtime evidence remains UNKNOWN."
+      }
+    },
+    {
+      "recordId": "hy3d_aelos_caldris_inspection_gantry_v1",
+      "planetId": "aelos",
+      "siteId": "aelos_caldris",
+      "assetId": "gsite_aelos_caldris_inspection_gantry",
+      "intendedCategory": "functional_machine",
+      "intendedRole": "cross-road customs inspection gantry with a completely open vehicle aperture",
+      "generation": {
+        "provider": "hunyuan3d",
+        "mode": "concept_image_to_3d",
+        "provenanceStatus": "PARTIAL_UNKNOWN_CONCEPT_IDS",
+        "conceptGenerationId": null,
+        "conceptImageAssetId": null,
+        "generatedMeshParentId": "7f490cdc-1fe4-49ee-b4f5-64d25035d0f3",
+        "generatedMeshNodeId": "29c415ba-d768-4c08-b993-bb4808a679cc"
+      },
+      "spline": {
+        "documentName": "GSITE_AELOS_CALDRIS_INSPECTION_GANTRY_V1",
+        "documentNameEvidence": "VERIFIED_IN_SPLINE",
+        "rootName": "GSITE_AELOS_CALDRIS_INSPECTION_GANTRY",
+        "meshName": "MF_AELOS_CALDRIS_INSPECTION_GANTRY_LOD0_SOURCE",
+        "parentNodeId": "7f490cdc-1fe4-49ee-b4f5-64d25035d0f3",
+        "meshNodeId": "29c415ba-d768-4c08-b993-bb4808a679cc",
+        "publicUrl": null
+      },
+      "acceptance": {
+        "state": "ACCEPTED_AS_INTENDED_SOURCE_CANDIDATE",
+        "acceptedCategory": "functional_machine",
+        "acceptedRole": "cross-road customs inspection gantry",
+        "acceptedAsOriginallyIntended": true,
+        "decisionReason": "The generated source preserves the required open aperture and reads as a customs inspection gantry. The authoring render passed framing and hero checks, but its failed exposure gate and incomplete generation provenance prevent runtime admission."
+      },
+      "sourceMaster": {
+        "status": "EXPORTED_HASH_VERIFIED",
+        "format": "glb",
+        "glbPath": "modules/space_exploration/assets/source/spline/ground-sites/aelos_caldris/hunyuan/gsite-aelos-caldris-inspection-gantry-source-v1.glb",
+        "sha256": "cec01fd1cba4eba411b900f790c97a7e4a828100cfffc9bd218ad9c0976925b8",
+        "byteLength": 66755776,
+        "measuredTriangles": 498292,
+        "rawSplineBounds": [170.74, 134.51, 67.08],
+        "rawBoundsUnit": "spline_scene_units"
+      },
+      "runtimeReady": false,
+      "runtimeAdmissionBlockers": [
+        "concept generation ID and concept image asset ID were not captured and remain UNKNOWN",
+        "the authoring render exposure gate failed",
+        "normalized game scale is not yet approved",
+        "the 498292-triangle source requires approved LOD and collision outputs",
+        "mobile source-matched captures and runtime material/package-budget evidence are missing"
+      ],
+      "evidence": {
+        "status": "PARTIAL_SOURCE_EVIDENCE",
+        "liveVisualReview": true,
+        "persistedSourceCapturePath": null,
+        "persistedSourceCaptureSha256": null,
+        "sourceHashVerified": true,
+        "runtimeEvidenceStatus": "UNKNOWN",
+        "runtimeCapturePaths": [],
+        "notes": "The live Spline review verified the open aperture and the source render passed framing and hero gates, but the exposure gate failed. The repository GLB hash is verified; runtime and mobile evidence remain UNKNOWN."
+      }
+    },
+    {
+      "recordId": "hy3d_elysion_cumulus_conservatory_pressure_dome_v1",
+      "planetId": "elysion",
+      "siteId": "elysion_cumulus_conservatory",
+      "assetId": "mf_elysion_cumulus_conservatory_pressure_dome",
+      "intendedCategory": "pressure_dome",
+      "intendedRole": "inhabited conservatory pressure dome with a usable service portal",
+      "generation": {
+        "provider": "hunyuan3d",
+        "mode": "concept_image_to_3d",
+        "provenanceStatus": "PARTIAL_UNKNOWN_CONCEPT_ASSET_ID",
+        "conceptGenerationId": "ca8ce03c-cc27-4380-9bb1-fba1a6ab4e79",
+        "conceptImageAssetId": null,
+        "generatedMeshParentId": "aef453ab-baab-4473-a460-7f9063426b3a",
+        "generatedMeshNodeId": "081b8c3c-28ba-4f54-93ad-5d6bb8aa5133"
+      },
+      "spline": {
+        "documentName": "MF_HY3D_ELYSION_PRESSURE_DOME_V1",
+        "documentNameEvidence": "VERIFIED_IN_SPLINE",
+        "rootName": "MF_ELYSION_CUMULUS_CONSERVATORY_PRESSURE_DOME_LOD0_SOURCE",
+        "meshName": "MF_ELYSION_CUMULUS_CONSERVATORY_PRESSURE_DOME_LOD0_SOURCE_MESH",
+        "parentNodeId": "aef453ab-baab-4473-a460-7f9063426b3a",
+        "meshNodeId": "081b8c3c-28ba-4f54-93ad-5d6bb8aa5133",
+        "publicUrl": null
+      },
+      "acceptance": {
+        "state": "RECLASSIFIED_SOURCE_CANDIDATE",
+        "acceptedCategory": "world_detail",
+        "acceptedRole": "sealed conservatory dome landmark or non-traversable environmental shell",
+        "acceptedAsOriginallyIntended": false,
+        "decisionReason": "The source is visually clean and reads as an Elysion conservatory dome, but the required service portal appears closed. It cannot satisfy the traversable pressure-dome contract and is retained only as a sealed landmark source candidate."
+      },
+      "sourceMaster": {
+        "status": "EXPORTED_HASH_VERIFIED",
+        "format": "glb",
+        "glbPath": "modules/space_exploration/assets/source/spline/hunyuan/elysion/elysion_cumulus_conservatory/pressure_dome/mf_elysion_cumulus_conservatory_pressure_dome_source.glb",
+        "sha256": "8514b00845b09bf764ece0ede56c4c29408360b905f79af109b8b1476ceb8f54",
+        "byteLength": 14348536,
+        "measuredTriangles": 374876,
+        "rawSplineBounds": [194.45, 98.82, 194.13],
+        "rawBoundsUnit": "spline_scene_units"
+      },
+      "runtimeReady": false,
+      "runtimeAdmissionBlockers": [
+        "concept image asset ID was not returned and remains UNKNOWN",
+        "the required service portal appears closed and fails the traversable pressure-dome contract",
+        "normalized game scale is not yet approved",
+        "the 374876-triangle source requires approved LOD and collision outputs",
+        "mobile source-matched captures and runtime material/package-budget evidence are missing"
+      ],
+      "evidence": {
+        "status": "PARTIAL_SOURCE_EVIDENCE",
+        "liveVisualReview": true,
+        "persistedSourceCapturePath": null,
+        "persistedSourceCaptureSha256": null,
+        "sourceHashVerified": true,
+        "runtimeEvidenceStatus": "UNKNOWN",
+        "runtimeCapturePaths": [],
+        "notes": "The live source screenshot was visually clean, but the required service portal appears closed. The repository GLB hash is verified; no persisted matched capture or mobile/runtime evidence is registered, so runtime evidence remains UNKNOWN."
+      }
+    },
+    {
+      "recordId": "hy3d_vespera_megaforge_brutish_structure_rejected_v1",
+      "planetId": "vespera",
+      "siteId": "vespera_refinery_megaforge_refinery",
+      "assetId": "mf_vespera_megaforge_brutish_structure_rejected",
+      "intendedCategory": "brutish_enemy_structure",
+      "intendedRole": "non-humanoid Brood industrial infestation architecture for the Vespera Megaforge refinery",
+      "generation": {
+        "provider": "hunyuan3d",
+        "mode": "concept_image_to_3d",
+        "provenanceStatus": "PARTIAL_UNKNOWN_CONCEPT_ASSET_ID",
+        "conceptGenerationId": "ec313e0a-082b-45ad-aa63-65bae5a61c1b",
+        "conceptImageAssetId": null,
+        "conceptReferencePath": "source-media/concepts/hunyuan/vespera/vespera_refinery_megaforge_refinery-brutish_enemy_structure-concept-v1.png",
+        "conceptReferenceSha256": "6d1c6b1dc94af83c17efe0eb5a9a27974c376af9284cf3edbd6c101db587070f",
+        "generatedMeshParentId": "70faa9d8-6960-49f5-9442-70d8cc51489c",
+        "generatedMeshNodeId": "84fd6911-c3da-494c-9c1b-4b815c8396d2"
+      },
+      "spline": {
+        "documentName": "MF_HY3D_VESPERA_BRUTISH_ENEMY_STRUCTURE_REJECTED_V1",
+        "documentNameEvidence": "VERIFIED_IN_SPLINE",
+        "rootName": "MF_VESPERA_MEGAFORGE_BRUTISH_STRUCTURE_REJECTED_SOURCE",
+        "meshName": "MF_VESPERA_MEGAFORGE_BRUTISH_STRUCTURE_REJECTED_SOURCE_MESH",
+        "parentNodeId": "70faa9d8-6960-49f5-9442-70d8cc51489c",
+        "meshNodeId": "84fd6911-c3da-494c-9c1b-4b815c8396d2",
+        "publicUrl": null
+      },
+      "acceptance": {
+        "state": "REJECTED_VISUAL_CONTRACT_FAILURE",
+        "acceptedCategory": null,
+        "acceptedRole": null,
+        "acceptedAsOriginallyIntended": false,
+        "processingAllowed": false,
+        "registrationAllowed": false,
+        "decisionReason": "The mesh reads as a creature or face with limbs and tentacles rather than non-humanoid Brood industrial infestation architecture. It fails the requested structural silhouette and must not be processed or registered."
+      },
+      "sourceMaster": {
+        "status": "EXPORTED_HASH_VERIFIED",
+        "format": "glb",
+        "glbPath": "modules/space_exploration/assets/source/spline/hunyuan/vespera/vespera_refinery_megaforge_refinery/rejected-candidates/mf_vespera_megaforge_brutish_structure_rejected_source_v1.glb",
+        "sha256": "c3e87768e6ea09c4f2bc887529b5dda8394e052ccd80461fd0e8259d78aeeea6",
+        "byteLength": 14708716,
+        "measuredTriangles": 373558,
+        "rawSplineBounds": [148.64, 112.72, 142.51],
+        "rawBoundsUnit": "spline_scene_units"
+      },
+      "runtimeReady": false,
+      "runtimeAdmissionBlockers": [
+        "REJECTED_VISUAL_CONTRACT_FAILURE: creature-like face, limbs, and tentacles do not read as industrial infestation architecture",
+        "the rejected source is evidence-only and must not enter model-kit processing",
+        "the rejected source must not be registered with any base-game, exploration, map-editor, manifest, or runtime consumer",
+        "concept image asset ID was not returned and remains UNKNOWN"
+      ],
+      "evidence": {
+        "status": "REJECTED",
+        "liveVisualReview": true,
+        "persistedSourceCapturePath": null,
+        "persistedSourceCaptureSha256": null,
+        "sourceHashVerified": true,
+        "runtimeEvidenceStatus": "UNKNOWN",
+        "runtimeCapturePaths": [],
+        "notes": "The repository GLB and local concept reference hashes are verified. Visual review rejected the candidate as creature-like rather than architectural; the file is retained only as rejected source evidence and has no runtime or mobile evidence."
+      }
+    },
+    {
+      "recordId": "hy3d_city_outpost_gatehouse_command_tower_v1",
+      "planetId": "multi_planet",
+      "siteId": "city_outpost_layout_kits",
+      "assetId": "mf_city_outpost_gatehouse_command_tower",
+      "intendedCategory": "civic_command_hub",
+      "intendedRole": "broad stepped city or outpost command hub with four layout connection faces",
+      "generation": {
+        "provider": "hunyuan3d",
+        "mode": "concept_image_to_3d",
+        "provenanceStatus": "PARTIAL_UNKNOWN_CONCEPT_IDS",
+        "conceptGenerationId": null,
+        "conceptImageAssetId": null,
+        "conceptReferencePath": "source-media/concepts/hunyuan/city_outpost_layout_kits/brutalist_command_hub/mf_city_outpost_brutalist_command_hub-concept-v1.png",
+        "conceptReferenceSha256": "f39b2020978c8c888f823458943364d596247f0900fb8405819872913892f32e",
+        "generatedMeshParentId": "0afa507c-7ea6-45fc-b522-9b691072662d",
+        "generatedMeshNodeId": "1feef00e-3251-47d8-a0f4-4ef9cff0c77c"
+      },
+      "spline": {
+        "documentName": "MF_HY3D_CITY_OUTPOST_COMMAND_HUB_V1",
+        "documentNameEvidence": "VERIFIED_IN_SPLINE",
+        "rootName": "MF_CITY_OUTPOST_GATEHOUSE_COMMAND_TOWER_LOD0_SOURCE",
+        "meshName": "MF_CITY_OUTPOST_GATEHOUSE_COMMAND_TOWER_LOD0_SOURCE_MESH",
+        "parentNodeId": "0afa507c-7ea6-45fc-b522-9b691072662d",
+        "meshNodeId": "1feef00e-3251-47d8-a0f4-4ef9cff0c77c",
+        "publicUrl": null
+      },
+      "acceptance": {
+        "state": "RECLASSIFIED_SOURCE_CANDIDATE",
+        "acceptedCategory": "fortified_outpost_gatehouse",
+        "acceptedRole": "fortified outpost gatehouse and command tower",
+        "acceptedAsOriginallyIntended": false,
+        "decisionReason": "The generated silhouette is a tall, portal-led fortified gatehouse and command tower rather than the broader stepped command-hub massing shown by the concept. It is retained truthfully as a reusable outpost entrance and command landmark source candidate."
+      },
+      "sourceMaster": {
+        "status": "EXPORTED_HASH_VERIFIED",
+        "format": "glb",
+        "glbPath": "modules/space_exploration/assets/source/spline/hunyuan/city_outpost_layout_kits/outpost_gatehouse_command_tower/mf_city_outpost_gatehouse_command_tower_source.glb",
+        "sha256": "6b9577a2ac476503261fe53539323854bd956711e45d7ed457cf1922a1f68829",
+        "byteLength": 15105500,
+        "measuredTriangles": 373060,
+        "rawSplineBounds": [63.999809, 71.999798, 64.000214],
+        "rawBoundsUnit": "spline_scene_units"
+      },
+      "runtimeReady": false,
+      "runtimeAdmissionBlockers": [
+        "the 373060-triangle source requires approved retopology, LOD, and collision outputs before runtime use",
+        "layout sockets, entrance clearances, pivot, and normalized scale are not yet approved in the map planner",
+        "the single generated material and 1024x1024 texture require semantic material separation and package-budget review",
+        "mobile source-matched captures and packaged-runtime evidence are missing and remain UNKNOWN"
+      ],
+      "evidence": {
+        "status": "PARTIAL_SOURCE_EVIDENCE",
+        "liveVisualReview": true,
+        "persistedSourceCapturePath": null,
+        "persistedSourceCaptureSha256": null,
+        "sourceHashVerified": true,
+        "runtimeEvidenceStatus": "UNKNOWN",
+        "runtimeCapturePaths": [],
+        "notes": "The cleaned source GLB measures 63.999809 x 71.999798 x 64.000214 Spline scene units and contains one mesh, one primitive, one material, one texture, one embedded 1024x1024 PNG, and no camera. The raw Spline export remains preserved beside it at modules/space_exploration/assets/source/spline/hunyuan/city_outpost_layout_kits/outpost_gatehouse_command_tower/mf_city_outpost_gatehouse_command_tower_raw-spline.glb (SHA-256 bef2a05983633306d3acfa910d040b7df2d0e321b882e3512d123616c6f2857e). The cleaned GLB and concept hashes are verified; mobile and runtime evidence remain UNKNOWN."
+      }
+    },
+    {
+      "recordId": "hy3d_city_outpost_operations_block_v1",
+      "planetId": "multi_planet",
+      "siteId": "city_outpost_layout_kits",
+      "assetId": "mf_city_outpost_operations_block",
+      "intendedCategory": "outpost_core",
+      "intendedRole": "compact modular city or outpost operations block with front road, rear service, and paired pedestrian-concourse connection faces",
+      "generation": {
+        "provider": "hunyuan3d",
+        "mode": "concept_image_to_3d",
+        "provenanceStatus": "PARTIAL_UNKNOWN_CONCEPT_IDS",
+        "conceptGenerationId": null,
+        "conceptImageAssetId": null,
+        "conceptReferencePath": "source-media/concepts/hunyuan/city_outpost_layout_kits/outpost_operations_block/mf_outpost_operations_block-concept-v1.png",
+        "conceptReferenceSha256": "1c10bbc4bae58ce421414a1f53897b1f000699e1d71a69adcf68da2b90abf51d",
+        "generatedMeshParentId": "91597ec3-3299-41c7-94be-9aab2479a48a",
+        "generatedMeshNodeId": "7bf92fc9-909a-4bc0-a8a5-ceb5e36cb015"
+      },
+      "spline": {
+        "documentName": "MF_HY3D_OUTPOST_OPERATIONS_BLOCK_V1",
+        "documentNameEvidence": "VERIFIED_IN_SPLINE",
+        "rootName": "MF_CITY_OUTPOST_OPERATIONS_BLOCK_SOURCE_GROUP",
+        "meshName": "MF_CITY_OUTPOST_OPERATIONS_BLOCK_LOD0_SOURCE_MESH",
+        "parentNodeId": "91597ec3-3299-41c7-94be-9aab2479a48a",
+        "meshNodeId": "7bf92fc9-909a-4bc0-a8a5-ceb5e36cb015",
+        "publicUrl": null
+      },
+      "acceptance": {
+        "state": "ACCEPTED_AS_INTENDED_SOURCE_CANDIDATE",
+        "acceptedCategory": "outpost_core",
+        "acceptedRole": "compact modular city or outpost operations block source master",
+        "acceptedAsOriginallyIntended": true,
+        "decisionReason": "The generated massing reads as one compact operations core with a dominant glazed command room, subordinate service wings, roof utilities, and four legible connection faces. This is source-shape acceptance only; socket clearances, semantic materials, topology, collision, navigation, LODs, and runtime behavior remain unverified."
+      },
+      "sourceMaster": {
+        "status": "EXPORTED_HASH_VERIFIED",
+        "format": "glb",
+        "glbPath": "modules/space_exploration/assets/source/spline/hunyuan/city_outpost_layout_kits/outpost_operations_block/mf_city_outpost_operations_block_source-opaque-fixed-v2.glb",
+        "sha256": "58a78ed446757dbc3d67be9099147701e0ae177ab6c44c5f04fd16cef53e1cb3",
+        "byteLength": 14847976,
+        "measuredTriangles": 374298,
+        "rawSplineBounds": [179.635773, 179.208145, 84.154587],
+        "rawBoundsUnit": "spline_scene_units",
+        "materialAlphaCorrection": {
+          "status": "CONFIRMED_METADATA_ONLY",
+          "materialIndex": 0,
+          "from": "BLEND",
+          "to": "OPAQUE",
+          "equivalenceReport": "modules/space_exploration/assets/source/spline/hunyuan/city_outpost_layout_kits/outpost_operations_block/mf_city_outpost_operations_block_source-opaque-fixed-v2-equivalence.json",
+          "originalCleanSourcePreserved": true
+        },
+        "geometryOverlapAudit": {
+          "status": "NO_BROAD_Z_FIGHT_GEOMETRY_FOUND",
+          "report": "tmp/operations-overlap-audit-v2/operations-overlap-audit-v2.json",
+          "meshObjects": 1,
+          "sameFacingExactDuplicateGroups": 0,
+          "coplanarOverlappingPairs": 0,
+          "nearCoplanarZFightPairs": 0,
+          "booleanMergeApplied": false,
+          "reason": "The generated building is already one textured mesh; a Boolean remesh would damage its atlas without addressing the measured flicker cause."
+        }
+      },
+      "runtimeReady": false,
+      "runtimeAdmissionBlockers": [
+        "the 374298-triangle, 263626-vertex source requires approved retopology and LOD outputs before runtime use",
+        "front road, rear service, and side pedestrian socket clearances plus the floor-center pivot require planner and placement-probe approval",
+        "collision and navigation meshes, internal routes, and clearance volumes are not authored or verified",
+        "the single generated material and texture require semantic structural, facade, roof, contact, glazing, and emissive separation plus package-budget review",
+        "mobile source-matched captures, packaged-runtime integration, performance, and device evidence are missing and remain UNKNOWN"
+      ],
+      "evidence": {
+        "status": "PARTIAL_SOURCE_EVIDENCE",
+        "liveVisualReview": true,
+        "persistedSourceCapturePath": null,
+        "persistedSourceCaptureSha256": null,
+        "sourceHashVerified": true,
+        "runtimeEvidenceStatus": "UNKNOWN",
+        "runtimeCapturePaths": [],
+        "notes": "The repaired source is normalized to exactly 32 x 20 x 32 meters with a floor-center pivot, one mesh, one primitive, 263626 vertices, 374298 triangles, one material, one texture, one embedded PNG, no external URIs, and no camera or light. The saved Spline scene contains one generated mesh rather than separable white shell objects. Inspection found the imported native light layer at alpha 0.4 even though the embedded texture and material factor are fully opaque; the scene was rebound to MF_OUTPOST_OPERATIONS_OPAQUE_NATIVE with light alpha 1.0. The source-model intake produced a non-overwriting v2 whose non-JSON chunks and embedded texture payload are identical to the prior clean source; the only permitted GLB JSON change is material 0 BLEND to OPAQUE. The original clean source and raw Spline export remain preserved. The final live Spline capture passed framing and exposure with the hero at approximately 83% of frame height and no crop. Runtime and mobile evidence remain UNKNOWN."
+      }
+    }
+  ]
+}

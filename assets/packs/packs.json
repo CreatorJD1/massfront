@@ -2,12 +2,14 @@
   "version": 1,
   "packs": {
     "music": {
+      "delivery": "base",
       "label": "MASSFRONT soundtrack",
       "bytes": 0,
       "files": []
     },
     "voice": {
-      "label": "MASSFRONT voice bank — KEEN narration and command radio",
+      "delivery": "base",
+      "label": "MASSFRONT voice bank — KEEL narration and command radio",
       "bytes": 6530249,
       "files": [
         {

@@ -1,0 +1,72 @@
+{
+  "generatedAt": "2026-09-04T17:08:21.512Z",
+  "evidenceClass": "browser-functional",
+  "visualProof": false,
+  "releaseProof": false,
+  "source": "src/game/matchconsumer.js",
+  "sourceHash": "254df88042edb148e15a0703f3113888cfe80b9640e20a64c3f577f6f4c4d1b8",
+  "passed": 11,
+  "total": 11,
+  "checks": [
+    {
+      "name": "network order takeover is installed",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "network move submits exact generation-safe refs without local mutation",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "offline path remains the original input implementation",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "build production research and commander proposals use typed schemas",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "authoritative production research and commander tick applies once",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "authoritative build tick creates the site and records ownership",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "invalid typed command rejects the complete tick before mutation",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "within-tick queue reservations reject aggregate overflow atomically",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "within-tick construction reservations reject overlapping sites atomically",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "welcome/start events expose immutable local bootstrap identity",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "non-host skirmish seat owns and submits only its canonical army",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "knownBlockers": [
+    "Two physical devices have not completed the packaged soak.",
+    "Three- and four-seat PvP remain rejected by the current simulation authority mapping.",
+    "Production remains unchanged until the approved release is uploaded and deployed."
+  ]
+}

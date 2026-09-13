@@ -1,6 +1,6 @@
 # MASSFRONT faction art conversion
 
-Updated: 2026-08-09
+Updated: 2026-08-28
 
 The reference target is Supreme Commander-scale role readability plus the
 surface hierarchy and battlefield atmosphere associated with Command & Conquer
@@ -65,6 +65,29 @@ materials.
 
 Convert the three commanders and faction deployment craft. These receive the
 highest geometry/material LOD while battle copies retain production-safe LODs.
+
+Commander art is the deliberate exception to the surrounding PBR material
+language. Every human, cyborg, robot, or mech commander must use the
+`commander-anime-flat-v1` profile in portraits and in its commander-only battle
+rendering path:
+
+- one solid fill per semantic region; no cel bands, gradients, baked shadows,
+  ambient occlusion, specular highlights, skin pores, or material microtexture;
+- continuous crisp outer contours 2–6 pixels wide at portrait master size and
+  internal lines 1–3 pixels wide, still readable at 48, 96, and 192 pixels;
+- at most 24 declared solid colors per portrait master, except edge
+  antialiasing;
+- robotic commander battle meshes use an unlit commander-only pass with no
+  normal-dependent sun/local light, GGX, AO, roughness, metal, or rim shading,
+  plus a stable 1–2 CSS-pixel silhouette outline;
+- faction emissive accents, selection outlines, whole-object fog modulation,
+  and damage decals remain allowed when they do not create surface shading.
+
+Acceptance covers all nine base commander identities, the three registered
+exploration commander portraits, and all three shared robotic battle chassis at
+412 x 915 and 1920 x 1080, on bright and dark terrain at close, normal, and
+strategic zoom. A commander asset cannot be approved without the style tag,
+palette declaration, dimensions, provenance, and matching visual evidence.
 
 ### D. Weapons and damage
 

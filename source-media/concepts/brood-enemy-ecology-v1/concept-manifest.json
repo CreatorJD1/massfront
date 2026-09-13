@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "conceptSetId": "brood_galactic_enemy_ecology_v1",
+  "status": "approved_for_first_modeling_pass",
+  "originalProjectArt": true,
+  "generatedWith": "OpenAI built-in image generation",
+  "runtimeUse": {
+    "pixelsUsedAsTexture": false,
+    "sourceOnly": true,
+    "requiresAuthoredGeometryAndMaterials": true
+  },
+  "canon": {
+    "forceRelationshipRole": "hostile_ai",
+    "playable": false,
+    "humanoid": false,
+    "enemyOfFactionIds": ["uga", "nova", "dominion", "syndicate"],
+    "primaryEnemyOfFactionId": "uga"
+  },
+  "concepts": [
+    {
+      "id": "brood_galactic_enemy_ecology_model_sheet_v1",
+      "file": "brood-galactic-enemy-ecology-model-sheet-v1.png",
+      "sha256": "f3ce8661e5239ecfe1419432481a01cea32cecd44c5c5856f00d8ab1ca161fa3",
+      "bytes": 2457494,
+      "resolution": [1536, 1024],
+      "generationEvidence": {
+        "system": "imagegen",
+        "executionId": "exec-2fab670a-4e3a-4f61-815b-78a424ae98ff"
+      },
+      "biomeOrBiodome": ["verdant", "arctic", "ashland", "vespera", "brood_hive_depths"],
+      "faction": ["brood"],
+      "forceRelationshipRole": ["hostile_ai"],
+      "intention": [
+        "hive_objective",
+        "non_humanoid_worker_scout",
+        "non_humanoid_assault_organism",
+        "non_humanoid_heavy_carrier",
+        "non_humanoid_aerial_spore_organism",
+        "terrain_infestation_kit",
+        "damage_and_death_state",
+        "lod_silhouette",
+        "uga_containment_opposition_props"
+      ],
+      "camera": ["front_orthographic", "side_orthographic", "top_orthographic", "isometric", "tilted_top_down_mobile_rts"],
+      "scale": ["small_organism", "combat_creature", "hive_landmark", "battlefield_region"],
+      "modelingTargets": [
+        "brood_hive_heart",
+        "brood_spawning_annex_and_tunnel_kit",
+        "brood_worker_scout_organism",
+        "brood_assault_organism",
+        "brood_heavy_carrier_siege_organism",
+        "brood_aerial_spore_organism",
+        "brood_infestation_terrain_kit",
+        "uga_containment_and_decontamination_prop_kit",
+        "active_wounded_ruptured_burning_and_dead_states",
+        "lod0_lod1_lod2_mobile_silhouettes"
+      ]
+    }
+  ],
+  "constraints": [
+    "concept_pixels_must_not_ship_as_runtime_textures",
+    "brood_must_never_be_presented_as_playable",
+    "brood_must_never_be_presented_as_humanoid",
+    "brood_must_never_be_ship_resident_commander_or_strike_team_roster",
+    "human_figures_are_scale_or_opposition_only",
+    "no_space_combat",
+    "no_gore_closeups"
+  ]
+}

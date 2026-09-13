@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import {fileURLToPath} from 'node:url';
+import {assertKitSharing} from './faction-kit-sharing.mjs';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const ctx=vm.createContext({console});
@@ -47,10 +48,8 @@ for(const slot of production){
   rows.push({slot,builder:kit[slot].name,verts,tris,materials:mats.size,livery:(team/verts*100).toFixed(1)+'%'});
 }
 
-if(kit[5]!==kit[25]||kit[6]!==kit[7]||kit[10]!==kit[22]||kit[20]!==kit[21])
-  throw new Error('Red shared-role wrappers no longer share GPU mesh resources');
-if(new Set(production.map(slot=>kit[slot].name)).size!==22)
-  throw new Error('Red wrapper cache has an unexpected production mesh count');
+const sharing=assertKitSharing({label:'Red',kit,production,
+  packs:vm.runInContext('DOM_LEGION_BESPOKE_PACKS',ctx)||{}});
 
 console.table(rows);
 console.log('Crimson Stage 2 QA passed: all '+production.length+' production slots use aged Dominion materials.');

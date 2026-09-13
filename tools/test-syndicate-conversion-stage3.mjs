@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import {fileURLToPath} from 'node:url';
+import {assertKitSharing} from './faction-kit-sharing.mjs';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const ctx=vm.createContext({console});
@@ -46,10 +47,8 @@ for(const slot of production){
   rows.push({slot,builder:kit[slot].name,verts,tris,materials:mats.size,livery:(team/verts*100).toFixed(1)+'%'});
 }
 
-if(kit[2]!==kit[6]||kit[10]!==kit[22]||kit[20]!==kit[21])
-  throw new Error('Green shared-role wrappers no longer share GPU mesh resources');
-if(new Set(production.map(slot=>kit[slot].name)).size!==23)
-  throw new Error('Green wrapper cache has an unexpected production mesh count');
+const sharing=assertKitSharing({label:'Green',kit,production,
+  packs:vm.runInContext('COA_SYN_BESPOKE_PACKS',ctx)||{}});
 
 console.table(rows);
 console.log('Syndicate Stage 3 QA passed: all '+production.length+' production slots use advanced field-tech materials.');

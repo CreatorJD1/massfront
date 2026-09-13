@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "baseline": "source-media/audio-library/music-catalog.json",
+  "cases": [
+    {
+      "name": "duplicate-track-id",
+      "mutation": "duplicate-track-id",
+      "expectedErrors": ["DUPLICATE_TRACK_ID"]
+    },
+    {
+      "name": "unsupported-scene-role",
+      "mutation": "unsupported-scene-role",
+      "expectedErrors": ["UNSUPPORTED_VALUE"]
+    },
+    {
+      "name": "missing-scene-role-coverage",
+      "mutation": "missing-scene-role-coverage",
+      "expectedErrors": ["SCENE_ROLE_UNCATALOGED"]
+    },
+    {
+      "name": "approval-without-rights",
+      "mutation": "approval-without-rights",
+      "expectedErrors": [
+        "APPROVAL_OWNERSHIP",
+        "APPROVAL_LICENSE",
+        "APPROVAL_PROVENANCE",
+        "APPROVAL_SOURCE_MASTER"
+      ]
+    },
+    {
+      "name": "verified-license-without-evidence",
+      "mutation": "verified-license-without-evidence",
+      "expectedErrors": ["VERIFIED_LICENSE_EVIDENCE"]
+    },
+    {
+      "name": "planned-track-claims-codec",
+      "mutation": "planned-track-claims-codec",
+      "expectedErrors": ["PLANNED_HAS_CODECS"]
+    },
+    {
+      "name": "missing-dual-codec",
+      "mutation": "missing-dual-codec",
+      "expectedErrors": ["DUAL_CODEC_MISSING"]
+    },
+    {
+      "name": "malformed-codec-hash",
+      "mutation": "malformed-codec-hash",
+      "expectedErrors": ["CODEC_SHA256"]
+    },
+    {
+      "name": "on-disk-media-hash-drift",
+      "mutation": "on-disk-media-hash-drift",
+      "verifyFiles": true,
+      "expectedErrors": ["MEDIA_HASH_MISMATCH"]
+    },
+    {
+      "name": "on-disk-source-hash-drift",
+      "mutation": "on-disk-source-hash-drift",
+      "verifyFiles": true,
+      "expectedErrors": ["SOURCE_MASTER_HASH_MISMATCH"]
+    },
+    {
+      "name": "loudness-label-drift",
+      "mutation": "loudness-label-drift",
+      "expectedErrors": ["LOUDNESS_CONFORMANCE_MISMATCH"]
+    },
+    {
+      "name": "codec-duration-parity-drift",
+      "mutation": "codec-duration-parity-drift",
+      "expectedErrors": ["CODEC_PARITY_DURATION"]
+    },
+    {
+      "name": "broken-fallback-target",
+      "mutation": "broken-fallback-target",
+      "expectedErrors": ["FALLBACK_TARGET_MISSING"]
+    },
+    {
+      "name": "fail-open-release-policy",
+      "mutation": "fail-open-release-policy",
+      "expectedErrors": ["FAIL_OPEN_RELEASE_POLICY"]
+    },
+    {
+      "name": "planned-playback-claim",
+      "mutation": "planned-playback-claim",
+      "expectedErrors": ["PLANNED_PLAYBACK_CLAIM"]
+    }
+  ]
+}

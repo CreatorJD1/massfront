@@ -1,0 +1,193 @@
+{
+  "capturedAt": "2026-08-30T23:37:45.651Z",
+  "url": "http://127.0.0.1:8914/",
+  "viewport": {
+    "width": 412,
+    "height": 900
+  },
+  "source": {
+    "offlineSha256": "e03af39d3f8cdce48d4e8009c0b52cbf2e6866107a84f2db649ec813718f39d1",
+    "packagedOfflineSha256": "e03af39d3f8cdce48d4e8009c0b52cbf2e6866107a84f2db649ec813718f39d1",
+    "indexSha256": "162141235290f8e4ff762e69335279f3936b4b513db7dba69868ca7ea69abf68",
+    "bootSha256": "40114ec5f5eb6ccc0c10b741b3c9be5782d001697a8a38f62b5cc987b4b2a505"
+  },
+  "passes": [
+    {
+      "label": "running version is current packaged version",
+      "detail": "1.33.48"
+    },
+    {
+      "label": "service worker registered",
+      "detail": {
+        "supported": true,
+        "registered": true,
+        "controlled": true,
+        "error": null,
+        "scope": "http://127.0.0.1:8914/",
+        "storagePersisted": false
+      }
+    },
+    {
+      "label": "storage estimate available",
+      "detail": {
+        "supported": true,
+        "usage": 67124670,
+        "quota": 5435833790,
+        "usageMiB": 64,
+        "quotaMiB": 5184,
+        "persisted": false
+      }
+    },
+    {
+      "label": "renderer status exposed",
+      "detail": "v1.33.48 · ctx ok · epoch 1 · model ok · terrainProg ok · terrainMesh ok · tris 204800 · mapTex ok · dpr 1.00 · px 0.37M"
+    },
+    {
+      "label": "texture family exposed",
+      "detail": {
+        "preferred": "BC7",
+        "compressedAtlasLoaded": true
+      }
+    },
+    {
+      "label": "runtime error list exposed",
+      "detail": []
+    },
+    {
+      "label": "offline control is in System settings",
+      "detail": [
+        {
+          "id": "textScale",
+          "text": "Interface Text Size\nScales menu copy and critical battlefield status text without changing camera zoom or touch geometry.\n100%"
+        },
+        {
+          "id": "offline",
+          "text": "✈ Offline Mode\nWhen on, the game never contacts a server. Updates and cloud saves stay on this device.\nOFF"
+        },
+        {
+          "id": "pwaInstall",
+          "text": "▣ Install Game\nThe browser will offer installation after its eligibility checks pass.\nWAITING"
+        },
+        {
+          "id": "platformDiag",
+          "text": "⌁ Platform Diagnostics\nRenderer, texture compression, storage, service worker, OTA version, and runtime errors.\nOPEN"
+        }
+      ]
+    },
+    {
+      "label": "install control is in System settings",
+      "detail": [
+        {
+          "id": "textScale",
+          "text": "Interface Text Size\nScales menu copy and critical battlefield status text without changing camera zoom or touch geometry.\n100%"
+        },
+        {
+          "id": "offline",
+          "text": "✈ Offline Mode\nWhen on, the game never contacts a server. Updates and cloud saves stay on this device.\nOFF"
+        },
+        {
+          "id": "pwaInstall",
+          "text": "▣ Install Game\nThe browser will offer installation after its eligibility checks pass.\nWAITING"
+        },
+        {
+          "id": "platformDiag",
+          "text": "⌁ Platform Diagnostics\nRenderer, texture compression, storage, service worker, OTA version, and runtime errors.\nOPEN"
+        }
+      ]
+    },
+    {
+      "label": "diagnostic control is in System settings",
+      "detail": [
+        {
+          "id": "textScale",
+          "text": "Interface Text Size\nScales menu copy and critical battlefield status text without changing camera zoom or touch geometry.\n100%"
+        },
+        {
+          "id": "offline",
+          "text": "✈ Offline Mode\nWhen on, the game never contacts a server. Updates and cloud saves stay on this device.\nOFF"
+        },
+        {
+          "id": "pwaInstall",
+          "text": "▣ Install Game\nThe browser will offer installation after its eligibility checks pass.\nWAITING"
+        },
+        {
+          "id": "platformDiag",
+          "text": "⌁ Platform Diagnostics\nRenderer, texture compression, storage, service worker, OTA version, and runtime errors.\nOPEN"
+        }
+      ]
+    },
+    {
+      "label": "settings diagnostic control opens report",
+      "detail": true
+    },
+    {
+      "label": "no page or console errors",
+      "detail": []
+    }
+  ],
+  "failures": [],
+  "gpu": {
+    "renderer": "ANGLE (AMD, AMD Radeon(TM) 610M (0x0000164E) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+    "vendor": "Google Inc. (AMD)"
+  },
+  "diagnostics": {
+    "capturedAt": "2026-08-30T23:38:02.114Z",
+    "location": "http://127.0.0.1:8914/",
+    "version": "1.33.48",
+    "ota": {
+      "active": false,
+      "version": null,
+      "channel": null
+    },
+    "network": {
+      "browserOnline": true,
+      "forcedOffline": false
+    },
+    "installed": false,
+    "installPromptAvailable": false,
+    "serviceWorker": {
+      "supported": true,
+      "registered": true,
+      "controlled": true,
+      "error": null,
+      "scope": "http://127.0.0.1:8914/",
+      "storagePersisted": false
+    },
+    "cacheNames": [
+      "massfront-pwa-1.33.48-shell1"
+    ],
+    "storage": {
+      "supported": true,
+      "usage": 67124670,
+      "quota": 5435833790,
+      "usageMiB": 64,
+      "quotaMiB": 5184,
+      "persisted": false
+    },
+    "renderer": "v1.33.48 · ctx ok · epoch 1 · model ok · terrainProg ok · terrainMesh ok · tris 204800 · mapTex ok · dpr 1.00 · px 0.37M",
+    "textureFamily": {
+      "preferred": "BC7",
+      "compressedAtlasLoaded": true
+    },
+    "shaderErrors": [],
+    "runtimeErrors": []
+  },
+  "systemRows": [
+    {
+      "id": "textScale",
+      "text": "Interface Text Size\nScales menu copy and critical battlefield status text without changing camera zoom or touch geometry.\n100%"
+    },
+    {
+      "id": "offline",
+      "text": "✈ Offline Mode\nWhen on, the game never contacts a server. Updates and cloud saves stay on this device.\nOFF"
+    },
+    {
+      "id": "pwaInstall",
+      "text": "▣ Install Game\nThe browser will offer installation after its eligibility checks pass.\nWAITING"
+    },
+    {
+      "id": "platformDiag",
+      "text": "⌁ Platform Diagnostics\nRenderer, texture compression, storage, service worker, OTA version, and runtime errors.\nOPEN"
+    }
+  ]
+}

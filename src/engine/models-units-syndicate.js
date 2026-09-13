@@ -317,7 +317,11 @@ function mdlCoaDrone(){
   m.box(-2.4,2.44,0,2.4,0.18,0.48,TEAM_A);
   m.ring(0.3,2.72,0,0.85,1.20,10,ENERGY);                        // dorsal lift ring
   coaThroat(m,-3.7,1.35,0,0.68,1.2);
-  return {hull:m.build(),tur:null,s:1.0};
+  return {hull:m.build(),tur:null,s:1.0,air:1,propulsion:{mode:'field',sockets:[
+    {p:[-4.90,1.35,0],axis:[-1,0,0],diameter:1.36,effect:'trail'},
+    {p:[-.60,.50,-2.85],axis:[0,-1,0],diameter:1.00,effect:'lift'},
+    {p:[-.60,.50, 2.85],axis:[0,-1,0],diameter:1.00,effect:'lift'}
+  ]}};
 }
 
 /* 25 — KESTREL. 120 hp and speed 96 — the smallest, fastest thing the faction
@@ -341,7 +345,11 @@ function mdlCoaScout(){
   m.sphere(1.6,2.06,0,0.58,7,TWR_GLOW,0.8,false);
   coaCoilGun(m,3.3,1.30,0,2.1,0.25,2,TWR_MACH);
   coaThroat(m,-4.6,1.20,0,0.60,1.1);
-  return {hull:m.build(),tur:null,s:0.92};
+  return {hull:m.build(),tur:null,s:0.92,air:1,propulsion:{mode:'field',sockets:[
+    {p:[-5.70,1.20,0],axis:[-1,0,0],diameter:1.20,effect:'trail'},
+    {p:[-3.50,.58,-1.05],axis:[0,-1,0],diameter:.76,effect:'lift'},
+    {p:[-3.50,.58, 1.05],axis:[0,-1,0],diameter:.76,effect:'lift'}
+  ]}};
 }
 
 /* 17 — RAPTOR. Range 52 and 85 damage a shot: this thing has to get close and
@@ -373,7 +381,12 @@ function mdlCoaGunship(){
   coaCore(m,-1.6,3.95,0,0.78,false);
   m.greeble(-1.0,3.79,0,3.0,2.4,0.34,5,TWR_MACH,0,121);
   m.box(1.2,3.80,0,3.0,0.20,0.52,TEAM_A);
-  return {hull:m.build(),tur:null,s:1.0};
+  return {hull:m.build(),tur:null,s:1.0,air:1,propulsion:{mode:'field',sockets:[
+    {p:[-6.00,2.05,-1.55],axis:[-1,0,0],diameter:1.44,effect:'trail'},
+    {p:[-6.00,2.05, 1.55],axis:[-1,0,0],diameter:1.44,effect:'trail'},
+    {p:[-.40,.55,-3.15],axis:[0,-1,0],diameter:1.32,effect:'lift'},
+    {p:[-.40,.55, 3.15],axis:[0,-1,0],diameter:1.32,effect:'lift'}
+  ]}};
 }
 
 /* ============================================================================

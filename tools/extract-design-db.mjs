@@ -54,6 +54,13 @@ const sandbox = {
   performance: { now: () => 0 },
   document: anything(), window: anything(), navigator: anything(),
   localStorage: anything(), indexedDB: anything(), location: anything(),
+  /* `location` is a permissive Proxy, so `location.search` answers with another
+     Proxy — but URL and URLSearchParams are real constructors the source calls
+     on it, and neither is visible inside a vm context by default. Without them
+     boot() dies at the first query-string read and the extractor exits before
+     writing anything, which is how design.json silently stopped tracking the
+     source it is derived from. */
+  URL, URLSearchParams,
   fetch: () => new Promise(() => {}), Image: function(){ return anything(); },
   AudioContext: function(){ return anything(); }, speechSynthesis: anything(),
   CompressionStream: function(){ return anything(); },

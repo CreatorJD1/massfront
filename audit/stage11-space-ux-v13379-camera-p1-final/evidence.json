@@ -1,0 +1,1167 @@
+{
+  "schema": "massfront.stage11-space-ux-acceptance.v2",
+  "startedUtc": "2026-09-08T08:19:30.445Z",
+  "finishedUtc": "2026-09-08T08:20:04.211Z",
+  "repository": {
+    "root": "C:/Users/Jason/Documents/Codex/2026-08-01/massfront-rts-mobile-game-for-apple",
+    "head": "0975bf6edc5a39d3b2ec76a40a6155072c726381",
+    "branch": "cursor/strip-mass-node-bloom",
+    "dirty": true
+  },
+  "sourceStamp": "7af316b421a4785e",
+  "sources": {
+    "index.html": {
+      "bytes": 444990,
+      "sha256": "4183f7af6e066a6fec62ca3c3680a9c1c8609f2ad4e2afd164cc0afc3a450cea"
+    },
+    "src/main.js": {
+      "bytes": 202543,
+      "sha256": "c5f3ba22fa139e5917ae312f80595610311b07c5f384f49958cce81000d7c43d"
+    },
+    "src/galactic-operations.js": {
+      "bytes": 70231,
+      "sha256": "45699c40cb57838407712ac485f9063ad7d075c5f3270f2988adf1e744e4bb26"
+    },
+    "src/career-faction-gate.js": {
+      "bytes": 29777,
+      "sha256": "ecafe9979ec0a9472767cbee5ed8e5cfb2b077cffead5a70b750393e2a9c5777"
+    },
+    "src/ui/hud.js": {
+      "bytes": 207210,
+      "sha256": "08b16448d0d964e7383341fc6af1703ca898e9822f316250c2766f9708d1c699"
+    },
+    "src/styles/ui.css": {
+      "bytes": 475648,
+      "sha256": "b465e4b5ad2d93d1f667a7dabac65645e8225c487237dc197dcb48ca67b9bfe2"
+    },
+    "src/onboarding.js": {
+      "bytes": 28999,
+      "sha256": "dee3811bcb70aae5d6862fe16be212293ed3b2d807240100bc8cceb9b8249a87"
+    },
+    "src/tutorial.js": {
+      "bytes": 131897,
+      "sha256": "863ef2fd0b66b0b84a9df459af497f74114f9dbe9278c73a61e32790bb6ff23e"
+    },
+    "src/styles/tutorial.css": {
+      "bytes": 29039,
+      "sha256": "d60f368d3aef436e9b405ffbed22596b3aab83fc1b6d2163772b5d254c9d7507"
+    },
+    "modules/space_exploration/index.html": {
+      "bytes": 16752,
+      "sha256": "16cc086666adc53738ae288fb72b15683628f6f29e9d04c1d03c8c7e44407f89"
+    },
+    "modules/space_exploration/src/space_module.js": {
+      "bytes": 10057,
+      "sha256": "d3123b89f6e49d0164a716f0792b368f45e91bf4229eefa8dbc6cc0adc5aa205"
+    },
+    "modules/space_exploration/src/space_experience.js": {
+      "bytes": 97247,
+      "sha256": "a8ab97c4a3881d2e8020c312c839c8d22fb19eb29e2f6bbcefd6bb352da337e7"
+    },
+    "modules/space_exploration/src/core/uga_command_scene.js": {
+      "bytes": 86635,
+      "sha256": "868efb73668b8809f46e9e56753852854f7ac28d2d459aec26657134d0edafef"
+    },
+    "modules/space_exploration/src/core/uga_management_profile_camera.js": {
+      "bytes": 2268,
+      "sha256": "5860e6fb1a8f7a31628cb189401c63ae122188272d01e11d1a02dd4115787263"
+    },
+    "modules/space_exploration/src/ui/story_transmission_controller.js": {
+      "bytes": 19954,
+      "sha256": "0ba7eb8bb8708b8509c892f5a96b79d6095378d9271b42bb367fb2ec30cf78c2"
+    },
+    "modules/space_exploration/src/ui/campaign_hub_registry.js": {
+      "bytes": 14692,
+      "sha256": "15d998051a5da15a2ee3e2a48abb28e56d3817061b4a8333578c87dc6c1c0751"
+    },
+    "modules/space_exploration/src/ui/uga_command.js": {
+      "bytes": 125573,
+      "sha256": "75c2a697ec56150818301ef09cb2df926807c5aa418bb157c64ed636c5c11a38"
+    },
+    "modules/space_exploration/src/ui/uga_command.css": {
+      "bytes": 93985,
+      "sha256": "7a9af1c93404474f414febe19a25308c1bd4ed5d4148436ad210a49c808fce9e"
+    },
+    "tools/test-galactic-entry-intro-ticket.mjs": {
+      "bytes": 3065,
+      "sha256": "4d2b309f851eca09df1a26531721d9d6bb235adb065412eef20bc83aac800795"
+    },
+    "tools/capture-stage11-space-ux.mjs": {
+      "bytes": 78853,
+      "sha256": "3885273d0d39378a5312962b814bd7e4ff8af0b4c4161449df1ca0903e363822"
+    }
+  },
+  "gpu": [
+    {
+      "label": "all-rooms-sandbox-412x900",
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4060 Laptop GPU (0x000028E0) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "vendor": "Google Inc. (NVIDIA)",
+      "version": "",
+      "shadingLanguageVersion": ""
+    },
+    {
+      "label": "all-rooms-reloaded-412x900",
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4060 Laptop GPU (0x000028E0) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "vendor": "Google Inc. (NVIDIA)",
+      "version": "",
+      "shadingLanguageVersion": ""
+    }
+  ],
+  "captures": [
+    {
+      "name": "05a-01-command-controller-412x900",
+      "title": "Command Core room controller",
+      "description": "The current-source Command Core controller is open against its matching authored cutaway district under the fully commissioned isolated showcase fixture.",
+      "viewport": {
+        "width": 412,
+        "height": 900
+      },
+      "path": "screenshots/05a-01-command-controller-412x900.png",
+      "bytes": 181314,
+      "sha256": "618f95924ca88c0e8a9fc3b5ba2c389e5e0b8d7babf539dccb00c4c7da3fdf23",
+      "url": "http://127.0.0.1:54623/modules/space_exploration/index.html",
+      "state": {
+        "runtime": "sandbox",
+        "scene": "uga",
+        "view": "command",
+        "districtId": "command",
+        "sceneLabel": "Command Core",
+        "heading": "Command Core",
+        "commissioned": true,
+        "tier": 3,
+        "sheetExpanded": true,
+        "bodyDisplay": "block",
+        "bodyVisibility": "visible",
+        "contextTextLength": 2208,
+        "contextScrollHeight": 1084,
+        "contextClientHeight": 270,
+        "contextRect": {
+          "x": 0,
+          "y": 527,
+          "width": 412,
+          "height": 315
+        },
+        "horizontalOverflow": 0,
+        "telemetry": {
+          "contained": true,
+          "overlap": false,
+          "labelDisplay": "none",
+          "value": "298 / 480 MW",
+          "surplus": "+182 MW SURPLUS"
+        },
+        "actionableControls": 2,
+        "managementProfile": {
+          "selectedDistrictId": "command",
+          "position": {
+            "x": -24.461127860824142,
+            "y": -37.27900859314417,
+            "z": 9.794990404753518
+          },
+          "target": {
+            "x": -28.825762261750025,
+            "y": -0.9070552520951298,
+            "z": -0.3891565307402125
+          },
+          "up": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          },
+          "sideOn": false
+        },
+        "fixture": "createShowcaseReadyDomainState"
+      }
+    },
+    {
+      "name": "05a-02-navigation-controller-412x900",
+      "title": "Navigation Bridge room controller",
+      "description": "The current-source Navigation Bridge controller is open against its matching authored cutaway district under the fully commissioned isolated showcase fixture.",
+      "viewport": {
+        "width": 412,
+        "height": 900
+      },
+      "path": "screenshots/05a-02-navigation-controller-412x900.png",
+      "bytes": 228990,
+      "sha256": "2fba76023ccd8737c3b110705f7c177a44281021e6d0146496cf698746865502",
+      "url": "http://127.0.0.1:54623/modules/space_exploration/index.html",
+      "state": {
+        "runtime": "sandbox",
+        "scene": "uga",
+        "view": "command",
+        "districtId": "navigation",
+        "sceneLabel": "Navigation Bridge",
+        "heading": "Navigation Bridge",
+        "commissioned": true,
+        "tier": 1,
+        "sheetExpanded": true,
+        "bodyDisplay": "block",
+        "bodyVisibility": "visible",
+        "contextTextLength": 1716,
+        "contextScrollHeight": 1049,
+        "contextClientHeight": 270,
+        "contextRect": {
+          "x": 0,
+          "y": 527,
+          "width": 412,
+          "height": 315
+        },
+        "horizontalOverflow": 0,
+        "telemetry": {
+          "contained": true,
+          "overlap": false,
+          "labelDisplay": "none",
+          "value": "298 / 480 MW",
+          "surplus": "+182 MW SURPLUS"
+        },
+        "actionableControls": 5,
+        "managementProfile": {
+          "selectedDistrictId": "navigation",
+          "position": {
+            "x": -21.412937537973797,
+            "y": -16.189226508486247,
+            "z": 9.411977184555177
+          },
+          "target": {
+            "x": -23.308892311629155,
+            "y": -0.3896033946915931,
+            "z": 4.988082712692674
+          },
+          "up": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          },
+          "sideOn": false
+        },
+        "fixture": "createShowcaseReadyDomainState"
+      }
+    },
+    {
+      "name": "05a-03-survey-controller-412x900",
+      "title": "Survey Lab room controller",
+      "description": "The current-source Survey Lab controller is open against its matching authored cutaway district under the fully commissioned isolated showcase fixture.",
+      "viewport": {
+        "width": 412,
+        "height": 900
+      },
+      "path": "screenshots/05a-03-survey-controller-412x900.png",
+      "bytes": 204620,
+      "sha256": "912b57307f2c233132468b4736be74b668c507cc45488962e2780226f179bae9",
+      "url": "http://127.0.0.1:54623/modules/space_exploration/index.html",
+      "state": {
+        "runtime": "sandbox",
+        "scene": "uga",
+        "view": "command",
+        "districtId": "survey",
+        "sceneLabel": "Survey Lab",
+        "heading": "Survey Lab",
+        "commissioned": true,
+        "tier": 3,
+        "sheetExpanded": true,
+        "bodyDisplay": "block",
+        "bodyVisibility": "visible",
+        "contextTextLength": 2282,
+        "contextScrollHeight": 1010,
+        "contextClientHeight": 270,
+        "contextRect": {
+          "x": 0,
+          "y": 527,
+          "width": 412,
+          "height": 315
+        },
+        "horizontalOverflow": 0,
+        "telemetry": {
+          "contained": true,
+          "overlap": false,
+          "labelDisplay": "none",
+          "value": "298 / 480 MW",
+          "surplus": "+182 MW SURPLUS"
+        },
+        "actionableControls": 10,
+        "managementProfile": {
+          "selectedDistrictId": "survey",
+          "position": {
+            "x": -14.276943899556894,
+            "y": -33.72755600109107,
+            "z": 13.92911932945353
+          },
+          "target": {
+            "x": -18.226849768791226,
+            "y": -0.8116737574716286,
+            "z": 4.712672301240087
+          },
+          "up": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          },
+          "sideOn": false
+        },
+        "fixture": "createShowcaseReadyDomainState"
+      }
+    },
+    {
+      "name": "05a-04-mission-ops-controller-412x900",
+      "title": "Mission Operations room controller",
+      "description": "The current-source Mission Operations controller is open against its matching authored cutaway district under the fully commissioned isolated showcase fixture.",
+      "viewport": {
+        "width": 412,
+        "height": 900
+      },
+      "path": "screenshots/05a-04-mission-ops-controller-412x900.png",
+      "bytes": 212702,
+      "sha256": "21813ed2f555dc918cb6766d03d6415d1f56449117e48a2dbf0d6dcc6d93d364",
+      "url": "http://127.0.0.1:54623/modules/space_exploration/index.html",
+      "state": {
+        "runtime": "sandbox",
+        "scene": "uga",
+        "view": "command",
+        "districtId": "mission_ops",
+        "sceneLabel": "Mission Operations",
+        "heading": "Mission Operations",
+        "commissioned": true,
+        "tier": 1,
+        "sheetExpanded": true,
+        "bodyDisplay": "block",
+        "bodyVisibility": "visible",
+        "contextTextLength": 1708,
+        "contextScrollHeight": 1049,
+        "contextClientHeight": 270,
+        "contextRect": {
+          "x": 0,
+          "y": 527,
+          "width": 412,
+          "height": 315
+        },
+        "horizontalOverflow": 0,
+        "telemetry": {
+          "contained": true,
+          "overlap": false,
+          "labelDisplay": "none",
+          "value": "298 / 480 MW",
+          "surplus": "+182 MW SURPLUS"
+        },
+        "actionableControls": 5,
+        "managementProfile": {
+          "selectedDistrictId": "mission_ops",
+          "position": {
+            "x": -21.41292727668824,
+            "y": -16.27497072644589,
+            "z": 4.4270254870600745
+          },
+          "target": {
+            "x": -23.326468289856255,
+            "y": -0.32879561671242274,
+            "z": -0.03790354366529858
+          },
+          "up": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          },
+          "sideOn": false
+        },
+        "fixture": "createShowcaseReadyDomainState"
+      }
+    },
+    {
+      "name": "05a-05-research-controller-412x900",
+      "title": "Research Directorate room controller",
+      "description": "The current-source Research Directorate controller is open against its matching authored cutaway district under the fully commissioned isolated showcase fixture.",
+      "viewport": {
+        "width": 412,
+        "height": 900
+      },
+      "path": "screenshots/05a-05-research-controller-412x900.png",
+      "bytes": 204162,
+      "sha256": "7bba8613729d8f54c8466f620d69ab29b8497253c7e703e15dd883f5733a6995",
+      "url": "http://127.0.0.1:54623/modules/space_exploration/index.html",
+      "state": {
+        "runtime": "sandbox",
+        "scene": "uga",
+        "view": "command",
+        "districtId": "research",
+        "sceneLabel": "Research Directorate",
+        "heading": "Research Directorate",
+        "commissioned": true,
+        "tier": 3,
+        "sheetExpanded": true,
+        "bodyDisplay": "block",
+        "bodyVisibility": "visible",
+        "contextTextLength": 2268,
+        "contextScrollHeight": 1010,
+        "contextClientHeight": 270,
+        "contextRect": {
+          "x": 0,
+          "y": 527,
+          "width": 412,
+          "height": 315
+        },
+        "horizontalOverflow": 0,
+        "telemetry": {
+          "contained": true,
+          "overlap": false,
+          "labelDisplay": "none",
+          "value": "298 / 480 MW",
+          "surplus": "+182 MW SURPLUS"
+        },
+        "actionableControls": 10,
+        "managementProfile": {
+          "selectedDistrictId": "research",
+          "position": {
+            "x": -4.276943899556894,
+            "y": -33.72755600109107,
+            "z": 13.929119329453528
+          },
+          "target": {
+            "x": -8.226849768791226,
+            "y": -0.8116737574716286,
+            "z": 4.712672301240085
+          },
+          "up": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          },
+          "sideOn": false
+        },
+        "fixture": "createShowcaseReadyDomainState"
+      }
+    },
+    {
+      "name": "05a-06-fabricator-controller-412x900",
+      "title": "Fabrication & Armory room controller",
+      "description": "The current-source Fabrication & Armory controller is open against its matching authored cutaway district under the fully commissioned isolated showcase fixture.",
+      "viewport": {
+        "width": 412,
+        "height": 900
+      },
+      "path": "screenshots/05a-06-fabricator-controller-412x900.png",
+      "bytes": 233247,
+      "sha256": "3b523f40d95f786a744092887114582d59b833dfd8b19ff5758bca9f169f76ad",
+      "url": "http://127.0.0.1:54623/modules/space_exploration/index.html",
+      "state": {
+        "runtime": "sandbox",
+        "scene": "uga",
+        "view": "command",
+        "districtId": "fabricator",
+        "sceneLabel": "Fabrication & Armory",
+        "heading": "Fabrication & Armory",
+        "commissioned": true,
+        "tier": 1,
+        "sheetExpanded": true,
+        "bodyDisplay": "block",
+        "bodyVisibility": "visible",
+        "contextTextLength": 1665,
+        "contextScrollHeight": 1035,
+        "contextClientHeight": 270,
+        "contextRect": {
+          "x": 0,
+          "y": 527,
+          "width": 412,
+          "height": 315
+        },
+        "horizontalOverflow": 0,
+        "telemetry": {
+          "contained": true,
+          "overlap": false,
+          "labelDisplay": "none",
+          "value": "298 / 480 MW",
+          "surplus": "+182 MW SURPLUS"
+        },
+        "actionableControls": 5,
+        "managementProfile": {
+          "selectedDistrictId": "fabricator",
+          "position": {
+            "x": 5.723056100443107,
+            "y": -33.72755600109107,
+            "z": 13.929119329453528
+          },
+          "target": {
+            "x": 1.7731502312087741,
+            "y": -0.8116737574716282,
+            "z": 4.712672301240086
+          },
+          "up": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          },
+          "sideOn": false
+        },
+        "fixture": "createShowcaseReadyDomainState"
+      }
+    },
+    {
+      "name": "05a-07-engineering-controller-412x900",
+      "title": "Engineering & Drive room controller",
+      "description": "The current-source Engineering & Drive controller is open against its matching authored cutaway district under the fully commissioned isolated showcase fixture.",
+      "viewport": {
+        "width": 412,
+        "height": 900
+      },
+      "path": "screenshots/05a-07-engineering-controller-412x900.png",
+      "bytes": 212271,
+      "sha256": "838cce7aeb78e75b8540cca6715e65baae41af7d820d3ed34e47be2f66ac9474",
+      "url": "http://127.0.0.1:54623/modules/space_exploration/index.html",
+      "state": {
+        "runtime": "sandbox",
+        "scene": "uga",
+        "view": "command",
+        "districtId": "engineering",
+        "sceneLabel": "Engineering & Drive",
+        "heading": "Engineering & Drive",
+        "commissioned": true,
+        "tier": 3,
+        "sheetExpanded": true,
+        "bodyDisplay": "block",
+        "bodyVisibility": "visible",
+        "contextTextLength": 2324,
+        "contextScrollHeight": 1010,
+        "contextClientHeight": 270,
+        "contextRect": {
+          "x": 0,
+          "y": 527,
+          "width": 412,
+          "height": 315
+        },
+        "horizontalOverflow": 0,
+        "telemetry": {
+          "contained": true,
+          "overlap": false,
+          "labelDisplay": "none",
+          "value": "298 / 480 MW",
+          "surplus": "+182 MW SURPLUS"
+        },
+        "actionableControls": 10,
+        "managementProfile": {
+          "selectedDistrictId": "engineering",
+          "position": {
+            "x": 15.723056100443108,
+            "y": -33.72755600109107,
+            "z": 13.929119329453528
+          },
+          "target": {
+            "x": 11.773150231208774,
+            "y": -0.8116737574716282,
+            "z": 4.712672301240086
+          },
+          "up": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          },
+          "sideOn": false
+        },
+        "fixture": "createShowcaseReadyDomainState"
+      }
+    },
+    {
+      "name": "05a-08-habitat-controller-412x900",
+      "title": "Habitat & Medical room controller",
+      "description": "The current-source Habitat & Medical controller is open against its matching authored cutaway district under the fully commissioned isolated showcase fixture.",
+      "viewport": {
+        "width": 412,
+        "height": 900
+      },
+      "path": "screenshots/05a-08-habitat-controller-412x900.png",
+      "bytes": 229058,
+      "sha256": "5a399aed17cffd017c20b274b41ed67fdb4f0db46d6316aacd758c7e5a2c97e3",
+      "url": "http://127.0.0.1:54623/modules/space_exploration/index.html",
+      "state": {
+        "runtime": "sandbox",
+        "scene": "uga",
+        "view": "command",
+        "districtId": "habitat",
+        "sceneLabel": "Habitat & Medical",
+        "heading": "Habitat & Medical",
+        "commissioned": true,
+        "tier": 1,
+        "sheetExpanded": true,
+        "bodyDisplay": "block",
+        "bodyVisibility": "visible",
+        "contextTextLength": 1736,
+        "contextScrollHeight": 1049,
+        "contextClientHeight": 270,
+        "contextRect": {
+          "x": 0,
+          "y": 527,
+          "width": 412,
+          "height": 315
+        },
+        "horizontalOverflow": 0,
+        "telemetry": {
+          "contained": true,
+          "overlap": false,
+          "labelDisplay": "none",
+          "value": "298 / 480 MW",
+          "surplus": "+182 MW SURPLUS"
+        },
+        "actionableControls": 5,
+        "managementProfile": {
+          "selectedDistrictId": "habitat",
+          "position": {
+            "x": -14.276943899556892,
+            "y": -33.72755600109107,
+            "z": 8.879119138718664
+          },
+          "target": {
+            "x": -18.226849768791226,
+            "y": -0.8116737574716291,
+            "z": -0.33732788949477843
+          },
+          "up": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          },
+          "sideOn": false
+        },
+        "fixture": "createShowcaseReadyDomainState"
+      }
+    },
+    {
+      "name": "05a-09-factions-controller-412x900",
+      "title": "Coalition Embassy room controller",
+      "description": "The current-source Coalition Embassy controller is open against its matching authored cutaway district under the fully commissioned isolated showcase fixture.",
+      "viewport": {
+        "width": 412,
+        "height": 900
+      },
+      "path": "screenshots/05a-09-factions-controller-412x900.png",
+      "bytes": 204076,
+      "sha256": "c36779badb8c3cfd83e9d723c1c4265e99da9f1716347680aca2e651f6ae0278",
+      "url": "http://127.0.0.1:54623/modules/space_exploration/index.html",
+      "state": {
+        "runtime": "sandbox",
+        "scene": "uga",
+        "view": "command",
+        "districtId": "factions",
+        "sceneLabel": "Coalition Embassy",
+        "heading": "Coalition Embassy",
+        "commissioned": true,
+        "tier": 3,
+        "sheetExpanded": true,
+        "bodyDisplay": "block",
+        "bodyVisibility": "visible",
+        "contextTextLength": 1558,
+        "contextScrollHeight": 854,
+        "contextClientHeight": 270,
+        "contextRect": {
+          "x": 0,
+          "y": 527,
+          "width": 412,
+          "height": 315
+        },
+        "horizontalOverflow": 0,
+        "telemetry": {
+          "contained": true,
+          "overlap": false,
+          "labelDisplay": "none",
+          "value": "298 / 480 MW",
+          "surplus": "+182 MW SURPLUS"
+        },
+        "actionableControls": 8,
+        "managementProfile": {
+          "selectedDistrictId": "factions",
+          "position": {
+            "x": -4.276943899556892,
+            "y": -33.72755600109107,
+            "z": 8.879119138718663
+          },
+          "target": {
+            "x": -8.226849768791224,
+            "y": -0.8116737574716286,
+            "z": -0.3373278894947797
+          },
+          "up": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          },
+          "sideOn": false
+        },
+        "fixture": "createShowcaseReadyDomainState"
+      }
+    },
+    {
+      "name": "05a-10-hangar-controller-412x900",
+      "title": "Strike & Expedition Bay room controller",
+      "description": "The current-source Strike & Expedition Bay controller is open against its matching authored cutaway district under the fully commissioned isolated showcase fixture.",
+      "viewport": {
+        "width": 412,
+        "height": 900
+      },
+      "path": "screenshots/05a-10-hangar-controller-412x900.png",
+      "bytes": 233500,
+      "sha256": "b0bbe8db49d5592eb52f8edc32b4eb121d17a070c4c26893814031c01612c626",
+      "url": "http://127.0.0.1:54623/modules/space_exploration/index.html",
+      "state": {
+        "runtime": "sandbox",
+        "scene": "uga",
+        "view": "command",
+        "districtId": "hangar",
+        "sceneLabel": "Strike & Expedition Bay",
+        "heading": "Strike & Expedition Bay",
+        "commissioned": true,
+        "tier": 2,
+        "sheetExpanded": true,
+        "bodyDisplay": "block",
+        "bodyVisibility": "visible",
+        "contextTextLength": 2521,
+        "contextScrollHeight": 1180,
+        "contextClientHeight": 270,
+        "contextRect": {
+          "x": 0,
+          "y": 527,
+          "width": 412,
+          "height": 315
+        },
+        "horizontalOverflow": 0,
+        "telemetry": {
+          "contained": true,
+          "overlap": false,
+          "labelDisplay": "none",
+          "value": "298 / 480 MW",
+          "surplus": "+182 MW SURPLUS"
+        },
+        "actionableControls": 9,
+        "managementProfile": {
+          "selectedDistrictId": "hangar",
+          "position": {
+            "x": 5.723056100443106,
+            "y": -33.72755600109107,
+            "z": 8.879119138718664
+          },
+          "target": {
+            "x": 1.7731502312087741,
+            "y": -0.8116737574716286,
+            "z": -0.3373278894947782
+          },
+          "up": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          },
+          "sideOn": false
+        },
+        "fixture": "createShowcaseReadyDomainState"
+      }
+    },
+    {
+      "name": "05a-11-logistics-controller-412x900",
+      "title": "Logistics & Cargo room controller",
+      "description": "The current-source Logistics & Cargo controller is open against its matching authored cutaway district under the fully commissioned isolated showcase fixture.",
+      "viewport": {
+        "width": 412,
+        "height": 900
+      },
+      "path": "screenshots/05a-11-logistics-controller-412x900.png",
+      "bytes": 227512,
+      "sha256": "5cc705de985105107d70bdb64e92e4aee5bb3549d0a718fa8820669e1b85dabb",
+      "url": "http://127.0.0.1:54623/modules/space_exploration/index.html",
+      "state": {
+        "runtime": "sandbox",
+        "scene": "uga",
+        "view": "command",
+        "districtId": "logistics",
+        "sceneLabel": "Logistics & Cargo",
+        "heading": "Logistics & Cargo",
+        "commissioned": true,
+        "tier": 1,
+        "sheetExpanded": true,
+        "bodyDisplay": "block",
+        "bodyVisibility": "visible",
+        "contextTextLength": 1709,
+        "contextScrollHeight": 1049,
+        "contextClientHeight": 270,
+        "contextRect": {
+          "x": 0,
+          "y": 527,
+          "width": 412,
+          "height": 315
+        },
+        "horizontalOverflow": 0,
+        "telemetry": {
+          "contained": true,
+          "overlap": false,
+          "labelDisplay": "none",
+          "value": "298 / 480 MW",
+          "surplus": "+182 MW SURPLUS"
+        },
+        "actionableControls": 5,
+        "managementProfile": {
+          "selectedDistrictId": "logistics",
+          "position": {
+            "x": 15.72305610044311,
+            "y": -33.72755600109107,
+            "z": 8.879119138718663
+          },
+          "target": {
+            "x": 11.77315023120878,
+            "y": -0.8116737574716283,
+            "z": -0.3373278894947797
+          },
+          "up": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          },
+          "sideOn": false
+        },
+        "fixture": "createShowcaseReadyDomainState"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "scope": "all-rooms-sandbox-412x900",
+      "name": "hardware GPU, never SwiftShader",
+      "ok": true,
+      "detail": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4060 Laptop GPU (0x000028E0) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "authored showcase fixture seeds all eleven commissioned room controllers in the isolated host",
+      "ok": true,
+      "detail": "{\"runtime\":\"sandbox\",\"accountId\":\"local_expedition\",\"profileId\":\"local_expedition\",\"commissionedRooms\":11}"
+    },
+    {
+      "scope": "all-rooms-reloaded-412x900",
+      "name": "hardware GPU, never SwiftShader",
+      "ok": true,
+      "detail": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4060 Laptop GPU (0x000028E0) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "decoded cutaway exposes every authored district root and focus anchor",
+      "ok": true,
+      "detail": "{\"anchors\":[\"command\",\"engineering\",\"fabricator\",\"factions\",\"habitat\",\"hangar\",\"logistics\",\"mission_ops\",\"navigation\",\"research\",\"survey\"],\"roots\":[\"command\",\"engineering\",\"fabricator\",\"factions\",\"habitat\",\"hangar\",\"logistics\",\"mission_ops\",\"navigation\",\"research\",\"survey\"]}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Command Core opens its commissioned room controller",
+      "ok": true,
+      "detail": "{\"state\":{\"runtime\":\"sandbox\",\"scene\":\"uga\",\"view\":\"command\",\"districtId\":\"command\",\"sceneLabel\":\"Command Core\",\"heading\":\"Command Core\",\"commissioned\":true,\"tier\":3,\"sheetExpanded\":true,\"bodyDisplay\":\"block\",\"bodyVisibility\":\"visible\",\"contextTextLength\":2208,\"contextScrollHeight\":1084,\"contextClientHeight\":270,\"contextRect\":{\"x\":0,\"y\":527,\"width\":412,\"height\":315},\"horizontalOverflow\":0,\"telemetry\":{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"},\"actionableControls\":2},\"profile\":{\"selectedDistrictId\":\"command\",\"position\":{\"x\":-24.461127860824142,\"y\":-37.27900859314417,\"z\":9.794990404753518},\"target\":{\"x\":-28.825762261750025,\"y\":-0.9070552520951298,\"z\":-0.3891565307402125},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Command Core controller stays within the 412px viewport",
+      "ok": true,
+      "detail": "{\"runtime\":\"sandbox\",\"scene\":\"uga\",\"view\":\"command\",\"districtId\":\"command\",\"sceneLabel\":\"Command Core\",\"heading\":\"Command Core\",\"commissioned\":true,\"tier\":3,\"sheetExpanded\":true,\"bodyDisplay\":\"block\",\"bodyVisibility\":\"visible\",\"contextTextLength\":2208,\"contextScrollHeight\":1084,\"contextClientHeight\":270,\"contextRect\":{\"x\":0,\"y\":527,\"width\":412,\"height\":315},\"horizontalOverflow\":0,\"telemetry\":{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"},\"actionableControls\":2}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Command Core power telemetry stays contained without label/value collisions",
+      "ok": true,
+      "detail": "{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Command Core focuses the matching authored cutaway district",
+      "ok": true,
+      "detail": "{\"selectedDistrictId\":\"command\",\"position\":{\"x\":-24.461127860824142,\"y\":-37.27900859314417,\"z\":9.794990404753518},\"target\":{\"x\":-28.825762261750025,\"y\":-0.9070552520951298,\"z\":-0.3891565307402125},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Navigation Bridge opens its commissioned room controller",
+      "ok": true,
+      "detail": "{\"state\":{\"runtime\":\"sandbox\",\"scene\":\"uga\",\"view\":\"command\",\"districtId\":\"navigation\",\"sceneLabel\":\"Navigation Bridge\",\"heading\":\"Navigation Bridge\",\"commissioned\":true,\"tier\":1,\"sheetExpanded\":true,\"bodyDisplay\":\"block\",\"bodyVisibility\":\"visible\",\"contextTextLength\":1716,\"contextScrollHeight\":1049,\"contextClientHeight\":270,\"contextRect\":{\"x\":0,\"y\":527,\"width\":412,\"height\":315},\"horizontalOverflow\":0,\"telemetry\":{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"},\"actionableControls\":5},\"profile\":{\"selectedDistrictId\":\"navigation\",\"position\":{\"x\":-21.412937537973797,\"y\":-16.189226508486247,\"z\":9.411977184555177},\"target\":{\"x\":-23.308892311629155,\"y\":-0.3896033946915931,\"z\":4.988082712692674},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Navigation Bridge controller stays within the 412px viewport",
+      "ok": true,
+      "detail": "{\"runtime\":\"sandbox\",\"scene\":\"uga\",\"view\":\"command\",\"districtId\":\"navigation\",\"sceneLabel\":\"Navigation Bridge\",\"heading\":\"Navigation Bridge\",\"commissioned\":true,\"tier\":1,\"sheetExpanded\":true,\"bodyDisplay\":\"block\",\"bodyVisibility\":\"visible\",\"contextTextLength\":1716,\"contextScrollHeight\":1049,\"contextClientHeight\":270,\"contextRect\":{\"x\":0,\"y\":527,\"width\":412,\"height\":315},\"horizontalOverflow\":0,\"telemetry\":{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"},\"actionableControls\":5}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Navigation Bridge power telemetry stays contained without label/value collisions",
+      "ok": true,
+      "detail": "{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Navigation Bridge focuses the matching authored cutaway district",
+      "ok": true,
+      "detail": "{\"selectedDistrictId\":\"navigation\",\"position\":{\"x\":-21.412937537973797,\"y\":-16.189226508486247,\"z\":9.411977184555177},\"target\":{\"x\":-23.308892311629155,\"y\":-0.3896033946915931,\"z\":4.988082712692674},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Survey Lab opens its commissioned room controller",
+      "ok": true,
+      "detail": "{\"state\":{\"runtime\":\"sandbox\",\"scene\":\"uga\",\"view\":\"command\",\"districtId\":\"survey\",\"sceneLabel\":\"Survey Lab\",\"heading\":\"Survey Lab\",\"commissioned\":true,\"tier\":3,\"sheetExpanded\":true,\"bodyDisplay\":\"block\",\"bodyVisibility\":\"visible\",\"contextTextLength\":2282,\"contextScrollHeight\":1010,\"contextClientHeight\":270,\"contextRect\":{\"x\":0,\"y\":527,\"width\":412,\"height\":315},\"horizontalOverflow\":0,\"telemetry\":{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"},\"actionableControls\":10},\"profile\":{\"selectedDistrictId\":\"survey\",\"position\":{\"x\":-14.276943899556894,\"y\":-33.72755600109107,\"z\":13.92911932945353},\"target\":{\"x\":-18.226849768791226,\"y\":-0.8116737574716286,\"z\":4.712672301240087},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Survey Lab controller stays within the 412px viewport",
+      "ok": true,
+      "detail": "{\"runtime\":\"sandbox\",\"scene\":\"uga\",\"view\":\"command\",\"districtId\":\"survey\",\"sceneLabel\":\"Survey Lab\",\"heading\":\"Survey Lab\",\"commissioned\":true,\"tier\":3,\"sheetExpanded\":true,\"bodyDisplay\":\"block\",\"bodyVisibility\":\"visible\",\"contextTextLength\":2282,\"contextScrollHeight\":1010,\"contextClientHeight\":270,\"contextRect\":{\"x\":0,\"y\":527,\"width\":412,\"height\":315},\"horizontalOverflow\":0,\"telemetry\":{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"},\"actionableControls\":10}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Survey Lab power telemetry stays contained without label/value collisions",
+      "ok": true,
+      "detail": "{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Survey Lab focuses the matching authored cutaway district",
+      "ok": true,
+      "detail": "{\"selectedDistrictId\":\"survey\",\"position\":{\"x\":-14.276943899556894,\"y\":-33.72755600109107,\"z\":13.92911932945353},\"target\":{\"x\":-18.226849768791226,\"y\":-0.8116737574716286,\"z\":4.712672301240087},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Mission Operations opens its commissioned room controller",
+      "ok": true,
+      "detail": "{\"state\":{\"runtime\":\"sandbox\",\"scene\":\"uga\",\"view\":\"command\",\"districtId\":\"mission_ops\",\"sceneLabel\":\"Mission Operations\",\"heading\":\"Mission Operations\",\"commissioned\":true,\"tier\":1,\"sheetExpanded\":true,\"bodyDisplay\":\"block\",\"bodyVisibility\":\"visible\",\"contextTextLength\":1708,\"contextScrollHeight\":1049,\"contextClientHeight\":270,\"contextRect\":{\"x\":0,\"y\":527,\"width\":412,\"height\":315},\"horizontalOverflow\":0,\"telemetry\":{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"},\"actionableControls\":5},\"profile\":{\"selectedDistrictId\":\"mission_ops\",\"position\":{\"x\":-21.41292727668824,\"y\":-16.27497072644589,\"z\":4.4270254870600745},\"target\":{\"x\":-23.326468289856255,\"y\":-0.32879561671242274,\"z\":-0.03790354366529858},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Mission Operations controller stays within the 412px viewport",
+      "ok": true,
+      "detail": "{\"runtime\":\"sandbox\",\"scene\":\"uga\",\"view\":\"command\",\"districtId\":\"mission_ops\",\"sceneLabel\":\"Mission Operations\",\"heading\":\"Mission Operations\",\"commissioned\":true,\"tier\":1,\"sheetExpanded\":true,\"bodyDisplay\":\"block\",\"bodyVisibility\":\"visible\",\"contextTextLength\":1708,\"contextScrollHeight\":1049,\"contextClientHeight\":270,\"contextRect\":{\"x\":0,\"y\":527,\"width\":412,\"height\":315},\"horizontalOverflow\":0,\"telemetry\":{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"},\"actionableControls\":5}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Mission Operations power telemetry stays contained without label/value collisions",
+      "ok": true,
+      "detail": "{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Mission Operations focuses the matching authored cutaway district",
+      "ok": true,
+      "detail": "{\"selectedDistrictId\":\"mission_ops\",\"position\":{\"x\":-21.41292727668824,\"y\":-16.27497072644589,\"z\":4.4270254870600745},\"target\":{\"x\":-23.326468289856255,\"y\":-0.32879561671242274,\"z\":-0.03790354366529858},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Research Directorate opens its commissioned room controller",
+      "ok": true,
+      "detail": "{\"state\":{\"runtime\":\"sandbox\",\"scene\":\"uga\",\"view\":\"command\",\"districtId\":\"research\",\"sceneLabel\":\"Research Directorate\",\"heading\":\"Research Directorate\",\"commissioned\":true,\"tier\":3,\"sheetExpanded\":true,\"bodyDisplay\":\"block\",\"bodyVisibility\":\"visible\",\"contextTextLength\":2268,\"contextScrollHeight\":1010,\"contextClientHeight\":270,\"contextRect\":{\"x\":0,\"y\":527,\"width\":412,\"height\":315},\"horizontalOverflow\":0,\"telemetry\":{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"},\"actionableControls\":10},\"profile\":{\"selectedDistrictId\":\"research\",\"position\":{\"x\":-4.276943899556894,\"y\":-33.72755600109107,\"z\":13.929119329453528},\"target\":{\"x\":-8.226849768791226,\"y\":-0.8116737574716286,\"z\":4.712672301240085},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Research Directorate controller stays within the 412px viewport",
+      "ok": true,
+      "detail": "{\"runtime\":\"sandbox\",\"scene\":\"uga\",\"view\":\"command\",\"districtId\":\"research\",\"sceneLabel\":\"Research Directorate\",\"heading\":\"Research Directorate\",\"commissioned\":true,\"tier\":3,\"sheetExpanded\":true,\"bodyDisplay\":\"block\",\"bodyVisibility\":\"visible\",\"contextTextLength\":2268,\"contextScrollHeight\":1010,\"contextClientHeight\":270,\"contextRect\":{\"x\":0,\"y\":527,\"width\":412,\"height\":315},\"horizontalOverflow\":0,\"telemetry\":{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"},\"actionableControls\":10}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Research Directorate power telemetry stays contained without label/value collisions",
+      "ok": true,
+      "detail": "{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Research Directorate focuses the matching authored cutaway district",
+      "ok": true,
+      "detail": "{\"selectedDistrictId\":\"research\",\"position\":{\"x\":-4.276943899556894,\"y\":-33.72755600109107,\"z\":13.929119329453528},\"target\":{\"x\":-8.226849768791226,\"y\":-0.8116737574716286,\"z\":4.712672301240085},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Fabrication & Armory opens its commissioned room controller",
+      "ok": true,
+      "detail": "{\"state\":{\"runtime\":\"sandbox\",\"scene\":\"uga\",\"view\":\"command\",\"districtId\":\"fabricator\",\"sceneLabel\":\"Fabrication & Armory\",\"heading\":\"Fabrication & Armory\",\"commissioned\":true,\"tier\":1,\"sheetExpanded\":true,\"bodyDisplay\":\"block\",\"bodyVisibility\":\"visible\",\"contextTextLength\":1665,\"contextScrollHeight\":1035,\"contextClientHeight\":270,\"contextRect\":{\"x\":0,\"y\":527,\"width\":412,\"height\":315},\"horizontalOverflow\":0,\"telemetry\":{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"},\"actionableControls\":5},\"profile\":{\"selectedDistrictId\":\"fabricator\",\"position\":{\"x\":5.723056100443107,\"y\":-33.72755600109107,\"z\":13.929119329453528},\"target\":{\"x\":1.7731502312087741,\"y\":-0.8116737574716282,\"z\":4.712672301240086},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Fabrication & Armory controller stays within the 412px viewport",
+      "ok": true,
+      "detail": "{\"runtime\":\"sandbox\",\"scene\":\"uga\",\"view\":\"command\",\"districtId\":\"fabricator\",\"sceneLabel\":\"Fabrication & Armory\",\"heading\":\"Fabrication & Armory\",\"commissioned\":true,\"tier\":1,\"sheetExpanded\":true,\"bodyDisplay\":\"block\",\"bodyVisibility\":\"visible\",\"contextTextLength\":1665,\"contextScrollHeight\":1035,\"contextClientHeight\":270,\"contextRect\":{\"x\":0,\"y\":527,\"width\":412,\"height\":315},\"horizontalOverflow\":0,\"telemetry\":{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"},\"actionableControls\":5}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Fabrication & Armory power telemetry stays contained without label/value collisions",
+      "ok": true,
+      "detail": "{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Fabrication & Armory focuses the matching authored cutaway district",
+      "ok": true,
+      "detail": "{\"selectedDistrictId\":\"fabricator\",\"position\":{\"x\":5.723056100443107,\"y\":-33.72755600109107,\"z\":13.929119329453528},\"target\":{\"x\":1.7731502312087741,\"y\":-0.8116737574716282,\"z\":4.712672301240086},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Engineering & Drive opens its commissioned room controller",
+      "ok": true,
+      "detail": "{\"state\":{\"runtime\":\"sandbox\",\"scene\":\"uga\",\"view\":\"command\",\"districtId\":\"engineering\",\"sceneLabel\":\"Engineering & Drive\",\"heading\":\"Engineering & Drive\",\"commissioned\":true,\"tier\":3,\"sheetExpanded\":true,\"bodyDisplay\":\"block\",\"bodyVisibility\":\"visible\",\"contextTextLength\":2324,\"contextScrollHeight\":1010,\"contextClientHeight\":270,\"contextRect\":{\"x\":0,\"y\":527,\"width\":412,\"height\":315},\"horizontalOverflow\":0,\"telemetry\":{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"},\"actionableControls\":10},\"profile\":{\"selectedDistrictId\":\"engineering\",\"position\":{\"x\":15.723056100443108,\"y\":-33.72755600109107,\"z\":13.929119329453528},\"target\":{\"x\":11.773150231208774,\"y\":-0.8116737574716282,\"z\":4.712672301240086},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Engineering & Drive controller stays within the 412px viewport",
+      "ok": true,
+      "detail": "{\"runtime\":\"sandbox\",\"scene\":\"uga\",\"view\":\"command\",\"districtId\":\"engineering\",\"sceneLabel\":\"Engineering & Drive\",\"heading\":\"Engineering & Drive\",\"commissioned\":true,\"tier\":3,\"sheetExpanded\":true,\"bodyDisplay\":\"block\",\"bodyVisibility\":\"visible\",\"contextTextLength\":2324,\"contextScrollHeight\":1010,\"contextClientHeight\":270,\"contextRect\":{\"x\":0,\"y\":527,\"width\":412,\"height\":315},\"horizontalOverflow\":0,\"telemetry\":{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"},\"actionableControls\":10}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Engineering & Drive power telemetry stays contained without label/value collisions",
+      "ok": true,
+      "detail": "{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Engineering & Drive focuses the matching authored cutaway district",
+      "ok": true,
+      "detail": "{\"selectedDistrictId\":\"engineering\",\"position\":{\"x\":15.723056100443108,\"y\":-33.72755600109107,\"z\":13.929119329453528},\"target\":{\"x\":11.773150231208774,\"y\":-0.8116737574716282,\"z\":4.712672301240086},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Habitat & Medical opens its commissioned room controller",
+      "ok": true,
+      "detail": "{\"state\":{\"runtime\":\"sandbox\",\"scene\":\"uga\",\"view\":\"command\",\"districtId\":\"habitat\",\"sceneLabel\":\"Habitat & Medical\",\"heading\":\"Habitat & Medical\",\"commissioned\":true,\"tier\":1,\"sheetExpanded\":true,\"bodyDisplay\":\"block\",\"bodyVisibility\":\"visible\",\"contextTextLength\":1736,\"contextScrollHeight\":1049,\"contextClientHeight\":270,\"contextRect\":{\"x\":0,\"y\":527,\"width\":412,\"height\":315},\"horizontalOverflow\":0,\"telemetry\":{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"},\"actionableControls\":5},\"profile\":{\"selectedDistrictId\":\"habitat\",\"position\":{\"x\":-14.276943899556892,\"y\":-33.72755600109107,\"z\":8.879119138718664},\"target\":{\"x\":-18.226849768791226,\"y\":-0.8116737574716291,\"z\":-0.33732788949477843},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Habitat & Medical controller stays within the 412px viewport",
+      "ok": true,
+      "detail": "{\"runtime\":\"sandbox\",\"scene\":\"uga\",\"view\":\"command\",\"districtId\":\"habitat\",\"sceneLabel\":\"Habitat & Medical\",\"heading\":\"Habitat & Medical\",\"commissioned\":true,\"tier\":1,\"sheetExpanded\":true,\"bodyDisplay\":\"block\",\"bodyVisibility\":\"visible\",\"contextTextLength\":1736,\"contextScrollHeight\":1049,\"contextClientHeight\":270,\"contextRect\":{\"x\":0,\"y\":527,\"width\":412,\"height\":315},\"horizontalOverflow\":0,\"telemetry\":{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"},\"actionableControls\":5}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Habitat & Medical power telemetry stays contained without label/value collisions",
+      "ok": true,
+      "detail": "{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Habitat & Medical focuses the matching authored cutaway district",
+      "ok": true,
+      "detail": "{\"selectedDistrictId\":\"habitat\",\"position\":{\"x\":-14.276943899556892,\"y\":-33.72755600109107,\"z\":8.879119138718664},\"target\":{\"x\":-18.226849768791226,\"y\":-0.8116737574716291,\"z\":-0.33732788949477843},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Coalition Embassy opens its commissioned room controller",
+      "ok": true,
+      "detail": "{\"state\":{\"runtime\":\"sandbox\",\"scene\":\"uga\",\"view\":\"command\",\"districtId\":\"factions\",\"sceneLabel\":\"Coalition Embassy\",\"heading\":\"Coalition Embassy\",\"commissioned\":true,\"tier\":3,\"sheetExpanded\":true,\"bodyDisplay\":\"block\",\"bodyVisibility\":\"visible\",\"contextTextLength\":1558,\"contextScrollHeight\":854,\"contextClientHeight\":270,\"contextRect\":{\"x\":0,\"y\":527,\"width\":412,\"height\":315},\"horizontalOverflow\":0,\"telemetry\":{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"},\"actionableControls\":8},\"profile\":{\"selectedDistrictId\":\"factions\",\"position\":{\"x\":-4.276943899556892,\"y\":-33.72755600109107,\"z\":8.879119138718663},\"target\":{\"x\":-8.226849768791224,\"y\":-0.8116737574716286,\"z\":-0.3373278894947797},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Coalition Embassy controller stays within the 412px viewport",
+      "ok": true,
+      "detail": "{\"runtime\":\"sandbox\",\"scene\":\"uga\",\"view\":\"command\",\"districtId\":\"factions\",\"sceneLabel\":\"Coalition Embassy\",\"heading\":\"Coalition Embassy\",\"commissioned\":true,\"tier\":3,\"sheetExpanded\":true,\"bodyDisplay\":\"block\",\"bodyVisibility\":\"visible\",\"contextTextLength\":1558,\"contextScrollHeight\":854,\"contextClientHeight\":270,\"contextRect\":{\"x\":0,\"y\":527,\"width\":412,\"height\":315},\"horizontalOverflow\":0,\"telemetry\":{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"},\"actionableControls\":8}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Coalition Embassy power telemetry stays contained without label/value collisions",
+      "ok": true,
+      "detail": "{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Coalition Embassy focuses the matching authored cutaway district",
+      "ok": true,
+      "detail": "{\"selectedDistrictId\":\"factions\",\"position\":{\"x\":-4.276943899556892,\"y\":-33.72755600109107,\"z\":8.879119138718663},\"target\":{\"x\":-8.226849768791224,\"y\":-0.8116737574716286,\"z\":-0.3373278894947797},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Strike & Expedition Bay opens its commissioned room controller",
+      "ok": true,
+      "detail": "{\"state\":{\"runtime\":\"sandbox\",\"scene\":\"uga\",\"view\":\"command\",\"districtId\":\"hangar\",\"sceneLabel\":\"Strike & Expedition Bay\",\"heading\":\"Strike & Expedition Bay\",\"commissioned\":true,\"tier\":2,\"sheetExpanded\":true,\"bodyDisplay\":\"block\",\"bodyVisibility\":\"visible\",\"contextTextLength\":2521,\"contextScrollHeight\":1180,\"contextClientHeight\":270,\"contextRect\":{\"x\":0,\"y\":527,\"width\":412,\"height\":315},\"horizontalOverflow\":0,\"telemetry\":{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"},\"actionableControls\":9},\"profile\":{\"selectedDistrictId\":\"hangar\",\"position\":{\"x\":5.723056100443106,\"y\":-33.72755600109107,\"z\":8.879119138718664},\"target\":{\"x\":1.7731502312087741,\"y\":-0.8116737574716286,\"z\":-0.3373278894947782},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Strike & Expedition Bay controller stays within the 412px viewport",
+      "ok": true,
+      "detail": "{\"runtime\":\"sandbox\",\"scene\":\"uga\",\"view\":\"command\",\"districtId\":\"hangar\",\"sceneLabel\":\"Strike & Expedition Bay\",\"heading\":\"Strike & Expedition Bay\",\"commissioned\":true,\"tier\":2,\"sheetExpanded\":true,\"bodyDisplay\":\"block\",\"bodyVisibility\":\"visible\",\"contextTextLength\":2521,\"contextScrollHeight\":1180,\"contextClientHeight\":270,\"contextRect\":{\"x\":0,\"y\":527,\"width\":412,\"height\":315},\"horizontalOverflow\":0,\"telemetry\":{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"},\"actionableControls\":9}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Strike & Expedition Bay power telemetry stays contained without label/value collisions",
+      "ok": true,
+      "detail": "{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Strike & Expedition Bay focuses the matching authored cutaway district",
+      "ok": true,
+      "detail": "{\"selectedDistrictId\":\"hangar\",\"position\":{\"x\":5.723056100443106,\"y\":-33.72755600109107,\"z\":8.879119138718664},\"target\":{\"x\":1.7731502312087741,\"y\":-0.8116737574716286,\"z\":-0.3373278894947782},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Logistics & Cargo opens its commissioned room controller",
+      "ok": true,
+      "detail": "{\"state\":{\"runtime\":\"sandbox\",\"scene\":\"uga\",\"view\":\"command\",\"districtId\":\"logistics\",\"sceneLabel\":\"Logistics & Cargo\",\"heading\":\"Logistics & Cargo\",\"commissioned\":true,\"tier\":1,\"sheetExpanded\":true,\"bodyDisplay\":\"block\",\"bodyVisibility\":\"visible\",\"contextTextLength\":1709,\"contextScrollHeight\":1049,\"contextClientHeight\":270,\"contextRect\":{\"x\":0,\"y\":527,\"width\":412,\"height\":315},\"horizontalOverflow\":0,\"telemetry\":{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"},\"actionableControls\":5},\"profile\":{\"selectedDistrictId\":\"logistics\",\"position\":{\"x\":15.72305610044311,\"y\":-33.72755600109107,\"z\":8.879119138718663},\"target\":{\"x\":11.77315023120878,\"y\":-0.8116737574716283,\"z\":-0.3373278894947797},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Logistics & Cargo controller stays within the 412px viewport",
+      "ok": true,
+      "detail": "{\"runtime\":\"sandbox\",\"scene\":\"uga\",\"view\":\"command\",\"districtId\":\"logistics\",\"sceneLabel\":\"Logistics & Cargo\",\"heading\":\"Logistics & Cargo\",\"commissioned\":true,\"tier\":1,\"sheetExpanded\":true,\"bodyDisplay\":\"block\",\"bodyVisibility\":\"visible\",\"contextTextLength\":1709,\"contextScrollHeight\":1049,\"contextClientHeight\":270,\"contextRect\":{\"x\":0,\"y\":527,\"width\":412,\"height\":315},\"horizontalOverflow\":0,\"telemetry\":{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"},\"actionableControls\":5}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Logistics & Cargo power telemetry stays contained without label/value collisions",
+      "ok": true,
+      "detail": "{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Logistics & Cargo focuses the matching authored cutaway district",
+      "ok": true,
+      "detail": "{\"selectedDistrictId\":\"logistics\",\"position\":{\"x\":15.72305610044311,\"y\":-33.72755600109107,\"z\":8.879119138718663},\"target\":{\"x\":11.77315023120878,\"y\":-0.8116737574716283,\"z\":-0.3373278894947797},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}"
+    },
+    {
+      "scope": "all-room-controllers",
+      "name": "no page errors",
+      "ok": true,
+      "detail": "clean"
+    },
+    {
+      "scope": "all-room-controllers",
+      "name": "no console errors",
+      "ok": true,
+      "detail": "clean"
+    },
+    {
+      "scope": "all-room-controllers",
+      "name": "no local request failures",
+      "ok": true,
+      "detail": "clean"
+    },
+    {
+      "scope": "source-binding",
+      "name": "acceptance-owned source did not change during capture",
+      "ok": true,
+      "detail": "20 files stable"
+    }
+  ],
+  "tests": [],
+  "pageDiagnostics": [
+    {
+      "label": "all-room-controllers",
+      "viewport": {
+        "width": 412,
+        "height": 900
+      },
+      "navigations": [
+        "http://127.0.0.1:54623/modules/space_exploration/index.html",
+        "http://127.0.0.1:54623/modules/space_exploration/index.html"
+      ],
+      "pageErrors": [],
+      "consoleErrors": [],
+      "requestFailures": [],
+      "expectedNavigationAborts": [],
+      "blockedExternal": [
+        "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/packs.json?download=true&t=1788855585901",
+        "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/packs.json?download=true&t=1788855588598",
+        "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/packs.json?download=true&t=1788855590677",
+        "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/packs.json?download=true&t=1788855595879",
+        "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/packs.json?download=true&t=1788855603892"
+      ]
+    }
+  ],
+  "unproven": [
+    "A complete manual play-through of every protected tutorial objective was not performed. The completion transaction is accelerated only after the real protected match starts, and is labelled as such.",
+    "Co-op / Versus and MMO cannot be entered because no synchronized session or persistent-sector authority exists in this build."
+  ],
+  "summary": {
+    "passed": 52,
+    "failed": 0,
+    "captures": 11,
+    "pageErrors": 0,
+    "consoleErrors": 0,
+    "localRequestFailures": 0
+  }
+}

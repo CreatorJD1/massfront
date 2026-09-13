@@ -1,0 +1,283 @@
+{
+  "$schema": "./model-pack-catalog.v1.schema.json",
+  "schemaVersion": 1,
+  "catalogId": "massfront-world-model-packs-v1",
+  "packs": [
+    {
+      "packId": "gsite_aelos_caldris_v1",
+      "version": 1,
+      "status": "SOURCE_CANDIDATE",
+      "runtimeReady": false,
+      "classification": {
+        "factions": ["uga"],
+        "biomes": ["orbital_arcology", "oceanic_biosphere_preserve"],
+        "locationClasses": ["city", "colony", "spaceport"],
+        "consumers": ["base-map", "exploration-ground-site", "map-editor", "concept-library"]
+      },
+      "concept": {
+        "path": "modules/space_exploration/assets/source/spline/ground-sites/aelos_caldris/concepts/caldris-modular-kit-concept-v1.png",
+        "sha256": "75cb5efbc15ce642533fa67f1c72fbd09a0fd16cd438189e3c73232a16148fab",
+        "approvalStatus": "CANDIDATE_REVIEW",
+        "pixelUsage": "concept-reference-only",
+        "generationSystem": "openai-imagegen"
+      },
+      "gridContract": {
+        "detailSnapMeters": 4,
+        "moduleSnapMeters": 16,
+        "cityBlockMeters": 64,
+        "roadClearWidthMeters": 18,
+        "curbHeightMeters": 0.24,
+        "podiumFootprintsMeters": [[16, 16], [32, 32], [32, 48]]
+      },
+      "identityContract": {
+        "heroSilhouette": ["open inhabited crescent", "faceted customs lantern", "mag-tram ribbon", "cargo pressure lock"],
+        "materialLanguage": ["pearl arcology ceramic", "graphite structural ribs", "teal pressure glazing", "restrained cyan and amber guidance"],
+        "decalLanguage": ["customs sectors", "tram direction", "cargo weights", "evacuation and decompression"],
+        "minimumDistinctAxes": 6,
+        "paletteSwapCountsAsVariant": false
+      },
+      "members": [
+        {
+          "assetId": "gsite_aelos_caldris_customs_core_hero",
+          "category": "hero_objective",
+          "status": "SOURCE_CANDIDATE",
+          "conceptCell": 1,
+          "footprintMeters": [56, 32],
+          "heightMeters": 26,
+          "repeatable": false,
+          "allowedRotations": [0, 90, 180, 270],
+          "sockets": [
+            { "id": "customs_entry_w", "profile": "caldris_concourse_18", "edge": "west", "snapMeters": 4 },
+            { "id": "customs_entry_e", "profile": "caldris_concourse_18", "edge": "east", "snapMeters": 4 },
+            { "id": "pressure_link_n", "profile": "caldris_pressure_8x6", "edge": "north", "snapMeters": 4 }
+          ],
+          "source": {
+            "path": "modules/space_exploration/assets/source/spline/ground-sites/aelos_caldris/aelos-caldris-source.glb",
+            "format": "glb",
+            "sha256": "56dfd9ed08ad8d0e04b00de14f1151ec3a9b4ab1fcff988a9aa731d37578a5f6",
+            "rootName": "GSITE_AELOS_CALDRIS_HERO",
+            "sceneObjectId": "97f4d4f5-0332-4495-b001-567b39c160eb",
+            "measuredTriangles": 374994,
+            "measuredBounds": [0.56, 0.26, 0.32],
+            "targetBoundsMeters": [56, 26, 32],
+            "normalizationScale": 100
+          },
+          "runtime": {
+            "runtimeReady": false,
+            "base": { "runtimeReady": false, "provider": "none", "key": null, "generatedSource": null },
+            "exploration": { "runtimeReady": false, "provider": "none", "runtimePath": null, "rootName": null, "loadGroup": null }
+          }
+        },
+        {
+          "assetId": "gsite_aelos_caldris_civic_tower_medium",
+          "category": "hero_landmark",
+          "status": "CONCEPT_READY",
+          "conceptCell": 2,
+          "footprintMeters": [16, 16],
+          "heightMeters": 34,
+          "repeatable": true,
+          "allowedRotations": [0, 90, 180, 270],
+          "sockets": [{ "id": "podium_16", "profile": "caldris_podium_16", "edge": "building", "snapMeters": 4 }]
+        },
+        {
+          "assetId": "gsite_aelos_caldris_control_tower_tall",
+          "category": "hero_landmark",
+          "status": "CONCEPT_READY",
+          "conceptCell": 3,
+          "footprintMeters": [32, 32],
+          "heightMeters": 52,
+          "repeatable": true,
+          "allowedRotations": [0, 90, 180, 270],
+          "sockets": [{ "id": "podium_32", "profile": "caldris_podium_32", "edge": "building", "snapMeters": 4 }]
+        },
+        {
+          "assetId": "gsite_aelos_caldris_inspection_hall",
+          "category": "structural_module",
+          "status": "CONCEPT_READY",
+          "conceptCell": 4,
+          "footprintMeters": [48, 32],
+          "heightMeters": 18,
+          "repeatable": true,
+          "allowedRotations": [0, 90, 180, 270],
+          "sockets": [
+            { "id": "vehicle_w", "profile": "caldris_vehicle_18x8", "edge": "west", "snapMeters": 4 },
+            { "id": "vehicle_e", "profile": "caldris_vehicle_18x8", "edge": "east", "snapMeters": 4 }
+          ]
+        },
+        {
+          "assetId": "gsite_aelos_caldris_road_straight_16",
+          "category": "transit_route",
+          "status": "CONCEPT_READY",
+          "conceptCell": 5,
+          "footprintMeters": [24, 16],
+          "heightMeters": 0.5,
+          "repeatable": true,
+          "allowedRotations": [0, 90, 180, 270],
+          "sockets": [
+            { "id": "road_n", "profile": "caldris_road_18", "edge": "north", "snapMeters": 4 },
+            { "id": "road_s", "profile": "caldris_road_18", "edge": "south", "snapMeters": 4 }
+          ]
+        },
+        {
+          "assetId": "gsite_aelos_caldris_road_corner_90",
+          "category": "transit_route",
+          "status": "CONCEPT_READY",
+          "conceptCell": 6,
+          "footprintMeters": [24, 24],
+          "heightMeters": 0.5,
+          "repeatable": true,
+          "allowedRotations": [0, 90, 180, 270],
+          "sockets": [
+            { "id": "road_n", "profile": "caldris_road_18", "edge": "north", "snapMeters": 4 },
+            { "id": "road_e", "profile": "caldris_road_18", "edge": "east", "snapMeters": 4 }
+          ]
+        },
+        {
+          "assetId": "gsite_aelos_caldris_road_x_plaza",
+          "category": "transit_route",
+          "status": "CONCEPT_READY",
+          "conceptCell": 7,
+          "footprintMeters": [48, 48],
+          "heightMeters": 0.5,
+          "repeatable": true,
+          "allowedRotations": [0, 90, 180, 270],
+          "sockets": [
+            { "id": "road_n", "profile": "caldris_road_18", "edge": "north", "snapMeters": 4 },
+            { "id": "road_e", "profile": "caldris_road_18", "edge": "east", "snapMeters": 4 },
+            { "id": "road_s", "profile": "caldris_road_18", "edge": "south", "snapMeters": 4 },
+            { "id": "road_w", "profile": "caldris_road_18", "edge": "west", "snapMeters": 4 }
+          ]
+        },
+        {
+          "assetId": "gsite_aelos_caldris_checkpoint_endcap",
+          "category": "portal_connector",
+          "status": "CONCEPT_READY",
+          "conceptCell": 8,
+          "footprintMeters": [24, 16],
+          "heightMeters": 7,
+          "repeatable": true,
+          "allowedRotations": [0, 90, 180, 270],
+          "sockets": [{ "id": "road_s", "profile": "caldris_road_18", "edge": "south", "snapMeters": 4 }]
+        },
+        {
+          "assetId": "gsite_aelos_caldris_pressure_corridor_straight",
+          "category": "portal_connector",
+          "status": "CONCEPT_READY",
+          "conceptCell": 9,
+          "footprintMeters": [8, 16],
+          "heightMeters": 6,
+          "repeatable": true,
+          "allowedRotations": [0, 90, 180, 270],
+          "sockets": [
+            { "id": "corridor_n", "profile": "caldris_pressure_8x6", "edge": "north", "snapMeters": 4 },
+            { "id": "corridor_s", "profile": "caldris_pressure_8x6", "edge": "south", "snapMeters": 4 }
+          ]
+        },
+        {
+          "assetId": "gsite_aelos_caldris_pressure_corridor_t",
+          "category": "portal_connector",
+          "status": "CONCEPT_READY",
+          "conceptCell": 10,
+          "footprintMeters": [16, 16],
+          "heightMeters": 7,
+          "repeatable": true,
+          "allowedRotations": [0, 90, 180, 270],
+          "sockets": [
+            { "id": "corridor_n", "profile": "caldris_pressure_8x6", "edge": "north", "snapMeters": 4 },
+            { "id": "corridor_e", "profile": "caldris_pressure_8x6", "edge": "east", "snapMeters": 4 },
+            { "id": "corridor_w", "profile": "caldris_pressure_8x6", "edge": "west", "snapMeters": 4 }
+          ]
+        },
+        {
+          "assetId": "gsite_aelos_caldris_scanner_gantry",
+          "category": "functional_machine",
+          "status": "CONCEPT_READY",
+          "conceptCell": 11,
+          "footprintMeters": [28, 14],
+          "heightMeters": 16,
+          "repeatable": true,
+          "allowedRotations": [0, 90, 180, 270],
+          "sockets": [
+            { "id": "route_n", "profile": "caldris_road_18", "edge": "north", "snapMeters": 4 },
+            { "id": "route_s", "profile": "caldris_road_18", "edge": "south", "snapMeters": 4 }
+          ]
+        },
+        {
+          "assetId": "gsite_aelos_caldris_customs_core_damaged",
+          "category": "hazard_state",
+          "status": "CONCEPT_READY",
+          "conceptCell": 12,
+          "footprintMeters": [56, 32],
+          "heightMeters": 24,
+          "repeatable": false,
+          "allowedRotations": [0, 90, 180, 270],
+          "sockets": [
+            { "id": "customs_entry_w", "profile": "caldris_concourse_18", "edge": "west", "snapMeters": 4 },
+            { "id": "customs_entry_e", "profile": "caldris_concourse_18", "edge": "east", "snapMeters": 4 }
+          ]
+        },
+        {
+          "assetId": "gsite_aelos_caldris_road_t_junction",
+          "category": "transit_route",
+          "status": "PLANNED",
+          "conceptCell": null,
+          "footprintMeters": [32, 32],
+          "heightMeters": 0.5,
+          "repeatable": true,
+          "allowedRotations": [0, 90, 180, 270],
+          "sockets": [
+            { "id": "road_n", "profile": "caldris_road_18", "edge": "north", "snapMeters": 4 },
+            { "id": "road_e", "profile": "caldris_road_18", "edge": "east", "snapMeters": 4 },
+            { "id": "road_w", "profile": "caldris_road_18", "edge": "west", "snapMeters": 4 }
+          ]
+        },
+        {
+          "assetId": "gsite_aelos_caldris_service_alley_straight",
+          "category": "transit_route",
+          "status": "PLANNED",
+          "conceptCell": null,
+          "footprintMeters": [8, 16],
+          "heightMeters": 0.4,
+          "repeatable": true,
+          "allowedRotations": [0, 90, 180, 270],
+          "sockets": [
+            { "id": "alley_n", "profile": "caldris_alley_8", "edge": "north", "snapMeters": 4 },
+            { "id": "alley_s", "profile": "caldris_alley_8", "edge": "south", "snapMeters": 4 }
+          ]
+        },
+        {
+          "assetId": "gsite_aelos_caldris_foundation_32",
+          "category": "terrain_contact",
+          "status": "PLANNED",
+          "conceptCell": null,
+          "footprintMeters": [32, 32],
+          "heightMeters": 2,
+          "repeatable": true,
+          "allowedRotations": [0, 90, 180, 270],
+          "sockets": [{ "id": "podium_32", "profile": "caldris_podium_32", "edge": "building", "snapMeters": 4 }]
+        },
+        {
+          "assetId": "gsite_aelos_caldris_retaining_edge_straight",
+          "category": "terrain_contact",
+          "status": "PLANNED",
+          "conceptCell": null,
+          "footprintMeters": [4, 16],
+          "heightMeters": 4,
+          "repeatable": true,
+          "allowedRotations": [0, 90, 180, 270],
+          "sockets": [
+            { "id": "edge_n", "profile": "caldris_retaining_4", "edge": "north", "snapMeters": 4 },
+            { "id": "edge_s", "profile": "caldris_retaining_4", "edge": "south", "snapMeters": 4 }
+          ]
+        }
+      ],
+      "evidence": {
+        "sourceInventory": null,
+        "lodComparison": null,
+        "socketAssembly": null,
+        "mobileCaptures": [],
+        "runtimeFingerprint": null
+      }
+    }
+  ]
+}

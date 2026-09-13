@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "conceptSetId": "biodome_habitat_typology_v1",
+  "status": "approved_for_first_modeling_pass",
+  "originalProjectArt": true,
+  "generatedWith": "OpenAI built-in image generation",
+  "runtimeUse": {
+    "pixelsUsedAsTexture": false,
+    "sourceOnly": true,
+    "requiresAuthoredGeometryAndMaterials": true
+  },
+  "concepts": [
+    {
+      "id": "biodome_habitat_typology_model_sheet_v1",
+      "file": "biodome-habitat-typology-model-sheet-v1.png",
+      "sha256": "b6b49f37fc44d13f336be440d143760fe1839dc66d038da40044e3fb74967fa8",
+      "bytes": 2874235,
+      "resolution": [1536, 1024],
+      "generationEvidence": {
+        "system": "imagegen",
+        "executionId": "exec-3840a73c-5999-4e6f-b524-d61414811afc"
+      },
+      "biomeOrBiodome": [
+        "uga_ship_civic_biodome",
+        "verdant_agri_survey_biodome",
+        "arctic_cryo_logistics_biodome",
+        "ashland_thermal_industrial_biodome",
+        "vespera_xenobiology_quarantine_biodome"
+      ],
+      "faction": ["uga", "faction_neutral"],
+      "intention": [
+        "civic_habitat",
+        "science_and_survey",
+        "logistics",
+        "industry",
+        "quarantine",
+        "modular_infrastructure_kit",
+        "construction_and_damage_states",
+        "lod_silhouette"
+      ],
+      "camera": ["isometric", "side_section", "top_down"],
+      "scale": ["human", "district_module", "city_ship"],
+      "modelingTargets": [
+        "distinct_floor_wall_building_glass_trim_and_emissive_material_slots",
+        "non_flat_foundations_and_service_undercrofts",
+        "roads_bridges_glass_tunnels_airlocks_and_lifts",
+        "pristine_construction_damaged_and_repaired_states",
+        "lod0_lod1_lod2_mobile_rts_silhouettes",
+        "one_meter_grid_and_human_scale"
+      ]
+    }
+  ],
+  "constraints": [
+    "concept_pixels_must_not_ship_as_runtime_textures",
+    "no_generic_runtime_cubes",
+    "no_exterior_hull_material_across_all_interior_surfaces",
+    "no_space_combat",
+    "consistent_human_scale",
+    "readable_on_mobile_top_down_camera"
+  ]
+}

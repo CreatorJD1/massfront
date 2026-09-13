@@ -12,6 +12,7 @@ import {access, mkdir, readFile, writeFile} from 'node:fs/promises';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {dirname, join, resolve} from 'node:path';
+import {writeMaterialAtlases} from './material-atlas-io.mjs';
 
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const base=(process.argv.find(arg=>/^https?:\/\//.test(arg))||'http://127.0.0.1:8100').replace(/\/$/,'');
@@ -121,7 +122,7 @@ try{
   await writeFile(join(outDir,'uv-quality-report.json'),JSON.stringify(uvReport,null,2));
   if(failures)throw new Error(`Building geometry gate failed with ${failures} invalid measurements`);
   const atlases=await page.evaluate(()=>__MF_MATERIAL_ATLASES);
-  for(const [kind,dataUrl] of Object.entries(atlases))await writeFile(join(outDir,`material-atlas-${kind}.png`),Buffer.from(dataUrl.slice(dataUrl.indexOf(',')+1),'base64'));
+  await writeMaterialAtlases(outDir,atlases);
   const parts=Object.values(uvReport.buildings).flatMap(value=>Object.values(value));
   process.stdout.write(`validated ${payload.buildings.length} buildings / ${parts.length} parts; worst UV stretch ${Math.max(...parts.map(part=>part.max)).toFixed(3)}x\n`);
   for(const building of payload.buildings){

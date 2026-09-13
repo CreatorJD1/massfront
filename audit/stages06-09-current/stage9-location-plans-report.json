@@ -1,0 +1,821 @@
+{
+  "schemaVersion": 1,
+  "kind": "MassfrontStage9LocationPlanVerificationV1",
+  "status": "FAIL",
+  "sourceBound": {
+    "gitHead": "0ea4e1ed9d99df55b4088e812736400cca8bff69",
+    "sourceSetSha256": "e809341aa9d89d21ffc93fbcdb9d0d0728db3bb44752c377577bf754b561a548",
+    "files": {
+      "src/engine/gl.js": {
+        "sha256": "cf9c397bebad5f3feef5db35e624ae7ed80f4493c86fefb37f82808fa3598699",
+        "bytes": 4287462,
+        "catalogSliceSha256": "637d33cb47de33633cdce87dbaeed0c723833bcc7854e37cff88efae05c853f7"
+      },
+      "assets/data/locationgrammar.js": {
+        "sha256": "733c253c078bd07ea3fc0879662358e7060e9846d23a29013435c388c93a05ec",
+        "bytes": 17065
+      },
+      "assets/data/sitetemplates.js": {
+        "sha256": "fd5d7f73dac874ec4ef2148f3d9785169b640f64d1194c8b29546cbcfd8e9e06",
+        "bytes": 20369
+      },
+      "assets/data/sitetemplates-stage9.js": {
+        "sha256": "45be5c291228370e166a44b91d575fab4fdaac1c3e312a384a9df9597e1793fd",
+        "bytes": 13125
+      },
+      "assets/data/locationplans.js": {
+        "sha256": "6e9434957499557026b7dc1cde0155b8257cc992ac04ad5db55ac2ff4b8fa1c4",
+        "bytes": 15698
+      },
+      "src/game/sim.js": {
+        "sha256": "ce4cdf71ecafef10fcdf5ec75b6b1ba99df211a4cc135843e628a212dd0b6a48",
+        "bytes": 522210
+      },
+      "assets/data/manifest.json": {
+        "sha256": "af6dd89e4955b8d571a734c0f9420a1aa44515773702cde01ac77beaec59ce95",
+        "bytes": 3192
+      },
+      "boot.js": {
+        "sha256": "a6ec2282721227596c4c017dcc010e290be0a605ea70ac14d674319bfb9b83a9",
+        "bytes": 33307
+      },
+      "index.html": {
+        "sha256": "162141235290f8e4ff762e69335279f3936b4b513db7dba69868ca7ea69abf68",
+        "bytes": 428638
+      },
+      "tools/mapgen/stamp-geometry.mjs": {
+        "sha256": "933eb3b546ae2b2408156008bc777b862ff4458eb2b4114c8b6d140adcc1eb09",
+        "bytes": 11125
+      },
+      "tools/verify-stage9-location-plans.mjs": {
+        "sha256": "7ca9cfc9ba07bb785f07d9c1124dd4a0c94cfbbc6a907678b61e9de80722a9d0",
+        "bytes": 30575
+      }
+    }
+  },
+  "summary": {
+    "checks": 60,
+    "passed": 59,
+    "failed": 1,
+    "plans": 6,
+    "templates": 10
+  },
+  "checks": [
+    {
+      "id": "source.manifest-boot-exact-order",
+      "status": "PASS",
+      "manifestCount": 106,
+      "bootCount": 106,
+      "manifestUnique": 106,
+      "bootUnique": 106
+    },
+    {
+      "id": "source.stage9-runtime-chain",
+      "status": "FAIL",
+      "index": 33,
+      "chain": [
+        "assets/data/locationgrammar.js",
+        "assets/data/sitetemplates.js",
+        "assets/data/sitetemplates-stage9.js",
+        "assets/data/locationplans.js",
+        "src/engine/worldsites.js"
+      ]
+    },
+    {
+      "id": "source.boot-cache-revision",
+      "status": "PASS",
+      "revision": "1.33.48-boot5"
+    },
+    {
+      "id": "catalog.exact-template-ids",
+      "status": "PASS",
+      "count": 10,
+      "ids": [
+        "base_aelos_coast_admiralty_v1",
+        "brood_vespera_refinery_matrix_core_v1",
+        "city_pyraeth_caldera_crucible_v1",
+        "colony_aelos_basin_canal_v1",
+        "derelict_pyraeth_flats_buried_logistics_v1",
+        "outpost_nordhall_frost_fault_gate_v1",
+        "refinery_aelos_basin_quay_v1",
+        "relic_nordhall_frost_thermal_well_v1",
+        "ruin_vespera_refinery_megaforge_v1",
+        "spaceport_pyraeth_flats_blackwind_v1"
+      ]
+    },
+    {
+      "id": "catalog.exact-class-union",
+      "status": "PASS",
+      "classes": [
+        "base",
+        "brood",
+        "city",
+        "colony",
+        "derelict",
+        "outpost",
+        "refinery",
+        "relic",
+        "ruin",
+        "spaceport"
+      ],
+      "required": [
+        "base",
+        "brood",
+        "city",
+        "colony",
+        "derelict",
+        "outpost",
+        "refinery",
+        "relic",
+        "ruin",
+        "spaceport"
+      ]
+    },
+    {
+      "id": "catalog.v1-only-registration",
+      "status": "PASS",
+      "registered": [
+        {
+          "id": "city_pyraeth_caldera_crucible_v1",
+          "v1Only": true,
+          "same": true
+        },
+        {
+          "id": "outpost_nordhall_frost_fault_gate_v1",
+          "v1Only": true,
+          "same": true
+        },
+        {
+          "id": "relic_nordhall_frost_thermal_well_v1",
+          "v1Only": true,
+          "same": true
+        },
+        {
+          "id": "spaceport_pyraeth_flats_blackwind_v1",
+          "v1Only": true,
+          "same": true
+        },
+        {
+          "id": "derelict_pyraeth_flats_buried_logistics_v1",
+          "v1Only": true,
+          "same": true
+        },
+        {
+          "id": "colony_aelos_basin_canal_v1",
+          "v1Only": true,
+          "same": true
+        },
+        {
+          "id": "refinery_aelos_basin_quay_v1",
+          "v1Only": true,
+          "same": true
+        },
+        {
+          "id": "base_aelos_coast_admiralty_v1",
+          "v1Only": true,
+          "same": true
+        },
+        {
+          "id": "ruin_vespera_refinery_megaforge_v1",
+          "v1Only": true,
+          "same": true
+        },
+        {
+          "id": "brood_vespera_refinery_matrix_core_v1",
+          "v1Only": true,
+          "same": true
+        }
+      ]
+    },
+    {
+      "id": "catalog.exact-fields",
+      "status": "PASS",
+      "problems": []
+    },
+    {
+      "id": "catalog.plot-kinds-and-roles",
+      "status": "PASS",
+      "problems": []
+    },
+    {
+      "id": "catalog.brood-ruin-no-kit-geometry",
+      "status": "PASS",
+      "problems": []
+    },
+    {
+      "id": "geometry.production-constants",
+      "status": "PASS",
+      "missing": []
+    },
+    {
+      "id": "geometry.stage9-all-rotations",
+      "status": "PASS",
+      "templates": [
+        {
+          "id": "base_aelos_coast_admiralty_v1",
+          "pass": 16,
+          "total": 16
+        },
+        {
+          "id": "brood_vespera_refinery_matrix_core_v1",
+          "pass": 16,
+          "total": 16
+        },
+        {
+          "id": "city_pyraeth_caldera_crucible_v1",
+          "pass": 16,
+          "total": 16
+        },
+        {
+          "id": "colony_aelos_basin_canal_v1",
+          "pass": 16,
+          "total": 16
+        },
+        {
+          "id": "derelict_pyraeth_flats_buried_logistics_v1",
+          "pass": 16,
+          "total": 16
+        },
+        {
+          "id": "outpost_nordhall_frost_fault_gate_v1",
+          "pass": 16,
+          "total": 16
+        },
+        {
+          "id": "refinery_aelos_basin_quay_v1",
+          "pass": 16,
+          "total": 16
+        },
+        {
+          "id": "relic_nordhall_frost_thermal_well_v1",
+          "pass": 16,
+          "total": 16
+        },
+        {
+          "id": "ruin_vespera_refinery_megaforge_v1",
+          "pass": 16,
+          "total": 16
+        },
+        {
+          "id": "spaceport_pyraeth_flats_blackwind_v1",
+          "pass": 16,
+          "total": 16
+        }
+      ],
+      "failures": []
+    },
+    {
+      "id": "catalog.legacy-pools-unchanged",
+      "status": "PASS",
+      "templates": [
+        {
+          "id": "base_aelos_coast_admiralty_v1",
+          "before": [],
+          "after": [],
+          "unchanged": true,
+          "leaked": false
+        },
+        {
+          "id": "brood_vespera_refinery_matrix_core_v1",
+          "before": [],
+          "after": [],
+          "unchanged": true,
+          "leaked": false
+        },
+        {
+          "id": "city_pyraeth_caldera_crucible_v1",
+          "before": [],
+          "after": [],
+          "unchanged": true,
+          "leaked": false
+        },
+        {
+          "id": "colony_aelos_basin_canal_v1",
+          "before": [],
+          "after": [],
+          "unchanged": true,
+          "leaked": false
+        },
+        {
+          "id": "derelict_pyraeth_flats_buried_logistics_v1",
+          "before": [],
+          "after": [],
+          "unchanged": true,
+          "leaked": false
+        },
+        {
+          "id": "outpost_nordhall_frost_fault_gate_v1",
+          "before": [],
+          "after": [],
+          "unchanged": true,
+          "leaked": false
+        },
+        {
+          "id": "refinery_aelos_basin_quay_v1",
+          "before": [],
+          "after": [],
+          "unchanged": true,
+          "leaked": false
+        },
+        {
+          "id": "relic_nordhall_frost_thermal_well_v1",
+          "before": [],
+          "after": [],
+          "unchanged": true,
+          "leaked": false
+        },
+        {
+          "id": "ruin_vespera_refinery_megaforge_v1",
+          "before": [],
+          "after": [],
+          "unchanged": true,
+          "leaked": false
+        },
+        {
+          "id": "spaceport_pyraeth_flats_blackwind_v1",
+          "before": [
+            "spaceport_apron"
+          ],
+          "after": [
+            "spaceport_apron"
+          ],
+          "unchanged": true,
+          "leaked": false
+        }
+      ]
+    },
+    {
+      "id": "catalog.v1-force-path-isolated",
+      "status": "PASS",
+      "templates": [
+        {
+          "id": "base_aelos_coast_admiralty_v1",
+          "direct": false,
+          "query": false
+        },
+        {
+          "id": "brood_vespera_refinery_matrix_core_v1",
+          "direct": false,
+          "query": false
+        },
+        {
+          "id": "city_pyraeth_caldera_crucible_v1",
+          "direct": false,
+          "query": false
+        },
+        {
+          "id": "colony_aelos_basin_canal_v1",
+          "direct": false,
+          "query": false
+        },
+        {
+          "id": "derelict_pyraeth_flats_buried_logistics_v1",
+          "direct": false,
+          "query": false
+        },
+        {
+          "id": "outpost_nordhall_frost_fault_gate_v1",
+          "direct": false,
+          "query": false
+        },
+        {
+          "id": "refinery_aelos_basin_quay_v1",
+          "direct": false,
+          "query": false
+        },
+        {
+          "id": "relic_nordhall_frost_thermal_well_v1",
+          "direct": false,
+          "query": false
+        },
+        {
+          "id": "ruin_vespera_refinery_megaforge_v1",
+          "direct": false,
+          "query": false
+        },
+        {
+          "id": "spaceport_pyraeth_flats_blackwind_v1",
+          "direct": false,
+          "query": false
+        }
+      ]
+    },
+    {
+      "id": "grammar.six-base-families",
+      "status": "PASS",
+      "families": [
+        "desert",
+        "glacial",
+        "jungle_wetland",
+        "oceanic",
+        "temperate_civic",
+        "volcanic"
+      ],
+      "problems": []
+    },
+    {
+      "id": "grammar.brood-conversion-features",
+      "status": "PASS",
+      "topology": [
+        "road-vein-conversion",
+        "traversal-membranes",
+        "nest-channels"
+      ],
+      "geometry": [
+        "building-cocoons",
+        "organic-buttresses",
+        "hatchery-overgrowth"
+      ]
+    },
+    {
+      "id": "plans.exact-six-map-slice",
+      "status": "PASS",
+      "maps": [
+        "aelos_basin_medium",
+        "aelos_coast_medium",
+        "nordhall_frost_medium",
+        "pyraeth_caldera_medium",
+        "pyraeth_flats_medium",
+        "vespera_refinery_medium"
+      ]
+    },
+    {
+      "id": "plans.exact-authored-requests",
+      "status": "PASS",
+      "instances": 16,
+      "problems": []
+    },
+    {
+      "id": "plan.aelos_basin_medium.full-v1",
+      "status": "FULL_V1",
+      "planHash": "8aef5d51",
+      "compiled": 4
+    },
+    {
+      "id": "plan.aelos_basin_medium.repeatable-bytes",
+      "status": "PASS",
+      "byteHash": "4b4ee8366a8f0326e107a9c72db9b64bfd1e936dd79319edbb7d48f66b507ab6",
+      "planHash": "8aef5d51"
+    },
+    {
+      "id": "plan.aelos_coast_medium.full-v1",
+      "status": "FULL_V1",
+      "planHash": "567c07d9",
+      "compiled": 2
+    },
+    {
+      "id": "plan.aelos_coast_medium.repeatable-bytes",
+      "status": "PASS",
+      "byteHash": "5dfa6d97d8decb0c8d97b036c712c1f53bb71d1461bfe075e3b5389d7d6b7356",
+      "planHash": "567c07d9"
+    },
+    {
+      "id": "plan.nordhall_frost_medium.full-v1",
+      "status": "FULL_V1",
+      "planHash": "e2b7e55a",
+      "compiled": 2
+    },
+    {
+      "id": "plan.nordhall_frost_medium.repeatable-bytes",
+      "status": "PASS",
+      "byteHash": "00702e6586de57d679555a423685832dbdf087665ba9658bd4879d4d5d4cd9af",
+      "planHash": "e2b7e55a"
+    },
+    {
+      "id": "plan.pyraeth_caldera_medium.full-v1",
+      "status": "FULL_V1",
+      "planHash": "dca73532",
+      "compiled": 2
+    },
+    {
+      "id": "plan.pyraeth_caldera_medium.repeatable-bytes",
+      "status": "PASS",
+      "byteHash": "5c66b3f50996018decd2f00a90e479574b5ae0aab43e86c5315b0a4daae3a2d0",
+      "planHash": "dca73532"
+    },
+    {
+      "id": "plan.pyraeth_flats_medium.full-v1",
+      "status": "FULL_V1",
+      "planHash": "0e61460f",
+      "compiled": 3
+    },
+    {
+      "id": "plan.pyraeth_flats_medium.repeatable-bytes",
+      "status": "PASS",
+      "byteHash": "443ad8fb66231bc2d22fb59cdb511ede2de8caceaf82a1dc4dbf02eae3b522fd",
+      "planHash": "0e61460f"
+    },
+    {
+      "id": "plan.vespera_refinery_medium.full-v1",
+      "status": "FULL_V1",
+      "planHash": "06bc9da8",
+      "compiled": 3
+    },
+    {
+      "id": "plan.vespera_refinery_medium.repeatable-bytes",
+      "status": "PASS",
+      "byteHash": "aad4e2a593f6a391fb5e174fb1e20d8a60772ee842ee417c4a2253396754a4a1",
+      "planHash": "06bc9da8"
+    },
+    {
+      "id": "plans.preflight-pure",
+      "status": "PASS",
+      "beforeHash": "a005d2a27bcfd47d08d5162562876efc3c909febb3234d9db3e4744ac5527d5e",
+      "afterHash": "a005d2a27bcfd47d08d5162562876efc3c909febb3234d9db3e4744ac5527d5e"
+    },
+    {
+      "id": "plans.preflight-zero-rng",
+      "status": "PASS",
+      "before": 0,
+      "after": 0
+    },
+    {
+      "id": "plans.unique-hashes",
+      "status": "PASS",
+      "hashes": [
+        "8aef5d51",
+        "567c07d9",
+        "e2b7e55a",
+        "dca73532",
+        "0e61460f",
+        "06bc9da8"
+      ]
+    },
+    {
+      "id": "plans.request-template-independent-semantics",
+      "status": "PASS",
+      "problems": []
+    },
+    {
+      "id": "plans.topology-and-tactical-scale",
+      "status": "PASS",
+      "problems": []
+    },
+    {
+      "id": "plans.six-adaptation-tracks",
+      "status": "PASS",
+      "baseFamilies": [
+        "desert",
+        "glacial",
+        "jungle_wetland",
+        "oceanic",
+        "volcanic"
+      ],
+      "broodConversion": true,
+      "broodOverlayRequests": 2
+    },
+    {
+      "id": "plans.ten-compiled-semantic-classes",
+      "status": "PASS",
+      "compiledInstances": 16,
+      "classes": [
+        "base",
+        "brood",
+        "city",
+        "colony",
+        "derelict",
+        "outpost",
+        "refinery",
+        "relic",
+        "ruin",
+        "spaceport"
+      ],
+      "semanticClassSignatures": 10
+    },
+    {
+      "id": "fault.template-missing",
+      "status": "PASS",
+      "expected": "LOCATION_TEMPLATE_MISSING",
+      "actual": "LOCATION_TEMPLATE_MISSING",
+      "pure": true,
+      "rngCalls": 0
+    },
+    {
+      "id": "fault.wrong-class",
+      "status": "PASS",
+      "expected": "LOCATION_TEMPLATE_CLASS_MISMATCH",
+      "actual": "LOCATION_TEMPLATE_CLASS_MISMATCH",
+      "pure": true,
+      "rngCalls": 0
+    },
+    {
+      "id": "fault.not-v1-only",
+      "status": "PASS",
+      "expected": "LOCATION_TEMPLATE_NOT_V1_ONLY",
+      "actual": "LOCATION_TEMPLATE_NOT_V1_ONLY",
+      "pure": true,
+      "rngCalls": 0
+    },
+    {
+      "id": "fault.any-field",
+      "status": "PASS",
+      "expected": "LOCATION_TEMPLATE_NOT_EXACT",
+      "actual": "LOCATION_TEMPLATE_NOT_EXACT",
+      "pure": true,
+      "rngCalls": 0
+    },
+    {
+      "id": "fault.invalid-seed",
+      "status": "PASS",
+      "expected": "LOCATION_MAP_SEED_INVALID",
+      "actual": "LOCATION_MAP_SEED_INVALID",
+      "pure": true,
+      "rngCalls": 0
+    },
+    {
+      "id": "fault.invalid-radius",
+      "status": "PASS",
+      "expected": "LOCATION_TEMPLATE_LAYOUT_INVALID",
+      "actual": "LOCATION_TEMPLATE_LAYOUT_INVALID",
+      "pure": true,
+      "rngCalls": 0
+    },
+    {
+      "id": "fault.invalid-street",
+      "status": "PASS",
+      "expected": "LOCATION_TEMPLATE_LAYOUT_INVALID",
+      "actual": "LOCATION_TEMPLATE_LAYOUT_INVALID",
+      "pure": true,
+      "rngCalls": 0
+    },
+    {
+      "id": "fault.map-drift",
+      "status": "PASS",
+      "expected": "LOCATION_TEMPLATE_STYLE_MISMATCH",
+      "actual": "LOCATION_TEMPLATE_STYLE_MISMATCH",
+      "pure": true,
+      "rngCalls": 0
+    },
+    {
+      "id": "fault.region-drift",
+      "status": "PASS",
+      "expected": "LOCATION_TEMPLATE_STYLE_MISMATCH",
+      "actual": "LOCATION_TEMPLATE_STYLE_MISMATCH",
+      "pure": true,
+      "rngCalls": 0
+    },
+    {
+      "id": "fault.geology-drift",
+      "status": "PASS",
+      "expected": "LOCATION_TEMPLATE_STYLE_MISMATCH",
+      "actual": "LOCATION_TEMPLATE_STYLE_MISMATCH",
+      "pure": true,
+      "rngCalls": 0
+    },
+    {
+      "id": "fault.adaptation-drift",
+      "status": "PASS",
+      "expected": "LOCATION_TEMPLATE_STYLE_MISMATCH",
+      "actual": "LOCATION_TEMPLATE_STYLE_MISMATCH",
+      "pure": true,
+      "rngCalls": 0
+    },
+    {
+      "id": "fault.brood-overlay-missing",
+      "status": "PASS",
+      "expected": "LOCATION_TEMPLATE_BROOD_CONVERSION_MISMATCH",
+      "actual": "LOCATION_TEMPLATE_BROOD_CONVERSION_MISMATCH",
+      "pure": true,
+      "rngCalls": 0
+    },
+    {
+      "id": "fault.brood-overlay-unexpected",
+      "status": "PASS",
+      "expected": "LOCATION_TEMPLATE_BROOD_CONVERSION_UNEXPECTED",
+      "actual": "LOCATION_TEMPLATE_BROOD_CONVERSION_UNEXPECTED",
+      "pure": true,
+      "rngCalls": 0
+    },
+    {
+      "id": "fault.duplicate-id",
+      "status": "PASS",
+      "expected": "LOCATION_REQUEST_ID_DUPLICATE",
+      "actual": "LOCATION_REQUEST_ID_DUPLICATE",
+      "pure": true,
+      "rngCalls": 0
+    },
+    {
+      "id": "fault.bad-count",
+      "status": "PASS",
+      "expected": "LOCATION_COUNT_INVALID",
+      "actual": "LOCATION_COUNT_INVALID",
+      "pure": true,
+      "rngCalls": 0
+    },
+    {
+      "id": "fault.bad-source",
+      "status": "PASS",
+      "expected": "LOCATION_COUNT_SOURCE_INVALID",
+      "actual": "LOCATION_COUNT_SOURCE_INVALID",
+      "pure": true,
+      "rngCalls": 0
+    },
+    {
+      "id": "fault.bad-mode",
+      "status": "PASS",
+      "expected": "LOCATION_PLAN_MODE_INVALID",
+      "actual": "LOCATION_PLAN_MODE_INVALID",
+      "pure": true,
+      "rngCalls": 0
+    },
+    {
+      "id": "plans.layout-hash-sensitive",
+      "status": "PASS",
+      "before": "dca73532",
+      "after": "30633022"
+    },
+    {
+      "id": "plans.seed-hash-sensitive",
+      "status": "PASS",
+      "before": "dca73532",
+      "after": "6712cd6b"
+    },
+    {
+      "id": "inactive.unknown-map-typed",
+      "status": "PASS",
+      "result": {
+        "ok": false,
+        "status": "FAIL",
+        "map": "stage9_unknown_map",
+        "planHash": "",
+        "requests": [],
+        "error": {
+          "schema": "LocationPlanningErrorV1",
+          "version": 1,
+          "code": "LOCATION_MAP_UNKNOWN",
+          "requested": "stage9_unknown_map"
+        }
+      }
+    },
+    {
+      "id": "inactive.legacy-map-non-v1",
+      "status": "LEGACY_V0"
+    },
+    {
+      "id": "inactive.pending-map-non-v1",
+      "status": "PENDING_V0",
+      "map": "aelos_north_medium"
+    },
+    {
+      "id": "inactive.no-aelos-resolver-default",
+      "status": "PASS",
+      "unknownCode": "LOCATION_MAP_UNKNOWN",
+      "legacyCode": "LOCATION_CONTEXT_INCOMPLETE"
+    },
+    {
+      "id": "plans.determinism-summary",
+      "status": "PASS",
+      "plans": [
+        {
+          "map": "aelos_basin_medium",
+          "byteHash": "4b4ee8366a8f0326e107a9c72db9b64bfd1e936dd79319edbb7d48f66b507ab6",
+          "planHash": "8aef5d51",
+          "identical": true
+        },
+        {
+          "map": "aelos_coast_medium",
+          "byteHash": "5dfa6d97d8decb0c8d97b036c712c1f53bb71d1461bfe075e3b5389d7d6b7356",
+          "planHash": "567c07d9",
+          "identical": true
+        },
+        {
+          "map": "nordhall_frost_medium",
+          "byteHash": "00702e6586de57d679555a423685832dbdf087665ba9658bd4879d4d5d4cd9af",
+          "planHash": "e2b7e55a",
+          "identical": true
+        },
+        {
+          "map": "pyraeth_caldera_medium",
+          "byteHash": "5c66b3f50996018decd2f00a90e479574b5ae0aab43e86c5315b0a4daae3a2d0",
+          "planHash": "dca73532",
+          "identical": true
+        },
+        {
+          "map": "pyraeth_flats_medium",
+          "byteHash": "443ad8fb66231bc2d22fb59cdb511ede2de8caceaf82a1dc4dbf02eae3b522fd",
+          "planHash": "0e61460f",
+          "identical": true
+        },
+        {
+          "map": "vespera_refinery_medium",
+          "byteHash": "aad4e2a593f6a391fb5e174fb1e20d8a60772ee842ee417c4a2253396754a4a1",
+          "planHash": "06bc9da8",
+          "identical": true
+        }
+      ]
+    }
+  ],
+  "fatal": null,
+  "pending": [
+    {
+      "scope": "planner-execution",
+      "status": "PENDING",
+      "reason": "Pure preflight does not execute seeded map planning."
+    },
+    {
+      "scope": "runtime-topology",
+      "status": "PENDING",
+      "reason": "Catalog topology has not yet been stamped and observed in the live renderer."
+    }
+  ]
+}

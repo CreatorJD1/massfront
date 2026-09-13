@@ -24,6 +24,42 @@ function aiBehaviorAvailable(key){
 }
 function aiBehaviorKey(key){return AI_BEHAVIOR_TYPES[key]&&aiBehaviorAvailable(key)?key:'balanced';}
 function aiBehaviorDef(key){return AI_BEHAVIOR_TYPES[aiBehaviorKey(key)];}
+/* AI point orders must use the same medium contract as player/queued orders.
+   Several recall/defense paths wrote a dry base coordinate into a ship while
+   asking requestField for a naval field. The field could route toward shore,
+   but utx/uty remained land, so the hull resumed direct steering at the end of
+   the field and pushed into the coast forever. Resolve once when the order is
+   authored; never re-pick a naval destination in unitTick. */
+function aiLegalMoveGoal(i,x,y){
+  const T=TYPES[utype[i]];
+  if(typeof battlefieldClampPoint==='function'){
+    const p=battlefieldClampPoint(x,y,(T&&T.r||4)+8);x=p[0];y=p[1];
+  }
+  if(!T||T.air)return [clamp(x,15,MAP-15),clamp(y,15,MAP-15)];
+  if(T.naval){
+    const p=typeof findWater==='function'?findWater(x,y):null;
+    return p||[ux[i],uy[i]];
+  }
+  return typeof findLand==='function'?findLand(x,y):[x,y];
+}
+function aiSetMoveGoal(i,x,y){
+  const T=TYPES[utype[i]],p=aiLegalMoveGoal(i,x,y);
+  utx[i]=clamp(p[0],15,MAP-15);uty[i]=clamp(p[1],15,MAP-15);
+  ufield[i]=T&&T.air?-1:requestField(utx[i],uty[i],!!(T&&T.naval),mfNavUnitClearance(T));
+  return p;
+}
+/* A tactical cohort keeps personal endpoints (spacing and local avoidance still
+   work), but shares one strategic flow per movement medium/clearance class.
+   Five hundred units requesting slightly jittered destinations used to fill the
+   bounded cache and serialize dozens of near-identical 384x384 builds. */
+function aiSetCohortMoveGoal(cache,i,x,y){
+  const T=TYPES[utype[i]],p=aiLegalMoveGoal(i,x,y);
+  utx[i]=clamp(p[0],15,MAP-15);uty[i]=clamp(p[1],15,MAP-15);
+  if(!T||T.air){ufield[i]=-1;return p;}
+  const clearance=mfNavUnitClearance(T),key=(T.naval?'w:':'g:')+clearance;
+  if(cache[key]==null)cache[key]=requestField(utx[i],uty[i],!!T.naval,clearance);
+  ufield[i]=cache[key];return p;
+}
 function aiBehaviorUnitPool(key,tier,facility){
   key=aiBehaviorKey(key);
   if(facility==='airfield')return key==='air'?[5,17,5,17,25]:[5,17];
@@ -51,7 +87,7 @@ function aiFactionBias(){
 }
 function aiWeightedPick(pool,bias){
   if(!pool||!pool.length) return -1;
-  if(!bias) return pool[Math.random()*pool.length|0];
+  if(!bias) return pool[mfSimRandom()*pool.length|0];
   let tot=0;
   const w=new Array(pool.length);
   for(let i=0;i<pool.length;i++){
@@ -59,7 +95,7 @@ function aiWeightedPick(pool,bias){
     w[i]=b>0?b:1;
     tot+=w[i];
   }
-  let r=Math.random()*tot;
+  let r=mfSimRandom()*tot;
   for(let i=0;i<pool.length;i++){ r-=w[i]; if(r<=0) return pool[i]; }
   return pool[pool.length-1];
 }
@@ -137,7 +173,7 @@ function aiPickFaction(){
   const pool=(typeof enemyFactions==='function'?enemyFactions():['nova','legion','syndicate','horde'])
     .filter(k=>typeof FACTIONS!=='undefined'&&FACTIONS[k]);
   const keys=pool.length?pool:['legion','syndicate','horde'];
-  let fac=aiFactionSel==='random'?keys[Math.random()*keys.length|0]:aiFactionSel;
+  let fac=aiFactionSel==='random'?keys[mfSimRandom()*keys.length|0]:aiFactionSel;
   if(!FACTIONS[fac]) fac=keys[0]||'legion';
   AI.fac=fac;
   aiFacPicked=true;
@@ -153,6 +189,7 @@ function aiSetup(diff,bases,allies){
   AI.bases=Array.isArray(bases)&&bases.length?bases:[{x:MAP*SP_HI,y:MAP*SP_LO,diff}];
   AI.allies=Array.isArray(allies)?allies:[];
   AI.base=AI.bases[0]; AI.buildCursor=0; AI.waveCursor=0;
+  aiInvalidateUnitView();
   if(!aiFacPicked) aiPickFaction();
   aiFacPicked=false;                       // consumed; next match picks again
   const F=FACTIONS[AI.fac];
@@ -198,11 +235,6 @@ function aiSetup(diff,bases,allies){
   TEAMB[1][0]=F.colB[0]; TEAMB[1][1]=F.colB[1]; TEAMB[1][2]=F.colB[2];
   mmECol='rgb('+F.colB[0]+','+F.colB[1]+','+F.colB[2]+')';
   mmEColA='rgba('+F.colB[0]+','+F.colB[1]+','+F.colB[2]+',.9)';
-  /* Re-run the player's livery now that the enemy's is known: the same-faction
-     matchup can only be resolved once both sides have been painted, and this
-     has to come AFTER the minimap colours or the contrast shift is overwritten
-     by the line that set them. */
-  if(typeof applyColor==='function') applyColor();
   /* THE SWARM WEARS THE BROOD'S COLOURS WHEN IT IS THE BROOD'S SWARM.
      Team 2 rendered a neutral off-white regardless, so fighting the Umbral
      Brood meant facing a violet army standing next to a beige one that was
@@ -214,26 +246,140 @@ function aiSetup(diff,bases,allies){
   const H=FACTIONS.horde;
   TEAMC[2][0]=brood?H.col[0]:WILD_C[0];  TEAMC[2][1]=brood?H.col[1]:WILD_C[1];  TEAMC[2][2]=brood?H.col[2]:WILD_C[2];
   TEAMB[2][0]=brood?H.colB[0]:WILD_B[0]; TEAMB[2][1]=brood?H.colB[1]:WILD_B[1]; TEAMB[2][2]=brood?H.colB[2]:WILD_B[2];
+  /* Re-run presentation only after ALL native teams and minimap colours are
+     known. Same-faction contrast needs team 1; Tactical Team Identification
+     also owns team 2, which the old ordering immediately overwrote. */
+  if(typeof applyColor==='function') applyColor();
   toast(F.em+' Enemy faction: '+F.nm+' — '+F.ds);
 }
 /* Shared-control allied AI. Allies use the player's team for real friendliness
    (weapons, shields, repair and fog all agree) but own a small virtual economy
    and only issue orders to units tagged with their slot. The player may still
    override those units; the director only retasks an idle unit. */
+function aiScanCount(){return typeof uActiveCount==='number'?uActiveCount:unitHigh;}
+function aiScanUnit(n){return typeof uActiveCount==='number'?uActive[n]:n;}
+/* One authority pulse used to rediscover the same armies in retreat, muster,
+   production, warning, dispatch, ambush and defense. At 2,000 normal units plus
+   a 500-body Brood wildcard that meant repeatedly walking the Brood even though
+   team-1 strategy must never command it. Build the ordered subsets once per
+   aiTick. This is a cache of current authoritative arrays, not deferred work:
+   it changes no cadence, RNG order or decision order. */
+let aiUnitViewT=NaN,aiUnitViewSrc=null,aiUnitViewN=-1,aiUnitViewBases=null,aiUnitViewBaseN=-1,aiUnitViewCache=null;
+const aiUnitViewSolo=[null];
+function aiUnitView(){
+  const dense=typeof uActiveCount==='number',src=dense?uActive:null,N=aiScanCount();
+  let bases=AI.bases;
+  if(!bases||!bases.length){aiUnitViewSolo[0]=AI.base;bases=aiUnitViewSolo;}
+  let basesSame=!!(aiUnitViewCache&&aiUnitViewBases===bases&&aiUnitViewBaseN===bases.length);
+  if(basesSame)for(let k=0;k<bases.length;k++){
+    const B=bases[k],S=aiUnitViewCache.baseState[k];
+    if(!S||S[0]!==B||S[1]!==B.x||S[2]!==B.y||S[3]!==B.slot){basesSame=false;break;}
+  }
+  if(aiUnitViewCache&&aiUnitViewT===AI.t&&aiUnitViewSrc===src&&aiUnitViewN===N&&basesSame)return aiUnitViewCache;
+  const enemyArmy=[],enemyCombat=[],allyBySlot=Object.create(null),firstBase=[];
+  const spatialArmy=new Map(),spatialCombat=new Map(),armyMemo=[];
+  for(const B of bases){spatialArmy.set(B,[]);spatialCombat.set(B,[]);}
+  let playerAir=0;
+  const useCmd=typeof uCmd!=='undefined';
+  if(typeof mfPerfBegin==='function')mfPerfBegin('aiCensus');
+  for(let n=0;n<N;n++){
+    const i=aiScanUnit(n);
+    if(!ualive[i])continue;
+    if(uteam[i]===0){
+      if(TYPES[utype[i]].air)playerAir++;
+      const slot=uAllyBase[i];
+      if(slot!=null&&slot>=0)(allyBySlot[slot]||(allyBySlot[slot]=[])).push(i);
+      continue;
+    }
+    if(uteam[i]!==1||isEnemyCommander(i)||utype[i]===UT_ENGINEER)continue;
+    enemyArmy.push(i);
+    const combat=TYPES[utype[i]].wk!=='n';
+    if(combat)enemyCombat.push(i);
+    let nearest=1e30,first=null;
+    if(bases.length<2){
+      first=bases[0];
+      spatialArmy.get(first).push(i);
+      if(combat)spatialCombat.get(first).push(i);
+      if(useCmd&&uCmd[i]>=0){
+        const key=(uCmd[i]+1)|0;armyMemo[key]=(armyMemo[key]||0)+1;
+      }else{
+        const key=((first&&first.slot)==null?0:first.slot+1)|0;armyMemo[key]=(armyMemo[key]||0)+1;
+      }
+    }else{
+      for(const B of bases){const d=dist2(ux[i],uy[i],B.x,B.y);if(d<nearest){nearest=d;first=B;}}
+      /* aiUnitBelongsToBase deliberately lets an exact tie belong to both
+         seats. Preserve that edge case and active-list order in each subset. */
+      for(const B of bases)if(dist2(ux[i],uy[i],B.x,B.y)===nearest){
+        spatialArmy.get(B).push(i);
+        if(combat)spatialCombat.get(B).push(i);
+        if(!(useCmd&&uCmd[i]>=0)){
+          const key=((B&&B.slot)==null?0:B.slot+1)|0;armyMemo[key]=(armyMemo[key]||0)+1;
+        }
+      }
+      if(useCmd&&uCmd[i]>=0){const key=(uCmd[i]+1)|0;armyMemo[key]=(armyMemo[key]||0)+1;}
+    }
+    firstBase[i]=first;
+  }
+  aiUnitViewT=AI.t;aiUnitViewSrc=src;aiUnitViewN=N;aiUnitViewBases=bases;aiUnitViewBaseN=bases.length;
+  if(typeof mfPerfEnd==='function')mfPerfEnd('aiCensus');
+  const baseState=bases.map(B=>[B,B.x,B.y,B.slot]);
+  return aiUnitViewCache={enemyArmy,enemyCombat,allyBySlot,firstBase,spatialArmy,spatialCombat,armyMemo,playerAir,baseState};
+}
+function aiUnitsForBase(B,combat){
+  const V=aiUnitView(),M=combat?V.spatialCombat:V.spatialArmy,L=M.get(B);
+  if(L)return L;
+  const src=combat?V.enemyCombat:V.enemyArmy,out=[];
+  for(const i of src)if(aiUnitBelongsToBase(i,B))out.push(i);
+  return out;
+}
+function aiInvalidateUnitView(){
+  aiUnitViewT=NaN;aiUnitViewSrc=null;aiUnitViewCache=null;
+  /* Affiliation/active-list changes can happen after a same-tick query (ally
+     spawning is the in-director case). Invalidate the two scalar readers too;
+     otherwise their own AI.t keys could retain the old census. */
+  if(typeof aiArmyMemoT!=='undefined')aiArmyMemoT=-1;
+  if(typeof aiAirMemoT!=='undefined')aiAirMemoT=-1;
+}
+let aiBldViewT=NaN,aiBldViewSrc=null,aiBldViewN=-1,aiBldView=null;
+function aiBuildingView(){
+  if(aiBldView&&aiBldViewT===AI.t&&aiBldViewSrc===bldLive&&aiBldViewN===bldLive.length)return aiBldView;
+  const liveByTeam=[[],[],[]],completeByTeam=[[],[],[]],defenseByTeam=[[],[],[]],playerMex=[];
+  for(const B of bldLive){
+    if(!B.alive)continue;
+    const team=B.team|0;
+    if(!liveByTeam[team])liveByTeam[team]=[];
+    liveByTeam[team].push(B);
+    if(B.prog>=1){
+      if(!completeByTeam[team])completeByTeam[team]=[];
+      completeByTeam[team].push(B);
+      if(B.type==='turret'||B.type==='bastion'||B.type==='seafort'||B.type==='aatower'){
+        if(!defenseByTeam[team])defenseByTeam[team]=[];
+        defenseByTeam[team].push(B);
+      }
+      if(team===0&&B.type==='mex')playerMex.push(B);
+    }
+  }
+  aiBldViewT=AI.t;aiBldViewSrc=bldLive;aiBldViewN=bldLive.length;
+  return aiBldView={liveByTeam,completeByTeam,defenseByTeam,playerMex};
+}
+function aiInvalidateBuildingView(){aiBldViewT=NaN;aiBldViewSrc=null;}
 function aiAllyTick(dt){
   if(!AI.allies||!AI.allies.length)return;
   for(const A of AI.allies){
-    A.mass=Math.min(1400,(A.mass||0)+dt*(4.4+A.diff*1.6));
-    A.energy=Math.min(6200,(A.energy||0)+dt*(22+A.diff*9));
+    /* The flat drip is gone. econTickPlayerSeats (economy.js) banks this
+       seat from the structures it actually owns, on the same yield table the
+       enemy seats use - so an ally that loses its Extractor visibly weakens,
+       which the drip could never express. A seat with NO income structures
+       still gets the 0.6/2 floor there, so a levelled ally is crippled
+       rather than dead. Caps move to MCAP0/ECAP0 + silos for the same
+       reason: a seat is a seat. */
     A.spawnT=(A.spawnT||0)-dt;A.orderT=(A.orderT||0)-dt;
     let live=typeof populationUsedForCommander==='function'?populationUsedForCommander(A.slot):0;
-    if(!live){
-      for(let i=0;i<unitHigh;i++)if(ualive[i]&&uteam[i]===0&&uAllyBase[i]===A.slot)live++;
-    }
+    if(!live)live=(aiUnitView().allyBySlot[A.slot]||[]).length;
     const behavior=aiBehaviorKey(A.behavior),targetMul=behavior==='rush'?1.18:behavior==='land'?1.10:behavior==='turtle'?.78:behavior==='air'?.92:1;
     const target=Math.round([18,30,44][A.diff]*targetMul);
     if(A.spawnT<=0&&live<target&&populationCanSpawn(0,0,A.slot)){
-      const F=bldLive.find(B=>B.alive&&B.team===0&&B.allyAI===A.slot&&B.type==='fac');
+      const F=(aiBuildingView().liveByTeam[0]||[]).find(B=>B.allyAI===A.slot&&B.type==='fac');
       if(F){
         const facility=behavior==='air'?'airfield':behavior==='naval'?'harbor':'fac';
         let pool=aiBehaviorUnitPool(behavior,A.diff>0?2:1,facility)||
@@ -243,23 +389,30 @@ function aiAllyTick(dt){
            units, so the setup label and the battlefield doctrine disagreed. */
         if(typeof factionDoctrineRoster==='function')pool=factionDoctrineRoster(pool,facility,0).filter(t=>TYPES[t]&&TYPES[t].bt>0);
         if(!pool.length)pool=[0];
-        const t=pool[Math.random()*pool.length|0]||0,T=TYPES[t];
+        const t=pool[mfSimRandom()*pool.length|0]||0,T=TYPES[t];
         if(A.mass>=T.cm&&A.energy>=T.ce){
-          const i=spawnUnit(t,0,F.x+rr(-18,18),F.y+F.r+20,A.slot);
-          if(i>=0){A.mass-=T.cm;A.energy-=T.ce;uAllyBase[i]=A.slot;ustate[i]=2;utx[i]=A.x+rr(-90,90);uty[i]=A.y+rr(-90,90);}
+          const i=spawnUnit(t,0,F.x+mfSimRange(-18,18),F.y+F.r+20,A.slot);
+          if(i>=0){
+            A.mass-=T.cm;A.energy-=T.ce;uAllyBase[i]=A.slot;ustate[i]=2;
+            /* The active count normally invalidates the census. Do it explicitly
+               as well so a remove+spawn that keeps the same count cannot leave
+               later production/air reads on the pre-spawn affiliation. */
+            aiInvalidateUnitView();
+            aiSetMoveGoal(i,A.x+mfSimRange(-90,90),A.y+mfSimRange(-90,90));
+          }
         }
       }
       const cadence=behavior==='rush'?.64:behavior==='turtle'?1.3:behavior==='air'?.92:1;
-      A.spawnT=(Math.max(5,13-A.diff*2)+Math.random()*5)*cadence;
+      A.spawnT=(Math.max(5,13-A.diff*2)+mfSimRandom()*5)*cadence;
     }
     if(A.orderT<=0){
       A.orderT=4.5;
-      for(let i=0;i<unitHigh;i++){
-        if(!ualive[i]||uteam[i]!==0||uAllyBase[i]!==A.slot||ustate[i]!==0)continue;
+      for(const i of aiUnitView().allyBySlot[A.slot]||[]){
+        if(ustate[i]!==0)continue;
         const hero=TYPES[utype[i]].cat==='hero',e=findEnemy(ux[i],uy[i],0,hero?300:520);
-        if(e>=0){ustate[i]=2;utx[i]=ux[e];uty[i]=uy[e];}
-        else if(hero||behavior==='turtle'){ustate[i]=2;utx[i]=A.x+rr(-100,100);uty[i]=A.y+rr(-100,100);}
-        else if(AI.t>AI.openingGrace*(behavior==='rush'?.55:1)){ustate[i]=2;utx[i]=AI.base.x+rr(-130,130);uty[i]=AI.base.y+rr(-130,130);}
+        if(e>=0){ustate[i]=2;aiSetMoveGoal(i,ux[e],uy[e]);}
+        else if(hero||behavior==='turtle'){ustate[i]=2;aiSetMoveGoal(i,A.x+mfSimRange(-100,100),A.y+mfSimRange(-100,100));}
+        else if(AI.t>AI.openingGrace*(behavior==='rush'?.55:1)){ustate[i]=2;aiSetMoveGoal(i,AI.base.x+mfSimRange(-130,130),AI.base.y+mfSimRange(-130,130));}
       }
     }
   }
@@ -282,29 +435,42 @@ function aiCanAfford(cm,ce,seat){
 }
 let aiArmyMemoT=-1, aiArmyMemo=[];
 let aiAirMemoT=-1, aiAirMemo=-1;
-function aiSeatArmy(slot){
-  /* Same aiTick can ask this per factory. 1000-pop scans were ~16ms of aiTick. */
-  const k=(slot==null?0:slot+1)|0;
-  if(aiArmyMemoT===AI.t && aiArmyMemo[k]!=null) return aiArmyMemo[k];
-  let n=0;
-  const useCmd=typeof uCmd!=='undefined';
-  const base=aiSeat(slot);
-  for(let i=0;i<unitHigh;i++){
-    if(!ualive[i]||uteam[i]!==1||isEnemyCommander(i)||utype[i]===UT_ENGINEER) continue;
-    if(useCmd&&uCmd[i]===slot) n++;
-    else if(!useCmd||uCmd[i]<0){ if(aiUnitBelongsToBase(i,base)) n++; }
+function aiRefreshArmyMemo(){
+  if(aiArmyMemoT===AI.t)return;
+  if(typeof aiUnitView==='function'){
+    aiArmyMemoT=AI.t;aiArmyMemo=aiUnitView().armyMemo;return;
   }
-  aiArmyMemoT=AI.t; aiArmyMemo[k]=n;
-  return n;
+  /* Standalone save/probe callers can load the census helper without the full
+     director. Keep the old one-pass seam functional; the game always uses the
+     shared pulse view above. */
+  aiArmyMemoT=AI.t;aiArmyMemo.length=0;
+  const useCmd=typeof uCmd!=='undefined',bases=AI.bases&&AI.bases.length?AI.bases:[AI.base];
+  for(let k=0,N=aiScanCount();k<N;k++){const i=aiScanUnit(k);
+    if(!ualive[i]||uteam[i]!==1||isEnemyCommander(i)||utype[i]===UT_ENGINEER)continue;
+    if(useCmd&&uCmd[i]>=0){const key=(uCmd[i]+1)|0;aiArmyMemo[key]=(aiArmyMemo[key]||0)+1;continue;}
+    let nearest=1e30;
+    for(const B of bases){const d=dist2(ux[i],uy[i],B.x,B.y);if(d<nearest)nearest=d;}
+    for(const B of bases)if(dist2(ux[i],uy[i],B.x,B.y)===nearest){
+      const key=((B&&B.slot)==null?0:B.slot+1)|0;aiArmyMemo[key]=(aiArmyMemo[key]||0)+1;
+    }
+  }
+}
+function aiSeatArmy(slot){
+  /* Every production building asks this at the same authority pulse. Build all
+     seat counts in one dense pass instead of rescanning up to 2,500 units for
+     every distinct factory seat. */
+  aiRefreshArmyMemo();
+  const resolved=slot==null&&AI.base?AI.base.slot:slot,key=(resolved==null?0:resolved+1)|0;
+  return aiArmyMemo[key]||0;
 }
 function aiSeatArmyCap(slot){
-  /* Clock, not a step to 1000. Easy/Normal/Hard keep the old opening drip
+  /* Clock, not a step to 500. Easy/Normal/Hard keep the old opening drip
      (18/28/36 + 5/9/13 per minute, plateau 46/86/132). After that plateau the
-     lid keeps climbing toward this seat's 1000 so a long match can actually
+     lid keeps climbing toward this seat's 500 so a long match can actually
      get there — 46/86/132 never would. Compact 1v1 is still one seat; theatre
      size does not multiply the cap. Do not raise FACTION_POP_CAP. */
   const D=AI.diff;
-  const popCap=typeof populationCapForCommander==='function'?populationCapForCommander(slot):1000;
+  const popCap=typeof populationCapForCommander==='function'?populationCapForCommander(slot):500;
   const seatMax=Math.max(1,popCap-2);
   const tMin=(typeof stats!=='undefined'?stats.t:0)/60;
   const floor=[18,28,36][D], early=[5,9,13][D], oldCeil=[46,86,132][D];
@@ -316,7 +482,7 @@ function aiSeatArmyCap(slot){
 }
 function aiSeatAtCap(B){
   const slot=(B&&B.aiBaseSlot!=null)?B.aiBaseSlot:(AI.base&&AI.base.slot);
-  const popCap=typeof populationCapForCommander==='function'?populationCapForCommander(slot):1000;
+  const popCap=typeof populationCapForCommander==='function'?populationCapForCommander(slot):500;
   const popUsed=typeof populationUsedForCommander==='function'?populationUsedForCommander(slot):0;
   return aiSeatArmy(slot)>=aiSeatArmyCap(slot)||popUsed>=popCap;
 }
@@ -329,8 +495,7 @@ function aiUnitBelongsToBase(i,B){
 // defense strength near a point (player turrets/bastions/aa)
 function defenseAt(x,y,team){
   let d=0;
-  for(const B of bldLive){
-    if(!B.alive||B.team!==team||B.prog<1) continue;
+  for(const B of aiBuildingView().defenseByTeam[team]||[]){
     if(B.type==='turret'&&dist2(x,y,B.x,B.y)<260*260) d++;
     else if((B.type==='bastion'||B.type==='seafort')&&dist2(x,y,B.x,B.y)<520*520) d+=2;
     else if(B.type==='aatower'&&dist2(x,y,B.x,B.y)<260*260) d+=0.5;
@@ -342,8 +507,7 @@ function aiPickTarget(base){
   const AB=base||AI.base;
   let best=null, bs=1e18;
   const cands=[];
-  for(const B of bldLive){
-    if(!B.alive||B.team!==0||B.prog<1) continue;
+  for(const B of aiBuildingView().completeByTeam[0]||[]){
     /* VALUE, not just proximity. Scoring on defence and distance alone meant a
        single undefended forty-mass Reactor parked next to the AI's base scored
        near zero and became a permanent decoy that every wave for the rest of
@@ -363,17 +527,13 @@ function aiPickTarget(base){
   return [best[0],best[1]];
 }
 function aiWaveMuster(B,WD){
-  let army=0;
-  for(let i=0;i<unitHigh;i++)
-    if(ualive[i]&&uteam[i]===1&&!isEnemyCommander(i)&&utype[i]!==UT_ENGINEER&&aiUnitBelongsToBase(i,B)) army++;
+  const army=aiUnitsForBase(B,false).length;
   return {army,need:Math.min([14,18,22][WD],[7,9,11][WD]+Math.ceil(AI.wave/AI.bases.length))};
 }
 function playerAirCount(){
   if(aiAirMemoT===AI.t && aiAirMemo>=0) return aiAirMemo;
-  let n=0;
-  for(let i=0;i<unitHigh;i++) if(ualive[i]&&uteam[i]===0&&TYPES[utype[i]].air) n++;
-  aiAirMemoT=AI.t; aiAirMemo=n;
-  return n;
+  aiAirMemoT=AI.t; aiAirMemo=aiUnitView().playerAir;
+  return aiAirMemo;
 }
 function aiFreeSpot(type){
   const fac=AI.fac||'legion', f=bldFoot(type,fac), edge=Math.max(f[0],f[1])*.5+12;
@@ -382,7 +542,7 @@ function aiFreeSpot(type){
      building. Use the same authored OBB as player placement. Forty attempts
      offsets the larger honest plots without granting the AI illegal ground. */
   for(let t=0;t<40;t++){
-    const a=Math.random()*TAU, d=70+Math.random()*320;
+    const a=mfSimRandom()*TAU, d=70+mfSimRandom()*320;
     const x=clamp(AI.base.x+Math.cos(a)*d,edge,MAP-edge);
     const y=clamp(AI.base.y+Math.sin(a)*d,edge,MAP-edge);
     if(typeof battlefieldContains==='function'&&!battlefieldContains(x,y,edge))continue;
@@ -399,7 +559,7 @@ function aiFreeWaterSpot(type){
   if(typeof battlefieldNavalEnabled!=='function'||!battlefieldNavalEnabled())return null;
   const fac=AI.fac||'legion',f=bldFoot(type,fac),edge=Math.max(f[0],f[1])*.5+12;
   for(let t=0;t<72;t++){
-    const a=Math.random()*TAU,d=120+Math.random()*760;
+    const a=mfSimRandom()*TAU,d=120+mfSimRandom()*760;
     const x=clamp(AI.base.x+Math.cos(a)*d,edge,MAP-edge),y=clamp(AI.base.y+Math.sin(a)*d,edge,MAP-edge);
     if(footOnWater(type,x,y,0,fac)&&!footBlocked(type,x,y,0,null,fac))return [x,y];
   }
@@ -414,7 +574,7 @@ function aiBaseOwnsBuilding(B,base){
 }
 function aiCounts(base){
   const c={mex:0,pgen:0,fac:0,turret:0,sgen:0,tgate:0,bastion:0,harbor:0,seafort:0,airfield:0,nest:0};
-  for(const B of bldLive) if(B.alive&&B.team===1&&aiBaseOwnsBuilding(B,base)) c[B.type]=(c[B.type]||0)+1;
+  for(const B of aiBuildingView().liveByTeam[1]||[]) if(aiBaseOwnsBuilding(B,base)) c[B.type]=(c[B.type]||0)+1;
   return c;
 }
 function aiBuildAt(type,x,y){
@@ -422,7 +582,7 @@ function aiBuildAt(type,x,y){
   AI.econPaySlot=slot;
   const B=beginBuild(1,type,x,y,0,slot);
   AI.econPaySlot=null;
-  if(B){B.aiBaseSlot=slot;B.aiBehavior=aiBehaviorKey(AI.base&&AI.base.behavior);}
+  if(B){B.aiBaseSlot=slot;B.aiBehavior=aiBehaviorKey(AI.base&&AI.base.behavior);aiInvalidateBuildingView();}
   return B;
 }
 function aiBuildingBehavior(B){
@@ -434,7 +594,7 @@ function aiBuildingBehavior(B){
 /* ---------- threat clock: how hard the AI is allowed to become ----------
    Grows with match time AND with how strong the player has actually gotten,
    so difficulty compounds instead of flat-lining. Slope + ceiling per level. */
-function playerStructCount(){ let n=0; for(const B of bldLive) if(B.alive&&B.team===0&&B.prog>=1) n++; return n; }
+function playerStructCount(){return (aiBuildingView().completeByTeam[0]||[]).length;}
 /* THREAT IS A CLOCK, NOT A MIRROR.
    The old curve fed off the player's own unit count, structure count and
    commander level, so on Hard the AI's income multiplier reached ~9.6x with
@@ -468,9 +628,27 @@ function aiThreat(){
   const a=territoryScore(0), b=territoryScore(1);
   return a*2<b ? 1+(raw-1)*0.65 : raw;
 }
+/* Team-1 support units use the simulation's same deterministic utility-job
+   authority as team 0. This hook is intentionally idempotent: unitTick also
+   invokes the planner before LOD, while the cadence guard makes a second call
+   in the same fixed step free. Keeping the AI hook explicit prevents a future
+   director refactor from silently orphaning Constructor/Warden/Prospector
+   claims again. */
+function aiUtilityJobsTick(){
+  if(typeof mfUtilityPlannerTick==='function')mfUtilityPlannerTick();
+}
 function aiTick(dt){
   AI.t+=dt; AI.buildTimer-=dt; AI.waveTimer-=dt;
+  aiBuildingView();
+  if(typeof mfPerfBegin==='function')mfPerfBegin('aiUtility');
+  aiUtilityJobsTick();
+  if(typeof mfPerfEnd==='function')mfPerfEnd('aiUtility');
+  if(typeof mfPerfBegin==='function')mfPerfBegin('aiAllies');
   aiAllyTick(dt);
+  if(typeof mfPerfEnd==='function')mfPerfEnd('aiAllies');
+  if(typeof mfPerfBegin==='function')mfPerfBegin('aiRetreat');
+  aiRetreatTick(dt);
+  if(typeof mfPerfEnd==='function')mfPerfEnd('aiRetreat');
   // scale economy, damage, toughness and build speed off the threat clock
   const thr=aiThreat(), FA=FACTIONS[AI.fac]||FACTIONS.legion;
   AI.thr=thr;
@@ -480,11 +658,13 @@ function aiTick(dt){
   const TE=(typeof threatEcon==='function')?threatEcon():1;
   const TH=(typeof threatHp==='function')?threatHp():1;
   const TD=(typeof threatDmg==='function')?threatDmg():1;
-  const TT=(typeof threatTech==='function')?threatTech():1;
   aiIncomeMult=[0.75,1.0,1.25][AI.diff]*thr*FA.income*TE;
   aiDmgMult   =[0.85,1.0,1.10][AI.diff]*(1+0.06*(thr-1))*TD;
   aiHpMult    =(1+[0.04,0.07,0.10][AI.diff]*(thr-1))*TH;
-  aiBuildMult =[0.85,1.15,1.6][AI.diff]*(1+0.10*(thr-1))*FA.buildMul*TT;
+  /* threatTech controls when technology becomes available. Multiplying every
+     factory by it also made late-game technology a hidden 10x manufacturing
+     buff, overwhelming the authored queues rather than improving decisions. */
+  aiBuildMult =[0.85,1.15,1.6][AI.diff]*(1+0.10*(thr-1))*FA.buildMul;
   // ---------- construction ----------
   if(AI.buildTimer<=0){
     aiUseBase('build');                 // expand each configured foothold in turn
@@ -598,7 +778,7 @@ function aiTick(dt){
     }
     // upgrade a factory to T2 over time — pay the factory's own seat
     if(AI.t>[220,170,130][AI.diff] || heroLvl>=4){
-      for(const B of bldLive){
+      for(const B of aiBuildingView().completeByTeam[1]||[]){
         if(B.alive&&B.team===1&&B.type==='fac'&&B.prog>=1&&B.tier===1&&B.upT<=0&&canAfford(1,FAC_UP.cm,FAC_UP.ce,B.aiBaseSlot)){
           pay(1,FAC_UP.cm,FAC_UP.ce,B.aiBaseSlot); B.upT=FAC_UP.t; B.upMax=FAC_UP.t; break;
         }
@@ -606,7 +786,7 @@ function aiTick(dt){
     }
     // upgrade turrets when that seat is rich
     if((bank.mass||0)>450){
-      for(const B of bldLive){
+      for(const B of aiBuildingView().completeByTeam[1]||[]){
         if(B.alive&&B.team===1&&B.type===basicDef&&B.prog>=1&&(B.lvl||1)<3&&B.upT<=0&&BUP[B.type]){
           const U=BUP[B.type][B.lvl-1];
           if(canAfford(1,U.cm,U.ce,B.aiBaseSlot)){ pay(1,U.cm,U.ce,B.aiBaseSlot); B.upT=U.t; B.upMax=U.t; }
@@ -621,27 +801,30 @@ function aiTick(dt){
      the unit is at its objective — otherwise the wave would stroll through the
      player's base without engaging it, which is a worse bug than the one march
      order was added to fix. */
-  for(const [i,g] of AI.waveUnits){
-    if(!ualive[i]||ugen[i]!==g) continue;
-    if(umarch[i]===1 && dist2(ux[i],uy[i],utx[i],uty[i])<340*340) umarch[i]=0;
-  }
   // ---------- retreat broken waves ----------
   if(AI.waveUnits.length){
     let alive=0;
     /* Wave membership is (slot, generation): counting bare slots meant a wave
        "survived" on units that had died and been replaced by whatever spawned
        into their index, so retreat never triggered. */
-    for(const [i,g] of AI.waveUnits) if(ualive[i]&&ugen[i]===g&&uteam[i]===1) alive++;
+    for(const [i,g] of AI.waveUnits){
+      if(!ualive[i]||ugen[i]!==g)continue;
+      if(umarch[i]===1&&dist2(ux[i],uy[i],utx[i],uty[i])<340*340)umarch[i]=0;
+      if(uteam[i]===1)alive++;
+    }
     /* A 28% floor on a four-unit wave triggers on the first casualty, which is
        how a "retreat" rule turned every small attack into an immediate rout.
        Only waves big enough for the fraction to mean something can break. */
     if(AI.waveSize0>=8 && alive>0 && alive<AI.waveSize0*0.28 && !AI.retreated){
       AI.retreated=true;
-      const rb=AI.waveBase||AI.base, fld=requestField(rb.x,rb.y);
+      const rb=AI.waveBase||AI.base;
+      const retreatFields=Object.create(null);
+      /* Retreat is rare; a second zero-allocation pass only on that transition
+         is cheaper than allocating [slot,generation] tuples every pulse. */
       for(const [i,g] of AI.waveUnits){
-        if(!ualive[i]||ugen[i]!==g||uteam[i]!==1) continue;
-        ustate[i]=2; utgt[i]=-1; ufield[i]=fld; umarch[i]=1;
-        utx[i]=rb.x+rr(-120,120); uty[i]=rb.y+rr(-120,120);
+        if(!ualive[i]||ugen[i]!==g||uteam[i]!==1)continue;
+        ustate[i]=2; utgt[i]=-1; umarch[i]=1;
+        aiSetCohortMoveGoal(retreatFields,i,rb.x+mfSimRange(-120,120),rb.y+mfSimRange(-120,120));
       }
       AI.waveUnits=[]; aiWaveDirty();
     } else if(alive===0){ AI.waveUnits=[]; aiWaveDirty(); }
@@ -652,35 +835,33 @@ function aiTick(dt){
     AI.harassTimer=[110,85,65][AI.diff];
     // weakest player mex
     let tgt=null, bs=1e18;
-    for(const B of bldLive){
-      if(!B.alive||B.team!==0||B.type!=='mex'||B.prog<1) continue;
+    for(const B of aiBuildingView().playerMex){
       const sc=defenseAt(B.x,B.y,0)*1000 - Math.sqrt(dist2(B.x,B.y,AI.base.x,AI.base.y))*0.1;
       if(sc<bs){ bs=sc; tgt=B; }
     }
     if(tgt){
       const squad=[];
-      for(let i=0;i<unitHigh&&squad.length<8;i++){
-        if(!ualive[i]||uteam[i]!==1||isEnemyCommander(i)) continue;
+      for(const i of aiUnitView().enemyArmy){
+        if(squad.length>=8)break;
         const tp=utype[i];
         if((tp===0||tp===9||tp===1)&&!aiWaveHas(i)&&!aiIsRetasked(i)) squad.push(i);
       }
       if(squad.length>=5){
-        const fld=requestField(tgt.x,tgt.y);
         for(const i of squad){
-          ustate[i]=2; utgt[i]=-1; ufield[i]=fld; umarch[i]=1;
-          utx[i]=tgt.x+rr(-40,40); uty[i]=tgt.y+rr(-40,40);
+          const T=TYPES[utype[i]];
+          ustate[i]=2; utgt[i]=-1; ufield[i]=requestField(tgt.x,tgt.y,false,mfNavUnitClearance(T)); umarch[i]=1;
+          utx[i]=tgt.x+mfSimRange(-40,40); uty[i]=tgt.y+mfSimRange(-40,40);
         }
         if(fogOn?covAt(AI.base.x,AI.base.y):true){} // silent unless scouted
       }
     }
   }
   /* ---------- ARMY CEILING --------------------------------------------------
-     Per seat, clock-ramped toward that seat's 1000. Opening minutes still
+     Per seat, clock-ramped toward that seat's 500. Opening minutes still
      follow 46/86/132; the lid is no longer a plateau. Compact 1v1 is one seat. */
 
   // ---------- production ----------
-  for(const B of bldLive){
-    if(!B.alive||B.team!==1||B.prog<1) continue;
+  for(const B of aiBuildingView().completeByTeam[1]||[]){
     const atCap=aiSeatAtCap(B);
     const seat=aiSeat(B.aiBaseSlot);
     if(B.type==='tgate'){
@@ -692,7 +873,7 @@ function aiTick(dt){
       const pool=aiBehaviorUnitPool(aiBuildingBehavior(B),B.tier,'airfield');
       if(!B.queue.length && !atCap){
         const t=aiWeightedPick(pool,aiFactionBias());
-        B.queue.push(t>=0?t:pool[Math.random()*pool.length|0]);
+        B.queue.push(t>=0?t:pool[mfSimRandom()*pool.length|0]);
       }
       continue;
     }
@@ -701,7 +882,7 @@ function aiTick(dt){
       const pool=aiBehaviorUnitPool(aiBuildingBehavior(B),B.tier,'harbor');
       if(!B.queue.length&&!atCap){
         const t=aiWeightedPick(pool,aiFactionBias());
-        B.queue.push(t>=0?t:pool[Math.random()*pool.length|0]);
+        B.queue.push(t>=0?t:pool[mfSimRandom()*pool.length|0]);
       }
       continue;
     }
@@ -712,11 +893,11 @@ function aiTick(dt){
     if((seat.mass||0)>(seat.mcap||MCAP0)*0.72 && B.queue.length<4){
       const dump=B.tier===2?[1,2,3,9,16]:[0,1,9];
       const biased=aiFactionBiasOverride(dump);
-      B.queue.push(biased>=0?biased:dump[Math.random()*dump.length|0]);
+      B.queue.push(biased>=0?biased:dump[mfSimRandom()*dump.length|0]);
     }
     if(!B.queue.length){
       let t=0;
-      const r=Math.random();
+      const r=mfSimRandom();
       // war footing advances with BOTH match time and the player's commander level
       const phase=Math.max(AI.t, (heroLvl-1)*75);
       if(B.tier===1){
@@ -736,10 +917,10 @@ function aiTick(dt){
          AI still fields Dominion escorts and a Syndicate Turtle cannot roll a
          chassis its faction does not own. */
       const behavior=aiBuildingBehavior(B),focus=aiBehaviorUnitPool(behavior,B.tier,'fac');
-      if(focus&&Math.random()<(behavior==='balanced'?0:behavior==='rush'?.9:.76))t=focus[Math.random()*focus.length|0];
+      if(focus&&mfSimRandom()<(behavior==='balanced'?0:behavior==='rush'?.9:.76))t=focus[mfSimRandom()*focus.length|0];
       /* This guard makes future wildlife/hero additions fail safe instead of
          turning one bad doctrine entry into a permanent production deadlock. */
-      if(!TYPES[t]||TYPES[t].bt<=0) t=B.tier===2?(Math.random()<0.6?21:20):(Math.random()<0.5?0:9);
+      if(!TYPES[t]||TYPES[t].bt<=0) t=B.tier===2?(mfSimRandom()<0.6?21:20):(mfSimRandom()<0.5?0:9);
       /* The same arsenal seam drives player cards and enemy factories. A bias
          alone still lets a Dominion line randomly field Coalition shields or
          a Coalition plant roll Dominion siege; filter the final choice, then
@@ -748,7 +929,7 @@ function aiTick(dt){
       if(typeof factionDoctrineRoster==='function'){
         const basePool=B.tier===2?[0,1,9,18,10,2,3,6,7,11,16,19,20,21,22,23,24,27,32]:[0,1,9,10,19,24,32];
         legal=factionDoctrineRoster(basePool,B.type||'fac',1).filter(q=>TYPES[q]&&TYPES[q].bt>0);
-        if(legal.length&&legal.indexOf(t)<0) t=legal[Math.random()*legal.length|0];
+        if(legal.length&&legal.indexOf(t)<0) t=legal[mfSimRandom()*legal.length|0];
       }
       /* Faction identity used to be three hardcoded pools that disagreed with
          FACTIONS[k].bias (Legion never rolled Harbinger). 0.45 matches the old
@@ -756,7 +937,7 @@ function aiTick(dt){
          often enough that the design-DB weights are a real production lever. */
       if(legal&&legal.length){
         const themed=aiFactionBiasOverride(legal);
-        if(themed>=0&&Math.random()<0.45) t=themed;
+        if(themed>=0&&mfSimRandom()<0.45) t=themed;
       }
       /* Vultures remain pure AA even if bias or the phase roll named one. */
       if(t===10&&playerAirCount()<=0) t=legal&&legal.indexOf(23)>=0?23:(B.tier===2&&legal&&legal.indexOf(2)>=0?2:1);
@@ -847,16 +1028,35 @@ function aiTick(dt){
     const waveBehavior=aiBehaviorKey(waveBase.behavior),commit=waveBehavior==='rush'?.13:waveBehavior==='turtle'?-.22:waveBehavior==='land'?.06:0;
     const sendFrac = ((AI.fac==='horde'?0.82:0.7)+commit+0.05*Math.min(4,Math.ceil(AI.wave/AI.bases.length)))
                      *[0.62,0.85,1][WD];
-    const fld=requestField(tx,ty);
     AI.waveUnits=[]; AI.retreated=false; aiWaveDirty();
-    for(let i=0;i<unitHigh;i++){
-      if(!ualive[i]||uteam[i]!==1||isEnemyCommander(i)||!aiUnitBelongsToBase(i,waveBase)) continue;
+    const waveFields=Object.create(null);
+    for(const i of aiUnitsForBase(waveBase,true)){
       if(aiIsRetasked(i)) continue;
-      if(Math.random()<sendFrac){
-        const T=TYPES[utype[i]],nav=T.naval&&typeof findWater==='function'?findWater(tx,ty):null;
-        const qx=nav?nav[0]:clamp(tx+rr(-90,90),20,MAP-20),qy=nav?nav[1]:clamp(ty+rr(-90,90),20,MAP-20);
-        ustate[i]=2; utgt[i]=-1; ufield[i]=T.naval?requestField(qx,qy,true):fld;
-        utx[i]=qx;uty[i]=qy;
+      if(mfSimRandom()<sendFrac){
+        const T=TYPES[utype[i]];
+        if(T.air&&typeof mfAirIssueMission==='function'){
+          /* Generic wave orders are ground flow-field state. Feeding aircraft
+             into that path left them orbiting their base because the air
+             authority immediately replaced the targetless march goal. Assign
+             the matching authored mission instead. */
+          let target=-1,mission='cap';
+          if(T.scout)mission='recon';
+          else if(T.ptype===7){
+            target=findEnemyDomain(tx,ty,1,980,MF_DOM_LAND|MF_DOM_NAVAL,MF_DOM_LAND);
+            if(target<0){const b=findEnemyBld(tx,ty,1,980);if(b>=0)target=-2-b;}
+            mission=target!==-1?'strike':'cap';
+          }else{
+            target=findEnemyDomain(tx,ty,1,1080,MF_DOM_AIR,MF_DOM_AIR);
+            mission=target!==-1?'intercept':'cap';
+          }
+          ustate[i]=2;utx[i]=tx;uty[i]=ty;ufield[i]=-1;umarch[i]=0;
+          mfAirIssueMission(i,mission,{x:tx,y:ty,target,
+            generation:target>=0?ugen[target]:-1});
+          AI.waveUnits.push([i,ugen[i]]);n++;continue;
+        }
+        const nav=T.naval&&typeof findWater==='function'?findWater(tx,ty):null;
+        const qx=nav?nav[0]:clamp(tx+mfSimRange(-90,90),20,MAP-20),qy=nav?nav[1]:clamp(ty+mfSimRange(-90,90),20,MAP-20);
+        ustate[i]=2; utgt[i]=-1; aiSetCohortMoveGoal(waveFields,i,qx,qy);
         umarch[i]=1;                       // march order: walk, don't skirmish
         AI.waveUnits.push([i,ugen[i]]);
         n++;
@@ -885,13 +1085,13 @@ function aiTick(dt){
       for(const B of AI.bases||[]){
         if(dist2(ux[heroIdx],uy[heroIdx],B.x,B.y)>640*640) continue;
         let sent=0;
-        for(let i=0;i<unitHigh&&sent<12;i++){
-          if(!ualive[i]||uteam[i]!==1||isEnemyCommander(i)||utype[i]===UT_ENGINEER) continue;
+        for(const i of aiUnitView().enemyCombat){
+          if(sent>=12)break;
           if(dist2(ux[i],uy[i],B.x,B.y)>900*900) continue;
           if(aiWaveHas(i)) continue;
           if(aiIsRetasked(i)) continue;
           ustate[i]=2; utgt[i]=-1; umarch[i]=0;
-          utx[i]=ux[heroIdx]+rr(-45,45); uty[i]=uy[heroIdx]+rr(-45,45); sent++;
+          aiSetMoveGoal(i,ux[heroIdx]+mfSimRange(-45,45),uy[heroIdx]+mfSimRange(-45,45));sent++;
         }
         break;
       }
@@ -936,25 +1136,40 @@ function aiRestoreOrder(s){
   utgt[i]=tg; utgtg[i]=tg>=0?s.tgtg:-1;
   return true;
 }
+let aiSnapMemo=new WeakMap();
+function aiSnapDirty(list){if(list)aiSnapMemo.delete(list);}
 function aiSnapHas(list,i){
   if(!list) return false;
-  const g=ugen[i];
-  for(let k=0;k<list.length;k++) if(list[k].i===i&&list[k].g===g) return true;
-  return false;
+  let M=aiSnapMemo.get(list);
+  if(!M){
+    M=new Map();
+    for(let k=0;k<list.length;k++){
+      const s=list[k],old=M.get(s.i);
+      if(old==null)M.set(s.i,s.g);
+      else if(old instanceof Set)old.add(s.g);
+      else if(old!==s.g)M.set(s.i,new Set([old,s.g]));
+    }
+    aiSnapMemo.set(list,M);
+  }
+  const g=M.get(i);return g instanceof Set?g.has(ugen[i]):M.has(i)&&g===ugen[i];
 }
 function aiIsRetasked(i){
   return aiSnapHas(AI.peelSnap,i)||aiSnapHas(AI.recallSnap,i);
 }
 function aiDropSnap(list,i){
   if(!list) return;
-  for(let k=list.length-1;k>=0;k--) if(list[k].i===i) list.splice(k,1);
+  let changed=false;
+  for(let k=list.length-1;k>=0;k--) if(list[k].i===i){list.splice(k,1);changed=true;}
+  if(changed)aiSnapDirty(list);
 }
 function aiPruneSnaps(list){
   if(!list) return;
+  let changed=false;
   for(let k=list.length-1;k>=0;k--){
     const s=list[k];
-    if(!ualive[s.i]||ugen[s.i]!==s.g||uteam[s.i]!==1) list.splice(k,1);
+    if(!ualive[s.i]||ugen[s.i]!==s.g||uteam[s.i]!==1){list.splice(k,1);changed=true;}
   }
+  if(changed)aiSnapDirty(list);
 }
 function aiWaveDirty(){ AI._waveMap=null; }
 function aiWaveHas(i){
@@ -974,6 +1189,42 @@ function aiCombatAI(i){
   return ualive[i]&&uteam[i]===1&&!isEnemyCommander(i)&&utype[i]!==UT_ENGINEER&&TYPES[utype[i]].wk!=='n';
 }
 
+/* RETREAT. The AI never read its own units' health: a wave fought to the last
+   chassis every time, which reads as mindless rather than difficult and hands
+   the player free kills and free veterancy. A unit below the threshold breaks
+   contact and pulls toward its base; it is NOT healed or protected, it simply
+   stops feeding itself into a fight it is losing.
+   Deliberately narrow:
+     - commanders and engineers are exempt (commanders have their own logic,
+       engineers are already non-combat)
+     - only while actually engaged, so idle damaged units do not stampede
+     - a cooldown per unit so a unit cannot oscillate between fight and flee
+     - the threshold is a named constant, so it can be tuned or set to 0 to
+       disable the behaviour entirely in one edit. */
+const AI_RETREAT_HP=0.28;      // fraction of max health
+const AI_RETREAT_COOL=6;       // seconds before the same unit may retreat again
+function aiRetreatTick(dt){
+  if(AI_RETREAT_HP<=0) return;
+  const R=AI.retreatT||(AI.retreatT={});
+  const V=aiUnitView();
+  for(const i of V.enemyArmy){
+    if(R[i]>0){ R[i]-=dt; continue; }
+    if(uhpm[i]<=0) continue;
+    if(uhp[i]/uhpm[i]>AI_RETREAT_HP) continue;
+    /* Only break off an actual engagement. */
+    if(ustate[i]!==2&&utgt[i]<0) continue;
+    /* Fall back to the main base. Per-seat bases exist (AI.bases) but there is
+       no unit->base lookup, only aiUnitBelongsToBase(i,B) which is a test, not
+       a query — walking every base per retreating unit is not worth it for a
+       pull-back destination. */
+    const B=V.firstBase[i]||AI.base;
+    const bx=B.x,by=B.y;
+    utgt[i]=-1; utgtg[i]=-1;
+    ustate[i]=1; umarch[i]=0;
+    aiSetMoveGoal(i,bx,by);
+    R[i]=AI_RETREAT_COOL;
+  }
+}
 function aiOnUnitHit(j,dmg,attTeam,attacker){
   if(attTeam!==0||uteam[j]!==1||attacker<0||dmg<6) return;
   if(!ualive[attacker]||uteam[attacker]!==0) return;
@@ -1010,8 +1261,7 @@ function aiIssueFocus(i,tx,ty,tgt){
   if(tgt>=0&&ualive[tgt]&&uteam[tgt]!==1){
     utgt[i]=tgt; utgtg[i]=ugen[tgt]; utx[i]=ux[tgt]; uty[i]=uy[tgt];
   } else {
-    utgt[i]=-1; utgtg[i]=-1; utx[i]=tx; uty[i]=ty;
-    ufield[i]=requestField(tx,ty,!!TYPES[utype[i]].naval);
+    utgt[i]=-1; utgtg[i]=-1;aiSetMoveGoal(i,tx,ty);
   }
 }
 
@@ -1024,6 +1274,7 @@ function aiAmbushTick(dt){
     if(s.until!=null&&now>s.until){ aiRestoreOrder(s); P.splice(k,1); continue; }
     if(s.focus>=0&&(!ualive[s.focus]||ugen[s.focus]!==s.focusg)){ aiRestoreOrder(s); P.splice(k,1); }
   }
+  aiSnapDirty(P);
   AI.ambushCool=(AI.ambushCool||0)-dt;
   const Q=AI.ambushQ;
   if(AI.ambushCool>0||!Q||!Q.length) return;
@@ -1031,8 +1282,7 @@ function aiAmbushTick(dt){
   const ev=Q.pop(); Q.length=0;
   if(!ev||!ualive[ev.a]||ugen[ev.a]!==ev.g||uteam[ev.a]!==0) return;
   const cands=[];
-  for(let i=0;i<unitHigh;i++){
-    if(!aiCombatAI(i)) continue;
+  for(const i of aiUnitView().enemyCombat){
     if(aiSnapHas(AI.recallSnap,i)||aiSnapHas(P,i)) continue;
     if(utgt[i]===ev.a) continue;
     const d2=dist2(ux[i],uy[i],ev.x,ev.y);
@@ -1052,6 +1302,7 @@ function aiAmbushTick(dt){
   if(local===1){
     const i=cands[0].i;
     P.push(Object.assign(aiSnapOrder(i),{until:now+7,focus:ev.a,focusg:ev.g}));
+    aiSnapDirty(P);
     aiIssueFocus(i,ux[ev.a],uy[ev.a],ev.a);
     return;
   }
@@ -1066,6 +1317,7 @@ function aiAmbushTick(dt){
     aiIssueFocus(c.i,ux[ev.a],uy[ev.a],ev.a);
     n++;
   }
+  if(n)aiSnapDirty(P);
 }
 
 function aiDefendTick(dt){
@@ -1092,8 +1344,7 @@ function aiDefendTick(dt){
   const behavior=aiBehaviorKey(seat&&seat.behavior);
   const frac=behavior==='turtle'?0.42:behavior==='rush'?0.18:0.28;
   const garrison=[], field=[];
-  for(let i=0;i<unitHigh;i++){
-    if(!aiCombatAI(i)||!aiUnitBelongsToBase(i,seat)) continue;
+  for(const i of aiUnitsForBase(seat,true)){
     if(aiSnapHas(R,i)) continue;
     const d=Math.sqrt(dist2(ux[i],uy[i],seat.x,seat.y));
     if(d<=820) garrison.push({i,d});
@@ -1116,12 +1367,15 @@ function aiDefendTick(dt){
   for(const i of pick){
     aiDropSnap(AI.peelSnap,i);
     R.push(aiSnapOrder(i));
-    aiIssueFocus(i,hx+rr(-40,40),hy+rr(-40,40),e);
+    aiIssueFocus(i,hx+mfSimRange(-40,40),hy+mfSimRange(-40,40),e);
   }
+  if(pick.length)aiSnapDirty(R);
 }
 
 function aiTacticsTick(dt){
+  if(typeof mfPerfBegin==='function')mfPerfBegin('aiTactics');
   aiAmbushTick(dt);
   aiDefendTick(dt);
+  if(typeof mfAirAiMissionTick==='function') mfAirAiMissionTick(dt);
+  if(typeof mfPerfEnd==='function')mfPerfEnd('aiTactics');
 }
-

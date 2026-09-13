@@ -1,0 +1,37 @@
+{
+  "schema": "MassfrontHfSourceCandidateV1",
+  "status": "source-candidate-generated",
+  "runtimeAccepted": false,
+  "input": {
+    "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\huggingface\\world-kits\\mf-road-straight-trellis2-v1\\mf-road-straight-trellis2-v1-alpha.png",
+    "sha256": "65381a44c821745fa87b6b721a21b504502dc78e0e196187619a59d355c57a8e",
+    "bytes": 2303829
+  },
+  "generator": {
+    "space": "tencent/Hunyuan3D-2.1",
+    "seed": 174021,
+    "steps": 30,
+    "octreeResolution": 256,
+    "targetFaces": 100000
+  },
+  "requiredNextSteps": [
+    "visual source-candidate review",
+    "Blender topology and z-fighting repair",
+    "meter normalization and modular socket authoring",
+    "collision and unit-clearance authoring",
+    "LOD0/1/2 and optional impostor creation",
+    "phone tactical and command-zoom evidence"
+  ],
+  "resumedGeneration": true,
+  "elapsedSeconds": 14.115,
+  "previewReturned": false,
+  "meshStats": {
+    "source": "resumed-downloaded-generation"
+  },
+  "usedSeed": 174021,
+  "output": {
+    "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\huggingface\\world-kits\\mf-road-straight-hunyuan3d21-v1\\mf-road-straight-hunyuan3d21-v1.glb",
+    "sha256": "62ec702437fac75d3651b0130be094dd8a824fb559a97a46319b131f6225b166",
+    "bytes": 6300544
+  }
+}

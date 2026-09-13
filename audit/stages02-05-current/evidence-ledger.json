@@ -1,0 +1,91 @@
+{
+  "schema": "MassfrontStages0205CurrentVerificationV1",
+  "localDate": "2026-08-30",
+  "timezone": "America/Los_Angeles",
+  "gitHead": "0ea4e1ed9d99df55b4088e812736400cca8bff69",
+  "masterPlan": {
+    "path": "docs/MASTER_PLAN.md",
+    "sha256": "4be283fb5e094aa5a92b4975ea2cfd31d29e1c8bdd15aebc2490faef1cba9b20",
+    "requirementsLines": "25-111"
+  },
+  "scope": {
+    "sourceMutation": false,
+    "visualApproval": false,
+    "deviceApproval": false,
+    "note": "Machine-readable summaries below are copied from source-matched point-in-time probes. Transient reports remain under .tmp or tmp and are not durable acceptance artifacts."
+  },
+  "currentSnapshotAfterRuns": {
+    "src/game/sim.js": "ce4cdf71ecafef10fcdf5ec75b6b1ba99df211a4cc135843e628a212dd0b6a48",
+    "src/engine/physics.js": "e4dc89f49a9bf2e1a5d2ced0e7fe3ee950bad30b6c3a4341af2787cb6d6f6867",
+    "src/engine/ordnancetrails.js": "d695c7bf8a524e0f1c3049aa9d56c9104e1e4f0b0bb2f9f07a257f1b0a7b89af",
+    "src/game/utilityjobs.js": "cf762f6a72144719df2fcf4bad0bcd7666609fcc50245e6fb30fa916ba9b28c1",
+    "src/game/airwarfare.js": "f1eadf76530d45a43d5f28314138e26ceabf107bd6133a7fb706f0eee46434fa",
+    "src/intel.js": "1ef9bb5c28723bd39e5b279307ccba5accf67b85f043a9908f4438558682b54e",
+    "src/game/statehash.js": "e6e41ad2aadd719e5da62fd936e6bf6dafc29efa12d2895a39855e52b817b717",
+    "boot.js": "a6ec2282721227596c4c017dcc010e290be0a605ea70ac14d674319bfb9b83a9",
+    "assets/data/manifest.json": "af6dd89e4955b8d571a734c0f9420a1aa44515773702cde01ac77beaec59ce95"
+  },
+  "stages": [
+    {
+      "stage": 2,
+      "decision": "NOT_ACCEPTED",
+      "passes": [
+        {"probe":"probe-navigation-blockers","result":"PASS","checks":"16/16","sourceSet":"0ae3dc4660f4c33cd46fae0d5a0a0241af4a79791c221942509cf7a8586b208f","reportSha256":"890e822f79f403f6ed1c9a708a9188b1ef135abe4af29fa42de5b8430cd450f3"},
+        {"probe":"probe-population-cap","result":"PASS_AT_EXECUTION","checks":"16/16","sourceSet":"f616de3c5b9b33d918b2977dda0de1bfc1eaa80e589c0abc4ed11c7f86ccffdb","reportSha256":"38e85370ab41c52f3ff6fe09224c6ddc8793a7f3103fd8f58aff06272e524c23"}
+      ],
+      "failures": [
+        {"probe":"probe-movement-blockers","result":"FAIL","reportSha256":"c997299b5675e3d4ebd46377d1c8d737d8a8cef97b3a8ef4dbcb64cca34b1a11","reason":"All movement behavior checks passed, but dirtyFingerprintStable=false and noWebGlContextLoss=false; the probe correctly refused acceptance."},
+        {"probe":"probe-naval-rally","result":"FAIL","sourceSet":"24f33e71e01db46fd9445845e411ce5a51521e958a2640c9bdff4c2faf467083","reportSha256":"26dda42397f34ee02ee62ab0922a43653ba307c91505438347df529fb88ea2fa","reason":"noPostArrivalHeadingTwitch=false (one post-arrival heading reversal); other naval goal, formation spread, overlap, facing and determinism checks passed."}
+      ],
+      "gaps": ["No clean source-stable movement acceptance run.","Naval post-arrival heading twitch remains reproducible in the current point-in-time source set.","No dedicated current proof for strategic sector routing above tactical flow fields.","No visual or physical-device approval."]
+    },
+    {
+      "stage": 3,
+      "decision": "NOT_ACCEPTED",
+      "passes": [
+        {"probe":"probe-weapon-flight","result":"PASS","checks":"12/12","simSha256":"ce4cdf71ecafef10fcdf5ec75b6b1ba99df211a4cc135843e628a212dd0b6a48"},
+        {"probe":"probe-stage3-turret-charge","result":"PASS","checks":"12/12","reportSha256":"1864867e4167efab8d375fcb3a1a2d00eef8b758c02d32e329949809342690a6"},
+        {"probe":"probe-singularity-physics","result":"PASS","checks":"11/11","stateHash":"b9146d46"},
+        {"probe":"probe-weapon-flight-singularity","result":"PASS_AT_EXECUTION","checks":"10/10","reportSha256":"83bda13c4f9a99986cbdbeefc5825b1eaaf5b8283b437b00fb0d11755d174bd0"}
+      ],
+      "failures": [
+        {"probe":"probe-turret-articulation","result":"FAIL","checks":"6 PASS / 1 FAIL / 1 UNSUPPORTED","reportSha256":"6909a53ffe546a51512765e511806b2dd7e41e67fc1ea33828a507e480c4e13b","reason":"Missing authoritative Horde turret articulation entries and unsupported barrel articulation coverage were reported; this is not converted to green."}
+      ],
+      "gaps": ["Faction-specific charge presentation (energy buildup, kinetic breech/heat, singularity lensing/inward flow, strategic warnings) lacks current visual approval.","The combined singularity report used an earlier boot.js hash; sim.js and physics.js still match the final snapshot, but boot drift prevents calling it final-current acceptance.","No physical-device approval."]
+    },
+    {
+      "stage": 4,
+      "decision": "NOT_ACCEPTED",
+      "passes": [
+        {"probe":"probe-utility-job-board","result":"PASS","coverage":"9 kinds; claims, leases, bounded search, manual override and diminishing assistance","repeatHash":"0511135e176cb456ec03fa9e2f777f8dc3ba130581872245184c969590ae34f5"},
+        {"probe":"probe-live-utility-jobs","result":"PASS","checks":"38/38","sourceSet":"10e9eef2704486de5b087f6187b64a2625713ce8675a538f5029b77699b63070","reportSha256":"d7371e7f0a43c1380fad6decaba593684a122db26758272021f24b679aa286c5","repeatHash":"2ed3e44e172dae3e6908faa7570c028497c2b6460aaf5af146f28c1078b96d6c"},
+        {"probe":"verify-runtime-fx-contracts","result":"PASS_RUNTIME_CONTRACTS","checks":"36/36","reportSha256":"0d2624b2ca3d6ce7e6e425f63267ef023016eeba08a2d255cc3197ee19f3a781","beamEvidence":"paused beam render stable; three energy beams and termini reached renderer"}
+      ],
+      "failures": [
+        {"probe":"probe-intel-contacts","result":"FAIL","reason":"Behavioral contact checks passed, but pageRuntime failed: TypeError Cannot redefine property mfGameplayStateHash. The probe also explicitly reports artilleryContactConsumer=UNSUPPORTED_NOT_WIRED."},
+        {"probe":"test-raymarched-artillery-trails","result":"FAIL","reason":"Simulation-owned lifecycle failed for the air projectile: during.active=false while its history row remained populated."},
+        {"probe":"verify-runtime-fx-contracts visualAudit","result":"FAIL_ART","reason":"missilesBeams is fail-art: broad white-cyan additive columns/discs erase terrain and projectile silhouettes."}
+      ],
+      "gaps": ["Artillery attacks consuming visible/radar/player/last-known contacts and confidence scatter are not accepted.","Weapon/radar/minimum-range/HQ/repair/construction overlay coverage is not established by these probes.","Keyed utility-beam ownership for every mining/repair/reclaim/construction path is not independently proven.","Trail fog/depth/LOD/fallback behavior lacks a clean current lifecycle result and visual approval.","Duplicate mfGameplayStateHash definition must be resolved and reverified.","No physical-device approval."]
+    },
+    {
+      "stage": 5,
+      "decision": "PROVISIONAL_FUNCTIONAL_PASS_NOT_FINAL_ACCEPTANCE",
+      "passes": [
+        {"probe":"probe-air-warfare","result":"PASS_AT_EXECUTION","checks":"22/22","sourceSet":"f9433fbde9f05bc82013df2143b68380c5d796a270e19eea868e94b0cf2352a6","reportSha256":"64bf7c6f548e48ebdf9bbf6de65a0b29a16f0b0ee79a6d288d96702cf7520f22"},
+        {"probe":"probe-air-propulsion","result":"PASS_AT_EXECUTION","checks":"19/19","sourceSet":"9d127dd7bd5d77f62035b8ef87d4030d72784918de69a3203b63c84220e2c704","reportSha256":"d02ff1011d5904819d27a5b3cb3c3adb880e3d2de5bc847a88e26a7f5c998d42"}
+      ],
+      "failures": [
+        {"probe":"verify-runtime-fx-contracts visualAudit","result":"NEEDS_ART","reason":"damaged aircraft smoke is sparse/blocky and air-destruction smoke/fire/debris remains billboard-like or placeholder-like."}
+      ],
+      "gaps": ["boot.js changed after both clean runs (tested bec477...; final snapshot a6ec22...), so the reports are point-in-time rather than final-current package acceptance.","No manual screenshot art approval was performed in this lane.","No Android/iOS physical-device pass.","Missile-rail presentation is not explicitly isolated by the two deterministic suites."]
+    }
+  ],
+  "falseGreenPolicy": [
+    "The movement behavior subchecks are not promoted because the probe result is FAIL.",
+    "The intel behavior subchecks are not promoted because pageRuntime is FAIL.",
+    "Runtime-FX 36/36 does not override its own fail-art visual findings.",
+    "A decoded nonzero-variance PNG is not treated as visual approval.",
+    "Runs whose tested boot no longer equals the ending worktree boot are labeled point-in-time."
+  ]
+}

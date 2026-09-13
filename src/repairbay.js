@@ -129,7 +129,10 @@ function mfRepairBayTick(dt){
          seen; drawing one per serviced unit would turn a base full of
          casualties into a solid sheet of light. */
       if(k<2&&perfScale>0.4){
-        addBeam(B.x,B.y,ux[i],uy[i],2.4,150,235,120,MF_BAY_CADENCE,'repair');
+        if(typeof mfBeamUpsert==='function')
+          mfBeamUpsert('bay:'+blds.indexOf(B)+':'+i+':'+ugen[i],B.x,B.y,ux[i],uy[i],2.4,
+            150,235,120,'repair',B.team,{lease:MF_BAY_CADENCE*1.35,fadeIn:.05,fadeOut:.13});
+        else addBeam(B.x,B.y,ux[i],uy[i],2.4,150,235,120,MF_BAY_CADENCE,'repair');
         addParticle(2,ux[i]+rr(-5,5),uy[i]+rr(-5,5),rr(-3,3),rr(-9,-2),.4,2.8,150,235,120);
       }
     }
@@ -141,6 +144,123 @@ econTick=function(dt){
   mfBayEconTickBase(dt);
   mfRepairBayTick(dt);
 };
+
+/* ---- PLAYER-CONTROLLED STRUCTURE MAINTENANCE -----------------------------
+   Constructors and Aegis relays repair structures for free in unitTick and
+   bldTick. Paid self-repair deliberately runs AFTER the original bldTick so it
+   only bills the HP still missing after those support systems have acted. */
+const MF_BUILDING_REPAIR_DAMAGE_GATE=2;   // dmgT starts at 6: >2 is a four-second lockout
+
+function mfBuildingRepairInvestment(B){
+  const T=B&&BT[B.type];
+  if(!T) return {m:0,e:0};
+  let m=Math.max(0,Number(T.cm)||0),e=Math.max(0,Number(T.ce)||0);
+  const path=BUP[B.type]||[];
+  const completed=B.type==='fac'?(B.tier===2?1:0):Math.max(0,Math.min(path.length,(B.lvl||1)-1));
+  /* Upgrade payment is a lump sum at start, but repair value follows completed
+     capability. An interrupted upgrade therefore cannot inflate repair cost. */
+  for(let i=0;i<completed;i++){m+=Math.max(0,Number(path[i].cm)||0);e+=Math.max(0,Number(path[i].ce)||0);}
+  return {m,e};
+}
+
+function mfBuildingRepairQuote(B){
+  if(!B||typeof B!=='object')return {eligible:false,state:'unavailable',reason:'invalid-building'};
+  if(!B.alive)return {eligible:false,state:'unavailable',reason:'building-gone',active:false};
+  if(B.team!==0&&B.team!==1)return {eligible:false,state:'unavailable',reason:'unsupported-owner',active:false};
+  if(B.prog<1)return {eligible:false,state:'building',reason:'under-construction',active:false};
+  if(!(B.hpm>0))return {eligible:false,state:'unavailable',reason:'invalid-health',active:false};
+  if(B.hp>=B.hpm-1e-6)return {eligible:false,state:'full',reason:'full-health',active:false,rate:0,fullCostM:0,fullCostE:0};
+  const invested=mfBuildingRepairInvestment(B);
+  if(!(invested.m>0||invested.e>0))
+    return {eligible:false,state:'unavailable',reason:'zero-investment',active:false,rate:0,fullCostM:0,fullCostE:0};
+  const rate=Math.min(MF_BAY_MAX,Math.max(MF_BAY_MIN,B.hpm*MF_BAY_RATE));
+  const active=!!B.repairOn,state=!active?'off':B.dmgT>MF_BUILDING_REPAIR_DAMAGE_GATE?'under-fire':
+    B.repairStalled?'stalled':'repairing';
+  return {eligible:true,state,reason:'',active,rate,fullCostM:invested.m*MF_BAY_COST,
+    fullCostE:invested.e*MF_BAY_COST,maxHp:B.hpm};
+}
+
+function mfBuildingServiceRef(target){
+  const B=Number.isInteger(target)?blds[target]:target;
+  return B&&typeof B==='object'&&blds.indexOf(B)>=0?B:null;
+}
+function mfBuildingServiceOwns(B,authority){
+  if(authority==null)return true;             // offline caller; network passes exact authority
+  return Number.isInteger(authority.team)&&Number.isInteger(authority.slot)&&B.team===authority.team&&
+    commanderSlotForBuilding(B)===authority.slot;
+}
+
+/* Authoritative command seam. This only changes intent; HP and resources move
+   on the simulation tick, so a network client cannot heal ahead of its peers. */
+function mfSetBuildingRepair(target,active,authority){
+  const B=mfBuildingServiceRef(target);
+  if(!B)return {ok:false,code:'invalid-building'};
+  if(!mfBuildingServiceOwns(B,authority))return {ok:false,code:'building-not-owned'};
+  if(typeof active!=='boolean')return {ok:false,code:'invalid-repair-state'};
+  if(!active){B.repairOn=false;B.repairStalled=false;return {ok:true,active:false,code:'cancelled'};}
+  const quote=mfBuildingRepairQuote(B);
+  if(!quote.eligible){B.repairOn=false;B.repairStalled=false;return {ok:false,active:false,code:quote.reason};}
+  B.repairOn=true;B.repairStalled=false;
+  return {ok:true,active:true,code:'repair-enabled'};
+}
+
+function mfBuildingRepairTick(dt){
+  if(!(dt>0)||typeof blds==='undefined')return;
+  for(const B of blds){
+    if(!B||!B.repairOn)continue;
+    const quote=mfBuildingRepairQuote(B);
+    if(!quote.eligible){B.repairOn=false;B.repairStalled=false;continue;}
+    if(B.dmgT>MF_BUILDING_REPAIR_DAMAGE_GATE){B.repairStalled=false;continue;}
+    const amount=Math.min(quote.rate*dt,B.hpm-B.hp);
+    if(!(amount>0)){B.repairOn=false;B.repairStalled=false;continue;}
+    const fraction=amount/quote.maxHp,slot=commanderSlotForBuilding(B);
+    /* Bank first, heal second. payStream is all-or-nothing and routes by exact
+       Commander seat, so a stalled ally can never drain the human wallet. */
+    if(!payStream(B.team,quote.fullCostM*fraction,quote.fullCostE*fraction,slot)){
+      B.repairStalled=true;continue;
+    }
+    B.repairStalled=false;
+    repairBld(B,amount);
+  }
+}
+
+/* Deterministic, idempotent recycle core shared by future UI and network
+   commands. Presentation effects stay with the caller; authority, refund,
+   ownership release and occupancy mutation happen exactly once here. */
+function mfRecycleBuilding(target,authority){
+  const B=mfBuildingServiceRef(target);
+  if(!B)return {ok:false,code:'invalid-building'};
+  if(!mfBuildingServiceOwns(B,authority))return {ok:false,code:'building-not-owned'};
+  if(!B.alive)return {ok:false,code:'building-gone'};
+  if(B.team!==0&&B.team!==1)return {ok:false,code:'unsupported-owner'};
+  if(typeof bldRecycleMass!=='function'||typeof credit!=='function')return {ok:false,code:'service-unavailable'};
+  const refund=bldRecycleMass(B),slot=commanderSlotForBuilding(B);
+  if(B.type==='mex'&&B.dep>=0&&typeof redirectProspectorsFromNode==='function')
+    redirectProspectorsFromNode(B.dep,B.team);
+  B.alive=false;B.repairOn=false;B.repairStalled=false;
+  if(typeof stats!=='undefined'&&stats)B.fallT=stats.t;
+  if(B.type==='mex'){
+    if(B.dep>=0&&deposits[B.dep]){deposits[B.dep].taken=false;B.dep=-1;}
+    else for(const D of deposits)if(D.x===B.x&&D.y===B.y)D.taken=false;
+  }
+  if(B.type==='geo'){
+    if(B.geo>=0&&geysers[B.geo]){geysers[B.geo].taken=false;B.geo=-1;}
+    else for(const G of geysers)if(G.x===B.x&&G.y===B.y)G.taken=false;
+  }
+  credit(B.team,refund,0,slot);
+  if(typeof rebuildBGrid==='function')rebuildBGrid(true);
+  return {ok:true,code:'recycled',refund,team:B.team,slot};
+}
+
+const mfBuildingServiceBldTickBase=bldTick;
+bldTick=function(dt){
+  mfBuildingServiceBldTickBase(dt);
+  mfBuildingRepairTick(dt);
+};
+
+Object.defineProperty(window,'MFBuildingService',{value:Object.freeze({
+  quote:mfBuildingRepairQuote,setRepair:mfSetBuildingRepair,recycle:mfRecycleBuilding,tick:mfBuildingRepairTick
+}),writable:false,configurable:false,enumerable:false});
 
 /* ---- CONSTRUCTOR RAISE ---------------------------------------------------
    Buildings construct themselves from the bank (`bldTick` + `payStream`). The
@@ -161,16 +281,20 @@ function mfEngineerRaiseTick(){
     if(!ualive[i]) continue;
     const T=TYPES[utype[i]];
     if(!T||!T.builder) continue;
+    const beamKey='u:'+i+':'+ugen[i]+':engineer-raise';
     /* A fresh move / patrol / barrage / guard order wins. Once they arrive
        (ustate 1 → 0 at 7 units), the next tick picks up the foundation. */
-    if(ustate[i]===1||ustate[i]===5||ustate[i]===6||ustate[i]===7) continue;
+    if(ustate[i]===1||ustate[i]===5||ustate[i]===6||ustate[i]===7){
+      if(typeof mfBeamStop==='function')mfBeamStop(beamKey,.1);
+      continue;
+    }
     let best=null,bd=MF_ENG_RAISE_R*MF_ENG_RAISE_R;
     for(const B of blds){
       if(!B.alive||B.team!==uteam[i]||B.prog>=1) continue;
       const d=dist2(ux[i],uy[i],B.x,B.y);
       if(d<bd){bd=d;best=B;}
     }
-    if(!best) continue;
+    if(!best){if(typeof mfBeamStop==='function')mfBeamStop(beamKey,.1);continue;}
     const n=Math.min(2,(best.tractorFrame===tick?(best.tractorN||0)+1:1));
     best.tractorT=.18; best.tractorN=n; best.tractorFrame=tick;
     uheal[i]=0.6; umov[i]=0;
@@ -178,8 +302,12 @@ function mfEngineerRaiseTick(){
       mfEngRaiseAnnounced=true;
       toast('🔧 CONSTRUCTORS RAISE STRUCTURES — park one on a foundation to finish it faster');
     }
-    if(n<=2&&perfScale>0.4)
-      addBeam(ux[i],uy[i],best.x,best.y,2.4,170,220,255,0.12,'repair');
+    if(n<=2&&perfScale>0.4){
+      if(typeof mfBeamUpsert==='function')
+        mfBeamUpsert(beamKey,ux[i],uy[i],best.x,best.y,2.4,170,220,255,'repair',uteam[i],
+          {lease:.18,fadeIn:.045,fadeOut:.1});
+      else addBeam(ux[i],uy[i],best.x,best.y,2.4,170,220,255,0.12,'repair');
+    }else if(typeof mfBeamStop==='function')mfBeamStop(beamKey,.1);
   }
 }
 

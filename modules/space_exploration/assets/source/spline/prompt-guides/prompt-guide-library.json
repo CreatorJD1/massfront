@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "libraryId": "massfront_spline_3d_prompt_guide_library_v1",
+  "createdDate": "2026-08-25",
+  "status": "SOURCE_PROMPTS_ONLY",
+  "runtimeReady": false,
+  "splineAuthoringReady": true,
+  "splineEditorConnectedAtValidation": false,
+  "sharedContract": "PROMPT_GUIDE_CONTRACT.md",
+  "referencePolicy": {
+    "allowed": "Broad visual-language study only: grounded industrial function and damage, strategic-scale silhouette readability, compact objective/cover/breach logic, and biome/faction/infestation separation.",
+    "forbidden": "Copying, tracing, extracting, recreating, or treating any reference-game asset, layout, silhouette, texture, decal, logo, icon, faction mark, palette, effect, organism, screenshot, or named landmark as MASSFRONT source art or provenance."
+  },
+  "summary": {
+    "promptCount": 340,
+    "galacticSitePrompts": 9,
+    "planetLocationPrompts": 32,
+    "nexusDistrictPrompts": 11,
+    "expandedPlanetOrbitalPrompts": 32,
+    "expandedPlanetLocationPrompts": 256,
+    "promptDocumentCount": 56,
+    "topLevelSetIndexCount": 4,
+    "nestedGroupIndexCount": 3
+  },
+  "sets": [
+    {
+      "id": "galactic_sites",
+      "index": "galactic-sites/index.json",
+      "promptCount": 9,
+      "documentCount": 9,
+      "unitOfAuthoring": "one site per Spline document or intentionally isolated scene root",
+      "status": "source_prompt_only",
+      "runtimeReady": false
+    },
+    {
+      "id": "planet_location_sets",
+      "index": "planet-location-sets/index.json",
+      "promptCount": 32,
+      "documentCount": 4,
+      "unitOfAuthoring": "one preset prompt block per Spline document; never paste an entire planet file at once",
+      "status": "source_prompt_only",
+      "runtimeReady": false
+    },
+    {
+      "id": "nexus_vii_districts",
+      "index": "nexus-vii-districts/index.json",
+      "promptCount": 11,
+      "documentCount": 11,
+      "unitOfAuthoring": "one district per Spline document or intentionally isolated scene root",
+      "status": "source_prompt_only",
+      "runtimeReady": false
+    },
+    {
+      "id": "planet_expansion_32",
+      "index": "planet-expansion-32/index.json",
+      "promptCount": 288,
+      "documentCount": 32,
+      "unitOfAuthoring": "one orbital prompt or one named location prompt per selected Spline document; never paste all nine blocks together",
+      "status": "source_prompt_only",
+      "runtimeReady": false
+    }
+  ],
+  "requiredAuthoringSequence": [
+    "connect a selected Spline 3D document and enable its AI bridge",
+    "load the Spline authoring guide before the first MCP run_code call",
+    "paste or execute one prompt only",
+    "inspect the scene tree and measured geometry before visual review",
+    "correct geometry, materials, routes, pivots, UVs, collisions and LODs",
+    "capture matched top-down, tactical-oblique, close and required phone-cutaway views",
+    "export source and candidate GLB with provenance and hashes",
+    "keep runtimeReady false until packaged-runtime and device evidence pass"
+  ]
+}

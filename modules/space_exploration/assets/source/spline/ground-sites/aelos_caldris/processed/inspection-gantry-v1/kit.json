@@ -1,0 +1,116 @@
+{
+  "$schema": "https://massfront.invalid/schemas/model-kit-v1.json",
+  "schemaVersion": 1,
+  "kitId": "gsite_aelos_caldris_inspection_gantry_v1",
+  "displayName": "Aelos Caldris Inspection Gantry V1",
+  "status": "SOURCE_CANDIDATE",
+  "classification": {
+    "packId": "gsite_aelos_caldris_v1",
+    "catalogEntryId": "gsite_aelos_caldris_scanner_gantry",
+    "planetId": "aelos",
+    "locationId": "aelos_caldris",
+    "category": "infrastructure_landmark",
+    "runtimeReady": false,
+    "authoredEnvelopeMeters": [28, 14, 16]
+  },
+  "source": {
+    "glb": "source/gsite-aelos-caldris-inspection-gantry-source-v1.glb",
+    "expectedSha256": "cec01fd1cba4eba411b900f790c97a7e4a828100cfffc9bd218ad9c0976925b8",
+    "publicSceneUrl": "https://massfront.invalid/evidence/unknown-spline-scene/",
+    "documentName": "GSITE_AELOS_CALDRIS_INSPECTION_GANTRY_V1",
+    "documentId": null,
+    "rootObjectId": "7f490cdc-1fe4-49ee-b4f5-64d25035d0f3",
+    "meshObjectIds": [
+      "29c415ba-d768-4c08-b993-bb4808a679cc"
+    ],
+    "meshNodeNames": [
+      "MF_AELOS_CALDRIS_INSPECTION_GANTRY_LOD0_SOURCE"
+    ],
+    "generation": {
+      "system": "spline-ai-3d",
+      "provider": "Hunyuan3D",
+      "generationId": "7f490cdc-1fe4-49ee-b4f5-64d25035d0f3",
+      "identityStatus": "PARTIAL",
+      "publicSceneUrlStatus": "UNKNOWN",
+      "sourceImageGenerationId": "UNKNOWN",
+      "sourceImageAssetId": "UNKNOWN"
+    },
+    "sceneDigest": "evidence/scene-digest.json",
+    "expectedSceneDigestSha256": null
+  },
+  "concept": {
+    "image": "concept/caldris-modular-kit-concept-v1.png",
+    "expectedSha256": "75cb5efbc15ce642533fa67f1c72fbd09a0fd16cd438189e3c73232a16148fab",
+    "pixelsUsedAsTexture": false,
+    "generation": {
+      "system": "imagegen",
+      "generationId": "exec-9afef402-f133-45ff-932d-aa31a637f58f",
+      "role": "approved modular-kit art-direction sheet; scanner gantry is concept cell 11",
+      "hunyuanIntermediaryImageGenerationId": "UNKNOWN",
+      "hunyuanIntermediaryImageAssetId": "UNKNOWN"
+    }
+  },
+  "normalization": {
+    "sourceUp": "Z",
+    "runtimeUp": "Z",
+    "runtimeForward": "+Y",
+    "scaleMode": "height",
+    "targetMeters": 16,
+    "centerXY": true,
+    "groundOrigin": true,
+    "toleranceMeters": 0.02
+  },
+  "lods": [
+    {
+      "name": "LOD0",
+      "targetTriangles": 140000,
+      "maxTriangles": 150000,
+      "output": "derived/gsite-aelos-caldris-inspection-gantry-v1-lod0.glb"
+    },
+    {
+      "name": "LOD1",
+      "targetTriangles": 60000,
+      "maxTriangles": 65000,
+      "output": "derived/gsite-aelos-caldris-inspection-gantry-v1-lod1.glb"
+    },
+    {
+      "name": "LOD2",
+      "targetTriangles": 24000,
+      "maxTriangles": 28000,
+      "output": "derived/gsite-aelos-caldris-inspection-gantry-v1-lod2.glb"
+    }
+  ],
+  "collision": {
+    "mode": "convex-hull",
+    "maxTriangles": 256,
+    "output": "derived/gsite-aelos-caldris-inspection-gantry-v1-collision.glb"
+  },
+  "textures": {
+    "extract": true,
+    "requireEmbeddedSource": true,
+    "outputDirectory": "derived/textures",
+    "seamPolicy": "uv-atlas-not-tileable",
+    "maxBorderMeanDelta": 0.035,
+    "maxBorderP95Delta": 0.08
+  },
+  "evidence": {
+    "outputDirectory": "evidence",
+    "thumbnailSize": [640, 640],
+    "views": ["iso", "front", "side", "top"],
+    "contactSheet": "evidence/contact-sheet.png",
+    "buildReport": "evidence/build-report.json",
+    "verificationReport": "evidence/verification-report.json",
+    "artifactIndex": "evidence/artifact-index.json",
+    "sourceLock": "evidence/source-lock.json",
+    "provenance": "provenance.json",
+    "mobileEvidence": "evidence/mobile-evidence.json",
+    "requiredMobileViewports": ["phone-portrait", "phone-landscape"]
+  },
+  "budgets": {
+    "maxSourceBytes": 67108864,
+    "maxSourceTriangles": 500000,
+    "maxMaterials": 8,
+    "maxTextures": 8,
+    "maxTextureDimension": 2048
+  }
+}

@@ -1,0 +1,2590 @@
+{
+  "schema": "MassfrontStage7ProductionUiEvidenceV1",
+  "generatedAt": "2026-08-31T00:22:10.073Z",
+  "startedAt": "2026-08-31T00:21:18.066Z",
+  "sourceMode": "current-source",
+  "url": "http://127.0.0.1:61735/?stage7Probe=1",
+  "identity": {
+    "before": {
+      "head": "0ea4e1ed9d99df55b4088e812736400cca8bff69",
+      "dirty": true,
+      "dirtyFingerprint": "fca480e32e7a7d5ed0d449d0086339f83c17b1ced034c24fa25995c458b622e2",
+      "dirtyBytes": 23710,
+      "trackedPatchBytes": 2421048,
+      "files": {
+        "index.html": "162141235290f8e4ff762e69335279f3936b4b513db7dba69868ca7ea69abf68",
+        "src/ui/hud.js": "56ec7027009ac9958b706fb50cf8eb115363d7128f00ad2f0ed1cee5b4f3f591",
+        "src/ui/render3d.js": "5583a4241e6facfd9a0acf3f328dc58a5dafffaa2880d32df5da8c1f110a7d1d",
+        "src/styles/ui.css": "9c0fe3c45f851f3009f26e1ce2f9967125179db357d08da3474f52712598c22d",
+        "assets/ui.css": "bf86f5b92a87a599702f3d4cab48b543fe1b2c1b5c3574dc930152bd9655fa8f",
+        "src/game/sim.js": "ce4cdf71ecafef10fcdf5ec75b6b1ba99df211a4cc135843e628a212dd0b6a48",
+        "src/game/economy.js": "867d19e968182e2826bccc610d6227a292ec2c3f979a83240f2073d72f6ebdc1",
+        "src/game/meta.js": "9e56f9c533f4c9b33c3f584dfee522a8a0755081b134c7028c9fd59651cd15ca",
+        "src/uistack.js": "19f03116f4885a870502c8ee409df3f0b9c04dffcd243cf90061298ed1cfc9ff"
+      }
+    },
+    "after": {
+      "head": "0ea4e1ed9d99df55b4088e812736400cca8bff69",
+      "dirty": true,
+      "dirtyFingerprint": "fca480e32e7a7d5ed0d449d0086339f83c17b1ced034c24fa25995c458b622e2",
+      "dirtyBytes": 23710,
+      "trackedPatchBytes": 2421048,
+      "files": {
+        "index.html": "162141235290f8e4ff762e69335279f3936b4b513db7dba69868ca7ea69abf68",
+        "src/ui/hud.js": "56ec7027009ac9958b706fb50cf8eb115363d7128f00ad2f0ed1cee5b4f3f591",
+        "src/ui/render3d.js": "5583a4241e6facfd9a0acf3f328dc58a5dafffaa2880d32df5da8c1f110a7d1d",
+        "src/styles/ui.css": "9c0fe3c45f851f3009f26e1ce2f9967125179db357d08da3474f52712598c22d",
+        "assets/ui.css": "bf86f5b92a87a599702f3d4cab48b543fe1b2c1b5c3574dc930152bd9655fa8f",
+        "src/game/sim.js": "ce4cdf71ecafef10fcdf5ec75b6b1ba99df211a4cc135843e628a212dd0b6a48",
+        "src/game/economy.js": "867d19e968182e2826bccc610d6227a292ec2c3f979a83240f2073d72f6ebdc1",
+        "src/game/meta.js": "9e56f9c533f4c9b33c3f584dfee522a8a0755081b134c7028c9fd59651cd15ca",
+        "src/uistack.js": "19f03116f4885a870502c8ee409df3f0b9c04dffcd243cf90061298ed1cfc9ff"
+      }
+    },
+    "stable": true
+  },
+  "browser": {
+    "schema": "MassfrontOwnedBrowserEvidenceV1",
+    "launchMode": "owned-isolated",
+    "owned": true,
+    "reused": false,
+    "token": "c64ffd8e-efa2-4c2f-b424-510960bdf03e",
+    "pid": 422292,
+    "spawnPid": 422292,
+    "port": 61739,
+    "profile": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\.tmp\\pw-owned-LHg0W9",
+    "endpoint": "http://127.0.0.1:61739",
+    "startedAt": "2026-08-31T00:21:18.912Z",
+    "gpu": {
+      "renderer": "ANGLE (AMD, AMD Radeon(TM) 610M (0x0000164E) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "vendor": "Google Inc. (AMD)",
+      "recordedAt": "2026-08-31T00:21:59.274Z"
+    },
+    "ownership": {
+      "status": "PROVEN",
+      "verifiedAt": "2026-08-31T00:21:24.670Z",
+      "processMatches": [
+        422292
+      ],
+      "cdpAlive": true,
+      "commandLineSha256": "6d5cc25921d268fd6d51f9d6cea878788a075330f9ce07d97ac0209d1cbf01da"
+    },
+    "cleanup": {
+      "attempted": false,
+      "success": false,
+      "processExited": false,
+      "portReleased": false,
+      "profileRemoved": false
+    },
+    "manifest": {
+      "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\.tmp\\pw-owned-sessions\\c64ffd8e-efa2-4c2f-b424-510960bdf03e.json",
+      "sha256": "94e0573ba29c48dbc46d85a234243dfcf3db68f37d9a4b35c7dc0a3ddd40eb51",
+      "written": true,
+      "removed": false
+    }
+  },
+  "profiles": [
+    {
+      "profile": {
+        "id": "phone-portrait",
+        "width": 412,
+        "height": 915
+      },
+      "scenarios": {
+        "production": {
+          "selector": "#prodMenu",
+          "kind": "production",
+          "present": true,
+          "visible": true,
+          "rect": {
+            "left": 7,
+            "top": 326.91,
+            "right": 405,
+            "bottom": 821,
+            "width": 398,
+            "height": 494.09
+          },
+          "text": "PRODUCTION×‹FACTORY1 / 1›🤖INFANTRY🛡ARMOUR🎯ANTI-TANK💥CROWD CONTROL💣ARTILLERY🛩ANTI-AIR🛠SUPPORTTACTICAL PREVIEW🛡ARMOURED CORE4 AVAILABLEARMOURHold the centre and trade efficiently under sustained fire.FORMATIONBATTLE LINE⚠ Screen against gauss and dedicated anti-tank.INSPECT RHINORhino25m 94e⏱ 2.3sMEDIUM · Ø12mPOP +1 · 0/500QUEUE 3/30FACILITY · Factory · TECH 1🔒 QUEUE FULL · CANCEL OR COMPLETE A UNITAP CANNON SHELLMain battle tank and the backbone of the line — everything else is built behind itⓘGoliath61m 235e⏱ 5.4sMEDIUM · Ø16mPOP +1 · 0/500QUEUE 3/30FACILITY · Factory · TECH 1🔒 TECH 2🔒 QUEUE FULL · CANCEL OR COMPLETE A UNITAP CANNON SHELLAssault walker with 450 hull and a splash cannon, sent to break a defended position🔒ⓘHornet46m 188e⏱ 4sMEDIUM · Ø12mPOP +1 · 0/500QUEUE 3/30FACILITY · Factory · TECH 1🔒 TECH 2🔒 QUEUE FULL · CANCEL OR COMPLETE A UNITUNGUIDED HE ROCKETRocket vehicle whose splash punishes formations that have not spread out🔒ⓘResonator63m 254e⏱ 4.5sMEDIUM · Ø13mPOP +1 · 0/500QUEUE 3/30FACILITY · Factory · TECH 1🔒 TECH 2🔒 QUEUE FULL · CANCEL OR COMPLETE A UNITSONIC RESONANCE PULSESonic platform whose waves pass straight through Bulwark shields🔒ⓘStriker×1Rhino×1▶ Striker in 1s · queue 3s⬆ UPGRADE TO TECH 2 (170m 650e)⚑ SET RALLY POINTREPEAT: OFF",
+          "cards": [
+            {
+              "text": "Rhino25m 94e⏱ 2.3sMEDIUM · Ø12mPOP +1 · 0/500QUEUE 3/30FACILITY · Factory · TECH 1🔒 QUEUE FULL · CANCEL OR COMPLETE A UNITAP CANNON SHELLMain battle tank and the backbone of the line — everything else is built behind itⓘ",
+              "locked": false,
+              "ariaDisabled": "false",
+              "cost": "25m 94e",
+              "meta": "⏱ 2.3s · MEDIUM · Ø12m · POP +1 · 0/500 · QUEUE 3/30",
+              "dependency": "FACILITY · Factory · TECH 1",
+              "locks": "",
+              "effect": "",
+              "queueLock": "",
+              "queueFull": false,
+              "footprint": null,
+              "footprintPolicy": null,
+              "expectedFootprint": null,
+              "footprintMatches": true,
+              "metaFont": 9.5,
+              "dependencyFont": 9.5
+            },
+            {
+              "text": "Goliath61m 235e⏱ 5.4sMEDIUM · Ø16mPOP +1 · 0/500QUEUE 3/30FACILITY · Factory · TECH 1🔒 TECH 2🔒 QUEUE FULL · CANCEL OR COMPLETE A UNITAP CANNON SHELLAssault walker with 450 hull and a splash cannon, sent to break a defended position🔒ⓘ",
+              "locked": true,
+              "ariaDisabled": "true",
+              "cost": "61m 235e",
+              "meta": "⏱ 5.4s · MEDIUM · Ø16m · POP +1 · 0/500 · QUEUE 3/30",
+              "dependency": "FACILITY · Factory · TECH 1",
+              "locks": "🔒 TECH 2",
+              "effect": "",
+              "queueLock": "",
+              "queueFull": false,
+              "footprint": null,
+              "footprintPolicy": null,
+              "expectedFootprint": null,
+              "footprintMatches": true,
+              "metaFont": 9.5,
+              "dependencyFont": 9.5
+            },
+            {
+              "text": "Hornet46m 188e⏱ 4sMEDIUM · Ø12mPOP +1 · 0/500QUEUE 3/30FACILITY · Factory · TECH 1🔒 TECH 2🔒 QUEUE FULL · CANCEL OR COMPLETE A UNITUNGUIDED HE ROCKETRocket vehicle whose splash punishes formations that have not spread out🔒ⓘ",
+              "locked": true,
+              "ariaDisabled": "true",
+              "cost": "46m 188e",
+              "meta": "⏱ 4s · MEDIUM · Ø12m · POP +1 · 0/500 · QUEUE 3/30",
+              "dependency": "FACILITY · Factory · TECH 1",
+              "locks": "🔒 TECH 2",
+              "effect": "",
+              "queueLock": "",
+              "queueFull": false,
+              "footprint": null,
+              "footprintPolicy": null,
+              "expectedFootprint": null,
+              "footprintMatches": true,
+              "metaFont": 9.5,
+              "dependencyFont": 9.5
+            },
+            {
+              "text": "Resonator63m 254e⏱ 4.5sMEDIUM · Ø13mPOP +1 · 0/500QUEUE 3/30FACILITY · Factory · TECH 1🔒 TECH 2🔒 QUEUE FULL · CANCEL OR COMPLETE A UNITSONIC RESONANCE PULSESonic platform whose waves pass straight through Bulwark shields🔒ⓘ",
+              "locked": true,
+              "ariaDisabled": "true",
+              "cost": "63m 254e",
+              "meta": "⏱ 4.5s · MEDIUM · Ø13m · POP +1 · 0/500 · QUEUE 3/30",
+              "dependency": "FACILITY · Factory · TECH 1",
+              "locks": "🔒 TECH 2",
+              "effect": "",
+              "queueLock": "",
+              "queueFull": false,
+              "footprint": null,
+              "footprintPolicy": null,
+              "expectedFootprint": null,
+              "footprintMatches": true,
+              "metaFont": 9.5,
+              "dependencyFont": 9.5
+            }
+          ],
+          "targets": [
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "",
+              "label": "Close PRODUCTION",
+              "width": 44,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": "prodPrev",
+              "className": "muted",
+              "label": "Previous structure",
+              "width": 44,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": "prodNext",
+              "className": "muted",
+              "label": "Next structure",
+              "width": 44,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "tabBtn",
+              "label": "🤖INFANTRY",
+              "width": 116.83,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "tabBtn on",
+              "label": "🛡ARMOUR",
+              "width": 101.81,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "tabBtn",
+              "label": "🎯ANTI-TANK",
+              "width": 123.69,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "tabBtn",
+              "label": "💥CROWD CONTROL",
+              "width": 169.55,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "tabBtn",
+              "label": "💣ARTILLERY",
+              "width": 125.75,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "tabBtn",
+              "label": "🛩ANTI-AIR",
+              "width": 104.05,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "tabBtn",
+              "label": "🛠SUPPORT",
+              "width": 108.92,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "menuRoleInspect",
+              "label": "INSPECT RHINO",
+              "width": 107.33,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "DIV",
+              "id": null,
+              "className": "bcard",
+              "label": "Build Rhino. Cost 25 mass and 94 energy. 2.3s. MEDIUM size. Population plus one. Queue position 3 of 30. Main battle tank and the backbone of the line — everything else is built behind it",
+              "width": 185,
+              "height": 243.06,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "cardIntel",
+              "label": "About Rhino",
+              "width": 44,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "DIV",
+              "id": null,
+              "className": "bcard locked",
+              "label": "Build Goliath. Cost 61 mass and 235 energy. 5.4s. MEDIUM size. Population plus one. Queue position 3 of 30. Locked: TECH 2. Assault walker with 450 hull and a splash cannon, sent to break a defended position",
+              "width": 185,
+              "height": 243.06,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "cardIntel",
+              "label": "About Goliath",
+              "width": 44,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "DIV",
+              "id": null,
+              "className": "bcard locked",
+              "label": "Build Hornet. Cost 46 mass and 188 energy. 4s. MEDIUM size. Population plus one. Queue position 3 of 30. Locked: TECH 2. Rocket vehicle whose splash punishes formations that have not spread out",
+              "width": 185,
+              "height": 243.06,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "cardIntel",
+              "label": "About Hornet",
+              "width": 44,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "DIV",
+              "id": null,
+              "className": "bcard locked",
+              "label": "Build Resonator. Cost 63 mass and 254 energy. 4.5s. MEDIUM size. Population plus one. Queue position 3 of 30. Locked: TECH 2. Sonic platform whose waves pass straight through Bulwark shields",
+              "width": 185,
+              "height": 243.06,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "cardIntel",
+              "label": "About Resonator",
+              "width": 44,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "qPlate active",
+              "label": "Cancel one Striker, 1 queued",
+              "width": 64,
+              "height": 64,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "qPlate",
+              "label": "Cancel one Rhino, 1 queued",
+              "width": 64,
+              "height": 64,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": "upBtn",
+              "className": "",
+              "label": "⬆ UPGRADE TO TECH 2 (170m 650e)",
+              "width": 378,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": "rallyBtn",
+              "className": "",
+              "label": "⚑ SET RALLY POINT",
+              "width": 378,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": "repeatBtn",
+              "className": "",
+              "label": "REPEAT: OFF",
+              "width": 378,
+              "height": 44,
+              "status": "PASS"
+            }
+          ],
+          "targetFailures": [],
+          "required": {
+            "cost": true,
+            "effectiveTime": true,
+            "size": true,
+            "population": true,
+            "queue": true,
+            "dependencies": true,
+            "readableMetadata": true
+          },
+          "missing": [],
+          "obstructions": [],
+          "viewportOverflow": false,
+          "panelOverflow": false,
+          "status": "PASS",
+          "screenshot": {
+            "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\tmp\\stage7-production-ui\\phone-portrait-production.png",
+            "relativePath": "tmp/stage7-production-ui/phone-portrait-production.png",
+            "sha256": "f75037b4365b39ccf6aa158bf63c094eec54813c1350292f74a85e3bf112e76d",
+            "bytes": 297198,
+            "dimensions": {
+              "width": 412,
+              "height": 915
+            },
+            "expected": {
+              "width": 412,
+              "height": 915
+            },
+            "valid": true
+          }
+        },
+        "productionFull": {
+          "selector": "#prodMenu",
+          "kind": "production-full",
+          "present": true,
+          "visible": true,
+          "rect": {
+            "left": 7,
+            "top": 326.91,
+            "right": 405,
+            "bottom": 821,
+            "width": 398,
+            "height": 494.09
+          },
+          "text": "PRODUCTION×‹FACTORY1 / 1›🤖INFANTRY🛡ARMOUR🎯ANTI-TANK💥CROWD CONTROL💣ARTILLERY🛩ANTI-AIR🛠SUPPORTTACTICAL PREVIEW🛡ARMOURED CORE4 AVAILABLEARMOURHold the centre and trade efficiently under sustained fire.FORMATIONBATTLE LINE⚠ Screen against gauss and dedicated anti-tank.INSPECT RHINORhino25m 94e⏱ 2.3sMEDIUM · Ø12mPOP +1 · 0/500QUEUE FULLFACILITY · Factory · TECH 1🔒 QUEUE FULL · CANCEL OR COMPLETE A UNITAP CANNON SHELLMain battle tank and the backbone of the line — everything else is built behind itⓘGoliath61m 235e⏱ 5.4sMEDIUM · Ø16mPOP +1 · 0/500QUEUE FULLFACILITY · Factory · TECH 1🔒 TECH 2🔒 QUEUE FULL · CANCEL OR COMPLETE A UNITAP CANNON SHELLAssault walker with 450 hull and a splash cannon, sent to break a defended position🔒ⓘHornet46m 188e⏱ 4sMEDIUM · Ø12mPOP +1 · 0/500QUEUE FULLFACILITY · Factory · TECH 1🔒 TECH 2🔒 QUEUE FULL · CANCEL OR COMPLETE A UNITUNGUIDED HE ROCKETRocket vehicle whose splash punishes formations that have not spread out🔒ⓘResonator63m 254e⏱ 4.5sMEDIUM · Ø13mPOP +1 · 0/500QUEUE FULLFACILITY · Factory · TECH 1🔒 TECH 2🔒 QUEUE FULL · CANCEL OR COMPLETE A UNITSONIC RESONANCE PULSESonic platform whose waves pass straight through Bulwark shields🔒ⓘStriker×30▶ Striker in 2s · queue 34s⬆ UPGRADE TO TECH 2 (170m 650e)⚑ SET RALLY POINTREPEAT: OFF",
+          "cards": [
+            {
+              "text": "Rhino25m 94e⏱ 2.3sMEDIUM · Ø12mPOP +1 · 0/500QUEUE FULLFACILITY · Factory · TECH 1🔒 QUEUE FULL · CANCEL OR COMPLETE A UNITAP CANNON SHELLMain battle tank and the backbone of the line — everything else is built behind itⓘ",
+              "locked": true,
+              "ariaDisabled": "true",
+              "cost": "25m 94e",
+              "meta": "⏱ 2.3s · MEDIUM · Ø12m · POP +1 · 0/500 · QUEUE FULL",
+              "dependency": "FACILITY · Factory · TECH 1",
+              "locks": "🔒 QUEUE FULL · CANCEL OR COMPLETE A UNIT",
+              "effect": "",
+              "queueLock": "🔒 QUEUE FULL · CANCEL OR COMPLETE A UNIT",
+              "queueFull": true,
+              "footprint": null,
+              "footprintPolicy": null,
+              "expectedFootprint": null,
+              "footprintMatches": true,
+              "metaFont": 9.5,
+              "dependencyFont": 9.5
+            },
+            {
+              "text": "Goliath61m 235e⏱ 5.4sMEDIUM · Ø16mPOP +1 · 0/500QUEUE FULLFACILITY · Factory · TECH 1🔒 TECH 2🔒 QUEUE FULL · CANCEL OR COMPLETE A UNITAP CANNON SHELLAssault walker with 450 hull and a splash cannon, sent to break a defended position🔒ⓘ",
+              "locked": true,
+              "ariaDisabled": "true",
+              "cost": "61m 235e",
+              "meta": "⏱ 5.4s · MEDIUM · Ø16m · POP +1 · 0/500 · QUEUE FULL",
+              "dependency": "FACILITY · Factory · TECH 1",
+              "locks": "🔒 TECH 2 · 🔒 QUEUE FULL · CANCEL OR COMPLETE A UNIT",
+              "effect": "",
+              "queueLock": "🔒 QUEUE FULL · CANCEL OR COMPLETE A UNIT",
+              "queueFull": true,
+              "footprint": null,
+              "footprintPolicy": null,
+              "expectedFootprint": null,
+              "footprintMatches": true,
+              "metaFont": 9.5,
+              "dependencyFont": 9.5
+            },
+            {
+              "text": "Hornet46m 188e⏱ 4sMEDIUM · Ø12mPOP +1 · 0/500QUEUE FULLFACILITY · Factory · TECH 1🔒 TECH 2🔒 QUEUE FULL · CANCEL OR COMPLETE A UNITUNGUIDED HE ROCKETRocket vehicle whose splash punishes formations that have not spread out🔒ⓘ",
+              "locked": true,
+              "ariaDisabled": "true",
+              "cost": "46m 188e",
+              "meta": "⏱ 4s · MEDIUM · Ø12m · POP +1 · 0/500 · QUEUE FULL",
+              "dependency": "FACILITY · Factory · TECH 1",
+              "locks": "🔒 TECH 2 · 🔒 QUEUE FULL · CANCEL OR COMPLETE A UNIT",
+              "effect": "",
+              "queueLock": "🔒 QUEUE FULL · CANCEL OR COMPLETE A UNIT",
+              "queueFull": true,
+              "footprint": null,
+              "footprintPolicy": null,
+              "expectedFootprint": null,
+              "footprintMatches": true,
+              "metaFont": 9.5,
+              "dependencyFont": 9.5
+            },
+            {
+              "text": "Resonator63m 254e⏱ 4.5sMEDIUM · Ø13mPOP +1 · 0/500QUEUE FULLFACILITY · Factory · TECH 1🔒 TECH 2🔒 QUEUE FULL · CANCEL OR COMPLETE A UNITSONIC RESONANCE PULSESonic platform whose waves pass straight through Bulwark shields🔒ⓘ",
+              "locked": true,
+              "ariaDisabled": "true",
+              "cost": "63m 254e",
+              "meta": "⏱ 4.5s · MEDIUM · Ø13m · POP +1 · 0/500 · QUEUE FULL",
+              "dependency": "FACILITY · Factory · TECH 1",
+              "locks": "🔒 TECH 2 · 🔒 QUEUE FULL · CANCEL OR COMPLETE A UNIT",
+              "effect": "",
+              "queueLock": "🔒 QUEUE FULL · CANCEL OR COMPLETE A UNIT",
+              "queueFull": true,
+              "footprint": null,
+              "footprintPolicy": null,
+              "expectedFootprint": null,
+              "footprintMatches": true,
+              "metaFont": 9.5,
+              "dependencyFont": 9.5
+            }
+          ],
+          "targets": [
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "",
+              "label": "Close PRODUCTION",
+              "width": 44,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": "prodPrev",
+              "className": "muted",
+              "label": "Previous structure",
+              "width": 44,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": "prodNext",
+              "className": "muted",
+              "label": "Next structure",
+              "width": 44,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "tabBtn",
+              "label": "🤖INFANTRY",
+              "width": 116.83,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "tabBtn on",
+              "label": "🛡ARMOUR",
+              "width": 101.81,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "tabBtn",
+              "label": "🎯ANTI-TANK",
+              "width": 123.69,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "tabBtn",
+              "label": "💥CROWD CONTROL",
+              "width": 169.55,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "tabBtn",
+              "label": "💣ARTILLERY",
+              "width": 125.75,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "tabBtn",
+              "label": "🛩ANTI-AIR",
+              "width": 104.05,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "tabBtn",
+              "label": "🛠SUPPORT",
+              "width": 108.92,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "menuRoleInspect",
+              "label": "INSPECT RHINO",
+              "width": 107.33,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "DIV",
+              "id": null,
+              "className": "bcard locked queueFull",
+              "label": "Queue full. Build Rhino. Cost 25 mass and 94 energy. 2.3s. MEDIUM size. Population plus one. Queue position 30 of 30. Main battle tank and the backbone of the line — everything else is built behind it",
+              "width": 185,
+              "height": 278.69,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "cardIntel",
+              "label": "About Rhino",
+              "width": 44,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "DIV",
+              "id": null,
+              "className": "bcard locked queueFull",
+              "label": "Queue full. Build Goliath. Cost 61 mass and 235 energy. 5.4s. MEDIUM size. Population plus one. Queue position 30 of 30. Locked: TECH 2. Assault walker with 450 hull and a splash cannon, sent to break a defended position",
+              "width": 185,
+              "height": 278.69,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "cardIntel",
+              "label": "About Goliath",
+              "width": 44,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "DIV",
+              "id": null,
+              "className": "bcard locked queueFull",
+              "label": "Queue full. Build Hornet. Cost 46 mass and 188 energy. 4s. MEDIUM size. Population plus one. Queue position 30 of 30. Locked: TECH 2. Rocket vehicle whose splash punishes formations that have not spread out",
+              "width": 185,
+              "height": 278.69,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "cardIntel",
+              "label": "About Hornet",
+              "width": 44,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "DIV",
+              "id": null,
+              "className": "bcard locked queueFull",
+              "label": "Queue full. Build Resonator. Cost 63 mass and 254 energy. 4.5s. MEDIUM size. Population plus one. Queue position 30 of 30. Locked: TECH 2. Sonic platform whose waves pass straight through Bulwark shields",
+              "width": 185,
+              "height": 278.69,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "cardIntel",
+              "label": "About Resonator",
+              "width": 44,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "qPlate active",
+              "label": "Cancel one Striker, 30 queued",
+              "width": 64,
+              "height": 64,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": "upBtn",
+              "className": "",
+              "label": "⬆ UPGRADE TO TECH 2 (170m 650e)",
+              "width": 378,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": "rallyBtn",
+              "className": "",
+              "label": "⚑ SET RALLY POINT",
+              "width": 378,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": "repeatBtn",
+              "className": "",
+              "label": "REPEAT: OFF",
+              "width": 378,
+              "height": 44,
+              "status": "PASS"
+            }
+          ],
+          "targetFailures": [],
+          "required": {
+            "cost": true,
+            "effectiveTime": true,
+            "size": true,
+            "population": true,
+            "queue": true,
+            "dependencies": true,
+            "readableMetadata": true,
+            "queueFullLock": true
+          },
+          "missing": [],
+          "obstructions": [],
+          "viewportOverflow": false,
+          "panelOverflow": false,
+          "status": "PASS",
+          "screenshot": {
+            "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\tmp\\stage7-production-ui\\phone-portrait-production-full.png",
+            "relativePath": "tmp/stage7-production-ui/phone-portrait-production-full.png",
+            "sha256": "015d9a5215424368ca3785b008cc4c5417a13d5da03d535157759f88f5f1605e",
+            "bytes": 268575,
+            "dimensions": {
+              "width": 412,
+              "height": 915
+            },
+            "expected": {
+              "width": 412,
+              "height": 915
+            },
+            "valid": true
+          }
+        },
+        "construction": {
+          "selector": "#buildMenu",
+          "kind": "construction",
+          "present": true,
+          "visible": true,
+          "rect": {
+            "left": 7,
+            "top": 326.91,
+            "right": 405,
+            "bottom": 821,
+            "width": 398,
+            "height": 494.09
+          },
+          "text": "STRUCTURES×⛏ECONOMY🏭PRODUCTION⚓NAVAL🛡DEFENCE🧱FORTIFICATION🔬TECH📡SUPPORT☄SUPERWEAPONTACTICAL PREVIEW⛏RESOURCE GRID5 AVAILABLEECONOMYSecure income and storage before expanding production.BUILD CHAINDEPOSIT → EXTRACTOR → STORAGEINSPECT EXTRACTORExtractor45m 120e⏱ 6sFOOT 34×34mLAND2% START · 98% STREAMPREREQ · Commander level 1 · Phase deposit at placement+4 mass/s at a Tier-I phase deposit; richer deposits multiply yield⛏ ECONOMY+4 Mass (on ◆)ⓘReactor40m 0e⏱ 5sFOOT 38×30mLAND2% START · 98% STREAMPREREQ · Commander level 1+14 energy/s at Mk1⛏ ECONOMY+14 EnergyⓘGeo Plant95m 160e⏱ 8sFOOT 38×32mLAND2% START · 98% STREAMPREREQ · Commander level 2 · Geothermal vent at placement+30 energy/s from an active geothermal vent⛏ ECONOMY+30 Energy (on ✦ geyser)ⓘSilo70m 220e⏱ 6sFOOT 30×30mLAND2% START · 98% STREAMPREREQ · Commander level 2+600 mass and +2,000 energy storage⛏ ECONOMY+600 mass / +2000 energy storageⓘFabricator130m 460e⏱ 9sFOOT 38×30mLAND2% START · 98% STREAMPREREQ · Commander level 3Converts up to 58 energy/s into 3.6 mass/s⛏ ECONOMYBurns 58 energy → +3.6 mass — salvage drones reclaim nearby wrecksⓘ",
+          "cards": [
+            {
+              "text": "Extractor45m 120e⏱ 6sFOOT 34×34mLAND2% START · 98% STREAMPREREQ · Commander level 1 · Phase deposit at placement+4 mass/s at a Tier-I phase deposit; richer deposits multiply yield⛏ ECONOMY+4 Mass (on ◆)ⓘ",
+              "locked": false,
+              "ariaDisabled": "false",
+              "cost": "45m 120e",
+              "meta": "⏱ 6s · FOOT 34×34m · LAND · 2% START · 98% STREAM",
+              "dependency": "PREREQ · Commander level 1 · Phase deposit at placement",
+              "locks": "",
+              "effect": "+4 mass/s at a Tier-I phase deposit; richer deposits multiply yield",
+              "queueLock": "",
+              "queueFull": false,
+              "footprint": "34x34",
+              "footprintPolicy": "reserved-max-tier",
+              "expectedFootprint": "34x34",
+              "footprintMatches": true,
+              "metaFont": 9.5,
+              "dependencyFont": 9.5
+            },
+            {
+              "text": "Reactor40m 0e⏱ 5sFOOT 38×30mLAND2% START · 98% STREAMPREREQ · Commander level 1+14 energy/s at Mk1⛏ ECONOMY+14 Energyⓘ",
+              "locked": false,
+              "ariaDisabled": "false",
+              "cost": "40m 0e",
+              "meta": "⏱ 5s · FOOT 38×30m · LAND · 2% START · 98% STREAM",
+              "dependency": "PREREQ · Commander level 1",
+              "locks": "",
+              "effect": "+14 energy/s at Mk1",
+              "queueLock": "",
+              "queueFull": false,
+              "footprint": "38x30",
+              "footprintPolicy": "reserved-max-tier",
+              "expectedFootprint": "38x30",
+              "footprintMatches": true,
+              "metaFont": 9.5,
+              "dependencyFont": 9.5
+            },
+            {
+              "text": "Geo Plant95m 160e⏱ 8sFOOT 38×32mLAND2% START · 98% STREAMPREREQ · Commander level 2 · Geothermal vent at placement+30 energy/s from an active geothermal vent⛏ ECONOMY+30 Energy (on ✦ geyser)ⓘ",
+              "locked": false,
+              "ariaDisabled": "false",
+              "cost": "95m 160e",
+              "meta": "⏱ 8s · FOOT 38×32m · LAND · 2% START · 98% STREAM",
+              "dependency": "PREREQ · Commander level 2 · Geothermal vent at placement",
+              "locks": "",
+              "effect": "+30 energy/s from an active geothermal vent",
+              "queueLock": "",
+              "queueFull": false,
+              "footprint": "38x32",
+              "footprintPolicy": "reserved-max-tier",
+              "expectedFootprint": "38x32",
+              "footprintMatches": true,
+              "metaFont": 9.5,
+              "dependencyFont": 9.5
+            },
+            {
+              "text": "Silo70m 220e⏱ 6sFOOT 30×30mLAND2% START · 98% STREAMPREREQ · Commander level 2+600 mass and +2,000 energy storage⛏ ECONOMY+600 mass / +2000 energy storageⓘ",
+              "locked": false,
+              "ariaDisabled": "false",
+              "cost": "70m 220e",
+              "meta": "⏱ 6s · FOOT 30×30m · LAND · 2% START · 98% STREAM",
+              "dependency": "PREREQ · Commander level 2",
+              "locks": "",
+              "effect": "+600 mass and +2,000 energy storage",
+              "queueLock": "",
+              "queueFull": false,
+              "footprint": "30x30",
+              "footprintPolicy": "reserved-max-tier",
+              "expectedFootprint": "30x30",
+              "footprintMatches": true,
+              "metaFont": 9.5,
+              "dependencyFont": 9.5
+            },
+            {
+              "text": "Fabricator130m 460e⏱ 9sFOOT 38×30mLAND2% START · 98% STREAMPREREQ · Commander level 3Converts up to 58 energy/s into 3.6 mass/s⛏ ECONOMYBurns 58 energy → +3.6 mass — salvage drones reclaim nearby wrecksⓘ",
+              "locked": false,
+              "ariaDisabled": "false",
+              "cost": "130m 460e",
+              "meta": "⏱ 9s · FOOT 38×30m · LAND · 2% START · 98% STREAM",
+              "dependency": "PREREQ · Commander level 3",
+              "locks": "",
+              "effect": "Converts up to 58 energy/s into 3.6 mass/s",
+              "queueLock": "",
+              "queueFull": false,
+              "footprint": "38x30",
+              "footprintPolicy": "reserved-max-tier",
+              "expectedFootprint": "38x30",
+              "footprintMatches": true,
+              "metaFont": 9.5,
+              "dependencyFont": 9.5
+            }
+          ],
+          "targets": [
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "",
+              "label": "Close STRUCTURES",
+              "width": 44,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "tabBtn on",
+              "label": "⛏ECONOMY",
+              "width": 110.52,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "tabBtn",
+              "label": "🏭PRODUCTION",
+              "width": 136.78,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "tabBtn",
+              "label": "⚓NAVAL",
+              "width": 97.41,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "tabBtn",
+              "label": "🛡DEFENCE",
+              "width": 107.52,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "tabBtn",
+              "label": "🧱FORTIFICATION",
+              "width": 150.83,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "tabBtn",
+              "label": "🔬TECH",
+              "width": 85.34,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "tabBtn",
+              "label": "📡SUPPORT",
+              "width": 113.77,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "tabBtn",
+              "label": "☄SUPERWEAPON",
+              "width": 148.81,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "menuRoleInspect",
+              "label": "INSPECT EXTRACTOR",
+              "width": 143.34,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "DIV",
+              "id": null,
+              "className": "bcard",
+              "label": "Build Extractor. Cost 45 mass and 120 energy. 6s. Footprint 34 by 34 meters. +4 mass/s at a Tier-I phase deposit; richer deposits multiply yield",
+              "width": 185,
+              "height": 299.09,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "cardIntel",
+              "label": "About Extractor",
+              "width": 44,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "DIV",
+              "id": null,
+              "className": "bcard",
+              "label": "Build Reactor. Cost 40 mass and 0 energy. 5s. Footprint 38 by 30 meters. +14 energy/s at Mk1",
+              "width": 185,
+              "height": 299.09,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "cardIntel",
+              "label": "About Reactor",
+              "width": 44,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "DIV",
+              "id": null,
+              "className": "bcard",
+              "label": "Build Geo Plant. Cost 95 mass and 160 energy. 8s. Footprint 38 by 32 meters. +30 energy/s from an active geothermal vent",
+              "width": 185,
+              "height": 299.09,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "cardIntel",
+              "label": "About Geo Plant",
+              "width": 44,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "DIV",
+              "id": null,
+              "className": "bcard",
+              "label": "Build Silo. Cost 70 mass and 220 energy. 6s. Footprint 30 by 30 meters. +600 mass and +2,000 energy storage",
+              "width": 185,
+              "height": 299.09,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "cardIntel",
+              "label": "About Silo",
+              "width": 44,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "DIV",
+              "id": null,
+              "className": "bcard",
+              "label": "Build Fabricator. Cost 130 mass and 460 energy. 9s. Footprint 38 by 30 meters. Converts up to 58 energy/s into 3.6 mass/s",
+              "width": 185,
+              "height": 286.78,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "cardIntel",
+              "label": "About Fabricator",
+              "width": 44,
+              "height": 44,
+              "status": "PASS"
+            }
+          ],
+          "targetFailures": [],
+          "required": {
+            "cost": true,
+            "effectiveTime": true,
+            "footprint": true,
+            "reservedFootprint": true,
+            "dependencies": true,
+            "effect": true,
+            "readableMetadata": true
+          },
+          "missing": [],
+          "obstructions": [],
+          "viewportOverflow": false,
+          "panelOverflow": false,
+          "status": "PASS",
+          "screenshot": {
+            "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\tmp\\stage7-production-ui\\phone-portrait-construction.png",
+            "relativePath": "tmp/stage7-production-ui/phone-portrait-construction.png",
+            "sha256": "4764b67f8d84f2afedf0ba91b6b89edd59c70de0600cfdec9e0454961b4a5573",
+            "bytes": 309356,
+            "dimensions": {
+              "width": 412,
+              "height": 915
+            },
+            "expected": {
+              "width": 412,
+              "height": 915
+            },
+            "valid": true
+          }
+        },
+        "economy": {
+          "selector": "#economyIntel",
+          "kind": "economy",
+          "present": true,
+          "visible": true,
+          "rect": {
+            "left": 20,
+            "top": 293,
+            "right": 392,
+            "bottom": 647,
+            "width": 372,
+            "height": 354
+          },
+          "text": "⌁RESOURCE FORECASTLive income, committed spending, storage and projected runway.×◆ MASSSTORED 950 / 1200GROSS +42.5/sSPEND -17.5/sNET +25.0/sFORECAST CAP IN 10s⚡ ENERGYSTORED 5600 / 6000GROSS +176.0/sSPEND -89.0/sNET +87.0/sFORECAST CAP IN 4.6sBOTTLENECKNONE — both resource flows are stable",
+          "cards": [],
+          "targets": [
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "ucClose",
+              "label": "Close resource forecast",
+              "width": 44,
+              "height": 44,
+              "status": "PASS"
+            }
+          ],
+          "targetFailures": [],
+          "required": {
+            "stored": true,
+            "gross": true,
+            "spend": true,
+            "net": true,
+            "forecast": true,
+            "bottleneck": true
+          },
+          "missing": [],
+          "obstructions": [],
+          "viewportOverflow": false,
+          "panelOverflow": false,
+          "status": "PASS",
+          "screenshot": {
+            "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\tmp\\stage7-production-ui\\phone-portrait-economy.png",
+            "relativePath": "tmp/stage7-production-ui/phone-portrait-economy.png",
+            "sha256": "87b8cb3c6266d15f3f7f40bd0f9018b6d30e00cdff55a44f561e6e617eb65a42",
+            "bytes": 325811,
+            "dimensions": {
+              "width": 412,
+              "height": 915
+            },
+            "expected": {
+              "width": 412,
+              "height": 915
+            },
+            "valid": true
+          }
+        },
+        "economyFull": {
+          "selector": "#economyIntel",
+          "kind": "economy-full",
+          "present": true,
+          "visible": true,
+          "rect": {
+            "left": 20,
+            "top": 293,
+            "right": 392,
+            "bottom": 647,
+            "width": 372,
+            "height": 354
+          },
+          "text": "⌁RESOURCE FORECASTLive income, committed spending, storage and projected runway.×◆ MASSSTORED 950 / 1200GROSS +42.5/sSPEND -17.5/sNET +25.0/sFORECAST CAP IN 10s⚡ ENERGYSTORED 6000 / 6000GROSS +200.0/sSPEND -20.0/sNET +180.0/sFORECAST FULL · INCOME WASTEDBOTTLENECKENERGY STORAGE FULL — income is being wasted",
+          "cards": [],
+          "targets": [
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "ucClose",
+              "label": "Close resource forecast",
+              "width": 44,
+              "height": 44,
+              "status": "PASS"
+            }
+          ],
+          "targetFailures": [],
+          "required": {
+            "stored": true,
+            "gross": true,
+            "spend": true,
+            "net": true,
+            "forecast": true,
+            "bottleneck": true,
+            "energyFull": true,
+            "wasteForecast": true
+          },
+          "missing": [],
+          "obstructions": [],
+          "viewportOverflow": false,
+          "panelOverflow": false,
+          "status": "PASS",
+          "screenshot": {
+            "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\tmp\\stage7-production-ui\\phone-portrait-economy-full.png",
+            "relativePath": "tmp/stage7-production-ui/phone-portrait-economy-full.png",
+            "sha256": "3779300869031b7d601e0f49c7269780e01d068093976a2a45045ae30c6c39db",
+            "bytes": 324733,
+            "dimensions": {
+              "width": 412,
+              "height": 915
+            },
+            "expected": {
+              "width": 412,
+              "height": 915
+            },
+            "valid": true
+          }
+        }
+      },
+      "pageErrors": [],
+      "consoleErrors": [],
+      "requestFailures": [],
+      "status": "PASS",
+      "runtime": {
+        "webgl2": true,
+        "renderer": "ANGLE (AMD, AMD Radeon(TM) 610M (0x0000164E) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+        "vendor": "Google Inc. (AMD)",
+        "viewport": {
+          "width": 412,
+          "height": 915,
+          "dpr": 1
+        },
+        "matchLive": true,
+        "sourceMarker": "http://127.0.0.1:61735/src/engine/gl.js?v=1.33.48-boot5",
+        "footprintContract": true,
+        "footprintQuote": [
+          58,
+          58
+        ],
+        "footprintReserved": [
+          58,
+          58
+        ],
+        "footprintPlacement": [
+          58,
+          58
+        ]
+      },
+      "globalControls": {
+        "targets": [
+          {
+            "selector": "#topbar .res[data-econ]",
+            "id": null,
+            "width": 84,
+            "height": 44,
+            "left": 4,
+            "right": 88,
+            "status": "PASS"
+          },
+          {
+            "selector": "#topbar .res[data-econ]",
+            "id": null,
+            "width": 84,
+            "height": 44,
+            "left": 92,
+            "right": 176,
+            "status": "PASS"
+          },
+          {
+            "selector": "#primaryRow .cbtn",
+            "id": "armyBtn",
+            "width": 46,
+            "height": 44,
+            "left": 115,
+            "right": 161,
+            "status": "PASS"
+          },
+          {
+            "selector": "#primaryRow .cbtn",
+            "id": "idleBuilderBtn",
+            "width": 46,
+            "height": 44,
+            "left": 164,
+            "right": 210,
+            "status": "PASS"
+          },
+          {
+            "selector": "#primaryRow .cbtn",
+            "id": "boxBtn",
+            "width": 46,
+            "height": 44,
+            "left": 213,
+            "right": 259,
+            "status": "PASS"
+          },
+          {
+            "selector": "#primaryRow .cbtn",
+            "id": "stopBtn",
+            "width": 46,
+            "height": 44,
+            "left": 262,
+            "right": 308,
+            "status": "PASS"
+          },
+          {
+            "selector": "#primaryRow .cbtn",
+            "id": "buildBtn",
+            "width": 46,
+            "height": 44,
+            "left": 311,
+            "right": 357,
+            "status": "PASS"
+          },
+          {
+            "selector": "#primaryRow .cbtn",
+            "id": "baseFindBtn",
+            "width": 46,
+            "height": 44,
+            "left": 360,
+            "right": 406,
+            "status": "PASS"
+          }
+        ],
+        "failures": [],
+        "rowOverflow": false,
+        "viewport": {
+          "width": 412,
+          "height": 915
+        },
+        "status": "PASS"
+      },
+      "productionKeyboard": {
+        "queueBefore": 2,
+        "queue": 2,
+        "intelVisible": true,
+        "hasClose": true,
+        "activeClass": "bgDim mfIntroDone hudTacticalDock uiPrimaryOpen uiPanelOpen uiIntelOpen",
+        "activeLabel": "",
+        "unitClosed": true,
+        "status": "PASS"
+      },
+      "constructionKeyboard": {
+        "placingBefore": false,
+        "placing": false,
+        "intelVisible": true,
+        "hasClose": true,
+        "activeClass": "bgDim mfIntroDone hudTacticalDock uiPrimaryOpen uiPanelOpen uiIntelOpen",
+        "activeLabel": "",
+        "buildingClosed": true,
+        "status": "PASS"
+      },
+      "economyOpenedBy": "showEconomyIntel",
+      "webgl": {
+        "contextLosses": 0,
+        "mainContextLost": false,
+        "mainError": 0
+      },
+      "failures": []
+    },
+    {
+      "profile": {
+        "id": "narrow-phone",
+        "width": 344,
+        "height": 882
+      },
+      "scenarios": {
+        "production": {
+          "selector": "#prodMenu",
+          "kind": "production",
+          "present": true,
+          "visible": true,
+          "rect": {
+            "left": 6,
+            "top": 311.73,
+            "right": 338,
+            "bottom": 788,
+            "width": 332,
+            "height": 476.27
+          },
+          "text": "PRODUCTION×‹FACTORY1 / 1›🤖INFANTRY🛡ARMOUR🎯ANTI-TANK💥CROWD CONTROL💣ARTILLERY🛩ANTI-AIR🛠SUPPORTTACTICAL PREVIEW🛡ARMOURED CORE4 AVAILABLEARMOURHold the centre and trade efficiently under sustained fire.FORMATIONBATTLE LINE⚠ Screen against gauss and dedicated anti-tank.INSPECT RHINORhino25m 94e⏱ 2.3sMEDIUM · Ø12mPOP +1 · 0/500QUEUE 3/30FACILITY · Factory · TECH 1🔒 QUEUE FULL · CANCEL OR COMPLETE A UNITAP CANNON SHELLMain battle tank and the backbone of the line — everything else is built behind itⓘGoliath61m 235e⏱ 5.4sMEDIUM · Ø16mPOP +1 · 0/500QUEUE 3/30FACILITY · Factory · TECH 1🔒 TECH 2🔒 QUEUE FULL · CANCEL OR COMPLETE A UNITAP CANNON SHELLAssault walker with 450 hull and a splash cannon, sent to break a defended position🔒ⓘHornet46m 188e⏱ 4sMEDIUM · Ø12mPOP +1 · 0/500QUEUE 3/30FACILITY · Factory · TECH 1🔒 TECH 2🔒 QUEUE FULL · CANCEL OR COMPLETE A UNITUNGUIDED HE ROCKETRocket vehicle whose splash punishes formations that have not spread out🔒ⓘResonator63m 254e⏱ 4.5sMEDIUM · Ø13mPOP +1 · 0/500QUEUE 3/30FACILITY · Factory · TECH 1🔒 TECH 2🔒 QUEUE FULL · CANCEL OR COMPLETE A UNITSONIC RESONANCE PULSESonic platform whose waves pass straight through Bulwark shields🔒ⓘStriker×1Rhino×1▶ Striker in 1s · queue 3s⬆ UPGRADE TO TECH 2 (170m 650e)⚑ SET RALLY POINTREPEAT: OFF",
+          "cards": [
+            {
+              "text": "Rhino25m 94e⏱ 2.3sMEDIUM · Ø12mPOP +1 · 0/500QUEUE 3/30FACILITY · Factory · TECH 1🔒 QUEUE FULL · CANCEL OR COMPLETE A UNITAP CANNON SHELLMain battle tank and the backbone of the line — everything else is built behind itⓘ",
+              "locked": false,
+              "ariaDisabled": "false",
+              "cost": "25m 94e",
+              "meta": "⏱ 2.3s · MEDIUM · Ø12m · POP +1 · 0/500 · QUEUE 3/30",
+              "dependency": "FACILITY · Factory · TECH 1",
+              "locks": "",
+              "effect": "",
+              "queueLock": "",
+              "queueFull": false,
+              "footprint": null,
+              "footprintPolicy": null,
+              "expectedFootprint": null,
+              "footprintMatches": true,
+              "metaFont": 9.5,
+              "dependencyFont": 9.5
+            },
+            {
+              "text": "Goliath61m 235e⏱ 5.4sMEDIUM · Ø16mPOP +1 · 0/500QUEUE 3/30FACILITY · Factory · TECH 1🔒 TECH 2🔒 QUEUE FULL · CANCEL OR COMPLETE A UNITAP CANNON SHELLAssault walker with 450 hull and a splash cannon, sent to break a defended position🔒ⓘ",
+              "locked": true,
+              "ariaDisabled": "true",
+              "cost": "61m 235e",
+              "meta": "⏱ 5.4s · MEDIUM · Ø16m · POP +1 · 0/500 · QUEUE 3/30",
+              "dependency": "FACILITY · Factory · TECH 1",
+              "locks": "🔒 TECH 2",
+              "effect": "",
+              "queueLock": "",
+              "queueFull": false,
+              "footprint": null,
+              "footprintPolicy": null,
+              "expectedFootprint": null,
+              "footprintMatches": true,
+              "metaFont": 9.5,
+              "dependencyFont": 9.5
+            },
+            {
+              "text": "Hornet46m 188e⏱ 4sMEDIUM · Ø12mPOP +1 · 0/500QUEUE 3/30FACILITY · Factory · TECH 1🔒 TECH 2🔒 QUEUE FULL · CANCEL OR COMPLETE A UNITUNGUIDED HE ROCKETRocket vehicle whose splash punishes formations that have not spread out🔒ⓘ",
+              "locked": true,
+              "ariaDisabled": "true",
+              "cost": "46m 188e",
+              "meta": "⏱ 4s · MEDIUM · Ø12m · POP +1 · 0/500 · QUEUE 3/30",
+              "dependency": "FACILITY · Factory · TECH 1",
+              "locks": "🔒 TECH 2",
+              "effect": "",
+              "queueLock": "",
+              "queueFull": false,
+              "footprint": null,
+              "footprintPolicy": null,
+              "expectedFootprint": null,
+              "footprintMatches": true,
+              "metaFont": 9.5,
+              "dependencyFont": 9.5
+            },
+            {
+              "text": "Resonator63m 254e⏱ 4.5sMEDIUM · Ø13mPOP +1 · 0/500QUEUE 3/30FACILITY · Factory · TECH 1🔒 TECH 2🔒 QUEUE FULL · CANCEL OR COMPLETE A UNITSONIC RESONANCE PULSESonic platform whose waves pass straight through Bulwark shields🔒ⓘ",
+              "locked": true,
+              "ariaDisabled": "true",
+              "cost": "63m 254e",
+              "meta": "⏱ 4.5s · MEDIUM · Ø13m · POP +1 · 0/500 · QUEUE 3/30",
+              "dependency": "FACILITY · Factory · TECH 1",
+              "locks": "🔒 TECH 2",
+              "effect": "",
+              "queueLock": "",
+              "queueFull": false,
+              "footprint": null,
+              "footprintPolicy": null,
+              "expectedFootprint": null,
+              "footprintMatches": true,
+              "metaFont": 9.5,
+              "dependencyFont": 9.5
+            }
+          ],
+          "targets": [
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "",
+              "label": "Close PRODUCTION",
+              "width": 44,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": "prodPrev",
+              "className": "muted",
+              "label": "Previous structure",
+              "width": 44,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": "prodNext",
+              "className": "muted",
+              "label": "Next structure",
+              "width": 44,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "tabBtn",
+              "label": "🤖INFANTRY",
+              "width": 116.83,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "tabBtn on",
+              "label": "🛡ARMOUR",
+              "width": 101.81,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "tabBtn",
+              "label": "🎯ANTI-TANK",
+              "width": 123.69,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "tabBtn",
+              "label": "💥CROWD CONTROL",
+              "width": 169.55,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "tabBtn",
+              "label": "💣ARTILLERY",
+              "width": 125.75,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "tabBtn",
+              "label": "🛩ANTI-AIR",
+              "width": 104.05,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "tabBtn",
+              "label": "🛠SUPPORT",
+              "width": 108.92,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "menuRoleInspect",
+              "label": "INSPECT RHINO",
+              "width": 107.33,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "DIV",
+              "id": null,
+              "className": "bcard",
+              "label": "Build Rhino. Cost 25 mass and 94 energy. 2.3s. MEDIUM size. Population plus one. Queue position 3 of 30. Main battle tank and the backbone of the line — everything else is built behind it",
+              "width": 152,
+              "height": 280.56,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "cardIntel",
+              "label": "About Rhino",
+              "width": 44,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "DIV",
+              "id": null,
+              "className": "bcard locked",
+              "label": "Build Goliath. Cost 61 mass and 235 energy. 5.4s. MEDIUM size. Population plus one. Queue position 3 of 30. Locked: TECH 2. Assault walker with 450 hull and a splash cannon, sent to break a defended position",
+              "width": 152,
+              "height": 280.56,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "cardIntel",
+              "label": "About Goliath",
+              "width": 44,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "DIV",
+              "id": null,
+              "className": "bcard locked",
+              "label": "Build Hornet. Cost 46 mass and 188 energy. 4s. MEDIUM size. Population plus one. Queue position 3 of 30. Locked: TECH 2. Rocket vehicle whose splash punishes formations that have not spread out",
+              "width": 152,
+              "height": 291.56,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "cardIntel",
+              "label": "About Hornet",
+              "width": 44,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "DIV",
+              "id": null,
+              "className": "bcard locked",
+              "label": "Build Resonator. Cost 63 mass and 254 energy. 4.5s. MEDIUM size. Population plus one. Queue position 3 of 30. Locked: TECH 2. Sonic platform whose waves pass straight through Bulwark shields",
+              "width": 152,
+              "height": 291.56,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "cardIntel",
+              "label": "About Resonator",
+              "width": 44,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "qPlate active",
+              "label": "Cancel one Striker, 1 queued",
+              "width": 64,
+              "height": 64,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "qPlate",
+              "label": "Cancel one Rhino, 1 queued",
+              "width": 64,
+              "height": 64,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": "upBtn",
+              "className": "",
+              "label": "⬆ UPGRADE TO TECH 2 (170m 650e)",
+              "width": 312,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": "rallyBtn",
+              "className": "",
+              "label": "⚑ SET RALLY POINT",
+              "width": 312,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": "repeatBtn",
+              "className": "",
+              "label": "REPEAT: OFF",
+              "width": 312,
+              "height": 44,
+              "status": "PASS"
+            }
+          ],
+          "targetFailures": [],
+          "required": {
+            "cost": true,
+            "effectiveTime": true,
+            "size": true,
+            "population": true,
+            "queue": true,
+            "dependencies": true,
+            "readableMetadata": true
+          },
+          "missing": [],
+          "obstructions": [],
+          "viewportOverflow": false,
+          "panelOverflow": false,
+          "status": "PASS",
+          "screenshot": {
+            "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\tmp\\stage7-production-ui\\narrow-phone-production.png",
+            "relativePath": "tmp/stage7-production-ui/narrow-phone-production.png",
+            "sha256": "05ca66611f92aa4b1330f73075a2f0f8ff58796a7bd2752c3ba010504562bc58",
+            "bytes": 242829,
+            "dimensions": {
+              "width": 344,
+              "height": 882
+            },
+            "expected": {
+              "width": 344,
+              "height": 882
+            },
+            "valid": true
+          }
+        },
+        "productionFull": {
+          "selector": "#prodMenu",
+          "kind": "production-full",
+          "present": true,
+          "visible": true,
+          "rect": {
+            "left": 6,
+            "top": 311.73,
+            "right": 338,
+            "bottom": 788,
+            "width": 332,
+            "height": 476.27
+          },
+          "text": "PRODUCTION×‹FACTORY1 / 1›🤖INFANTRY🛡ARMOUR🎯ANTI-TANK💥CROWD CONTROL💣ARTILLERY🛩ANTI-AIR🛠SUPPORTTACTICAL PREVIEW🛡ARMOURED CORE4 AVAILABLEARMOURHold the centre and trade efficiently under sustained fire.FORMATIONBATTLE LINE⚠ Screen against gauss and dedicated anti-tank.INSPECT RHINORhino25m 94e⏱ 2.3sMEDIUM · Ø12mPOP +1 · 0/500QUEUE FULLFACILITY · Factory · TECH 1🔒 QUEUE FULL · CANCEL OR COMPLETE A UNITAP CANNON SHELLMain battle tank and the backbone of the line — everything else is built behind itⓘGoliath61m 235e⏱ 5.4sMEDIUM · Ø16mPOP +1 · 0/500QUEUE FULLFACILITY · Factory · TECH 1🔒 TECH 2🔒 QUEUE FULL · CANCEL OR COMPLETE A UNITAP CANNON SHELLAssault walker with 450 hull and a splash cannon, sent to break a defended position🔒ⓘHornet46m 188e⏱ 4sMEDIUM · Ø12mPOP +1 · 0/500QUEUE FULLFACILITY · Factory · TECH 1🔒 TECH 2🔒 QUEUE FULL · CANCEL OR COMPLETE A UNITUNGUIDED HE ROCKETRocket vehicle whose splash punishes formations that have not spread out🔒ⓘResonator63m 254e⏱ 4.5sMEDIUM · Ø13mPOP +1 · 0/500QUEUE FULLFACILITY · Factory · TECH 1🔒 TECH 2🔒 QUEUE FULL · CANCEL OR COMPLETE A UNITSONIC RESONANCE PULSESonic platform whose waves pass straight through Bulwark shields🔒ⓘStriker×30▶ Striker in 2s · queue 34s⬆ UPGRADE TO TECH 2 (170m 650e)⚑ SET RALLY POINTREPEAT: OFF",
+          "cards": [
+            {
+              "text": "Rhino25m 94e⏱ 2.3sMEDIUM · Ø12mPOP +1 · 0/500QUEUE FULLFACILITY · Factory · TECH 1🔒 QUEUE FULL · CANCEL OR COMPLETE A UNITAP CANNON SHELLMain battle tank and the backbone of the line — everything else is built behind itⓘ",
+              "locked": true,
+              "ariaDisabled": "true",
+              "cost": "25m 94e",
+              "meta": "⏱ 2.3s · MEDIUM · Ø12m · POP +1 · 0/500 · QUEUE FULL",
+              "dependency": "FACILITY · Factory · TECH 1",
+              "locks": "🔒 QUEUE FULL · CANCEL OR COMPLETE A UNIT",
+              "effect": "",
+              "queueLock": "🔒 QUEUE FULL · CANCEL OR COMPLETE A UNIT",
+              "queueFull": true,
+              "footprint": null,
+              "footprintPolicy": null,
+              "expectedFootprint": null,
+              "footprintMatches": true,
+              "metaFont": 9.5,
+              "dependencyFont": 9.5
+            },
+            {
+              "text": "Goliath61m 235e⏱ 5.4sMEDIUM · Ø16mPOP +1 · 0/500QUEUE FULLFACILITY · Factory · TECH 1🔒 TECH 2🔒 QUEUE FULL · CANCEL OR COMPLETE A UNITAP CANNON SHELLAssault walker with 450 hull and a splash cannon, sent to break a defended position🔒ⓘ",
+              "locked": true,
+              "ariaDisabled": "true",
+              "cost": "61m 235e",
+              "meta": "⏱ 5.4s · MEDIUM · Ø16m · POP +1 · 0/500 · QUEUE FULL",
+              "dependency": "FACILITY · Factory · TECH 1",
+              "locks": "🔒 TECH 2 · 🔒 QUEUE FULL · CANCEL OR COMPLETE A UNIT",
+              "effect": "",
+              "queueLock": "🔒 QUEUE FULL · CANCEL OR COMPLETE A UNIT",
+              "queueFull": true,
+              "footprint": null,
+              "footprintPolicy": null,
+              "expectedFootprint": null,
+              "footprintMatches": true,
+              "metaFont": 9.5,
+              "dependencyFont": 9.5
+            },
+            {
+              "text": "Hornet46m 188e⏱ 4sMEDIUM · Ø12mPOP +1 · 0/500QUEUE FULLFACILITY · Factory · TECH 1🔒 TECH 2🔒 QUEUE FULL · CANCEL OR COMPLETE A UNITUNGUIDED HE ROCKETRocket vehicle whose splash punishes formations that have not spread out🔒ⓘ",
+              "locked": true,
+              "ariaDisabled": "true",
+              "cost": "46m 188e",
+              "meta": "⏱ 4s · MEDIUM · Ø12m · POP +1 · 0/500 · QUEUE FULL",
+              "dependency": "FACILITY · Factory · TECH 1",
+              "locks": "🔒 TECH 2 · 🔒 QUEUE FULL · CANCEL OR COMPLETE A UNIT",
+              "effect": "",
+              "queueLock": "🔒 QUEUE FULL · CANCEL OR COMPLETE A UNIT",
+              "queueFull": true,
+              "footprint": null,
+              "footprintPolicy": null,
+              "expectedFootprint": null,
+              "footprintMatches": true,
+              "metaFont": 9.5,
+              "dependencyFont": 9.5
+            },
+            {
+              "text": "Resonator63m 254e⏱ 4.5sMEDIUM · Ø13mPOP +1 · 0/500QUEUE FULLFACILITY · Factory · TECH 1🔒 TECH 2🔒 QUEUE FULL · CANCEL OR COMPLETE A UNITSONIC RESONANCE PULSESonic platform whose waves pass straight through Bulwark shields🔒ⓘ",
+              "locked": true,
+              "ariaDisabled": "true",
+              "cost": "63m 254e",
+              "meta": "⏱ 4.5s · MEDIUM · Ø13m · POP +1 · 0/500 · QUEUE FULL",
+              "dependency": "FACILITY · Factory · TECH 1",
+              "locks": "🔒 TECH 2 · 🔒 QUEUE FULL · CANCEL OR COMPLETE A UNIT",
+              "effect": "",
+              "queueLock": "🔒 QUEUE FULL · CANCEL OR COMPLETE A UNIT",
+              "queueFull": true,
+              "footprint": null,
+              "footprintPolicy": null,
+              "expectedFootprint": null,
+              "footprintMatches": true,
+              "metaFont": 9.5,
+              "dependencyFont": 9.5
+            }
+          ],
+          "targets": [
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "",
+              "label": "Close PRODUCTION",
+              "width": 44,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": "prodPrev",
+              "className": "muted",
+              "label": "Previous structure",
+              "width": 44,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": "prodNext",
+              "className": "muted",
+              "label": "Next structure",
+              "width": 44,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "tabBtn",
+              "label": "🤖INFANTRY",
+              "width": 116.83,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "tabBtn on",
+              "label": "🛡ARMOUR",
+              "width": 101.81,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "tabBtn",
+              "label": "🎯ANTI-TANK",
+              "width": 123.69,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "tabBtn",
+              "label": "💥CROWD CONTROL",
+              "width": 169.55,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "tabBtn",
+              "label": "💣ARTILLERY",
+              "width": 125.75,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "tabBtn",
+              "label": "🛩ANTI-AIR",
+              "width": 104.05,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "tabBtn",
+              "label": "🛠SUPPORT",
+              "width": 108.92,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "menuRoleInspect",
+              "label": "INSPECT RHINO",
+              "width": 107.33,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "DIV",
+              "id": null,
+              "className": "bcard locked queueFull",
+              "label": "Queue full. Build Rhino. Cost 25 mass and 94 energy. 2.3s. MEDIUM size. Population plus one. Queue position 30 of 30. Main battle tank and the backbone of the line — everything else is built behind it",
+              "width": 152,
+              "height": 329,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "cardIntel",
+              "label": "About Rhino",
+              "width": 44,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "DIV",
+              "id": null,
+              "className": "bcard locked queueFull",
+              "label": "Queue full. Build Goliath. Cost 61 mass and 235 energy. 5.4s. MEDIUM size. Population plus one. Queue position 30 of 30. Locked: TECH 2. Assault walker with 450 hull and a splash cannon, sent to break a defended position",
+              "width": 152,
+              "height": 329,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "cardIntel",
+              "label": "About Goliath",
+              "width": 44,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "DIV",
+              "id": null,
+              "className": "bcard locked queueFull",
+              "label": "Queue full. Build Hornet. Cost 46 mass and 188 energy. 4s. MEDIUM size. Population plus one. Queue position 30 of 30. Locked: TECH 2. Rocket vehicle whose splash punishes formations that have not spread out",
+              "width": 152,
+              "height": 340,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "cardIntel",
+              "label": "About Hornet",
+              "width": 44,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "DIV",
+              "id": null,
+              "className": "bcard locked queueFull",
+              "label": "Queue full. Build Resonator. Cost 63 mass and 254 energy. 4.5s. MEDIUM size. Population plus one. Queue position 30 of 30. Locked: TECH 2. Sonic platform whose waves pass straight through Bulwark shields",
+              "width": 152,
+              "height": 340,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "cardIntel",
+              "label": "About Resonator",
+              "width": 44,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "qPlate active",
+              "label": "Cancel one Striker, 30 queued",
+              "width": 64,
+              "height": 64,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": "upBtn",
+              "className": "",
+              "label": "⬆ UPGRADE TO TECH 2 (170m 650e)",
+              "width": 312,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": "rallyBtn",
+              "className": "",
+              "label": "⚑ SET RALLY POINT",
+              "width": 312,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": "repeatBtn",
+              "className": "",
+              "label": "REPEAT: OFF",
+              "width": 312,
+              "height": 44,
+              "status": "PASS"
+            }
+          ],
+          "targetFailures": [],
+          "required": {
+            "cost": true,
+            "effectiveTime": true,
+            "size": true,
+            "population": true,
+            "queue": true,
+            "dependencies": true,
+            "readableMetadata": true,
+            "queueFullLock": true
+          },
+          "missing": [],
+          "obstructions": [],
+          "viewportOverflow": false,
+          "panelOverflow": false,
+          "status": "PASS",
+          "screenshot": {
+            "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\tmp\\stage7-production-ui\\narrow-phone-production-full.png",
+            "relativePath": "tmp/stage7-production-ui/narrow-phone-production-full.png",
+            "sha256": "f3aa7afd4429fa18fe4f65f7828dcdce2f8f9ab479ad0faa1db4c51b3794eaf6",
+            "bytes": 218763,
+            "dimensions": {
+              "width": 344,
+              "height": 882
+            },
+            "expected": {
+              "width": 344,
+              "height": 882
+            },
+            "valid": true
+          }
+        },
+        "construction": {
+          "selector": "#buildMenu",
+          "kind": "construction",
+          "present": true,
+          "visible": true,
+          "rect": {
+            "left": 6,
+            "top": 311.73,
+            "right": 338,
+            "bottom": 788,
+            "width": 332,
+            "height": 476.27
+          },
+          "text": "STRUCTURES×⛏ECONOMY🏭PRODUCTION⚓NAVAL🛡DEFENCE🧱FORTIFICATION🔬TECH📡SUPPORT☄SUPERWEAPONTACTICAL PREVIEW⛏RESOURCE GRID5 AVAILABLEECONOMYSecure income and storage before expanding production.BUILD CHAINDEPOSIT → EXTRACTOR → STORAGEINSPECT EXTRACTORExtractor45m 120e⏱ 6sFOOT 34×34mLAND2% START · 98% STREAMPREREQ · Commander level 1 · Phase deposit at placement+4 mass/s at a Tier-I phase deposit; richer deposits multiply yield⛏ ECONOMY+4 Mass (on ◆)ⓘReactor40m 0e⏱ 5sFOOT 38×30mLAND2% START · 98% STREAMPREREQ · Commander level 1+14 energy/s at Mk1⛏ ECONOMY+14 EnergyⓘGeo Plant95m 160e⏱ 8sFOOT 38×32mLAND2% START · 98% STREAMPREREQ · Commander level 2 · Geothermal vent at placement+30 energy/s from an active geothermal vent⛏ ECONOMY+30 Energy (on ✦ geyser)ⓘSilo70m 220e⏱ 6sFOOT 30×30mLAND2% START · 98% STREAMPREREQ · Commander level 2+600 mass and +2,000 energy storage⛏ ECONOMY+600 mass / +2000 energy storageⓘFabricator130m 460e⏱ 9sFOOT 38×30mLAND2% START · 98% STREAMPREREQ · Commander level 3Converts up to 58 energy/s into 3.6 mass/s⛏ ECONOMYBurns 58 energy → +3.6 mass — salvage drones reclaim nearby wrecksⓘ",
+          "cards": [
+            {
+              "text": "Extractor45m 120e⏱ 6sFOOT 34×34mLAND2% START · 98% STREAMPREREQ · Commander level 1 · Phase deposit at placement+4 mass/s at a Tier-I phase deposit; richer deposits multiply yield⛏ ECONOMY+4 Mass (on ◆)ⓘ",
+              "locked": false,
+              "ariaDisabled": "false",
+              "cost": "45m 120e",
+              "meta": "⏱ 6s · FOOT 34×34m · LAND · 2% START · 98% STREAM",
+              "dependency": "PREREQ · Commander level 1 · Phase deposit at placement",
+              "locks": "",
+              "effect": "+4 mass/s at a Tier-I phase deposit; richer deposits multiply yield",
+              "queueLock": "",
+              "queueFull": false,
+              "footprint": "34x34",
+              "footprintPolicy": "reserved-max-tier",
+              "expectedFootprint": "34x34",
+              "footprintMatches": true,
+              "metaFont": 9.5,
+              "dependencyFont": 9.5
+            },
+            {
+              "text": "Reactor40m 0e⏱ 5sFOOT 38×30mLAND2% START · 98% STREAMPREREQ · Commander level 1+14 energy/s at Mk1⛏ ECONOMY+14 Energyⓘ",
+              "locked": false,
+              "ariaDisabled": "false",
+              "cost": "40m 0e",
+              "meta": "⏱ 5s · FOOT 38×30m · LAND · 2% START · 98% STREAM",
+              "dependency": "PREREQ · Commander level 1",
+              "locks": "",
+              "effect": "+14 energy/s at Mk1",
+              "queueLock": "",
+              "queueFull": false,
+              "footprint": "38x30",
+              "footprintPolicy": "reserved-max-tier",
+              "expectedFootprint": "38x30",
+              "footprintMatches": true,
+              "metaFont": 9.5,
+              "dependencyFont": 9.5
+            },
+            {
+              "text": "Geo Plant95m 160e⏱ 8sFOOT 38×32mLAND2% START · 98% STREAMPREREQ · Commander level 2 · Geothermal vent at placement+30 energy/s from an active geothermal vent⛏ ECONOMY+30 Energy (on ✦ geyser)ⓘ",
+              "locked": false,
+              "ariaDisabled": "false",
+              "cost": "95m 160e",
+              "meta": "⏱ 8s · FOOT 38×32m · LAND · 2% START · 98% STREAM",
+              "dependency": "PREREQ · Commander level 2 · Geothermal vent at placement",
+              "locks": "",
+              "effect": "+30 energy/s from an active geothermal vent",
+              "queueLock": "",
+              "queueFull": false,
+              "footprint": "38x32",
+              "footprintPolicy": "reserved-max-tier",
+              "expectedFootprint": "38x32",
+              "footprintMatches": true,
+              "metaFont": 9.5,
+              "dependencyFont": 9.5
+            },
+            {
+              "text": "Silo70m 220e⏱ 6sFOOT 30×30mLAND2% START · 98% STREAMPREREQ · Commander level 2+600 mass and +2,000 energy storage⛏ ECONOMY+600 mass / +2000 energy storageⓘ",
+              "locked": false,
+              "ariaDisabled": "false",
+              "cost": "70m 220e",
+              "meta": "⏱ 6s · FOOT 30×30m · LAND · 2% START · 98% STREAM",
+              "dependency": "PREREQ · Commander level 2",
+              "locks": "",
+              "effect": "+600 mass and +2,000 energy storage",
+              "queueLock": "",
+              "queueFull": false,
+              "footprint": "30x30",
+              "footprintPolicy": "reserved-max-tier",
+              "expectedFootprint": "30x30",
+              "footprintMatches": true,
+              "metaFont": 9.5,
+              "dependencyFont": 9.5
+            },
+            {
+              "text": "Fabricator130m 460e⏱ 9sFOOT 38×30mLAND2% START · 98% STREAMPREREQ · Commander level 3Converts up to 58 energy/s into 3.6 mass/s⛏ ECONOMYBurns 58 energy → +3.6 mass — salvage drones reclaim nearby wrecksⓘ",
+              "locked": false,
+              "ariaDisabled": "false",
+              "cost": "130m 460e",
+              "meta": "⏱ 9s · FOOT 38×30m · LAND · 2% START · 98% STREAM",
+              "dependency": "PREREQ · Commander level 3",
+              "locks": "",
+              "effect": "Converts up to 58 energy/s into 3.6 mass/s",
+              "queueLock": "",
+              "queueFull": false,
+              "footprint": "38x30",
+              "footprintPolicy": "reserved-max-tier",
+              "expectedFootprint": "38x30",
+              "footprintMatches": true,
+              "metaFont": 9.5,
+              "dependencyFont": 9.5
+            }
+          ],
+          "targets": [
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "",
+              "label": "Close STRUCTURES",
+              "width": 44,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "tabBtn on",
+              "label": "⛏ECONOMY",
+              "width": 110.52,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "tabBtn",
+              "label": "🏭PRODUCTION",
+              "width": 136.78,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "tabBtn",
+              "label": "⚓NAVAL",
+              "width": 97.41,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "tabBtn",
+              "label": "🛡DEFENCE",
+              "width": 107.52,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "tabBtn",
+              "label": "🧱FORTIFICATION",
+              "width": 150.83,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "tabBtn",
+              "label": "🔬TECH",
+              "width": 85.34,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "tabBtn",
+              "label": "📡SUPPORT",
+              "width": 113.77,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "tabBtn",
+              "label": "☄SUPERWEAPON",
+              "width": 148.81,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "menuRoleInspect",
+              "label": "INSPECT EXTRACTOR",
+              "width": 143.34,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "DIV",
+              "id": null,
+              "className": "bcard",
+              "label": "Build Extractor. Cost 45 mass and 120 energy. 6s. Footprint 34 by 34 meters. +4 mass/s at a Tier-I phase deposit; richer deposits multiply yield",
+              "width": 152,
+              "height": 336.59,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "cardIntel",
+              "label": "About Extractor",
+              "width": 44,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "DIV",
+              "id": null,
+              "className": "bcard",
+              "label": "Build Reactor. Cost 40 mass and 0 energy. 5s. Footprint 38 by 30 meters. +14 energy/s at Mk1",
+              "width": 152,
+              "height": 336.59,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "cardIntel",
+              "label": "About Reactor",
+              "width": 44,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "DIV",
+              "id": null,
+              "className": "bcard",
+              "label": "Build Geo Plant. Cost 95 mass and 160 energy. 8s. Footprint 38 by 32 meters. +30 energy/s from an active geothermal vent",
+              "width": 152,
+              "height": 336.59,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "cardIntel",
+              "label": "About Geo Plant",
+              "width": 44,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "DIV",
+              "id": null,
+              "className": "bcard",
+              "label": "Build Silo. Cost 70 mass and 220 energy. 6s. Footprint 30 by 30 meters. +600 mass and +2,000 energy storage",
+              "width": 152,
+              "height": 336.59,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "cardIntel",
+              "label": "About Silo",
+              "width": 44,
+              "height": 44,
+              "status": "PASS"
+            },
+            {
+              "tag": "DIV",
+              "id": null,
+              "className": "bcard",
+              "label": "Build Fabricator. Cost 130 mass and 460 energy. 9s. Footprint 38 by 30 meters. Converts up to 58 energy/s into 3.6 mass/s",
+              "width": 152,
+              "height": 335.53,
+              "status": "PASS"
+            },
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "cardIntel",
+              "label": "About Fabricator",
+              "width": 44,
+              "height": 44,
+              "status": "PASS"
+            }
+          ],
+          "targetFailures": [],
+          "required": {
+            "cost": true,
+            "effectiveTime": true,
+            "footprint": true,
+            "reservedFootprint": true,
+            "dependencies": true,
+            "effect": true,
+            "readableMetadata": true
+          },
+          "missing": [],
+          "obstructions": [],
+          "viewportOverflow": false,
+          "panelOverflow": false,
+          "status": "PASS",
+          "screenshot": {
+            "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\tmp\\stage7-production-ui\\narrow-phone-construction.png",
+            "relativePath": "tmp/stage7-production-ui/narrow-phone-construction.png",
+            "sha256": "623626e378a847e4fd3467bed735b49de628cab7147d8eb8b063b7fb53858313",
+            "bytes": 241802,
+            "dimensions": {
+              "width": 344,
+              "height": 882
+            },
+            "expected": {
+              "width": 344,
+              "height": 882
+            },
+            "valid": true
+          }
+        },
+        "economy": {
+          "selector": "#economyIntel",
+          "kind": "economy",
+          "present": true,
+          "visible": true,
+          "rect": {
+            "left": 20,
+            "top": 293,
+            "right": 324,
+            "bottom": 647.09,
+            "width": 304,
+            "height": 354.09
+          },
+          "text": "⌁RESOURCE FORECASTLive income, committed spending, storage and projected runway.×◆ MASSSTORED 950 / 1200GROSS +42.5/sSPEND -17.5/sNET +25.0/sFORECAST CAP IN 10s⚡ ENERGYSTORED 5600 / 6000GROSS +176.0/sSPEND -89.0/sNET +87.0/sFORECAST CAP IN 4.6sBOTTLENECKNONE — both resource flows are stable",
+          "cards": [],
+          "targets": [
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "ucClose",
+              "label": "Close resource forecast",
+              "width": 44,
+              "height": 44,
+              "status": "PASS"
+            }
+          ],
+          "targetFailures": [],
+          "required": {
+            "stored": true,
+            "gross": true,
+            "spend": true,
+            "net": true,
+            "forecast": true,
+            "bottleneck": true
+          },
+          "missing": [],
+          "obstructions": [],
+          "viewportOverflow": false,
+          "panelOverflow": false,
+          "status": "PASS",
+          "screenshot": {
+            "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\tmp\\stage7-production-ui\\narrow-phone-economy.png",
+            "relativePath": "tmp/stage7-production-ui/narrow-phone-economy.png",
+            "sha256": "db8fcd512f8f99e64a8db239d330674e0faa743941b605670ec6a0a9029bee1a",
+            "bytes": 260764,
+            "dimensions": {
+              "width": 344,
+              "height": 882
+            },
+            "expected": {
+              "width": 344,
+              "height": 882
+            },
+            "valid": true
+          }
+        },
+        "economyFull": {
+          "selector": "#economyIntel",
+          "kind": "economy-full",
+          "present": true,
+          "visible": true,
+          "rect": {
+            "left": 20,
+            "top": 293,
+            "right": 324,
+            "bottom": 660.59,
+            "width": 304,
+            "height": 367.59
+          },
+          "text": "⌁RESOURCE FORECASTLive income, committed spending, storage and projected runway.×◆ MASSSTORED 950 / 1200GROSS +42.5/sSPEND -17.5/sNET +25.0/sFORECAST CAP IN 10s⚡ ENERGYSTORED 6000 / 6000GROSS +200.0/sSPEND -20.0/sNET +180.0/sFORECAST FULL · INCOME WASTEDBOTTLENECKENERGY STORAGE FULL — income is being wasted",
+          "cards": [],
+          "targets": [
+            {
+              "tag": "BUTTON",
+              "id": null,
+              "className": "ucClose",
+              "label": "Close resource forecast",
+              "width": 44,
+              "height": 44,
+              "status": "PASS"
+            }
+          ],
+          "targetFailures": [],
+          "required": {
+            "stored": true,
+            "gross": true,
+            "spend": true,
+            "net": true,
+            "forecast": true,
+            "bottleneck": true,
+            "energyFull": true,
+            "wasteForecast": true
+          },
+          "missing": [],
+          "obstructions": [],
+          "viewportOverflow": false,
+          "panelOverflow": false,
+          "status": "PASS",
+          "screenshot": {
+            "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\tmp\\stage7-production-ui\\narrow-phone-economy-full.png",
+            "relativePath": "tmp/stage7-production-ui/narrow-phone-economy-full.png",
+            "sha256": "f66ab4e6479b8895628beb33aec044ed37212162c3af52d6afee7055e5fdb1b5",
+            "bytes": 260670,
+            "dimensions": {
+              "width": 344,
+              "height": 882
+            },
+            "expected": {
+              "width": 344,
+              "height": 882
+            },
+            "valid": true
+          }
+        }
+      },
+      "pageErrors": [],
+      "consoleErrors": [],
+      "requestFailures": [],
+      "status": "PASS",
+      "runtime": {
+        "webgl2": true,
+        "renderer": "ANGLE (AMD, AMD Radeon(TM) 610M (0x0000164E) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+        "vendor": "Google Inc. (AMD)",
+        "viewport": {
+          "width": 344,
+          "height": 882,
+          "dpr": 1
+        },
+        "matchLive": true,
+        "sourceMarker": "http://127.0.0.1:61735/src/engine/gl.js?v=1.33.48-boot5",
+        "footprintContract": true,
+        "footprintQuote": [
+          58,
+          58
+        ],
+        "footprintReserved": [
+          58,
+          58
+        ],
+        "footprintPlacement": [
+          58,
+          58
+        ]
+      },
+      "globalControls": {
+        "targets": [
+          {
+            "selector": "#topbar .res[data-econ]",
+            "id": null,
+            "width": 64.33,
+            "height": 44,
+            "left": 2,
+            "right": 66.33,
+            "status": "PASS"
+          },
+          {
+            "selector": "#topbar .res[data-econ]",
+            "id": null,
+            "width": 64.34,
+            "height": 44,
+            "left": 69.33,
+            "right": 133.67,
+            "status": "PASS"
+          },
+          {
+            "selector": "#primaryRow .cbtn",
+            "id": "armyBtn",
+            "width": 44,
+            "height": 44,
+            "left": 69,
+            "right": 113,
+            "status": "PASS"
+          },
+          {
+            "selector": "#primaryRow .cbtn",
+            "id": "idleBuilderBtn",
+            "width": 44,
+            "height": 44,
+            "left": 114,
+            "right": 158,
+            "status": "PASS"
+          },
+          {
+            "selector": "#primaryRow .cbtn",
+            "id": "boxBtn",
+            "width": 44,
+            "height": 44,
+            "left": 159,
+            "right": 203,
+            "status": "PASS"
+          },
+          {
+            "selector": "#primaryRow .cbtn",
+            "id": "stopBtn",
+            "width": 44,
+            "height": 44,
+            "left": 204,
+            "right": 248,
+            "status": "PASS"
+          },
+          {
+            "selector": "#primaryRow .cbtn",
+            "id": "buildBtn",
+            "width": 44,
+            "height": 44,
+            "left": 249,
+            "right": 293,
+            "status": "PASS"
+          },
+          {
+            "selector": "#primaryRow .cbtn",
+            "id": "baseFindBtn",
+            "width": 44,
+            "height": 44,
+            "left": 294,
+            "right": 338,
+            "status": "PASS"
+          }
+        ],
+        "failures": [],
+        "rowOverflow": false,
+        "viewport": {
+          "width": 344,
+          "height": 882
+        },
+        "status": "PASS"
+      },
+      "productionKeyboard": {
+        "queueBefore": 2,
+        "queue": 2,
+        "intelVisible": true,
+        "hasClose": true,
+        "activeClass": "bgDim mfIntroDone hudTacticalDock uiPrimaryOpen uiPanelOpen uiIntelOpen",
+        "activeLabel": "",
+        "unitClosed": true,
+        "status": "PASS"
+      },
+      "constructionKeyboard": {
+        "placingBefore": false,
+        "placing": false,
+        "intelVisible": true,
+        "hasClose": true,
+        "activeClass": "bgDim mfIntroDone hudTacticalDock uiPrimaryOpen uiPanelOpen uiIntelOpen",
+        "activeLabel": "",
+        "buildingClosed": true,
+        "status": "PASS"
+      },
+      "economyOpenedBy": "showEconomyIntel",
+      "webgl": {
+        "contextLosses": 0,
+        "mainContextLost": false,
+        "mainError": 0
+      },
+      "failures": []
+    }
+  ],
+  "summary": {
+    "requested": 2,
+    "accepted": 2,
+    "rejected": 0,
+    "blockerCount": 0
+  },
+  "blockers": [],
+  "status": "PASS"
+}

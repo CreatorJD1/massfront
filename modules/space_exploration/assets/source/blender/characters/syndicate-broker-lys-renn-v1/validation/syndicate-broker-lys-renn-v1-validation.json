@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "assetId": "syndicate-broker-lys-renn-v1",
+  "character": "Broker Lys Renn",
+  "status": "PASS",
+  "runtimeState": "SOURCE_ACCEPTED_RUNTIME_UNREGISTERED",
+  "runtimeReady": false,
+  "authoringMaster": {
+    "file": "../syndicate-broker-lys-renn-v1.blend",
+    "bytes": 8847769,
+    "sha256": "b593c84cfc6016ac4c44f644c50e3d9694810bae11734d9b9213bd05179e4e24"
+  },
+  "acceptedSources": {
+    "characterAndHairStage08": {
+      "sourceName": "Broker_Lys_Renn_stage08_hair_silhouette_strict.blend",
+      "sha256": "55e9bb57377dcb351b1051a98716976caa4194e01fec15e4db92bae15d93b57c"
+    },
+    "bodyWidthStage04c": {
+      "sourceName": "Broker_Lys_Renn_stage04c_width_only.blend",
+      "sha256": "80c2bbd8644888c423b65dbd2cfa2729bd8cb24d28342f064828fca65819f595"
+    },
+    "neuralDeviceV4Library": {
+      "sourceName": "Broker_Lys_Renn_neural_device_v4_library.blend",
+      "sha256": "80e64ab4f5171c8f668f8e801a6a3af6410e8ad1d30a03ef366867e36626a9b6",
+      "meshCount": 6
+    },
+    "flatsV2Library": {
+      "sourceName": "Broker_Lys_Renn_flats_library_v2.blend",
+      "sha256": "678ebcd79af8f177f4ae4eef9e3f791ae802417c25085cb99a34d2fb16531d4b",
+      "meshCount": 8
+    }
+  },
+  "geometry": {
+    "canonicalHeightM": 1.8034,
+    "acceptedSurfaceHeightM": 1.7893472622525621,
+    "kneeZM": 0.5601189732551575,
+    "faceShapeKeyCount": 60,
+    "bodyShapeKeys": [
+      "Basis",
+      "LysRenn_Proportions",
+      "LysRenn_SilhouetteDepth",
+      "LysRenn_StrictSilhouetteDepth",
+      "LysRenn_StrictWidthOnly"
+    ],
+    "activeBodyShapeKeyValues": {
+      "LysRenn_Proportions": 1.0,
+      "LysRenn_SilhouetteDepth": 1.0,
+      "LysRenn_StrictSilhouetteDepth": 0.0,
+      "LysRenn_StrictWidthOnly": 1.0
+    },
+    "neuralDeviceMeshes": [
+      "LYS_ND_V4_Teal_MainShell_LIB",
+      "LYS_ND_V4_Teal_TemplePlate_LIB",
+      "LYS_ND_V4_Gold_TileUpper_LIB",
+      "LYS_ND_V4_Gold_TileMid_LIB",
+      "LYS_ND_V4_Gold_TileLower_LIB",
+      "LYS_ND_V4_Ivory_LowerInset_LIB"
+    ],
+    "flatsMeshCount": 8
+  },
+  "visualValidation": {
+    "centeredProofCount": 24,
+    "bodyViews": 5,
+    "headAndDeviceViews": 4,
+    "footwearViews": 3,
+    "expressionViews": 12,
+    "proofSheet": {
+      "file": "syndicate-broker-lys-renn-v1-proof-sheet.png",
+      "bytes": 6356141,
+      "sha256": "ac3c8483ecbe9f932d17c5b39a2d0cf4b6e95c8488f3a3e0e75eb878ca4003d1",
+      "dimensions": [4096, 6448]
+    },
+    "proofSheetSidecar": {
+      "file": "syndicate-broker-lys-renn-v1-proof-sheet.json",
+      "bytes": 6333,
+      "sha256": "f9ae0275767b7f01bd1dac01a60a87011690ded73a1337c784b9f29870f3b131"
+    }
+  },
+  "validationInputs": {
+    "masterValidationReportSha256": "5b9c4b1b4f1b6afe98674bd9c85c60598f06535d18602a9adffea5ea46cebbbd",
+    "renderValidationReportSha256": "55d395451332fdce40fe23b038214c17c2d5850e9defe017dd4d351948edc36b",
+    "proofSheetReportSha256": "f9ae0275767b7f01bd1dac01a60a87011690ded73a1337c784b9f29870f3b131"
+  },
+  "checks": {
+    "acceptedInputHashesUnchanged": true,
+    "stage08HairOnly": true,
+    "masterSavedAndHashMatched": true,
+    "acceptedBodyKeysEnabled": true,
+    "sixtyFaceShapeKeys": true,
+    "sixV4DeviceMeshesRiggedToHead": true,
+    "eightV2FlatsMeshesRiggedToFeet": true,
+    "surfaceAndKneeHeightsPreserved": true,
+    "twentyFourCenteredProofsRendered": true,
+    "allProofsNonempty": true,
+    "proofSheetHashMatched": true
+  }
+}

@@ -1,5 +1,7 @@
 const http = require('http'), fs = require('fs'), path = require('path');
-const root = path.resolve('www');
+const pnglib = require('./artv2/pnglib.cjs');
+const repoRoot = path.resolve(__dirname, '..');
+const root = path.join(repoRoot, 'www');
 const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.m4a': 'audio/mp4', '.ogg': 'audio/ogg', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json' };
 const server = http.createServer((req, res) => {
   let p = decodeURIComponent(req.url.split('?')[0]);
@@ -22,12 +24,12 @@ const server = http.createServer((req, res) => {
     await assertHardwareGpu(p);
     await p.waitForTimeout(20000);   // boot + initGL3D + buildMatAtlas
     const atlas = await p.evaluate(() => window.__MF_MATERIAL_ATLASES || null);
-    if (!atlas || !atlas.albedo || !atlas.normal || !atlas.orm) {
+    if (!atlas || !atlas.albedo || !atlas.normal || !atlas.ormRaw || !atlas.ormSize) {
       console.error('Material atlas capture failed');
       process.exitCode = 1;
       return;
     }
-    const outDir = path.resolve('assets/textures');
+    const outDir = path.join(repoRoot, 'assets', 'textures');
     fs.mkdirSync(outDir, { recursive: true });
     const save = (name, dataUrl) => {
       const base64 = dataUrl.split(',')[1];
@@ -38,7 +40,11 @@ const server = http.createServer((req, res) => {
     };
     save('mat-albedo.png', atlas.albedo);
     save('mat-normal.png', atlas.normal);
-    save('mat-orm.png', atlas.orm);
+    const raw = Buffer.from(atlas.ormRaw, 'base64');
+    if (raw.length !== atlas.ormSize * atlas.ormSize * 4) throw new Error('Invalid raw ORM atlas byte count');
+    const ormOut = path.join(outDir, 'mat-orm.png');
+    pnglib.encode(atlas.ormSize, atlas.ormSize, raw, ormOut);
+    console.log('mat-orm.png -> ' + ormOut + ' (' + (fs.statSync(ormOut).size / 1024).toFixed(1) + ' KB)');
   } finally {
     await closePwBrowser();
     server.close();

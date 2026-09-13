@@ -1,0 +1,1438 @@
+{
+  "schema": "massfront.stage11-space-ux-acceptance.v2",
+  "startedUtc": "2026-09-08T07:49:00.629Z",
+  "finishedUtc": "2026-09-08T07:50:10.009Z",
+  "repository": {
+    "root": "C:/Users/Jason/Documents/Codex/2026-08-01/massfront-rts-mobile-game-for-apple",
+    "head": "0975bf6edc5a39d3b2ec76a40a6155072c726381",
+    "branch": "cursor/strip-mass-node-bloom",
+    "dirty": true
+  },
+  "sourceStamp": "5843563d7b02cc51",
+  "sources": {
+    "index.html": {
+      "bytes": 444886,
+      "sha256": "95a9712077aa1c1f8a85ac64d92a33f262152724cdd186c5857d3f126e6e55ba"
+    },
+    "src/main.js": {
+      "bytes": 202248,
+      "sha256": "2f4ff291509bd083b44d558d57836d13668c0e36cbb15744911484643698d6d1"
+    },
+    "src/galactic-operations.js": {
+      "bytes": 69702,
+      "sha256": "3a4d3e47234dce9d9765a1d56436d8a285e47d0d4bd96404cc6c5c34cd486c5c"
+    },
+    "src/career-faction-gate.js": {
+      "bytes": 29777,
+      "sha256": "ecafe9979ec0a9472767cbee5ed8e5cfb2b077cffead5a70b750393e2a9c5777"
+    },
+    "src/ui/hud.js": {
+      "bytes": 207210,
+      "sha256": "08b16448d0d964e7383341fc6af1703ca898e9822f316250c2766f9708d1c699"
+    },
+    "src/styles/ui.css": {
+      "bytes": 475028,
+      "sha256": "e12ede743f5597100344d853da0e18df1f0a8d9f86685daecf0712ec45d994b6"
+    },
+    "src/onboarding.js": {
+      "bytes": 28999,
+      "sha256": "dee3811bcb70aae5d6862fe16be212293ed3b2d807240100bc8cceb9b8249a87"
+    },
+    "src/tutorial.js": {
+      "bytes": 129752,
+      "sha256": "b7cbca36f00ca148df27fe25157d70ac79b3c569e3861fa704e90e2f37fa4f79"
+    },
+    "src/styles/tutorial.css": {
+      "bytes": 29039,
+      "sha256": "d60f368d3aef436e9b405ffbed22596b3aab83fc1b6d2163772b5d254c9d7507"
+    },
+    "modules/space_exploration/index.html": {
+      "bytes": 16752,
+      "sha256": "16cc086666adc53738ae288fb72b15683628f6f29e9d04c1d03c8c7e44407f89"
+    },
+    "modules/space_exploration/src/space_module.js": {
+      "bytes": 10057,
+      "sha256": "d3123b89f6e49d0164a716f0792b368f45e91bf4229eefa8dbc6cc0adc5aa205"
+    },
+    "modules/space_exploration/src/space_experience.js": {
+      "bytes": 97247,
+      "sha256": "a8ab97c4a3881d2e8020c312c839c8d22fb19eb29e2f6bbcefd6bb352da337e7"
+    },
+    "modules/space_exploration/src/core/uga_command_scene.js": {
+      "bytes": 85158,
+      "sha256": "07a5f5b034466178ff9b1e09f20ac9b012c58299826fc026b7c6e1dd24749e01"
+    },
+    "modules/space_exploration/src/core/uga_management_profile_camera.js": {
+      "bytes": 2268,
+      "sha256": "5860e6fb1a8f7a31628cb189401c63ae122188272d01e11d1a02dd4115787263"
+    },
+    "modules/space_exploration/src/ui/story_transmission_controller.js": {
+      "bytes": 19954,
+      "sha256": "0ba7eb8bb8708b8509c892f5a96b79d6095378d9271b42bb367fb2ec30cf78c2"
+    },
+    "modules/space_exploration/src/ui/campaign_hub_registry.js": {
+      "bytes": 14692,
+      "sha256": "15d998051a5da15a2ee3e2a48abb28e56d3817061b4a8333578c87dc6c1c0751"
+    },
+    "modules/space_exploration/src/ui/uga_command.js": {
+      "bytes": 125124,
+      "sha256": "1aa552bee1d87235e4e51b08c10f421bf71406454fc82c6aa735253272bf8d6d"
+    },
+    "modules/space_exploration/src/ui/uga_command.css": {
+      "bytes": 91700,
+      "sha256": "3c099fca6e85307cec3568ff5de8ff0d513e3d137ab6306aeb94b6459fcf6314"
+    },
+    "tools/test-galactic-entry-intro-ticket.mjs": {
+      "bytes": 3065,
+      "sha256": "4d2b309f851eca09df1a26531721d9d6bb235adb065412eef20bc83aac800795"
+    },
+    "tools/capture-stage11-space-ux.mjs": {
+      "bytes": 77258,
+      "sha256": "98995102f76e5a65ad2e59cd1b4887c0b3b3de0d6301d32612d6d30945f30fd4"
+    }
+  },
+  "gpu": [
+    {
+      "label": "fresh-base-412x900",
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4060 Laptop GPU (0x000028E0) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "vendor": "Google Inc. (NVIDIA)",
+      "version": "",
+      "shadingLanguageVersion": ""
+    },
+    {
+      "label": "fresh-space-412x900",
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4060 Laptop GPU (0x000028E0) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "vendor": "Google Inc. (NVIDIA)",
+      "version": "",
+      "shadingLanguageVersion": ""
+    },
+    {
+      "label": "skip-return-base-412x900",
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4060 Laptop GPU (0x000028E0) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "vendor": "Google Inc. (NVIDIA)",
+      "version": "",
+      "shadingLanguageVersion": ""
+    },
+    {
+      "label": "commissioned-space-412x900",
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4060 Laptop GPU (0x000028E0) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "vendor": "Google Inc. (NVIDIA)",
+      "version": "",
+      "shadingLanguageVersion": ""
+    }
+  ],
+  "captures": [
+    {
+      "name": "02-world-intro-keel-story-rail-412x900",
+      "title": "Cinematic world introduction + normal-space KEEL",
+      "description": "A genuine new career enters the exterior Aelos system. KEEL occupies the dedicated story rail; there is no minimap receiver in the space document.",
+      "viewport": {
+        "width": 412,
+        "height": 900
+      },
+      "path": "screenshots/02-world-intro-keel-story-rail-412x900.png",
+      "bytes": 141988,
+      "sha256": "a74c6430cb1b0c602a4f4ab282f85451a7deb1cebb4e348760feedb32c25c7fe",
+      "url": "http://127.0.0.1:63216/modules/space_exploration/index.html",
+      "state": {
+        "runtime": "massfront",
+        "entryView": "system",
+        "scene": "system",
+        "storyRailHidden": "false",
+        "transmitting": true,
+        "channel": "UGA PERSONNEL LINK",
+        "speaker": "KEEL",
+        "title": "WELCOME TO THE AELOS ANCHORAGE",
+        "body": "Welcome aboard your UGA exploration ship. I am KEEL. Drag to look around, select a contact, and use ALIGN or AUTOPILOT to approach. SURVEY opens the scanner for a selected planet.",
+        "actions": [
+          {
+            "id": "first-entry-next",
+            "text": "01NEXT · YOUR MISSION LOOP›"
+          }
+        ],
+        "minimapNodes": 0,
+        "renderVeil": {
+          "ready": true,
+          "visibility": "hidden",
+          "opacity": "0",
+          "pointerEvents": "none"
+        }
+      }
+    },
+    {
+      "name": "03-optional-tutorial-choice-412x900",
+      "title": "Optional protected tutorial choice",
+      "description": "Both paths remain explicit: begin the protected planetary basics or skip directly to required faction commissioning.",
+      "viewport": {
+        "width": 412,
+        "height": 900
+      },
+      "path": "screenshots/03-optional-tutorial-choice-412x900.png",
+      "bytes": 149619,
+      "sha256": "c4f72e4a3cc57f4aff29549e4f21784dab0e1330448459e4ccd09975492e1628",
+      "url": "http://127.0.0.1:63216/modules/space_exploration/index.html",
+      "state": {
+        "runtime": "massfront",
+        "entryView": "system",
+        "scene": "system",
+        "storyRailHidden": "false",
+        "transmitting": true,
+        "channel": "UGA PERSONNEL LINK",
+        "speaker": "KEEL",
+        "title": "SELECT YOUR STARTING PATH",
+        "body": "You command the UGA exploration ship. Survey points of interest, review an objective, then choose an available hired commander and deployment force. Return here after the mission to develop your ship. First, learn the field controls or arrange your first commander.",
+        "actions": [
+          {
+            "id": "begin-planetary-training",
+            "text": "01BEGIN BASIC TUTORIALProtected planetary mission covering navigation, selection, economy, construction and combat.RECOMMENDED · PROTECTED›"
+          },
+          {
+            "id": "skip-to-faction-selection",
+            "text": "02ARRANGE FIRST COMMANDERChoose the faction supplying your first commander. Select that available commander when preparing an objective.NO TRAINING MISSION›"
+          }
+        ],
+        "minimapNodes": 0,
+        "renderVeil": {
+          "ready": true,
+          "visibility": "hidden",
+          "opacity": "0",
+          "pointerEvents": "none"
+        }
+      }
+    },
+    {
+      "name": "04-faction-commander1-commissioning-412x900",
+      "title": "Faction + Commander 1 commissioning",
+      "description": "The visible Nova card grants Captain Elara Kai as Commander 1; the bound live state records equivalent real Commander 1 grants for all three playable factions while KEEL remains neutral UGA guidance.",
+      "viewport": {
+        "width": 412,
+        "height": 900
+      },
+      "path": "screenshots/04-faction-commander1-commissioning-412x900.png",
+      "bytes": 243928,
+      "sha256": "39a7a9d23b6e1d70e6c697cb1c1cba3985bb9405cfb8ba79955f4772fc7b30f5",
+      "url": "http://127.0.0.1:63216/index.html",
+      "state": {
+        "skipBefore": {
+          "url": "http://127.0.0.1:63216/modules/space_exploration/index.html",
+          "firstEntry": {
+            "started": true,
+            "choice": "",
+            "choicePending": false,
+            "continuation": {
+              "schema": "massfront.new-career-sequence.v1",
+              "required": true,
+              "moduleImplemented": true,
+              "nextStep": "faction-selection",
+              "afterTraining": "faction-selection",
+              "sequence": [
+                "faction-selection",
+                "starter-commander-1",
+                "full-uga-space"
+              ],
+              "catalogAuthority": "base-game-faction-and-commander-catalog"
+            }
+          },
+          "ticket": {
+            "schemaVersion": 2,
+            "kind": "MassfrontGalacticEntryV2",
+            "profileId": "p1",
+            "issuedAt": 1788853759848,
+            "expiresAt": 1789458559848,
+            "source": "massfront-base",
+            "entryView": "system",
+            "introRequired": true,
+            "commanderRosterSnapshot": {
+              "schemaVersion": 1,
+              "kind": "CommanderRosterSnapshotV1",
+              "source": "massfront-base",
+              "sourceVersion": 1,
+              "commanderCount": 9,
+              "commander1ByCampaignFaction": {
+                "nova": "nova_kai",
+                "dominion": "legion_vex",
+                "syndicate": "syndicate_renn"
+              },
+              "commanders": [
+                {
+                  "id": "nova_kai",
+                  "sourceFactionId": "nova",
+                  "campaignFactionId": "nova",
+                  "name": "Captain Elara Kai",
+                  "rank": "Captain",
+                  "shortName": "Kai",
+                  "callsign": "LANTERN",
+                  "role": "VANGUARD",
+                  "lore": {
+                    "key": "commander.nova_kai",
+                    "epithet": "The Clean Landing",
+                    "service": "Federation Expeditionary Command / 4th Landing Group",
+                    "bio": "Kai took Sombrero-I with fewer losses than the plan allowed for and has been quietly resented for it ever since. She fires first only when the shot ends the argument."
+                  },
+                  "chassis": {
+                    "heroType": 4,
+                    "unit": "Commander",
+                    "sprite": "cdr"
+                  },
+                  "passive": {
+                    "label": "Fire-Control · Commander damage +12%",
+                    "perk": "kai"
+                  },
+                  "baseline": {
+                    "index": 0,
+                    "label": "Orbital Blast"
+                  },
+                  "signature": {
+                    "id": "skybreaker",
+                    "label": "Skybreaker Salvo",
+                    "em": "✦"
+                  },
+                  "weapons": {
+                    "primary": "Rail Repeater",
+                    "secondary": "Cluster Cannon"
+                  },
+                  "portrait": {
+                    "resolver": "commanderPortraitSrc",
+                    "fallback": "./assets/factions/nova_192.jpg",
+                    "alt": "Captain Elara Kai command portrait"
+                  },
+                  "voice": {
+                    "bank": "cmdr_nova_kai",
+                    "channel": "cmdr",
+                    "slotPrefix": "vo_cmdr_nova_kai_"
+                  },
+                  "sourceArt": null
+                },
+                {
+                  "id": "nova_holt",
+                  "sourceFactionId": "nova",
+                  "campaignFactionId": "nova",
+                  "name": "Major Rowan Holt",
+                  "rank": "Major",
+                  "shortName": "Holt",
+                  "callsign": "ANVIL",
+                  "role": "ENGINEER",
+                  "lore": {
+                    "key": "commander.nova_holt",
+                    "epithet": "Forward Works",
+                    "service": "Federation Corps of Engineers / Forward Works Detachment",
+                    "bio": "Holt builds the position before he argues about it. Three of his forward depots are still standing on worlds the Federation formally abandoned."
+                  },
+                  "chassis": {
+                    "heroType": 4,
+                    "unit": "Commander",
+                    "sprite": "cdr"
+                  },
+                  "passive": {
+                    "label": "Forward Engineering · build speed +15%",
+                    "perk": "holt"
+                  },
+                  "baseline": {
+                    "index": 1,
+                    "label": "Repair Pulse"
+                  },
+                  "signature": {
+                    "id": "fieldworkshop",
+                    "label": "Field Workshop",
+                    "em": "⛭"
+                  },
+                  "weapons": {
+                    "primary": "Arc Welder",
+                    "secondary": "Nanite Charge"
+                  },
+                  "portrait": {
+                    "resolver": "commanderPortraitSrc",
+                    "fallback": "./assets/factions/nova_192.jpg",
+                    "alt": "Major Rowan Holt command portrait"
+                  },
+                  "voice": {
+                    "bank": "cmdr_nova_holt",
+                    "channel": "cmdr",
+                    "slotPrefix": "vo_cmdr_nova_holt_"
+                  },
+                  "sourceArt": null
+                },
+                {
+                  "id": "nova_vale",
+                  "sourceFactionId": "nova",
+                  "campaignFactionId": "nova",
+                  "name": "Cmdr. Sera Vale",
+                  "rank": "Commander",
+                  "shortName": "Vale",
+                  "callsign": "LONGSIGHT",
+                  "role": "TACTICIAN",
+                  "lore": {
+                    "key": "commander.nova_vale",
+                    "epithet": "Long Sight",
+                    "service": "Federation Reconnaissance Doctrine Office",
+                    "bio": "Vale reads a battlefield an hour before it happens and is usually right about the part nobody wanted to hear. Her recon doctrine is now standard across the Group."
+                  },
+                  "chassis": {
+                    "heroType": 4,
+                    "unit": "Commander",
+                    "sprite": "cdr"
+                  },
+                  "passive": {
+                    "label": "Recon Doctrine · army range +8%",
+                    "perk": "vale"
+                  },
+                  "baseline": {
+                    "index": 2,
+                    "label": "Combat Surge"
+                  },
+                  "signature": {
+                    "id": "ghostnet",
+                    "label": "Ghost Net",
+                    "em": "⌾"
+                  },
+                  "weapons": {
+                    "primary": "Spotter Rail",
+                    "secondary": "Ghost Flare"
+                  },
+                  "portrait": {
+                    "resolver": "commanderPortraitSrc",
+                    "fallback": "./assets/factions/nova_192.jpg",
+                    "alt": "Cmdr. Sera Vale command portrait"
+                  },
+                  "voice": {
+                    "bank": "cmdr_nova_vale",
+                    "channel": "cmdr",
+                    "slotPrefix": "vo_cmdr_nova_vale_"
+                  },
+                  "sourceArt": null
+                },
+                {
+                  "id": "legion_vex",
+                  "sourceFactionId": "legion",
+                  "campaignFactionId": "dominion",
+                  "name": "Lord Darion Vex",
+                  "rank": "Lord",
+                  "shortName": "Vex",
+                  "callsign": "ASCENDANT",
+                  "role": "JUGGERNAUT",
+                  "lore": {
+                    "key": "commander.legion_vex",
+                    "epithet": "The Grading Hand",
+                    "service": "Red Ascendancy / First Wardens, self-appointed",
+                    "bio": "Federation-trained, resigned his commission, took a third of his division with him. Treats every engagement as an examination he is setting for someone."
+                  },
+                  "chassis": {
+                    "heroType": 28,
+                    "unit": "Lord Darion Vex",
+                    "sprite": "praetor"
+                  },
+                  "passive": {
+                    "label": "Ascendant Plate · Commander health +18%",
+                    "perk": "vex"
+                  },
+                  "baseline": {
+                    "index": 0,
+                    "label": "Orbital Blast"
+                  },
+                  "signature": {
+                    "id": "seismicdecree",
+                    "label": "Seismic Decree",
+                    "em": "◆"
+                  },
+                  "weapons": {
+                    "primary": "Siege Autocannon",
+                    "secondary": "Breach Shell"
+                  },
+                  "portrait": {
+                    "resolver": "commanderPortraitSrc",
+                    "fallback": "./assets/factions/ascendancy_192.jpg",
+                    "alt": "Lord Darion Vex command portrait"
+                  },
+                  "voice": {
+                    "bank": "cmdr_legion_vex",
+                    "channel": "cmdr",
+                    "slotPrefix": "vo_cmdr_legion_vex_"
+                  },
+                  "sourceArt": null
+                },
+                {
+                  "id": "legion_korr",
+                  "sourceFactionId": "legion",
+                  "campaignFactionId": "dominion",
+                  "name": "Marshal Rhea Korr",
+                  "rank": "Marshal",
+                  "shortName": "Korr",
+                  "callsign": "CADENCE",
+                  "role": "WARMASTER",
+                  "lore": {
+                    "key": "commander.legion_korr",
+                    "epithet": "Cadence",
+                    "service": "Red Ascendancy / Marshal of the Crimson Advance",
+                    "bio": "Korr keeps a battle line moving at a tempo that breaks formations no single push could. Her Wardens do not retreat and are not ordered to."
+                  },
+                  "chassis": {
+                    "heroType": 28,
+                    "unit": "Lord Darion Vex",
+                    "sprite": "praetor"
+                  },
+                  "passive": {
+                    "label": "Martial Cadence · army damage +8%",
+                    "perk": "korr"
+                  },
+                  "baseline": {
+                    "index": 2,
+                    "label": "Combat Surge"
+                  },
+                  "signature": {
+                    "id": "crimsonadvance",
+                    "label": "Crimson Advance",
+                    "em": "⚔"
+                  },
+                  "weapons": {
+                    "primary": "Cadence Gun",
+                    "secondary": "Crimson Volley"
+                  },
+                  "portrait": {
+                    "resolver": "commanderPortraitSrc",
+                    "fallback": "./assets/factions/ascendancy_192.jpg",
+                    "alt": "Marshal Rhea Korr command portrait"
+                  },
+                  "voice": {
+                    "bank": "cmdr_legion_korr",
+                    "channel": "cmdr",
+                    "slotPrefix": "vo_cmdr_legion_korr_"
+                  },
+                  "sourceArt": null
+                },
+                {
+                  "id": "legion_dravik",
+                  "sourceFactionId": "legion",
+                  "campaignFactionId": "dominion",
+                  "name": "Prefect Amon Dravik",
+                  "rank": "Prefect",
+                  "shortName": "Dravik",
+                  "callsign": "REDOUBT",
+                  "role": "FORTIFIER",
+                  "lore": {
+                    "key": "commander.legion_dravik",
+                    "epithet": "The Iron Mandate",
+                    "service": "Red Ascendancy / Prefect of Fortifications",
+                    "bio": "Dravik fortifies ground the Ascendancy has no doctrinal interest in holding, and is never asked to explain why once the counterattack arrives."
+                  },
+                  "chassis": {
+                    "heroType": 28,
+                    "unit": "Lord Darion Vex",
+                    "sprite": "praetor"
+                  },
+                  "passive": {
+                    "label": "Iron Mandate · structures health +15%",
+                    "perk": "dravik"
+                  },
+                  "baseline": {
+                    "index": 1,
+                    "label": "Repair Pulse"
+                  },
+                  "signature": {
+                    "id": "ironredoubt",
+                    "label": "Iron Redoubt",
+                    "em": "▰"
+                  },
+                  "weapons": {
+                    "primary": "Bastion Gun",
+                    "secondary": "Redoubt Shell"
+                  },
+                  "portrait": {
+                    "resolver": "commanderPortraitSrc",
+                    "fallback": "./assets/factions/ascendancy_192.jpg",
+                    "alt": "Prefect Amon Dravik command portrait"
+                  },
+                  "voice": {
+                    "bank": "cmdr_legion_dravik",
+                    "channel": "cmdr",
+                    "slotPrefix": "vo_cmdr_legion_dravik_"
+                  },
+                  "sourceArt": null
+                },
+                {
+                  "id": "syndicate_renn",
+                  "sourceFactionId": "syndicate",
+                  "campaignFactionId": "syndicate",
+                  "name": "Broker Lys Renn",
+                  "rank": "Broker",
+                  "shortName": "Renn",
+                  "callsign": "LEDGER",
+                  "role": "BROKER",
+                  "lore": {
+                    "key": "commander.syndicate_renn",
+                    "epithet": "The Black Ledger",
+                    "service": "Syndicate Coalition / Accounts, Field Division",
+                    "bio": "Renn sells terrain telemetry to both sides of the same engagement and has never once been accused of inaccuracy. Adapt, profit, survive; she never said to whom."
+                  },
+                  "chassis": {
+                    "heroType": 29,
+                    "unit": "Broker Lys Renn",
+                    "sprite": "archon"
+                  },
+                  "passive": {
+                    "label": "Black Ledger · +1.5 mass / +6 energy",
+                    "perk": "renn"
+                  },
+                  "baseline": {
+                    "index": 2,
+                    "label": "Combat Surge"
+                  },
+                  "signature": {
+                    "id": "liquidation",
+                    "label": "Combat Liquidation",
+                    "em": "◇"
+                  },
+                  "weapons": {
+                    "primary": "Pulse Lance",
+                    "secondary": "Ion Cascade"
+                  },
+                  "portrait": {
+                    "resolver": "commanderPortraitSrc",
+                    "fallback": "./assets/factions/syndicate_192.jpg",
+                    "alt": "Broker Lys Renn command portrait"
+                  },
+                  "voice": {
+                    "bank": "cmdr_syndicate_renn",
+                    "channel": "cmdr",
+                    "slotPrefix": "vo_cmdr_syndicate_renn_"
+                  },
+                  "sourceArt": {
+                    "assetId": "syndicate-broker-lys-renn-v1",
+                    "assetType": "character-source",
+                    "status": "SOURCE_ACCEPTED_RUNTIME_UNREGISTERED",
+                    "runtimeReady": false,
+                    "runtimeRegistered": false,
+                    "canonicalPath": "modules/space_exploration/assets/source/blender/characters/syndicate-broker-lys-renn-v1",
+                    "manifestPath": "modules/space_exploration/assets/source/blender/characters/syndicate-broker-lys-renn-v1/syndicate-broker-lys-renn-v1.asset-manifest.json"
+                  }
+                },
+                {
+                  "id": "syndicate_nyx",
+                  "sourceFactionId": "syndicate",
+                  "campaignFactionId": "syndicate",
+                  "name": "Operative Nyx Calder",
+                  "rank": "Operative",
+                  "shortName": "Calder",
+                  "callsign": "GHOST",
+                  "role": "INFILTRATOR",
+                  "lore": {
+                    "key": "commander.syndicate_nyx",
+                    "epithet": "Ghost Optics",
+                    "service": "Syndicate Coalition / Infiltration, unlisted",
+                    "bio": "Calder appears in after-action reports as an equipment anomaly. Two Coalition auditors have tried to establish whether they are one person."
+                  },
+                  "chassis": {
+                    "heroType": 29,
+                    "unit": "Broker Lys Renn",
+                    "sprite": "archon"
+                  },
+                  "passive": {
+                    "label": "Ghost Optics · army range +10%",
+                    "perk": "nyx"
+                  },
+                  "baseline": {
+                    "index": 4,
+                    "label": "EMP Charge"
+                  },
+                  "signature": {
+                    "id": "phasebreach",
+                    "label": "Phase Breach",
+                    "em": "ϟ"
+                  },
+                  "weapons": {
+                    "primary": "Needle Lance",
+                    "secondary": "Phase Bolt"
+                  },
+                  "portrait": {
+                    "resolver": "commanderPortraitSrc",
+                    "fallback": "./assets/factions/syndicate_192.jpg",
+                    "alt": "Operative Nyx Calder command portrait"
+                  },
+                  "voice": {
+                    "bank": "cmdr_syndicate_nyx",
+                    "channel": "cmdr",
+                    "slotPrefix": "vo_cmdr_syndicate_nyx_"
+                  },
+                  "sourceArt": null
+                },
+                {
+                  "id": "syndicate_voss",
+                  "sourceFactionId": "syndicate",
+                  "campaignFactionId": "syndicate",
+                  "name": "Director Oren Voss",
+                  "rank": "Director",
+                  "shortName": "Voss",
+                  "callsign": "CORE",
+                  "role": "CONTROLLER",
+                  "lore": {
+                    "key": "commander.syndicate_voss",
+                    "epithet": "The Predictive Core",
+                    "service": "Syndicate Coalition / Directorate of Autonomous Systems",
+                    "bio": "Voss runs the engagement two seconds ahead of everyone standing in it, and considers the delay between his order and its execution a defect to be engineered out."
+                  },
+                  "chassis": {
+                    "heroType": 29,
+                    "unit": "Broker Lys Renn",
+                    "sprite": "archon"
+                  },
+                  "passive": {
+                    "label": "Predictive Core · cooldowns −14%",
+                    "perk": "voss"
+                  },
+                  "baseline": {
+                    "index": 1,
+                    "label": "Repair Pulse"
+                  },
+                  "signature": {
+                    "id": "naniterecall",
+                    "label": "Nanite Recall",
+                    "em": "⟲"
+                  },
+                  "weapons": {
+                    "primary": "Grid Pulse",
+                    "secondary": "Net Cascade"
+                  },
+                  "portrait": {
+                    "resolver": "commanderPortraitSrc",
+                    "fallback": "./assets/factions/syndicate_192.jpg",
+                    "alt": "Director Oren Voss command portrait"
+                  },
+                  "voice": {
+                    "bank": "cmdr_syndicate_voss",
+                    "channel": "cmdr",
+                    "slotPrefix": "vo_cmdr_syndicate_voss_"
+                  },
+                  "sourceArt": null
+                }
+              ],
+              "fingerprint": "fnv1a32:0aadcd2d"
+            },
+            "commanderRosterFingerprint": "fnv1a32:0aadcd2d",
+            "commissioning": {
+              "factionId": null,
+              "commanderId": null
+            }
+          }
+        },
+        "commission": {
+          "returnUrl": "http://127.0.0.1:63216/index.html",
+          "bridge": {
+            "status": "menu-route",
+            "reason": ""
+          },
+          "pagehide": {
+            "url": "http://127.0.0.1:63216/modules/space_exploration/index.html",
+            "choice": {
+              "schema": "massfront.space-first-entry-choice.v1",
+              "profileId": "p1",
+              "choice": "skipped",
+              "outcome": "required-faction-selection",
+              "routeId": "new-career-faction",
+              "nextStep": "faction-selection",
+              "continuation": {
+                "schema": "massfront.new-career-sequence.v1",
+                "required": true,
+                "moduleImplemented": true,
+                "nextStep": "faction-selection",
+                "afterTraining": "faction-selection",
+                "sequence": [
+                  "faction-selection",
+                  "starter-commander-1",
+                  "full-uga-space"
+                ],
+                "catalogAuthority": "base-game-faction-and-commander-catalog"
+              }
+            },
+            "firstEntry": {
+              "started": true,
+              "choice": "skipped",
+              "choicePending": false,
+              "continuation": {
+                "schema": "massfront.new-career-sequence.v1",
+                "required": true,
+                "moduleImplemented": true,
+                "nextStep": "faction-selection",
+                "afterTraining": "faction-selection",
+                "sequence": [
+                  "faction-selection",
+                  "starter-commander-1",
+                  "full-uga-space"
+                ],
+                "catalogAuthority": "base-game-faction-and-commander-catalog"
+              }
+            },
+            "ticket": {
+              "schemaVersion": 2,
+              "kind": "MassfrontGalacticEntryV2",
+              "profileId": "p1",
+              "issuedAt": 1788853759848,
+              "expiresAt": 1789458559848,
+              "source": "massfront-base",
+              "entryView": "system",
+              "introRequired": true,
+              "commanderRosterSnapshot": {
+                "schemaVersion": 1,
+                "kind": "CommanderRosterSnapshotV1",
+                "source": "massfront-base",
+                "sourceVersion": 1,
+                "commanderCount": 9,
+                "commander1ByCampaignFaction": {
+                  "nova": "nova_kai",
+                  "dominion": "legion_vex",
+                  "syndicate": "syndicate_renn"
+                },
+                "commanders": [
+                  {
+                    "id": "nova_kai",
+                    "sourceFactionId": "nova",
+                    "campaignFactionId": "nova",
+                    "name": "Captain Elara Kai",
+                    "rank": "Captain",
+                    "shortName": "Kai",
+                    "callsign": "LANTERN",
+                    "role": "VANGUARD",
+                    "lore": {
+                      "key": "commander.nova_kai",
+                      "epithet": "The Clean Landing",
+                      "service": "Federation Expeditionary Command / 4th Landing Group",
+                      "bio": "Kai took Sombrero-I with fewer losses than the plan allowed for and has been quietly resented for it ever since. She fires first only when the shot ends the argument."
+                    },
+                    "chassis": {
+                      "heroType": 4,
+                      "unit": "Commander",
+                      "sprite": "cdr"
+                    },
+                    "passive": {
+                      "label": "Fire-Control · Commander damage +12%",
+                      "perk": "kai"
+                    },
+                    "baseline": {
+                      "index": 0,
+                      "label": "Orbital Blast"
+                    },
+                    "signature": {
+                      "id": "skybreaker",
+                      "label": "Skybreaker Salvo",
+                      "em": "✦"
+                    },
+                    "weapons": {
+                      "primary": "Rail Repeater",
+                      "secondary": "Cluster Cannon"
+                    },
+                    "portrait": {
+                      "resolver": "commanderPortraitSrc",
+                      "fallback": "./assets/factions/nova_192.jpg",
+                      "alt": "Captain Elara Kai command portrait"
+                    },
+                    "voice": {
+                      "bank": "cmdr_nova_kai",
+                      "channel": "cmdr",
+                      "slotPrefix": "vo_cmdr_nova_kai_"
+                    },
+                    "sourceArt": null
+                  },
+                  {
+                    "id": "nova_holt",
+                    "sourceFactionId": "nova",
+                    "campaignFactionId": "nova",
+                    "name": "Major Rowan Holt",
+                    "rank": "Major",
+                    "shortName": "Holt",
+                    "callsign": "ANVIL",
+                    "role": "ENGINEER",
+                    "lore": {
+                      "key": "commander.nova_holt",
+                      "epithet": "Forward Works",
+                      "service": "Federation Corps of Engineers / Forward Works Detachment",
+                      "bio": "Holt builds the position before he argues about it. Three of his forward depots are still standing on worlds the Federation formally abandoned."
+                    },
+                    "chassis": {
+                      "heroType": 4,
+                      "unit": "Commander",
+                      "sprite": "cdr"
+                    },
+                    "passive": {
+                      "label": "Forward Engineering · build speed +15%",
+                      "perk": "holt"
+                    },
+                    "baseline": {
+                      "index": 1,
+                      "label": "Repair Pulse"
+                    },
+                    "signature": {
+                      "id": "fieldworkshop",
+                      "label": "Field Workshop",
+                      "em": "⛭"
+                    },
+                    "weapons": {
+                      "primary": "Arc Welder",
+                      "secondary": "Nanite Charge"
+                    },
+                    "portrait": {
+                      "resolver": "commanderPortraitSrc",
+                      "fallback": "./assets/factions/nova_192.jpg",
+                      "alt": "Major Rowan Holt command portrait"
+                    },
+                    "voice": {
+                      "bank": "cmdr_nova_holt",
+                      "channel": "cmdr",
+                      "slotPrefix": "vo_cmdr_nova_holt_"
+                    },
+                    "sourceArt": null
+                  },
+                  {
+                    "id": "nova_vale",
+                    "sourceFactionId": "nova",
+                    "campaignFactionId": "nova",
+                    "name": "Cmdr. Sera Vale",
+                    "rank": "Commander",
+                    "shortName": "Vale",
+                    "callsign": "LONGSIGHT",
+                    "role": "TACTICIAN",
+                    "lore": {
+                      "key": "commander.nova_vale",
+                      "epithet": "Long Sight",
+                      "service": "Federation Reconnaissance Doctrine Office",
+                      "bio": "Vale reads a battlefield an hour before it happens and is usually right about the part nobody wanted to hear. Her recon doctrine is now standard across the Group."
+                    },
+                    "chassis": {
+                      "heroType": 4,
+                      "unit": "Commander",
+                      "sprite": "cdr"
+                    },
+                    "passive": {
+                      "label": "Recon Doctrine · army range +8%",
+                      "perk": "vale"
+                    },
+                    "baseline": {
+                      "index": 2,
+                      "label": "Combat Surge"
+                    },
+                    "signature": {
+                      "id": "ghostnet",
+                      "label": "Ghost Net",
+                      "em": "⌾"
+                    },
+                    "weapons": {
+                      "primary": "Spotter Rail",
+                      "secondary": "Ghost Flare"
+                    },
+                    "portrait": {
+                      "resolver": "commanderPortraitSrc",
+                      "fallback": "./assets/factions/nova_192.jpg",
+                      "alt": "Cmdr. Sera Vale command portrait"
+                    },
+                    "voice": {
+                      "bank": "cmdr_nova_vale",
+                      "channel": "cmdr",
+                      "slotPrefix": "vo_cmdr_nova_vale_"
+                    },
+                    "sourceArt": null
+                  },
+                  {
+                    "id": "legion_vex",
+                    "sourceFactionId": "legion",
+                    "campaignFactionId": "dominion",
+                    "name": "Lord Darion Vex",
+                    "rank": "Lord",
+                    "shortName": "Vex",
+                    "callsign": "ASCENDANT",
+                    "role": "JUGGERNAUT",
+                    "lore": {
+                      "key": "commander.legion_vex",
+                      "epithet": "The Grading Hand",
+                      "service": "Red Ascendancy / First Wardens, self-appointed",
+                      "bio": "Federation-trained, resigned his commission, took a third of his division with him. Treats every engagement as an examination he is setting for someone."
+                    },
+                    "chassis": {
+                      "heroType": 28,
+                      "unit": "Lord Darion Vex",
+                      "sprite": "praetor"
+                    },
+                    "passive": {
+                      "label": "Ascendant Plate · Commander health +18%",
+                      "perk": "vex"
+                    },
+                    "baseline": {
+                      "index": 0,
+                      "label": "Orbital Blast"
+                    },
+                    "signature": {
+                      "id": "seismicdecree",
+                      "label": "Seismic Decree",
+                      "em": "◆"
+                    },
+                    "weapons": {
+                      "primary": "Siege Autocannon",
+                      "secondary": "Breach Shell"
+                    },
+                    "portrait": {
+                      "resolver": "commanderPortraitSrc",
+                      "fallback": "./assets/factions/ascendancy_192.jpg",
+                      "alt": "Lord Darion Vex command portrait"
+                    },
+                    "voice": {
+                      "bank": "cmdr_legion_vex",
+                      "channel": "cmdr",
+                      "slotPrefix": "vo_cmdr_legion_vex_"
+                    },
+                    "sourceArt": null
+                  },
+                  {
+                    "id": "legion_korr",
+                    "sourceFactionId": "legion",
+                    "campaignFactionId": "dominion",
+                    "name": "Marshal Rhea Korr",
+                    "rank": "Marshal",
+                    "shortName": "Korr",
+                    "callsign": "CADENCE",
+                    "role": "WARMASTER",
+                    "lore": {
+                      "key": "commander.legion_korr",
+                      "epithet": "Cadence",
+                      "service": "Red Ascendancy / Marshal of the Crimson Advance",
+                      "bio": "Korr keeps a battle line moving at a tempo that breaks formations no single push could. Her Wardens do not retreat and are not ordered to."
+                    },
+                    "chassis": {
+                      "heroType": 28,
+                      "unit": "Lord Darion Vex",
+                      "sprite": "praetor"
+                    },
+                    "passive": {
+                      "label": "Martial Cadence · army damage +8%",
+                      "perk": "korr"
+                    },
+                    "baseline": {
+                      "index": 2,
+                      "label": "Combat Surge"
+                    },
+                    "signature": {
+                      "id": "crimsonadvance",
+                      "label": "Crimson Advance",
+                      "em": "⚔"
+                    },
+                    "weapons": {
+                      "primary": "Cadence Gun",
+                      "secondary": "Crimson Volley"
+                    },
+                    "portrait": {
+                      "resolver": "commanderPortraitSrc",
+                      "fallback": "./assets/factions/ascendancy_192.jpg",
+                      "alt": "Marshal Rhea Korr command portrait"
+                    },
+                    "voice": {
+                      "bank": "cmdr_legion_korr",
+                      "channel": "cmdr",
+                      "slotPrefix": "vo_cmdr_legion_korr_"
+                    },
+                    "sourceArt": null
+                  },
+                  {
+                    "id": "legion_dravik",
+                    "sourceFactionId": "legion",
+                    "campaignFactionId": "dominion",
+                    "name": "Prefect Amon Dravik",
+                    "rank": "Prefect",
+                    "shortName": "Dravik",
+                    "callsign": "REDOUBT",
+                    "role": "FORTIFIER",
+                    "lore": {
+                      "key": "commander.legion_dravik",
+                      "epithet": "The Iron Mandate",
+                      "service": "Red Ascendancy / Prefect of Fortifications",
+                      "bio": "Dravik fortifies ground the Ascendancy has no doctrinal interest in holding, and is never asked to explain why once the counterattack arrives."
+                    },
+                    "chassis": {
+                      "heroType": 28,
+                      "unit": "Lord Darion Vex",
+                      "sprite": "praetor"
+                    },
+                    "passive": {
+                      "label": "Iron Mandate · structures health +15%",
+                      "perk": "dravik"
+                    },
+                    "baseline": {
+                      "index": 1,
+                      "label": "Repair Pulse"
+                    },
+                    "signature": {
+                      "id": "ironredoubt",
+                      "label": "Iron Redoubt",
+                      "em": "▰"
+                    },
+                    "weapons": {
+                      "primary": "Bastion Gun",
+                      "secondary": "Redoubt Shell"
+                    },
+                    "portrait": {
+                      "resolver": "commanderPortraitSrc",
+                      "fallback": "./assets/factions/ascendancy_192.jpg",
+                      "alt": "Prefect Amon Dravik command portrait"
+                    },
+                    "voice": {
+                      "bank": "cmdr_legion_dravik",
+                      "channel": "cmdr",
+                      "slotPrefix": "vo_cmdr_legion_dravik_"
+                    },
+                    "sourceArt": null
+                  },
+                  {
+                    "id": "syndicate_renn",
+                    "sourceFactionId": "syndicate",
+                    "campaignFactionId": "syndicate",
+                    "name": "Broker Lys Renn",
+                    "rank": "Broker",
+                    "shortName": "Renn",
+                    "callsign": "LEDGER",
+                    "role": "BROKER",
+                    "lore": {
+                      "key": "commander.syndicate_renn",
+                      "epithet": "The Black Ledger",
+                      "service": "Syndicate Coalition / Accounts, Field Division",
+                      "bio": "Renn sells terrain telemetry to both sides of the same engagement and has never once been accused of inaccuracy. Adapt, profit, survive; she never said to whom."
+                    },
+                    "chassis": {
+                      "heroType": 29,
+                      "unit": "Broker Lys Renn",
+                      "sprite": "archon"
+                    },
+                    "passive": {
+                      "label": "Black Ledger · +1.5 mass / +6 energy",
+                      "perk": "renn"
+                    },
+                    "baseline": {
+                      "index": 2,
+                      "label": "Combat Surge"
+                    },
+                    "signature": {
+                      "id": "liquidation",
+                      "label": "Combat Liquidation",
+                      "em": "◇"
+                    },
+                    "weapons": {
+                      "primary": "Pulse Lance",
+                      "secondary": "Ion Cascade"
+                    },
+                    "portrait": {
+                      "resolver": "commanderPortraitSrc",
+                      "fallback": "./assets/factions/syndicate_192.jpg",
+                      "alt": "Broker Lys Renn command portrait"
+                    },
+                    "voice": {
+                      "bank": "cmdr_syndicate_renn",
+                      "channel": "cmdr",
+                      "slotPrefix": "vo_cmdr_syndicate_renn_"
+                    },
+                    "sourceArt": {
+                      "assetId": "syndicate-broker-lys-renn-v1",
+                      "assetType": "character-source",
+                      "status": "SOURCE_ACCEPTED_RUNTIME_UNREGISTERED",
+                      "runtimeReady": false,
+                      "runtimeRegistered": false,
+                      "canonicalPath": "modules/space_exploration/assets/source/blender/characters/syndicate-broker-lys-renn-v1",
+                      "manifestPath": "modules/space_exploration/assets/source/blender/characters/syndicate-broker-lys-renn-v1/syndicate-broker-lys-renn-v1.asset-manifest.json"
+                    }
+                  },
+                  {
+                    "id": "syndicate_nyx",
+                    "sourceFactionId": "syndicate",
+                    "campaignFactionId": "syndicate",
+                    "name": "Operative Nyx Calder",
+                    "rank": "Operative",
+                    "shortName": "Calder",
+                    "callsign": "GHOST",
+                    "role": "INFILTRATOR",
+                    "lore": {
+                      "key": "commander.syndicate_nyx",
+                      "epithet": "Ghost Optics",
+                      "service": "Syndicate Coalition / Infiltration, unlisted",
+                      "bio": "Calder appears in after-action reports as an equipment anomaly. Two Coalition auditors have tried to establish whether they are one person."
+                    },
+                    "chassis": {
+                      "heroType": 29,
+                      "unit": "Broker Lys Renn",
+                      "sprite": "archon"
+                    },
+                    "passive": {
+                      "label": "Ghost Optics · army range +10%",
+                      "perk": "nyx"
+                    },
+                    "baseline": {
+                      "index": 4,
+                      "label": "EMP Charge"
+                    },
+                    "signature": {
+                      "id": "phasebreach",
+                      "label": "Phase Breach",
+                      "em": "ϟ"
+                    },
+                    "weapons": {
+                      "primary": "Needle Lance",
+                      "secondary": "Phase Bolt"
+                    },
+                    "portrait": {
+                      "resolver": "commanderPortraitSrc",
+                      "fallback": "./assets/factions/syndicate_192.jpg",
+                      "alt": "Operative Nyx Calder command portrait"
+                    },
+                    "voice": {
+                      "bank": "cmdr_syndicate_nyx",
+                      "channel": "cmdr",
+                      "slotPrefix": "vo_cmdr_syndicate_nyx_"
+                    },
+                    "sourceArt": null
+                  },
+                  {
+                    "id": "syndicate_voss",
+                    "sourceFactionId": "syndicate",
+                    "campaignFactionId": "syndicate",
+                    "name": "Director Oren Voss",
+                    "rank": "Director",
+                    "shortName": "Voss",
+                    "callsign": "CORE",
+                    "role": "CONTROLLER",
+                    "lore": {
+                      "key": "commander.syndicate_voss",
+                      "epithet": "The Predictive Core",
+                      "service": "Syndicate Coalition / Directorate of Autonomous Systems",
+                      "bio": "Voss runs the engagement two seconds ahead of everyone standing in it, and considers the delay between his order and its execution a defect to be engineered out."
+                    },
+                    "chassis": {
+                      "heroType": 29,
+                      "unit": "Broker Lys Renn",
+                      "sprite": "archon"
+                    },
+                    "passive": {
+                      "label": "Predictive Core · cooldowns −14%",
+                      "perk": "voss"
+                    },
+                    "baseline": {
+                      "index": 1,
+                      "label": "Repair Pulse"
+                    },
+                    "signature": {
+                      "id": "naniterecall",
+                      "label": "Nanite Recall",
+                      "em": "⟲"
+                    },
+                    "weapons": {
+                      "primary": "Grid Pulse",
+                      "secondary": "Net Cascade"
+                    },
+                    "portrait": {
+                      "resolver": "commanderPortraitSrc",
+                      "fallback": "./assets/factions/syndicate_192.jpg",
+                      "alt": "Director Oren Voss command portrait"
+                    },
+                    "voice": {
+                      "bank": "cmdr_syndicate_voss",
+                      "channel": "cmdr",
+                      "slotPrefix": "vo_cmdr_syndicate_voss_"
+                    },
+                    "sourceArt": null
+                  }
+                ],
+                "fingerprint": "fnv1a32:0aadcd2d"
+              },
+              "commanderRosterFingerprint": "fnv1a32:0aadcd2d",
+              "commissioning": {
+                "factionId": null,
+                "commanderId": null
+              }
+            },
+            "routeKey": "massfront.galactic.route.v1.9f188242545afd0a3e21ef8a2991a855",
+            "route": {
+              "schemaVersion": 2,
+              "kind": "MassfrontGalacticRouteRequestV2",
+              "nonce": "9f188242545afd0a3e21ef8a2991a855",
+              "profileId": "p1",
+              "routeId": "new-career-faction",
+              "issuedAt": 1788853762938,
+              "expiresAt": 1788853882938,
+              "source": "massfront-exploration",
+              "location": {
+                "systemId": "aelos",
+                "targetId": "nexus_vii"
+              },
+              "checksum": "bc911939"
+            }
+          },
+          "phase": "faction-selection",
+          "guide": "KEEL · UGA COMMISSIONING GUIDE",
+          "options": [
+            {
+              "faction": "nova",
+              "commander": "Captain Elara Kai",
+              "grant": "COMMANDER 1",
+              "action": "COMMISSION NOVA"
+            },
+            {
+              "faction": "dominion",
+              "commander": "Lord Darion Vex",
+              "grant": "COMMANDER 1",
+              "action": "COMMISSION DOMINION"
+            },
+            {
+              "faction": "syndicate",
+              "commander": "Broker Lys Renn",
+              "grant": "COMMANDER 1",
+              "action": "COMMISSION SYNDICATE"
+            }
+          ]
+        },
+        "navigations": [
+          "http://127.0.0.1:63216/index.html",
+          "http://127.0.0.1:63216/modules/space_exploration/index.html",
+          "http://127.0.0.1:63216/index.html?galacticRoute=9f188242545afd0a3e21ef8a2991a855",
+          "http://127.0.0.1:63216/index.html",
+          "http://127.0.0.1:63216/modules/space_exploration/index.html"
+        ]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "scope": "fresh-base-412x900",
+      "name": "hardware GPU, never SwiftShader",
+      "ok": true,
+      "detail": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4060 Laptop GPU (0x000028E0) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    },
+    {
+      "scope": "fresh-base-412x900",
+      "name": "integrated Galactic capability comes from the packaged or OTA contract",
+      "ok": true,
+      "detail": "{\"build\":true,\"ota\":false,\"legacyPreference\":false}"
+    },
+    {
+      "scope": "fresh-base-412x900",
+      "name": "real launcher exposes an enabled route to the title sequence",
+      "ok": true,
+      "detail": "{\"selector\":\"#mfLaunchPlay\",\"label\":\"CONTINUE TO INTRO\",\"snapshot\":{\"gate\":true,\"passed\":false,\"bypass\":false,\"phase\":\"updater\",\"primary\":\"play-offline\",\"identity\":{\"state\":\"pending\",\"signedIn\":false,\"verified\":false,\"source\":\"boot\",\"revision\":0},\"update\":{\"state\":\"idle\",\"status\":\"Ready\"},\"notesTab\":\"features\",\"historyTab\":\"published\"}}"
+    },
+    {
+      "scope": "fresh-space-412x900",
+      "name": "hardware GPU, never SwiftShader",
+      "ok": true,
+      "detail": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4060 Laptop GPU (0x000028E0) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    },
+    {
+      "scope": "player-entry",
+      "name": "launcher, title and offline identity continue directly into integrated Galactic space",
+      "ok": true,
+      "detail": "{\"entry\":{\"capability\":{\"build\":true,\"ota\":false,\"legacyPreference\":false},\"launcher\":{\"selector\":\"#mfLaunchPlay\",\"label\":\"CONTINUE TO INTRO\",\"snapshot\":{\"gate\":true,\"passed\":false,\"bypass\":false,\"phase\":\"updater\",\"primary\":\"play-offline\",\"identity\":{\"state\":\"pending\",\"signedIn\":false,\"verified\":false,\"source\":\"boot\",\"revision\":0},\"update\":{\"state\":\"idle\",\"status\":\"Ready\"},\"notesTab\":\"features\",\"historyTab\":\"published\"}},\"intro\":\"#mfIntroStart\",\"identity\":\"#apOfflineBtn\"},\"identity\":{\"state\":\"offline\",\"signedIn\":false,\"verified\":false,\"source\":\"offline-choice\",\"revision\":2}}"
+    },
+    {
+      "scope": "world-intro",
+      "name": "new career enters the exterior system scene",
+      "ok": true,
+      "detail": "system"
+    },
+    {
+      "scope": "world-intro",
+      "name": "normal-space KEEL uses the dedicated story rail",
+      "ok": true,
+      "detail": "{\"runtime\":\"massfront\",\"entryView\":\"system\",\"scene\":\"system\",\"storyRailHidden\":\"false\",\"transmitting\":true,\"channel\":\"UGA PERSONNEL LINK\",\"speaker\":\"KEEL\",\"title\":\"WELCOME TO THE AELOS ANCHORAGE\",\"body\":\"Welcome aboard your UGA exploration ship. I am KEEL. Drag to look around, select a contact, and use ALIGN or AUTOPILOT to approach. SURVEY opens the scanner for a selected planet.\",\"actions\":[{\"id\":\"first-entry-next\",\"text\":\"01NEXT · YOUR MISSION LOOP›\"}],\"minimapNodes\":0,\"renderVeil\":{\"ready\":true,\"visibility\":\"hidden\",\"opacity\":\"0\",\"pointerEvents\":\"none\"}}"
+    },
+    {
+      "scope": "world-intro",
+      "name": "space document contains no battle minimap receiver",
+      "ok": true,
+      "detail": "0"
+    },
+    {
+      "scope": "world-intro",
+      "name": "opening veil is fully gone and stays gone before capture",
+      "ok": true,
+      "detail": "{\"ready\":true,\"visibility\":\"hidden\",\"opacity\":\"0\",\"pointerEvents\":\"none\"}"
+    },
+    {
+      "scope": "first-choice",
+      "name": "both optional tutorial paths are visible",
+      "ok": true,
+      "detail": "[{\"id\":\"begin-planetary-training\",\"text\":\"01BEGIN BASIC TUTORIALProtected planetary mission covering navigation, selection, economy, construction and combat.RECOMMENDED · PROTECTED›\"},{\"id\":\"skip-to-faction-selection\",\"text\":\"02ARRANGE FIRST COMMANDERChoose the faction supplying your first commander. Select that available commander when preparing an objective.NO TRAINING MISSION›\"}]"
+    },
+    {
+      "scope": "skip-return-base-412x900",
+      "name": "hardware GPU, never SwiftShader",
+      "ok": true,
+      "detail": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4060 Laptop GPU (0x000028E0) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    },
+    {
+      "scope": "commissioning",
+      "name": "skip route converges on required faction selection",
+      "ok": true,
+      "detail": "faction-selection"
+    },
+    {
+      "scope": "commissioning",
+      "name": "three playable factions expose real Commander 1 grants",
+      "ok": true,
+      "detail": "[{\"faction\":\"nova\",\"commander\":\"Captain Elara Kai\",\"grant\":\"COMMANDER 1\",\"action\":\"COMMISSION NOVA\"},{\"faction\":\"dominion\",\"commander\":\"Lord Darion Vex\",\"grant\":\"COMMANDER 1\",\"action\":\"COMMISSION DOMINION\"},{\"faction\":\"syndicate\",\"commander\":\"Broker Lys Renn\",\"grant\":\"COMMANDER 1\",\"action\":\"COMMISSION SYNDICATE\"}]"
+    },
+    {
+      "scope": "commissioned-space-412x900",
+      "name": "hardware GPU, never SwiftShader",
+      "ok": true,
+      "detail": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4060 Laptop GPU (0x000028E0) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    },
+    {
+      "scope": "commissioning",
+      "name": "selected faction and its Commander 1 crossed the secured ticket",
+      "ok": true,
+      "detail": "{\"ticket\":{\"factionId\":\"nova\",\"commanderId\":\"nova_kai\"},\"scene\":\"system\",\"introRequired\":false}"
+    },
+    {
+      "scope": "run",
+      "name": "acceptance capture completed",
+      "ok": false,
+      "detail": "page.waitForFunction: Timeout 30000ms exceeded.\n    at runFreshCareerFlow (C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\tools\\capture-stage11-space-ux.mjs:808:16)\n    at async file:///C:/Users/Jason/Documents/Codex/2026-08-01/massfront-rts-mobile-game-for-apple/tools/capture-stage11-space-ux.mjs:1134:20"
+    },
+    {
+      "scope": "source-binding",
+      "name": "acceptance-owned source did not change during capture",
+      "ok": true,
+      "detail": "20 files stable"
+    }
+  ],
+  "tests": [],
+  "pageDiagnostics": [
+    {
+      "label": "fresh-career",
+      "viewport": {
+        "width": 412,
+        "height": 900
+      },
+      "navigations": [
+        "http://127.0.0.1:63216/index.html",
+        "http://127.0.0.1:63216/modules/space_exploration/index.html",
+        "http://127.0.0.1:63216/index.html?galacticRoute=9f188242545afd0a3e21ef8a2991a855",
+        "http://127.0.0.1:63216/index.html",
+        "http://127.0.0.1:63216/modules/space_exploration/index.html"
+      ],
+      "pageErrors": [],
+      "consoleErrors": [],
+      "requestFailures": [],
+      "expectedNavigationAborts": [
+        "net::ERR_ABORTED http://127.0.0.1:63216/modules/space_exploration/index.html"
+      ],
+      "blockedExternal": [
+        "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/update.json?download=true&mfcb=mtsdc9xa-zvdq28l10ij",
+        "https://huggingface.co/datasets/CREATORJD/massfront-releases/raw/main/update.json?mfcb=mtsdc9xd-6cs3reylhh9",
+        "https://massfront-update.jasondixon1994.workers.dev/update.json?mfcb=mtsdc9xf-8xpvfchwo3",
+        "https://huggingface.co/api/datasets/CREATORJD/massfront-releases?mfcb=mtsdc9xk-tz9h5tgheu9"
+      ]
+    }
+  ],
+  "unproven": [
+    "A complete manual play-through of every protected tutorial objective was not performed. The completion transaction is accelerated only after the real protected match starts, and is labelled as such.",
+    "Co-op / Versus and MMO cannot be entered because no synchronized session or persistent-sector authority exists in this build.",
+    "Capture run stopped early: page.waitForFunction: Timeout 30000ms exceeded."
+  ],
+  "summary": {
+    "passed": 16,
+    "failed": 1,
+    "captures": 3,
+    "pageErrors": 0,
+    "consoleErrors": 0,
+    "localRequestFailures": 0
+  }
+}

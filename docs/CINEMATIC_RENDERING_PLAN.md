@@ -1,5 +1,8 @@
 # MASSFRONT cinematic rendering and visual-clarity plan
 
+Status: subordinate rendering reference. Its numbered phases are not the
+authoritative 18-stage delivery schedule in [`MASTER_PLAN.md`](MASTER_PLAN.md).
+
 ## Purpose
 
 Make MASSFRONT readable at mobile RTS scale while giving important moments
@@ -92,7 +95,7 @@ uploading a small uniform array. A battle may contain hundreds of glowing
 objects, but only the few that materially affect a visible model become true
 lights. Every other glow stays a cheap billboard or emissive surface.
 
-## Stage 0 — measure before changing art
+## Local phase 0 — measure before changing art
 
 Create a hidden visual-debug menu and a repeatable screenshot suite.
 
@@ -110,7 +113,7 @@ Create a hidden visual-debug menu and a repeatable screenshot suite.
 Success criterion: a reviewer can identify team, unit class, selected unit and
 the active combat focal point within one second in each capture.
 
-## Stage 1 — correct the lighting and post-processing foundation
+## Local phase 1 — correct the lighting and post-processing foundation
 
 1. Audit color space end to end. Albedo/base-color textures are sampled as
    sRGB; normal, roughness, metallic, AO and masks remain linear. Never apply
@@ -134,7 +137,7 @@ Success criterion: the command center has a bright, readable roof/pad and
 visible cyan systems by day; at night its nearby terrain and geometry are
 illuminated without making the entire map bright.
 
-## Stage 2 — authored PBR and UV pipeline
+## Local phase 2 — authored PBR and UV pipeline
 
 Every new or rebuilt hero model must pass this pipeline before it enters the
 game.
@@ -171,7 +174,7 @@ The Brood requires its own organic foundation, construction animation and
 surface shader language. A human concrete pad with a different tint is not a
 faction conversion.
 
-## Stage 3 — rebuild the first cinematic asset set
+## Local phase 3 — rebuild the first cinematic asset set
 
 Do not attempt every unit at once. Establish the finished standard with six
 assets that the player repeatedly sees:
@@ -195,7 +198,7 @@ Only then convert factories, resource buildings, vehicles and higher tier
 towers. This prevents a large number of uniformly dark, generic models from
 replacing a smaller number of good readable ones.
 
-## Stage 4 — make combat cinematic but RTS-readable
+## Local phase 4 — make combat cinematic but RTS-readable
 
 Each major event gets a small visual recipe rather than indiscriminate
 particles.
@@ -232,7 +235,7 @@ particles.
   contrast around selected units and objectives;
 - storms may reduce vision, but should not reduce input or command readability.
 
-## Stage 5 — terrain and map composition
+## Local phase 5 — terrain and map composition
 
 - Use a macro terrain map before adding more micro noise: dominant ground
   value, erosion routes, resource-corruption region, wet/ash/sand zones and
@@ -246,7 +249,7 @@ particles.
   red holographic grid before non-playable backdrop terrain. The boundary must
   be visible before a unit reaches it.
 
-## Stage 6 — faction-aware UI and previews
+## Local phase 6 — faction-aware UI and previews
 
 Visual clarity does not end at the 3D world.
 
@@ -264,7 +267,7 @@ Visual clarity does not end at the 3D world.
 - Keep notifications and speech in one reserved message region; it must not
   stack on the command panel, minimap or build menu.
 
-## Stage 7 — mobile performance discipline
+## Local phase 7 — mobile performance discipline
 
 - Use feature tiers and dynamic scale based on frame time, not only device
   model. Preserve UI resolution while lowering 3D resolution when required.
@@ -316,4 +319,3 @@ Performance acceptance targets:
 - [Android rendering performance guidance](https://developer.android.com/topic/performance/vitals/render)
   describes the frame-time/jank constraints behind the 60 FPS (about 16 ms)
   target and the need for a robust lower tier.
-

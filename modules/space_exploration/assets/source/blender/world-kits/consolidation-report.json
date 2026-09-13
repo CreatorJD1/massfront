@@ -1,0 +1,80 @@
+[
+  {
+    "kit": "mf-ground-kit-v1",
+    "modules": 36,
+    "objectsBefore": 374,
+    "polysBefore": 9555,
+    "polysAfter": 9555,
+    "welded": 36,
+    "rolledBack": 0,
+    "exported": 36,
+    "objectsAfter": 374,
+    "seconds": 9.3,
+    "purged": []
+  },
+  {
+    "kit": "mf-cityforms-kit-v1",
+    "modules": 72,
+    "objectsBefore": 466,
+    "polysBefore": 152955,
+    "polysAfter": 152957,
+    "welded": 70,
+    "rolledBack": 2,
+    "exported": 72,
+    "objectsAfter": 466,
+    "seconds": 59.1,
+    "purged": []
+  },
+  {
+    "kit": "mf-superstructure-v1",
+    "modules": 57,
+    "objectsBefore": 601,
+    "polysBefore": 143106,
+    "polysAfter": 143107,
+    "welded": 57,
+    "rolledBack": 0,
+    "exported": 57,
+    "objectsAfter": 601,
+    "seconds": 49.2,
+    "purged": []
+  },
+  {
+    "kit": "mf-transit-kit-v1",
+    "modules": 54,
+    "objectsBefore": 344,
+    "polysBefore": 50474,
+    "polysAfter": 50473,
+    "welded": 49,
+    "rolledBack": 5,
+    "exported": 54,
+    "objectsAfter": 344,
+    "seconds": 17.1,
+    "purged": []
+  },
+  {
+    "kit": "mf-modular-building-v1",
+    "modules": 36,
+    "objectsBefore": 532,
+    "polysBefore": 88879,
+    "polysAfter": 88879,
+    "welded": 36,
+    "rolledBack": 0,
+    "exported": 36,
+    "objectsAfter": 532,
+    "seconds": 24.3,
+    "purged": []
+  },
+  {
+    "kit": "mf-modular-road-v1",
+    "modules": 7,
+    "objectsBefore": 29,
+    "polysBefore": 24241,
+    "polysAfter": 24241,
+    "welded": 7,
+    "rolledBack": 0,
+    "exported": 7,
+    "objectsAfter": 29,
+    "seconds": 4.5,
+    "purged": []
+  }
+]

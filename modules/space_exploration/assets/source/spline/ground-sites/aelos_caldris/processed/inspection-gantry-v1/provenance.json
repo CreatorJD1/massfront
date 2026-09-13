@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "kind": "MassfrontModelKitProvenanceV1",
+  "createdAtUtc": "2026-08-26T06:53:10.488Z",
+  "kitId": "gsite_aelos_caldris_inspection_gantry_v1",
+  "candidateStatus": "SOURCE_CANDIDATE",
+  "buildArtifactSetSha256": "4ff65ed0eb8b589991c5ff72ac0d966faaef8404a6e684874033acf2883324ae",
+  "repository": {
+    "head": "c4090cc5785e6c30b342f58beca52d34585e9bfc",
+    "branch": "cursor/strip-mass-node-bloom",
+    "dirty": true,
+    "dirtyFingerprint": "c8d728e7a7ba7044bebdb5e63be5927671e044a95efe72513a182f1989d1b1cb",
+    "fingerprintScope": "tracked-worktree-excluding-kit-root",
+    "excludedPaths": [
+      "modules/space_exploration/assets/source/spline/ground-sites/aelos_caldris/processed/inspection-gantry-v1"
+    ]
+  },
+  "catalog": {
+    "status": "BOUND",
+    "path": "source-media/content-library/model-pack-catalog.v1.json",
+    "sha256": "b6110cfaff892809bdb826568d91773aa271fbaa5f2774201cef73d9e4ec964b",
+    "bytes": 11972
+  },
+  "source": {
+    "path": "source/gsite-aelos-caldris-inspection-gantry-source-v1.glb",
+    "bytes": 66755776,
+    "sha256": "cec01fd1cba4eba411b900f790c97a7e4a828100cfffc9bd218ad9c0976925b8",
+    "expectedSha256": "cec01fd1cba4eba411b900f790c97a7e4a828100cfffc9bd218ad9c0976925b8"
+  },
+  "sceneDigest": {
+    "path": "evidence/scene-digest.json",
+    "bytes": 1779,
+    "sha256": "38507fea5846e5da6903859c4c1ac9c51b75cd0d329bc6f348da9196e044fba7",
+    "expectedSha256": null
+  },
+  "concept": {
+    "path": "concept/caldris-modular-kit-concept-v1.png",
+    "bytes": 2761674,
+    "sha256": "75cb5efbc15ce642533fa67f1c72fbd09a0fd16cd438189e3c73232a16148fab",
+    "expectedSha256": "75cb5efbc15ce642533fa67f1c72fbd09a0fd16cd438189e3c73232a16148fab",
+    "pixelsUsedAsTexture": false
+  },
+  "splineIdentity": {
+    "publicSceneUrl": "https://massfront.invalid/evidence/unknown-spline-scene/",
+    "documentName": "GSITE_AELOS_CALDRIS_INSPECTION_GANTRY_V1",
+    "documentId": null,
+    "rootObjectId": "7f490cdc-1fe4-49ee-b4f5-64d25035d0f3",
+    "meshObjectIds": [
+      "29c415ba-d768-4c08-b993-bb4808a679cc"
+    ],
+    "meshNodeNames": [
+      "MF_AELOS_CALDRIS_INSPECTION_GANTRY_LOD0_SOURCE"
+    ],
+    "generation": {
+      "system": "spline-ai-3d",
+      "provider": "Hunyuan3D",
+      "generationId": "7f490cdc-1fe4-49ee-b4f5-64d25035d0f3",
+      "identityStatus": "PARTIAL",
+      "publicSceneUrlStatus": "UNKNOWN",
+      "sourceImageGenerationId": "UNKNOWN",
+      "sourceImageAssetId": "UNKNOWN"
+    }
+  },
+  "toolchain": {
+    "blender": {
+      "version": "5.2.0 LTS",
+      "versionTuple": [
+        5,
+        2,
+        0
+      ]
+    },
+    "node": "v26.7.0",
+    "files": [
+      {
+        "path": "modules/space_exploration/tools/model-kits/model-kit.mjs",
+        "bytes": 11172,
+        "sha256": "af47d5d876e0df0473ebca15bbce80b128d1cb277453d42a774c68ec7901e99a"
+      },
+      {
+        "path": "modules/space_exploration/tools/model-kits/process-model-kit.py",
+        "bytes": 27359,
+        "sha256": "5d02eaf662ffde023725db2da1495a01abdcae745fbea826d5b8b379c587d25c"
+      },
+      {
+        "path": "modules/space_exploration/tools/model-kits/verify-model-kit.mjs",
+        "bytes": 27399,
+        "sha256": "4b9a3d5f328c4aa6ced2a0d9c7cdc8610381b7d87dee416057cb7d334ec2a61f"
+      },
+      {
+        "path": "modules/space_exploration/tools/model-kits/model-kit-core.mjs",
+        "bytes": 21716,
+        "sha256": "a0866f1bced72bb4593d00b21c73f3c8fbc470fc2b174896f5d4395233cd2eff"
+      },
+      {
+        "path": "modules/space_exploration/tools/model-kits/model-kit.schema.json",
+        "bytes": 8419,
+        "sha256": "ba2ff160a6e38b9b7aa3bd11aa146766c2c7637e3e03f4733e93770fb8aa3759"
+      }
+    ]
+  },
+  "command": {
+    "executable": "C:/Program Files/Blender Foundation/Blender 5.2/blender.exe",
+    "arguments": [
+      "--background",
+      "--factory-startup",
+      "--python",
+      "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\tools\\model-kits\\process-model-kit.py",
+      "--",
+      "--manifest",
+      "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\spline\\ground-sites\\aelos_caldris\\processed\\inspection-gantry-v1\\kit.json"
+    ],
+    "cwd": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple"
+  }
+}

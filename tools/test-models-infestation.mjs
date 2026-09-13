@@ -26,7 +26,28 @@ if(!tiers)throw new Error('BLD_TIER_MDL_INFESTATION was not exported');
 for(const key of currentKeys.concat(defenseKeys,aliases))if(typeof map[key]!=='function')
   throw new Error('missing Infestation model key: '+key);
 
-const STRIDE=12,MATERIAL_COUNT=25,UV_LIMIT=1.5;
+/* MATERIAL_COUNT comes from the atlas, not from a number typed here. It was
+   pinned at 25 — the size of the original palette — and the atlas has since
+   grown to over a hundred entries (faction skins, biome ground, damage
+   states, world-kit trim). Every model reaching for one of the newer ids
+   failed this as an "invalid material id", which is the opposite of what the
+   check is for: it exists to catch an UNBOUND id, not a new one. */
+const STRIDE=12,UV_LIMIT=1.5;
+/* `const MAT` lands in the global LEXICAL environment of a classic script, so
+   it is reachable by evaluating its name in the context but never appears as a
+   property on the context object. */
+if(vm.runInContext('typeof MAT',ctx)!=='object')throw new Error('the material atlas was not exported');
+const MATERIAL_COUNT=vm.runInContext(
+  'Math.max.apply(null,Object.values(MAT).filter(Number.isInteger))+1',ctx);
+if(!(MATERIAL_COUNT>25))throw new Error('material atlas looks truncated ('+MATERIAL_COUNT+')');
+const EMISSIVE=new Set(vm.runInContext('Object.keys(MAT_EMIS).map(Number)',ctx));
+if(EMISSIVE.size<4)throw new Error('the emissive-mask table looks truncated ('+EMISSIVE.size+')');
+/* Soft tissue: the semantic membrane/limb roles, plus the Brood's own wet
+   materials. Named through MAT so a renumbered atlas cannot silently change
+   what this accepts. */
+const SOFT_TISSUE=new Set(vm.runInContext(
+  '[MAT_ROLE["bio.membrane"],MAT_ROLE["bio.limb"],MAT.BROOD_MEMBRANE,MAT.BROOD_SLIME,MAT.BROOD_VEIN,MAT.RUST]',ctx));
+if(SOFT_TISSUE.size<4)throw new Error('the soft-tissue material set looks truncated ('+SOFT_TISSUE.size+')');
 function bounds(mesh){
   const lo=[Infinity,Infinity,Infinity],hi=[-Infinity,-Infinity,-Infinity];
   for(let i=0;i<mesh.v.length;i+=STRIDE)for(let q=0;q<3;q++){
@@ -80,8 +101,18 @@ function inspect(key,build,needsBore,rooted=true){
   if(mats.size<(rooted?5:3))throw new Error(key+': insufficient biological material zoning ('+mats.size+')');
   if(rooted&&!mats.has(9))throw new Error(key+': no EARTH/root zone');
   if(!mats.has(8))throw new Error(key+': no CHITIN shell zone');
-  if(!mats.has(7)&&!mats.has(13))throw new Error(key+': no distinct flesh zone');
-  if(!mats.has(22)&&!mats.has(5))throw new Error(key+': no emissive/glow zone');
+  /* Soft tissue, read through the atlas's own semantic vocabulary. This
+     accepted only RUST or LEAF — RUST being a stand-in from before the Brood
+     had materials of its own — so a hive wall built from BROOD_SLIME and
+     BROOD_VEIN, which is what soft tissue is supposed to be made of now, read
+     as having no flesh at all. */
+  if(![...mats].some(m=>SOFT_TISSUE.has(m)))throw new Error(key+': no distinct flesh zone');
+  /* "Does it glow" is answered by MAT_EMIS, the atlas's own authoritative
+     emissive-mask table, not by a pair of ids typed here. This named only
+     TWR_GLOW and LAMP — the two that existed before the Brood palette — so a
+     hive structure lit by BROOD_SLIME and BROOD_VEIN, which are exactly the
+     right materials for it, read as having no emissive zone at all. */
+  if(![...mats].some(m=>EMISSIVE.has(m)))throw new Error(key+': no emissive/glow zone');
   if(needsBore&&(!mats.has(24)||(counts.get(24)||0)<24))
     throw new Error(key+': no substantial TWR_BORE throat geometry');
   const box=bounds(mesh),uv=uvQuality(mesh);

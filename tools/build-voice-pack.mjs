@@ -44,7 +44,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const PACK = 'voice';
-const LABEL = 'MASSFRONT voice bank — KEEN narration and command radio';
+const LABEL = 'MASSFRONT voice bank — KEEL narration and command radio';
 const SRC = join(ROOT, 'assets/audio/voice');
 const BANK = join(ROOT, 'assets/audio/voice.json');
 const OUT = join(ROOT, 'assets/packs');
@@ -134,7 +134,7 @@ if (process.argv.includes('--from-live')) {
 }
 const carried = Object.keys(index.packs).filter(p => p !== PACK);
 index.version = index.version || 1;
-index.packs[PACK] = { label: LABEL, bytes, files: entries };
+index.packs[PACK] = { delivery: 'base', label: LABEL, bytes, files: entries };
 writeFileSync(INDEX, JSON.stringify(index, null, 2) + '\n');
 
 /* ---- 5. say exactly what happened --------------------------------------- */

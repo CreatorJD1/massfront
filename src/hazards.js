@@ -165,7 +165,7 @@ function hazFrontTick(dt){
 function hazPickSteep(){
   let best=null, bs=-1;
   for(let t=0;t<40;t++){
-    const x=rr(220,MAP-220), y=rr(220,MAP-220);
+    const x=mfSimRange(220,MAP-220), y=mfSimRange(220,MAP-220);
     if(typeof hAt!=='function') break;
     const h=hAt(x,y);
     if(h<0.02) continue;                                   // not underwater
@@ -187,7 +187,7 @@ function hazSeedFaults(){
     if(typeof farFromStartZones==='function'&&!farFromStartZones(p[0],p[1],430)) continue;
     let clear=true;
     for(const F of HAZ.faults) if(dist2(p[0],p[1],F.x,F.y)<280*280){ clear=false; break; }
-    if(clear) HAZ.faults.push({x:p[0],y:p[1],r:105+Math.random()*28,state:0,at:0});
+    if(clear) HAZ.faults.push({x:p[0],y:p[1],r:105+mfSimRandom()*28,state:0,at:0});
   }
 }
 
@@ -218,7 +218,7 @@ function hazPickChannel(){
   let best=null, bs=1e9;
   if(typeof hAt!=='function') return null;
   for(let t=0;t<50;t++){
-    const x=rr(200,MAP-200), y=rr(200,MAP-200);
+    const x=mfSimRange(200,MAP-200), y=mfSimRange(200,MAP-200);
     const h=hAt(x,y);
     if(h<wh-0.008||h>wh+0.048) continue;
     const score=Math.abs(h-wh);
@@ -287,10 +287,10 @@ function hazTick(dt){
   if(HAZ.t>0) return;
 
   if(HAZ.mode==='vanguard'||HAZ.mode==='whiteout'||HAZ.mode==='spore_bloom'||HAZ.mode==='spores'){
-    HAZ.t=hazEvery(115+Math.random()*50);
-    const a=Math.random()*TAU;
+    HAZ.t=hazEvery(115+mfSimRandom()*50);
+    const a=mfSimRandom()*TAU;
     HAZ.front={dx:Math.cos(a),dy:Math.sin(a),p:0,
-               sp:118+Math.random()*40, w:[300,400,480][D]};
+               sp:118+mfSimRandom()*40, w:[300,400,480][D]};
     HAZ.count++;
     const Dfn=mapHazardDef(HAZ.map);
     toast((Dfn&&Dfn.em||'🌪')+' '+(Dfn&&Dfn.nm||'FRONT')+' rolling in — sight and speed cut inside it');
@@ -300,12 +300,12 @@ function hazTick(dt){
     HAZ.t=1e9;
   }
   else if(HAZ.mode==='heat'){
-    HAZ.t=hazEvery(90+Math.random()*35);
+    HAZ.t=hazEvery(90+mfSimRandom()*35);
     HAZ.cells.length=0;
     const n=[2,3,4][D];
     for(let k=0;k<n;k++){
-      const p=[rr(200,MAP-200),rr(200,MAP-200)];
-      HAZ.cells.push([p[0],p[1],90+Math.random()*30,[255,180,60]]);
+      const p=[mfSimRange(200,MAP-200),mfSimRange(200,MAP-200)];
+      HAZ.cells.push([p[0],p[1],90+mfSimRandom()*30,[255,180,60]]);
     }
     HAZ.warn=3.5; HAZ.phase=5;
     for(const c of HAZ.cells) mmPing(c[0],c[1]);
@@ -313,7 +313,7 @@ function hazTick(dt){
     sfx('alarm');
   }
   else if(HAZ.mode==='highland'){
-    HAZ.t=hazEvery(95+Math.random()*40);
+    HAZ.t=hazEvery(95+mfSimRandom()*40);
     HAZ.cells.length=0;
     const n=[1,2,3][D];
     for(let k=0;k<n;k++){
@@ -331,12 +331,12 @@ function hazTick(dt){
     sfx('alarm');
   }
   else if(HAZ.mode==='eruption'){
-    HAZ.t=hazEvery(82+Math.random()*38);
+    HAZ.t=hazEvery(82+mfSimRandom()*38);
     HAZ.cells.length=0;
     const n=[1,2,3][D];
     for(let k=0;k<n;k++){
-      const p=hazPickSteep()||[rr(240,MAP-240),rr(240,MAP-240)];
-      HAZ.cells.push([p[0],p[1],86+Math.random()*24,[255,92,28]]);
+      const p=hazPickSteep()||[mfSimRange(240,MAP-240),mfSimRange(240,MAP-240)];
+      HAZ.cells.push([p[0],p[1],86+mfSimRandom()*24,[255,92,28]]);
     }
     HAZ.warn=4.4; HAZ.phase=4;
     for(const c of HAZ.cells) mmPing(c[0],c[1]);
@@ -344,12 +344,12 @@ function hazTick(dt){
     sfx('alarm');
   }
   else if(HAZ.mode==='flood'){
-    HAZ.t=hazEvery(85+Math.random()*35);
+    HAZ.t=hazEvery(85+mfSimRandom()*35);
     HAZ.cells.length=0;
     const n=[2,3,4][D];
     for(let k=0;k<n;k++){
-      const p=hazPickChannel()||[rr(220,MAP-220),rr(220,MAP-220)];
-      HAZ.cells.push([p[0],p[1],88+Math.random()*24,[70,190,220]]);
+      const p=hazPickChannel()||[mfSimRange(220,MAP-220),mfSimRange(220,MAP-220)];
+      HAZ.cells.push([p[0],p[1],88+mfSimRandom()*24,[70,190,220]]);
     }
     HAZ.warn=3.8; HAZ.phase=7;
     for(const c of HAZ.cells) mmPing(c[0],c[1]);
@@ -357,13 +357,13 @@ function hazTick(dt){
     sfx('alarm');
   }
   else if(HAZ.mode==='isles'){
-    HAZ.t=hazEvery(80+Math.random()*35);
+    HAZ.t=hazEvery(80+mfSimRandom()*35);
     HAZ.cells.length=0;
     const n=[2,3,5][D];
     for(let k=0;k<n;k++){
       const p=hazPickMass();
-      if(p) HAZ.cells.push([clamp(p[0]+rr(-70,70),40,MAP-40),
-                            clamp(p[1]+rr(-70,70),40,MAP-40),70,[150,225,255]]);
+      if(p) HAZ.cells.push([clamp(p[0]+mfSimRange(-70,70),40,MAP-40),
+                            clamp(p[1]+mfSimRange(-70,70),40,MAP-40),70,[150,225,255]]);
     }
     if(!HAZ.cells.length){ HAZ.t=18; return; }
     HAZ.warn=2.6; HAZ.phase=2;
@@ -372,12 +372,12 @@ function hazTick(dt){
     sfx('alarm');
   }
   else if(HAZ.mode==='meteor'){
-    HAZ.t=hazEvery(88+Math.random()*40);
+    HAZ.t=hazEvery(88+mfSimRandom()*40);
     HAZ.cells.length=0;
     const n=[2,3,4][D];
     for(let k=0;k<n;k++){
-      const p=[rr(220,MAP-220),rr(220,MAP-220)];
-      HAZ.cells.push([p[0],p[1],80+Math.random()*28,[210,230,255]]);
+      const p=[mfSimRange(220,MAP-220),mfSimRange(220,MAP-220)];
+      HAZ.cells.push([p[0],p[1],80+mfSimRandom()*28,[210,230,255]]);
     }
     HAZ.warn=3.8; HAZ.phase=6;
     for(const c of HAZ.cells) mmPing(c[0],c[1]);
@@ -385,7 +385,7 @@ function hazTick(dt){
     sfx('alarm');
   }
   else if(HAZ.mode==='crater'){
-    HAZ.t=hazEvery(125+Math.random()*45);
+    HAZ.t=hazEvery(125+mfSimRandom()*45);
     HAZ.cells=[[MAP/2,MAP/2,[300,380,460][D],[200,160,255]]];
     HAZ.warn=4.0; HAZ.phase=3;
     mmPing(MAP/2,MAP/2);
@@ -457,7 +457,7 @@ function hazStrike(){
       hazHurt(c[0],c[1],c[2]*1.08,hazDmg(320));
       hazBlind(c[0],c[1],c[2]*1.3,2.4);
       HAZ.vision.push({x:c[0],y:c[1],r:c[2]*1.35,until:stats.t+4,m:.5});
-      HAZ.lava.push({x:c[0],y:c[1],r:c[2]*.82,life:34+Math.random()*14,pulse:.2});
+      HAZ.lava.push({x:c[0],y:c[1],r:c[2]*.82,life:34+mfSimRandom()*14,pulse:.2});
       if(typeof deformTerrain==='function') deformTerrain(c[0],c[1],c[2]*.65,.055);
       if(typeof addParticle==='function') for(let k=0;k<28;k++){
         const a=Math.random()*TAU;
@@ -512,4 +512,3 @@ function hazStrike(){
   }
   HAZ.phase=0;
 }
-

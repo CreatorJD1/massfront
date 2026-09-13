@@ -5,7 +5,7 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
-const artifactDir = 'C:/Users/Jason/.gemini/antigravity/brain/86010afe-f1c4-44d4-a618-12f28cfd8c8b';
+const artifactDir = join(root, '.tmp', 'agent-captures', 'antigravity', 'tower-defense');
 await mkdir(artifactDir, { recursive: true });
 
 const url = 'http://127.0.0.1:8974/';

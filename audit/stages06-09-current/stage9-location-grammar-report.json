@@ -1,0 +1,1057 @@
+{
+  "schema": "MassfrontStage9LocationGrammarVerificationV1",
+  "version": 1,
+  "status": "PASS",
+  "stageStatus": "STAGE_9A_VERIFIED_STAGE_9_PENDING",
+  "sourceHashes": {
+    "gl": "cf9c397bebad5f3feef5db35e624ae7ed80f4493c86fefb37f82808fa3598699",
+    "siteTemplates": "fd5d7f73dac874ec4ef2148f3d9785169b640f64d1194c8b29546cbcfd8e9e06",
+    "locationGrammar": "733c253c078bd07ea3fc0879662358e7060e9846d23a29013435c388c93a05ec",
+    "verifier": "db4ff2dc5d2edc43a28da4feeed931d2ccc975baf7e6264d19da1cc2b985de3d",
+    "manifest": "af6dd89e4955b8d571a734c0f9420a1aa44515773702cde01ac77beaec59ce95",
+    "boot": "a6ec2282721227596c4c017dcc010e290be0a605ea70ac14d674319bfb9b83a9",
+    "index": "162141235290f8e4ff762e69335279f3936b4b513db7dba69868ca7ea69abf68"
+  },
+  "sourceBindingHash": "319a416366a356eb40ef346bb85fb085e37b263912e67c8c779f31243f104c24",
+  "catalogHash": "f5f9aed4803145155577d6dcf56e8f5547074d261d4c3c369d3f27d24deec8a0",
+  "contracts": [
+    {
+      "name": "WorldLocationStyleV1",
+      "schema": "WorldLocationStyleV1",
+      "version": 1
+    },
+    {
+      "name": "LocationGrammarV1",
+      "schema": "LocationGrammarV1",
+      "version": 1
+    },
+    {
+      "name": "PlanetAdaptationV1",
+      "schema": "PlanetAdaptationV1",
+      "version": 1
+    },
+    {
+      "name": "FactionOccupationV1",
+      "schema": "FactionOccupationV1",
+      "version": 1
+    },
+    {
+      "name": "ConditionVariantV1",
+      "schema": "ConditionVariantV1",
+      "version": 1
+    }
+  ],
+  "activations": [
+    {
+      "map": "aelos_north_medium",
+      "cls": "city",
+      "template": "city_brutalist_grid",
+      "purpose": "prefecture",
+      "era": "occupied",
+      "condition": "intact",
+      "ids": [
+        "city_brutalist_grid"
+      ],
+      "styleHash": "532fe3bc"
+    },
+    {
+      "map": "pyraeth_crater_small",
+      "cls": "dome",
+      "template": "dome_cluster",
+      "purpose": "pressure-dome",
+      "era": "occupied",
+      "condition": "pressurized",
+      "ids": [
+        "dome_cluster"
+      ],
+      "styleHash": "d97b3361"
+    }
+  ],
+  "regionGrammar": {
+    "expected": 16,
+    "actual": 16,
+    "ids": [
+      "aelos_basin",
+      "aelos_coast",
+      "aelos_north",
+      "aelos_ridge",
+      "nordhall_cliff",
+      "nordhall_frost",
+      "nordhall_isles",
+      "nordhall_peaks",
+      "pyraeth_belt",
+      "pyraeth_caldera",
+      "pyraeth_crater",
+      "pyraeth_flats",
+      "vespera_dunes",
+      "vespera_plateau",
+      "vespera_refinery",
+      "vespera_spire"
+    ]
+  },
+  "adaptations": {
+    "required": [
+      "temperate_civic",
+      "volcanic",
+      "glacial",
+      "desert",
+      "jungle_wetland",
+      "oceanic",
+      "broodConversion"
+    ],
+    "baseFamilies": [
+      "desert",
+      "glacial",
+      "jungle_wetland",
+      "oceanic",
+      "temperate_civic",
+      "volcanic"
+    ],
+    "broodStages": [
+      "encroaching",
+      "infested",
+      "consumed"
+    ]
+  },
+  "tacticalScales": [
+    "infantry",
+    "smallVehicle",
+    "mech"
+  ],
+  "canonicalMaps": {
+    "expected": 48,
+    "resolved": 48,
+    "resolutionHash": "3b0960af79c00848f6ecc7cbac3af54652a393492fa58637148a77ed27b9d20a",
+    "rows": [
+      {
+        "map": "aelos_north_small",
+        "planet": "aelos",
+        "biome": "civic",
+        "region": "aelos_north",
+        "geology": "metamorphic-civic-bedrock",
+        "faction": "nova",
+        "purpose": "military-base",
+        "era": "occupied",
+        "condition": "operational",
+        "adaptation": "temperate_civic",
+        "broodOverlay": false,
+        "styleHash": "85ff0cdc",
+        "bytesHash": "6f5cb4e17f292ee7ce4d7f85b812d34cc2a1d440f48a5cc129eb5a16b28bc415"
+      },
+      {
+        "map": "aelos_north_medium",
+        "planet": "aelos",
+        "biome": "civic",
+        "region": "aelos_north",
+        "geology": "metamorphic-civic-bedrock",
+        "faction": "nova",
+        "purpose": "military-base",
+        "era": "occupied",
+        "condition": "operational",
+        "adaptation": "temperate_civic",
+        "broodOverlay": false,
+        "styleHash": "e75668ec",
+        "bytesHash": "f0f2ce276bae52eebfe0251e354f18be10a10f5983f5754fc1a473cd9c47afb7"
+      },
+      {
+        "map": "aelos_north_large",
+        "planet": "aelos",
+        "biome": "civic",
+        "region": "aelos_north",
+        "geology": "metamorphic-civic-bedrock",
+        "faction": "nova",
+        "purpose": "military-base",
+        "era": "occupied",
+        "condition": "operational",
+        "adaptation": "temperate_civic",
+        "broodOverlay": false,
+        "styleHash": "bdbf4264",
+        "bytesHash": "a2b82c28a5be771a5d438df5b34eda43b89a6b94e31e53147a6f3aa4228af2a7"
+      },
+      {
+        "map": "aelos_basin_small",
+        "planet": "aelos",
+        "biome": "civic",
+        "region": "aelos_basin",
+        "geology": "alluvial-river-basin",
+        "faction": "nova",
+        "purpose": "military-base",
+        "era": "occupied",
+        "condition": "operational",
+        "adaptation": "jungle_wetland",
+        "broodOverlay": false,
+        "styleHash": "4bee56a1",
+        "bytesHash": "669d33ab0b0c04497def94f89217c50b3405e193795055838db17b0e430762ef"
+      },
+      {
+        "map": "aelos_basin_medium",
+        "planet": "aelos",
+        "biome": "civic",
+        "region": "aelos_basin",
+        "geology": "alluvial-river-basin",
+        "faction": "nova",
+        "purpose": "military-base",
+        "era": "occupied",
+        "condition": "operational",
+        "adaptation": "jungle_wetland",
+        "broodOverlay": false,
+        "styleHash": "0160d879",
+        "bytesHash": "14e7407bde106d59dbb42f8a59226c8717ad4e97b784775c8f995bce9c6d5505"
+      },
+      {
+        "map": "aelos_basin_large",
+        "planet": "aelos",
+        "biome": "civic",
+        "region": "aelos_basin",
+        "geology": "alluvial-river-basin",
+        "faction": "nova",
+        "purpose": "military-base",
+        "era": "occupied",
+        "condition": "operational",
+        "adaptation": "jungle_wetland",
+        "broodOverlay": false,
+        "styleHash": "3d48653d",
+        "bytesHash": "f2ff147d9d60e5bd3a617dc09d6cb006fcf31a3238d3a5beccb4c5f7853bdde8"
+      },
+      {
+        "map": "aelos_coast_small",
+        "planet": "aelos",
+        "biome": "civic",
+        "region": "aelos_coast",
+        "geology": "littoral-shelf-stone",
+        "faction": "nova",
+        "purpose": "military-base",
+        "era": "occupied",
+        "condition": "operational",
+        "adaptation": "oceanic",
+        "broodOverlay": false,
+        "styleHash": "8d5124ce",
+        "bytesHash": "1071d7900dea996ad8125ccbee22127493ed382294f44cf5ebc56dbe08c0fc02"
+      },
+      {
+        "map": "aelos_coast_medium",
+        "planet": "aelos",
+        "biome": "civic",
+        "region": "aelos_coast",
+        "geology": "littoral-shelf-stone",
+        "faction": "nova",
+        "purpose": "military-base",
+        "era": "occupied",
+        "condition": "operational",
+        "adaptation": "oceanic",
+        "broodOverlay": false,
+        "styleHash": "cad3f4d8",
+        "bytesHash": "ceb77cf3fc2d8efcde3842bb965967dc44034db0e860721506c4a92d311ef095"
+      },
+      {
+        "map": "aelos_coast_large",
+        "planet": "aelos",
+        "biome": "civic",
+        "region": "aelos_coast",
+        "geology": "littoral-shelf-stone",
+        "faction": "nova",
+        "purpose": "military-base",
+        "era": "occupied",
+        "condition": "operational",
+        "adaptation": "oceanic",
+        "broodOverlay": false,
+        "styleHash": "10f062f2",
+        "bytesHash": "8284f65742c5dae4cbda445f2c470b55a7ce2515f89cc5f6ab5f3d2bfe430947"
+      },
+      {
+        "map": "aelos_ridge_small",
+        "planet": "aelos",
+        "biome": "alpine",
+        "region": "aelos_ridge",
+        "geology": "glaciated-granite-ridge",
+        "faction": "nova",
+        "purpose": "military-base",
+        "era": "occupied",
+        "condition": "operational",
+        "adaptation": "glacial",
+        "broodOverlay": false,
+        "styleHash": "e2843fdf",
+        "bytesHash": "52da9108614d9f1b26d6378921d66bad3de6b73c0f6f49976a7da737872f3b9f"
+      },
+      {
+        "map": "aelos_ridge_medium",
+        "planet": "aelos",
+        "biome": "alpine",
+        "region": "aelos_ridge",
+        "geology": "glaciated-granite-ridge",
+        "faction": "nova",
+        "purpose": "military-base",
+        "era": "occupied",
+        "condition": "operational",
+        "adaptation": "glacial",
+        "broodOverlay": false,
+        "styleHash": "9f9da68f",
+        "bytesHash": "db00384232778959338cef73d7103dec6c9a3ca475abb6a2e074df82308b57af"
+      },
+      {
+        "map": "aelos_ridge_large",
+        "planet": "aelos",
+        "biome": "alpine",
+        "region": "aelos_ridge",
+        "geology": "glaciated-granite-ridge",
+        "faction": "nova",
+        "purpose": "military-base",
+        "era": "occupied",
+        "condition": "operational",
+        "adaptation": "glacial",
+        "broodOverlay": false,
+        "styleHash": "02a52557",
+        "bytesHash": "f3689d4b331b46853a400fe9c4cbf37c98e2651fb22b21e1f46a156698f139f5"
+      },
+      {
+        "map": "pyraeth_crater_small",
+        "planet": "pyraeth",
+        "biome": "dusk",
+        "region": "pyraeth_crater",
+        "geology": "impact-basalt-caldera",
+        "faction": "legion",
+        "purpose": "military-base",
+        "era": "occupied",
+        "condition": "operational",
+        "adaptation": "volcanic",
+        "broodOverlay": false,
+        "styleHash": "b09818df",
+        "bytesHash": "724fa9b0a1c7a60b7da1728601f1d8fae4b2d2e0dfbec5437bfaae3891b7a195"
+      },
+      {
+        "map": "pyraeth_crater_medium",
+        "planet": "pyraeth",
+        "biome": "dusk",
+        "region": "pyraeth_crater",
+        "geology": "impact-basalt-caldera",
+        "faction": "legion",
+        "purpose": "military-base",
+        "era": "occupied",
+        "condition": "operational",
+        "adaptation": "volcanic",
+        "broodOverlay": false,
+        "styleHash": "7e40a019",
+        "bytesHash": "e7cfecbc2c72b44efe969b884f06d4c1f6926e829ec26b840c2d2f22b0af7aa9"
+      },
+      {
+        "map": "pyraeth_crater_large",
+        "planet": "pyraeth",
+        "biome": "dusk",
+        "region": "pyraeth_crater",
+        "geology": "impact-basalt-caldera",
+        "faction": "legion",
+        "purpose": "military-base",
+        "era": "occupied",
+        "condition": "operational",
+        "adaptation": "volcanic",
+        "broodOverlay": false,
+        "styleHash": "8dd25a27",
+        "bytesHash": "7f34ba67bfc889715fecadb246657339ca5fe1e031db12690caf3781bdc26506"
+      },
+      {
+        "map": "pyraeth_belt_small",
+        "planet": "pyraeth",
+        "biome": "dusk",
+        "region": "pyraeth_belt",
+        "geology": "ironstone-dust-belt",
+        "faction": "legion",
+        "purpose": "military-base",
+        "era": "occupied",
+        "condition": "operational",
+        "adaptation": "desert",
+        "broodOverlay": false,
+        "styleHash": "df826eba",
+        "bytesHash": "07ec4405bdc660688e772a250389bde77d46bd7abe51c4d22bdbe7df8f7ee9bb"
+      },
+      {
+        "map": "pyraeth_belt_medium",
+        "planet": "pyraeth",
+        "biome": "dusk",
+        "region": "pyraeth_belt",
+        "geology": "ironstone-dust-belt",
+        "faction": "legion",
+        "purpose": "military-base",
+        "era": "occupied",
+        "condition": "operational",
+        "adaptation": "desert",
+        "broodOverlay": false,
+        "styleHash": "6ef9d620",
+        "bytesHash": "758861f3237d4a4725df330e13a7201b0a831aca2a9e18f04c70af19b198fc40"
+      },
+      {
+        "map": "pyraeth_belt_large",
+        "planet": "pyraeth",
+        "biome": "dusk",
+        "region": "pyraeth_belt",
+        "geology": "ironstone-dust-belt",
+        "faction": "legion",
+        "purpose": "military-base",
+        "era": "occupied",
+        "condition": "operational",
+        "adaptation": "desert",
+        "broodOverlay": false,
+        "styleHash": "98770416",
+        "bytesHash": "80e5ac2b24a3258fde183df93a8c22f677e5fa57bb45be9eaa797ab6d21971c8"
+      },
+      {
+        "map": "pyraeth_caldera_small",
+        "planet": "pyraeth",
+        "biome": "dusk",
+        "region": "pyraeth_caldera",
+        "geology": "active-basalt-caldera",
+        "faction": "legion",
+        "purpose": "military-base",
+        "era": "occupied",
+        "condition": "operational",
+        "adaptation": "volcanic",
+        "broodOverlay": false,
+        "styleHash": "2aa1d8f7",
+        "bytesHash": "40e779953f5d390630fb1abf98a6cfb7f753f1cafcd4e6f41a892d120d62a818"
+      },
+      {
+        "map": "pyraeth_caldera_medium",
+        "planet": "pyraeth",
+        "biome": "dusk",
+        "region": "pyraeth_caldera",
+        "geology": "active-basalt-caldera",
+        "faction": "legion",
+        "purpose": "military-base",
+        "era": "occupied",
+        "condition": "operational",
+        "adaptation": "volcanic",
+        "broodOverlay": false,
+        "styleHash": "e046f027",
+        "bytesHash": "71b845f0a83961192655ae2f9b4b0ce3e9fe3583db6c1385b5493953f3139e5b"
+      },
+      {
+        "map": "pyraeth_caldera_large",
+        "planet": "pyraeth",
+        "biome": "dusk",
+        "region": "pyraeth_caldera",
+        "geology": "active-basalt-caldera",
+        "faction": "legion",
+        "purpose": "military-base",
+        "era": "occupied",
+        "condition": "operational",
+        "adaptation": "volcanic",
+        "broodOverlay": false,
+        "styleHash": "b66f32cf",
+        "bytesHash": "f888db417a2a5d6d49003f537634dcb540ca61ba37129e986cf2ba4ba0baea61"
+      },
+      {
+        "map": "pyraeth_flats_small",
+        "planet": "pyraeth",
+        "biome": "dusk",
+        "region": "pyraeth_flats",
+        "geology": "wind-scoured-slag-flat",
+        "faction": "legion",
+        "purpose": "military-base",
+        "era": "occupied",
+        "condition": "operational",
+        "adaptation": "desert",
+        "broodOverlay": false,
+        "styleHash": "2f32515a",
+        "bytesHash": "bd2d783b1a4111b2115f5597622f82641bec60f490c33dba2d38adb065f3fad8"
+      },
+      {
+        "map": "pyraeth_flats_medium",
+        "planet": "pyraeth",
+        "biome": "dusk",
+        "region": "pyraeth_flats",
+        "geology": "wind-scoured-slag-flat",
+        "faction": "legion",
+        "purpose": "military-base",
+        "era": "occupied",
+        "condition": "operational",
+        "adaptation": "desert",
+        "broodOverlay": false,
+        "styleHash": "df3350f2",
+        "bytesHash": "fa97ec580d77231e5f5a991fcbbdd540037165f47c2c45d60d159d8abf74a824"
+      },
+      {
+        "map": "pyraeth_flats_large",
+        "planet": "pyraeth",
+        "biome": "dusk",
+        "region": "pyraeth_flats",
+        "geology": "wind-scoured-slag-flat",
+        "faction": "legion",
+        "purpose": "military-base",
+        "era": "occupied",
+        "condition": "operational",
+        "adaptation": "desert",
+        "broodOverlay": false,
+        "styleHash": "3feebeae",
+        "bytesHash": "08f26e970febc82420d7a1861f0c559e5bbe5309f94128fbc7648a2f0f2fe0d7"
+      },
+      {
+        "map": "nordhall_isles_small",
+        "planet": "nordhall",
+        "biome": "ice",
+        "region": "nordhall_isles",
+        "geology": "sea-ice-archipelago",
+        "faction": "syndicate",
+        "purpose": "military-base",
+        "era": "occupied",
+        "condition": "operational",
+        "adaptation": "glacial",
+        "broodOverlay": false,
+        "styleHash": "056ec02a",
+        "bytesHash": "511701568fceca49f10848c164534204821d9a868b0f8cd5a828b965ff43eec9"
+      },
+      {
+        "map": "nordhall_isles_medium",
+        "planet": "nordhall",
+        "biome": "ice",
+        "region": "nordhall_isles",
+        "geology": "sea-ice-archipelago",
+        "faction": "syndicate",
+        "purpose": "military-base",
+        "era": "occupied",
+        "condition": "operational",
+        "adaptation": "glacial",
+        "broodOverlay": false,
+        "styleHash": "1c424b70",
+        "bytesHash": "2095b45eee25408004d2a9206e075d4e331f3a1893a09ab04302acc4244fd330"
+      },
+      {
+        "map": "nordhall_isles_large",
+        "planet": "nordhall",
+        "biome": "ice",
+        "region": "nordhall_isles",
+        "geology": "sea-ice-archipelago",
+        "faction": "syndicate",
+        "purpose": "military-base",
+        "era": "occupied",
+        "condition": "operational",
+        "adaptation": "glacial",
+        "broodOverlay": false,
+        "styleHash": "9ec710b2",
+        "bytesHash": "0e8b2e5ece3bcc782bf51c1fbab7d090a76fb083970cb35847be366f508b9f59"
+      },
+      {
+        "map": "nordhall_cliff_small",
+        "planet": "nordhall",
+        "biome": "ice",
+        "region": "nordhall_cliff",
+        "geology": "permafrost-cliff-scar",
+        "faction": "syndicate",
+        "purpose": "military-base",
+        "era": "occupied",
+        "condition": "operational",
+        "adaptation": "glacial",
+        "broodOverlay": false,
+        "styleHash": "02f9acf1",
+        "bytesHash": "2917be1881b221f49c48532534247fe4c13b5295adf251c20937e6365d39653a"
+      },
+      {
+        "map": "nordhall_cliff_medium",
+        "planet": "nordhall",
+        "biome": "ice",
+        "region": "nordhall_cliff",
+        "geology": "permafrost-cliff-scar",
+        "faction": "syndicate",
+        "purpose": "military-base",
+        "era": "occupied",
+        "condition": "operational",
+        "adaptation": "glacial",
+        "broodOverlay": false,
+        "styleHash": "873336af",
+        "bytesHash": "b3c72c61851185631d80714d8b385e56d67e8dd1cd72debfe88839a4fe674cb8"
+      },
+      {
+        "map": "nordhall_cliff_large",
+        "planet": "nordhall",
+        "biome": "ice",
+        "region": "nordhall_cliff",
+        "geology": "permafrost-cliff-scar",
+        "faction": "syndicate",
+        "purpose": "military-base",
+        "era": "occupied",
+        "condition": "operational",
+        "adaptation": "glacial",
+        "broodOverlay": false,
+        "styleHash": "e02a5c4d",
+        "bytesHash": "c92d72d1fcdb200b090d506896d1c79a68c77033bf9b4e1b5ffd122828d7900e"
+      },
+      {
+        "map": "nordhall_frost_small",
+        "planet": "nordhall",
+        "biome": "ice",
+        "region": "nordhall_frost",
+        "geology": "fractured-glacier-rift",
+        "faction": "syndicate",
+        "purpose": "military-base",
+        "era": "occupied",
+        "condition": "operational",
+        "adaptation": "glacial",
+        "broodOverlay": false,
+        "styleHash": "eb503d9f",
+        "bytesHash": "304f499f756d8f864ecfa3d162fed3cec05bfbddc0a0711223a4cfb19bb3f085"
+      },
+      {
+        "map": "nordhall_frost_medium",
+        "planet": "nordhall",
+        "biome": "ice",
+        "region": "nordhall_frost",
+        "geology": "fractured-glacier-rift",
+        "faction": "syndicate",
+        "purpose": "military-base",
+        "era": "occupied",
+        "condition": "operational",
+        "adaptation": "glacial",
+        "broodOverlay": false,
+        "styleHash": "06b7ab2d",
+        "bytesHash": "66c3a1dfcdca3f5246cca487fc0597a204a9beb3469264ab98128b48c3ced1e0"
+      },
+      {
+        "map": "nordhall_frost_large",
+        "planet": "nordhall",
+        "biome": "ice",
+        "region": "nordhall_frost",
+        "geology": "fractured-glacier-rift",
+        "faction": "syndicate",
+        "purpose": "military-base",
+        "era": "occupied",
+        "condition": "operational",
+        "adaptation": "glacial",
+        "broodOverlay": false,
+        "styleHash": "c7f52d43",
+        "bytesHash": "f2746a349a8cf953a40cf2f27516397baa15a471e66fc7b2d207a511f76db712"
+      },
+      {
+        "map": "nordhall_peaks_small",
+        "planet": "nordhall",
+        "biome": "ice",
+        "region": "nordhall_peaks",
+        "geology": "polar-ice-peak",
+        "faction": "syndicate",
+        "purpose": "military-base",
+        "era": "occupied",
+        "condition": "operational",
+        "adaptation": "glacial",
+        "broodOverlay": false,
+        "styleHash": "c713d047",
+        "bytesHash": "a829db11c9764b420fb45aa83196b59a6f701ca34463257c113dd461d89ae28c"
+      },
+      {
+        "map": "nordhall_peaks_medium",
+        "planet": "nordhall",
+        "biome": "ice",
+        "region": "nordhall_peaks",
+        "geology": "polar-ice-peak",
+        "faction": "syndicate",
+        "purpose": "military-base",
+        "era": "occupied",
+        "condition": "operational",
+        "adaptation": "glacial",
+        "broodOverlay": false,
+        "styleHash": "ac04af89",
+        "bytesHash": "b821e4c0ed7ef48cb994bcf1f96c25b197ec801e87c85c13d25145475a89b810"
+      },
+      {
+        "map": "nordhall_peaks_large",
+        "planet": "nordhall",
+        "biome": "ice",
+        "region": "nordhall_peaks",
+        "geology": "polar-ice-peak",
+        "faction": "syndicate",
+        "purpose": "military-base",
+        "era": "occupied",
+        "condition": "operational",
+        "adaptation": "glacial",
+        "broodOverlay": false,
+        "styleHash": "8b18b47f",
+        "bytesHash": "4dffcd57ef251b8f268ab076152e4c840c5be2c403b0ce4511490649f300d092"
+      },
+      {
+        "map": "vespera_spire_small",
+        "planet": "vespera",
+        "biome": "hive",
+        "region": "vespera_spire",
+        "geology": "hive-basalt-caldera",
+        "faction": "horde",
+        "purpose": "brood-site",
+        "era": "conversion",
+        "condition": "infested",
+        "adaptation": "volcanic",
+        "broodOverlay": true,
+        "styleHash": "8be4c822",
+        "bytesHash": "bb8e29531c143a9d9d006ac1ae9875cc517beebdd11b425318ebe57b528061aa"
+      },
+      {
+        "map": "vespera_spire_medium",
+        "planet": "vespera",
+        "biome": "hive",
+        "region": "vespera_spire",
+        "geology": "hive-basalt-caldera",
+        "faction": "horde",
+        "purpose": "brood-site",
+        "era": "conversion",
+        "condition": "infested",
+        "adaptation": "volcanic",
+        "broodOverlay": true,
+        "styleHash": "3b058a32",
+        "bytesHash": "0bfeb60ce1447fc7ae0f74dc463936f62964b7839f881690e71204451e5688f5"
+      },
+      {
+        "map": "vespera_spire_large",
+        "planet": "vespera",
+        "biome": "hive",
+        "region": "vespera_spire",
+        "geology": "hive-basalt-caldera",
+        "faction": "horde",
+        "purpose": "brood-site",
+        "era": "conversion",
+        "condition": "infested",
+        "adaptation": "volcanic",
+        "broodOverlay": true,
+        "styleHash": "3c22140a",
+        "bytesHash": "88e9492fd710205e67aaf521cb9fab052a52e870203e99fa6ebfbf061696e048"
+      },
+      {
+        "map": "vespera_dunes_small",
+        "planet": "vespera",
+        "biome": "hive",
+        "region": "vespera_dunes",
+        "geology": "ichor-dust-escarpment",
+        "faction": "horde",
+        "purpose": "brood-site",
+        "era": "conversion",
+        "condition": "infested",
+        "adaptation": "desert",
+        "broodOverlay": true,
+        "styleHash": "5e62bad8",
+        "bytesHash": "9a02650b7322151653bd9a5068415257e6519c447a49b2a2ae49db5cbf237a27"
+      },
+      {
+        "map": "vespera_dunes_medium",
+        "planet": "vespera",
+        "biome": "hive",
+        "region": "vespera_dunes",
+        "geology": "ichor-dust-escarpment",
+        "faction": "horde",
+        "purpose": "brood-site",
+        "era": "conversion",
+        "condition": "infested",
+        "adaptation": "desert",
+        "broodOverlay": true,
+        "styleHash": "a749b0d0",
+        "bytesHash": "4850fb4d8cafb77bbf5cd14ed2d67856ed150466196477d8d831f618d65b11db"
+      },
+      {
+        "map": "vespera_dunes_large",
+        "planet": "vespera",
+        "biome": "hive",
+        "region": "vespera_dunes",
+        "geology": "ichor-dust-escarpment",
+        "faction": "horde",
+        "purpose": "brood-site",
+        "era": "conversion",
+        "condition": "infested",
+        "adaptation": "desert",
+        "broodOverlay": true,
+        "styleHash": "49d8b590",
+        "bytesHash": "f9332e4a13e0c1a3745ece7b5c316bd5a9ee4a2da45a2e071b34a896d552d30c"
+      },
+      {
+        "map": "vespera_refinery_small",
+        "planet": "vespera",
+        "biome": "hive",
+        "region": "vespera_refinery",
+        "geology": "magma-foundry-bedrock",
+        "faction": "horde",
+        "purpose": "brood-site",
+        "era": "conversion",
+        "condition": "infested",
+        "adaptation": "volcanic",
+        "broodOverlay": true,
+        "styleHash": "2badef2b",
+        "bytesHash": "8e5b2942113845ca277cfa8a5be43eba2dc6776bc169da09d42f089af4e2f2b1"
+      },
+      {
+        "map": "vespera_refinery_medium",
+        "planet": "vespera",
+        "biome": "hive",
+        "region": "vespera_refinery",
+        "geology": "magma-foundry-bedrock",
+        "faction": "horde",
+        "purpose": "brood-site",
+        "era": "conversion",
+        "condition": "infested",
+        "adaptation": "volcanic",
+        "broodOverlay": true,
+        "styleHash": "48835065",
+        "bytesHash": "aae7452dc6c0c958a29ca4f7b09ccf6e5c94941880cade0a63c4d947fa9b24f4"
+      },
+      {
+        "map": "vespera_refinery_large",
+        "planet": "vespera",
+        "biome": "hive",
+        "region": "vespera_refinery",
+        "geology": "magma-foundry-bedrock",
+        "faction": "horde",
+        "purpose": "brood-site",
+        "era": "conversion",
+        "condition": "infested",
+        "adaptation": "volcanic",
+        "broodOverlay": true,
+        "styleHash": "6554d2b3",
+        "bytesHash": "416963dc548e2bc48e173b7cdd5f3e5d3b7939b2327bae8aff28d4a7b69dc858"
+      },
+      {
+        "map": "vespera_plateau_small",
+        "planet": "vespera",
+        "biome": "hive",
+        "region": "vespera_plateau",
+        "geology": "overgrown-basalt-mesa",
+        "faction": "horde",
+        "purpose": "brood-site",
+        "era": "conversion",
+        "condition": "infested",
+        "adaptation": "jungle_wetland",
+        "broodOverlay": true,
+        "styleHash": "90f56c33",
+        "bytesHash": "1a8a0ab846924ca7cda6b834597954a18d14a0b1683ecade21ad779fd558a2bd"
+      },
+      {
+        "map": "vespera_plateau_medium",
+        "planet": "vespera",
+        "biome": "hive",
+        "region": "vespera_plateau",
+        "geology": "overgrown-basalt-mesa",
+        "faction": "horde",
+        "purpose": "brood-site",
+        "era": "conversion",
+        "condition": "infested",
+        "adaptation": "jungle_wetland",
+        "broodOverlay": true,
+        "styleHash": "3d544775",
+        "bytesHash": "737c004742f859d6b4a222f17d721c99f2ee100725b3a1e6b22ea5ffa3f82148"
+      },
+      {
+        "map": "vespera_plateau_large",
+        "planet": "vespera",
+        "biome": "hive",
+        "region": "vespera_plateau",
+        "geology": "overgrown-basalt-mesa",
+        "faction": "horde",
+        "purpose": "brood-site",
+        "era": "conversion",
+        "condition": "infested",
+        "adaptation": "jungle_wetland",
+        "broodOverlay": true,
+        "styleHash": "07d9ebaf",
+        "bytesHash": "41561b15ef719dbf21ea72af6b24b22e4a7987f6835b240b11b4daaf76540403"
+      }
+    ]
+  },
+  "requiredFieldOmissions": [
+    {
+      "field": "map",
+      "code": "LOCATION_CONTEXT_INCOMPLETE",
+      "missing": [
+        "map"
+      ]
+    },
+    {
+      "field": "planet",
+      "code": "LOCATION_CONTEXT_INCOMPLETE",
+      "missing": [
+        "planet"
+      ]
+    },
+    {
+      "field": "biome",
+      "code": "LOCATION_CONTEXT_INCOMPLETE",
+      "missing": [
+        "biome"
+      ]
+    },
+    {
+      "field": "region",
+      "code": "LOCATION_CONTEXT_INCOMPLETE",
+      "missing": [
+        "region"
+      ]
+    },
+    {
+      "field": "geology",
+      "code": "LOCATION_CONTEXT_INCOMPLETE",
+      "missing": [
+        "geology"
+      ]
+    },
+    {
+      "field": "faction",
+      "code": "LOCATION_CONTEXT_INCOMPLETE",
+      "missing": [
+        "faction"
+      ]
+    },
+    {
+      "field": "purpose",
+      "code": "LOCATION_CONTEXT_INCOMPLETE",
+      "missing": [
+        "purpose"
+      ]
+    },
+    {
+      "field": "era",
+      "code": "LOCATION_CONTEXT_INCOMPLETE",
+      "missing": [
+        "era"
+      ]
+    },
+    {
+      "field": "condition",
+      "code": "LOCATION_CONTEXT_INCOMPLETE",
+      "missing": [
+        "condition"
+      ]
+    },
+    {
+      "field": "adaptation",
+      "code": "LOCATION_CONTEXT_INCOMPLETE",
+      "missing": [
+        "adaptation"
+      ]
+    },
+    {
+      "field": "occupation",
+      "code": "LOCATION_CONTEXT_INCOMPLETE",
+      "missing": [
+        "occupation"
+      ]
+    },
+    {
+      "field": "variant",
+      "code": "LOCATION_CONTEXT_INCOMPLETE",
+      "missing": [
+        "variant"
+      ]
+    },
+    {
+      "field": "tacticalScales",
+      "code": "LOCATION_CONTEXT_INCOMPLETE",
+      "missing": [
+        "tacticalScales"
+      ]
+    },
+    {
+      "field": "hash",
+      "code": "LOCATION_CONTEXT_INCOMPLETE",
+      "missing": [
+        "hash"
+      ]
+    }
+  ],
+  "invalidValues": [
+    {
+      "field": "planet",
+      "code": "LOCATION_INCOMPATIBLE"
+    },
+    {
+      "field": "biome",
+      "code": "LOCATION_INCOMPATIBLE"
+    },
+    {
+      "field": "region",
+      "code": "LOCATION_INCOMPATIBLE"
+    },
+    {
+      "field": "geology",
+      "code": "LOCATION_INCOMPATIBLE"
+    },
+    {
+      "field": "faction",
+      "code": "LOCATION_INCOMPATIBLE"
+    },
+    {
+      "field": "purpose",
+      "code": "LOCATION_INCOMPATIBLE"
+    },
+    {
+      "field": "era",
+      "code": "LOCATION_INCOMPATIBLE"
+    },
+    {
+      "field": "condition",
+      "code": "LOCATION_GRAMMAR_MISSING"
+    }
+  ],
+  "nestedDrift": [
+    {
+      "id": "adaptation-topology",
+      "code": "LOCATION_INCOMPATIBLE",
+      "hashChanged": true
+    },
+    {
+      "id": "occupation-geometry",
+      "code": "LOCATION_INCOMPATIBLE",
+      "hashChanged": true
+    },
+    {
+      "id": "variant-transforms",
+      "code": "LOCATION_INCOMPATIBLE",
+      "hashChanged": true
+    },
+    {
+      "id": "brood-conversion",
+      "code": "LOCATION_INCOMPATIBLE"
+    }
+  ],
+  "invasionStages": [
+    {
+      "condition": "encroaching",
+      "ok": true,
+      "overlay": true,
+      "hash": "a9bc9e34"
+    },
+    {
+      "condition": "infested",
+      "ok": true,
+      "overlay": true,
+      "hash": "f6a901eb"
+    },
+    {
+      "condition": "consumed",
+      "ok": true,
+      "overlay": true,
+      "hash": "b60c3548"
+    }
+  ],
+  "typedFailures": [
+    {
+      "map": "__unknown_stage9_map__",
+      "code": "LOCATION_MAP_UNKNOWN",
+      "value": null
+    },
+    {
+      "map": "vanguard",
+      "code": "LOCATION_CONTEXT_INCOMPLETE",
+      "value": null
+    }
+  ],
+  "catalogPlannerCoverage": {
+    "status": "PENDING",
+    "declaredSiteClasses": [
+      "city",
+      "colony",
+      "outpost",
+      "base",
+      "refinery",
+      "relic",
+      "ruin",
+      "spaceport",
+      "derelict",
+      "brood"
+    ],
+    "pending": [
+      "dedicated authored coverage for every required location class",
+      "planner integration that removes the generic procedural fallback",
+      "runtime topology, traversal, and hardware-GPU visual acceptance"
+    ]
+  },
+  "failures": [],
+  "reportHash": "a9a8e662d1aadd8fa32693f30c8fb7b388c6418fdde1bd28dac8fb5d784cfefa"
+}

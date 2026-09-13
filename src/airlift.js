@@ -352,19 +352,25 @@ unitTick=function(dt){mfAirliftPreTick(dt);mfAirliftUnitTickBase(dt);mfAirliftPo
 /* A board order is intentionally higher priority than ordinary friendly-unit
    selection: selected troops + tap Skycrane is the whole mobile gesture. */
 const mfAirliftOnTapBase=onTap;
-onTap=function(sx,sy){
+/* pointerType MUST be forwarded. Dropping it here silently disabled the whole
+   pointer-aware picker for every tap in the game: onTap only calls
+   pickPointerEntities when pointerType is truthy, so the base fell back to the
+   legacy world picker and projected hulls, icon plates and touch allowances
+   were never consulted. Two wrappers in this file each ate the argument. */
+onTap=function(sx,sy,pointerType){
   const W=s2w(sx,sy),wx=W[0],wy=W[1];
   if(mfAirliftAim){
     mfAirliftConfirmAim(wx,wy);
     return;
   }
-  const pk=pickUnit(wx,wy);
+  const pk=pointerType&&typeof pickPointerEntities==='function'
+    ?pickPointerEntities(wx,wy,sx,sy,pointerType):pickUnit(wx,wy);
   if(pk.own>=0&&utype[pk.own]===MF_UT_AIRLIFT&&selCount()>0&&!usel[pk.own]){
     if(mfAirliftIssueBoard(pk.own))return;
     const hasOther=(()=>{for(let i=0;i<unitHigh;i++)if(ualive[i]&&usel[i]&&i!==pk.own)return true;return false;})();
     if(hasOther)return;
   }
-  return mfAirliftOnTapBase(sx,sy);
+  return mfAirliftOnTapBase(sx,sy,pointerType);
 };
 
 function mfAirliftSvgIcon(size){
@@ -401,6 +407,17 @@ showUnitCard=function(uIdx,bIdx,pinned){
   if(chip)chip.innerHTML='<i>▦</i>'+H.used+' / '+H.capacity+' SLOTS';
 };
 
+/* Extension production cards must obey the same release/drag contract as the
+   core roster. Mark them locally safe only after mfBindTap owns the gesture;
+   the pointerdown fallback stays unmarked so input.js guards and replays it on
+   a completed release instead of trusting an unsafe caller. */
+function mfAirliftBindReleaseCard(d,fn){
+  if(typeof mfBindTap==='function'){
+    d.dataset.mfReleaseSafe='1';
+    mfBindTap(d,fn);
+  }else d.addEventListener('pointerdown',fn);
+}
+
 function mfAirliftRenderCard(){
   const g=$('prodGrid'),T=TYPES[MF_UT_AIRLIFT];g.innerHTML='';
   renderMenuRoleBrief('unit','transport',[MF_UT_AIRLIFT]);
@@ -410,7 +427,7 @@ function mfAirliftRenderCard(){
     +'<div class="cardPurpose">INFANTRY · CONSTRUCTORS · LIGHT VEHICLES</div>';
   d.setAttribute('role','button');d.setAttribute('aria-label','Build Atlas Skycrane heavy air transport, capacity 12 slots');
   const icw=document.createElement('div');icw.className='icw';icw.appendChild(unitIconEl(MF_UT_AIRLIFT,48));d.insertBefore(icw,d.firstChild);
-  d.addEventListener('pointerdown',ev=>{
+  mfAirliftBindReleaseCard(d,ev=>{
     ev.stopPropagation();if(openBld<0)return;const B=blds[openBld];
     if(B&&B.alive&&B.queue.length<30){B.queue.push(MF_UT_AIRLIFT);sfx('ui');renderQueue();}
   });
@@ -429,7 +446,7 @@ renderProdMenu=function(){
   b.innerHTML='<span class="tEm">⇩</span>AIRLIFT';b.setAttribute('aria-label','Air transport production');
   if(wants)for(const x of tr.querySelectorAll('.tabBtn'))x.classList.remove('on');
   if(wants)b.classList.add('on');
-  b.addEventListener('pointerdown',ev=>{ev.stopPropagation();prodTab='transport';sfx('ui');renderProdMenu();});
+  mfBindNativePress(b,ev=>{ev.stopPropagation();prodTab='transport';sfx('ui');renderProdMenu();});
   tr.appendChild(b);
   if(wants){prodTab='transport';mfAirliftRenderCard();}
   /* The transport also belongs in AIRCRAFT. A dedicated tab is discoverable
@@ -452,7 +469,7 @@ function mfAirliftAppendCard(g){
   d.setAttribute('aria-label','Build Atlas Skycrane heavy air transport, capacity '+T.transportCap+' slots');
   const icw=document.createElement('div');icw.className='icw';icw.appendChild(unitIconEl(MF_UT_AIRLIFT,48));
   d.insertBefore(icw,d.firstChild);
-  d.addEventListener('pointerdown',ev=>{
+  mfAirliftBindReleaseCard(d,ev=>{
     ev.stopPropagation();if(openBld<0)return;const B=blds[openBld];
     if(B&&B.alive&&B.queue.length<30){B.queue.push(MF_UT_AIRLIFT);sfx('ui');renderQueue();}
   });
@@ -489,7 +506,7 @@ function mfAirliftInitUI(){
   const row=$('tacRow');if(!row||$('mfUnloadBtn'))return;
   const b=document.createElement('button');b.type='button';b.className='cbtn mfAirliftOrder';b.id='mfUnloadBtn';
   b.style.display='none';b.innerHTML='<span class="em">⇩</span><span class="lbl">UNLOAD</span>';
-  b.addEventListener('pointerdown',ev=>{ev.preventDefault();ev.stopPropagation();const i=mfAirliftSelected();if(i>=0)mfAirliftArmUnload(i);});
+  mfBindNativePress(b,ev=>{ev.preventDefault();ev.stopPropagation();const i=mfAirliftSelected();if(i>=0)mfAirliftArmUnload(i);});
   row.insertBefore(b,$('clearBtn'));
   const st=document.createElement('style');st.textContent='\n'
     +'.mfAirliftIcon{filter:drop-shadow(0 0 7px rgba(90,220,255,.42)) drop-shadow(0 4px 4px rgba(0,0,0,.65))}.mfAirliftIcon svg{width:100%;height:100%;display:block}'
@@ -714,7 +731,8 @@ function mfMassAlert(i,state){
 }
 function mfMassBeginFlight(i){
   const H=mfMassHold(i,false);if(!H||!H.cargo.length||utype[i]!==MF_UT_MASSFLESH)return false;
-  utype[i]=MF_UT_MASSFLESH_AIR;H.flight=MF_MASS_FLIGHT;H.mission=null;H.attack=.25;uhold[i]=0;ustate[i]=0;
+  utype[i]=MF_UT_MASSFLESH_AIR;if(typeof mfAirTypeTransition==='function')mfAirTypeTransition(i,TYPES[utype[i]],true);
+  H.flight=MF_MASS_FLIGHT;H.mission=null;H.attack=.25;uhold[i]=0;ustate[i]=0;
   addParticle(3,ux[i],uy[i],0,0,1.0,100,185,92,255);
   for(let k=0;k<10;k++)addParticle(4,ux[i]+rr(-12,12),uy[i]+rr(-12,12),rr(-18,18),rr(-18,18),.8,8,135,236,72);
   sfx('cre_attack',ux[i],uy[i],1.6);
@@ -750,7 +768,8 @@ function mfMassBirthNow(i,H){
     addParticle(6,ux[u],uy[u],0,0,.55,TYPES[P.type].size*1.8,150,242,82);born.push(u);
   }
   H.cargo=remaining;H.used=remaining.reduce((n,P)=>n+P.slots,0);H.mission=null;H.flight=0;
-  utype[i]=MF_UT_MASSFLESH;ustate[i]=0;utx[i]=ux[i];uty[i]=uy[i];uhold[i]=0;
+  utype[i]=MF_UT_MASSFLESH;if(typeof mfAirTypeTransition==='function')mfAirTypeTransition(i,TYPES[utype[i]],false);
+  ustate[i]=0;utx[i]=ux[i];uty[i]=uy[i];uhold[i]=0;
   addParticle(3,ux[i],uy[i],0,0,.9,86,185,92,255);sfx('deploy',ux[i],uy[i],1.25);sfx('cre_attack',ux[i],uy[i],1.1);
   if(uteam[i]===0)toast('♒ '+born.length+' ORGANISMS BORN INTO FORMATION');
   updateSelInfo();return born;
@@ -853,15 +872,18 @@ const mfMassUnitTickBase=unitTick;
 unitTick=function(dt){mfMassPreTick(dt);mfMassUnitTickBase(dt);mfMassPostTick(dt);};
 
 const mfMassOnTapBase=onTap;
-onTap=function(sx,sy){
+/* Same contract as the airlift wrapper above: forward pointerType or the base
+   loses its pointer-aware picking. */
+onTap=function(sx,sy,pointerType){
   const W=s2w(sx,sy),wx=W[0],wy=W[1];
   if(mfMassBirthAim){mfMassConfirmAim(wx,wy);return;}
-  const pk=pickUnit(wx,wy);
+  const pk=pointerType&&typeof pickPointerEntities==='function'
+    ?pickPointerEntities(wx,wy,sx,sy,pointerType):pickUnit(wx,wy);
   if(pk.own>=0&&utype[pk.own]===MF_UT_MASSFLESH&&selCount()>0&&!usel[pk.own]){
     if(mfMassIssueBoard(pk.own))return;
     for(let i=0;i<unitHigh;i++)if(ualive[i]&&usel[i]&&i!==pk.own)return;
   }
-  return mfMassOnTapBase(sx,sy);
+  return mfMassOnTapBase(sx,sy,pointerType);
 };
 
 const mfMassPurposeBase=intelUnitPurpose;
@@ -896,7 +918,7 @@ function mfMassRenderCard(){
     +'<div class="cardPurpose">MERGE · ASCEND · BIRTH BEHIND DEFENSES</div>';
   d.setAttribute('role','button');d.setAttribute('aria-label','Grow Massflesh Brood breakthrough carrier');
   const icw=document.createElement('div');icw.className='icw';icw.appendChild(unitIconEl(MF_UT_MASSFLESH,48));d.insertBefore(icw,d.firstChild);
-  d.addEventListener('pointerdown',ev=>{ev.stopPropagation();const B=openBld>=0?blds[openBld]:null;if(B&&bldFactionKey(B)==='horde'&&B.queue.length<30){B.queue.push(MF_UT_MASSFLESH);sfx('ui');renderQueue();}});
+  mfAirliftBindReleaseCard(d,ev=>{ev.stopPropagation();const B=openBld>=0?blds[openBld]:null;if(B&&bldFactionKey(B)==='horde'&&B.queue.length<30){B.queue.push(MF_UT_MASSFLESH);sfx('ui');renderQueue();}});
   addCardIntelButton(d,'unit',MF_UT_MASSFLESH);g.appendChild(d);
 }
 const mfMassRenderProdBase=renderProdMenu;
@@ -906,7 +928,7 @@ renderProdMenu=function(){
   const tr=$('prodTabs');tr.style.display='flex';const b=document.createElement('button');b.className='tabBtn'+(wants?' on':'');
   b.innerHTML='<span class="tEm">♒</span>MASSFLESH';b.setAttribute('aria-label','Brood living transport production');
   if(wants)for(const x of tr.querySelectorAll('.tabBtn'))x.classList.remove('on');
-  b.addEventListener('pointerdown',ev=>{ev.stopPropagation();prodTab='biomass';sfx('ui');renderProdMenu();});
+  mfBindNativePress(b,ev=>{ev.stopPropagation();prodTab='biomass';sfx('ui');renderProdMenu();});
   /* A faction-defining organism must not be hidden beyond the phone-width tab
      scroller.  Keep it first for Brood factories while leaving Terran clean. */
   tr.insertBefore(b,tr.firstChild);
@@ -929,10 +951,21 @@ function mfMassArmSelected(){
 function mfMassSelected(){let found=-1;for(let i=0;i<unitHigh;i++)if(ualive[i]&&usel[i]&&mfTransportKindByType(utype[i])==='massflesh'){if(found>=0)return -1;found=i;}return found;}
 function mfMassUpdateUI(){
   const b=$('mfMassActionBtn');if(!b)return;const i=mfMassSelected(),H=i>=0?mfMassHold(i,true):null,air=i>=0&&utype[i]===MF_UT_MASSFLESH_AIR;
-  b.style.display=i>=0?'flex':'none';b.disabled=!H||!H.cargo.length;
-  const label=b.querySelector('.lbl');if(label)label.textContent=air?'BIRTH '+Math.ceil(H.flight)+'s':'TAKE FLIGHT';
-  b.classList.toggle('on',!!(mfMassBirthAim&&i===mfMassBirthAim.i));
-  b.setAttribute('aria-label',air?'Set Massflesh birth site; airborne counter is anti-air':'Take flight; landed Massflesh counter is anti-tank');
+  /* This runs on every selection service point. textContent, disabled and
+     setAttribute all mutate even when the value is unchanged, and #tacRow sits
+     inside the watched command dock, so re-writing the same label kept waking
+     the HUD observers. Only write on a real change. */
+  const wantDisplay=i>=0?'flex':'none';
+  if(b.style.display!==wantDisplay) b.style.display=wantDisplay;
+  const wantDisabled=!H||!H.cargo.length;
+  if(b.disabled!==wantDisabled) b.disabled=wantDisabled;
+  const label=b.querySelector('.lbl');
+  const wantLabel=air?'BIRTH '+Math.ceil(H.flight)+'s':'TAKE FLIGHT';
+  if(label&&label.textContent!==wantLabel) label.textContent=wantLabel;
+  const wantOn=!!(mfMassBirthAim&&i===mfMassBirthAim.i);
+  if(b.classList.contains('on')!==wantOn) b.classList.toggle('on',wantOn);
+  const wantAria=air?'Set Massflesh birth site; airborne counter is anti-air':'Take flight; landed Massflesh counter is anti-tank';
+  if(b.getAttribute('aria-label')!==wantAria) b.setAttribute('aria-label',wantAria);
 }
 const mfMassUpdateSelBase=updateSelInfo;
 updateSelInfo=function(){
@@ -956,10 +989,10 @@ function mfMassInitUI(){
   const row=$('tacRow');if(!row||$('mfMassActionBtn'))return;
   const b=document.createElement('button');b.type='button';b.id='mfMassActionBtn';b.className='cbtn mfMassAction';b.style.display='none';
   b.innerHTML='<span class="em">♒</span><span class="lbl">TAKE FLIGHT</span>';
-  b.addEventListener('pointerdown',ev=>{ev.preventDefault();ev.stopPropagation();mfMassArmSelected();});
+  mfBindNativePress(b,ev=>{ev.preventDefault();ev.stopPropagation();mfMassArmSelected();});
   row.insertBefore(b,$('clearBtn'));
   const a=document.createElement('button');a.type='button';a.id='mfMassAlert';a.style.display='none';a.setAttribute('aria-label','Track inbound Massflesh breakthrough carrier');
-  a.addEventListener('pointerdown',()=>{const i=mfMassAlertUnit;if(i>=0&&ualive[i]){cam.x=ux[i];cam.y=uy[i];camFollow=i;clampCam();camUpdateMatrices();sfx('ui');}});document.body.appendChild(a);
+  mfBindNativePress(a,()=>{const i=mfMassAlertUnit;if(i>=0&&ualive[i]){cam.x=ux[i];cam.y=uy[i];camFollow=i;clampCam();camUpdateMatrices();sfx('ui');}});document.body.appendChild(a);
   const st=document.createElement('style');st.textContent='\n'
     +'.mfMassIcon{filter:drop-shadow(0 0 8px rgba(184,102,255,.5))}.mfMassIcon svg{width:100%;height:100%;display:block}'
     +'.mfMassCard{width:156px!important;min-height:176px}.mfMassBadges{display:flex;flex-wrap:wrap;justify-content:center;gap:3px;margin:3px 0}.mfMassBadges b{padding:3px 5px;border:1px solid rgba(185,112,255,.48);border-radius:4px;background:rgba(72,28,92,.42);color:#d9aaff;font:700 7px/1 var(--fT)}'
@@ -1018,5 +1051,3 @@ function mfAirliftAiTick(dt){
 }
 const mfAirliftAiTickBase=aiTick;
 aiTick=function(dt){ mfAirliftAiTick(dt); return mfAirliftAiTickBase(dt); };
-
-

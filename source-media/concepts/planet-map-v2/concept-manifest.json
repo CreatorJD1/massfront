@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "conceptSetId": "massfront_planet_map_verdant_ashland_v2",
+  "status": "approved_for_first_texture_and_map_pass",
+  "originalProjectArt": true,
+  "generatedWith": "OpenAI built-in image generation",
+  "concepts": [
+    {
+      "id": "verdant_ashland_map_concept_v1",
+      "file": "verdant-ashland-map-concept-v1.png",
+      "sha256": "4e628cca810a1c4146a9a629e7aac63e6851fc378fea1687d3445f233b2d5d1b",
+      "bytes": 3362274,
+      "resolution": [1536, 1024],
+      "productionTargets": [
+        "verdant_grass_soil_rock_and_shoreline",
+        "ashland_basalt_ash_cooled_lava_and_industrial_paving",
+        "readable_buildable_areas",
+        "coherent_roads_and_civic_foundations",
+        "material_specific_craters_and_scorches"
+      ]
+    }
+  ],
+  "constraints": [
+    "concept_pixels_are_not_runtime_textures",
+    "production_sheets_must_be_original_and_seamless",
+    "lighting_neutral_albedo",
+    "no_universal_crack_network",
+    "numerical_border_and_3x3_repeat_verification",
+    "matched_in_engine_capture_required"
+  ]
+}

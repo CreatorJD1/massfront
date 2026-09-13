@@ -1,0 +1,2751 @@
+{
+  "schemaVersion": 1,
+  "manifestId": "massfront_galactic_ground_site_spline_briefs_v1",
+  "createdDate": "2026-08-25",
+  "status": "AUTHORING_BRIEFS_ONLY",
+  "runtimeReady": false,
+  "scope": {
+    "siteCount": 9,
+    "galacticSitePresetCount": 14,
+    "baseGamePlanetCount": 4,
+    "baseGameRegionCount": 16,
+    "baseGameLocationClassCount": 8,
+    "baseGamePresetCount": 32,
+    "purpose": "Spline-ready source briefs for the nine Galactic mission-site seeds plus the complete 32-family base-game planet/region/location-class art matrix.",
+    "runtimeMutation": false,
+    "splineInvocationPerformed": false
+  },
+  "sourceAuthority": [
+    {
+      "path": "../../../../src/domain/catalog.js",
+      "owns": [
+        "system IDs",
+        "site IDs and display names",
+        "biomes and hazards",
+        "mission objectives",
+        "landing-zone IDs",
+        "Brood hive-target IDs"
+      ]
+    },
+    {
+      "path": "../../../../src/systems/showcase_systems.js",
+      "owns": [
+        "Aelos, Veyra, and Karak system presentation",
+        "Caldris, Orison, and Meridian planetary context"
+      ]
+    }
+  ],
+  "referencePolicy": {
+    "classification": "visual_language_only_not_asset_sources",
+    "references": [
+      {
+        "title": "Command & Conquer 3: Tiberium Wars",
+        "allowedStudy": [
+          "industrial battlefield readability",
+          "destruction-state legibility",
+          "contamination storytelling"
+        ]
+      },
+      {
+        "title": "Supreme Commander 2",
+        "allowedStudy": [
+          "combined-arms scale and separation",
+          "large-unit route readability",
+          "strategic landmark hierarchy"
+        ]
+      },
+      {
+        "title": "XCOM 2",
+        "allowedStudy": [
+          "compact tactical interiors",
+          "compact tactical cover language",
+          "breach, objective, and extraction readability"
+        ]
+      },
+      {
+        "title": "StarCraft II",
+        "allowedStudy": [
+          "biome readability",
+          "faction silhouette contrast",
+          "Brood and organic-infestation readability"
+        ]
+      }
+    ],
+    "prohibited": [
+      "copying or tracing any reference mesh, texture, decal, layout, icon, logo, faction mark, unit, building, character, or named prop",
+      "shipping extracted, captured, recreated, or derivative game assets",
+      "using a reference screenshot as a texture source",
+      "claiming any reference title as provenance for MASSFRONT art"
+    ],
+    "requiredProvenance": "Every delivered model, texture, decal, and concept must be original MASSFRONT work with its actual authoring source recorded."
+  },
+  "identityPolicy": {
+    "genericRecolorForbidden": true,
+    "paletteSwapDoesNotCreatePreset": true,
+    "requiredPresetDifferences": [
+      "hero silhouette",
+      "modular geometry grammar",
+      "material response and weathering",
+      "decal language",
+      "route topology",
+      "damage-state story",
+      "objective landmark"
+    ],
+    "sharedKitLimit": "Shared structural and gameplay-proxy pieces may support a site, but may not replace its dedicated heroes, materials, decals, or skyline.",
+    "broodRule": "Brood is a hostile, non-playable, non-humanoid force. Brood growth is dedicated living geometry and material work, never a recolor of a resident-faction building."
+  },
+  "sharedContracts": {
+    "authoringScale": {
+      "contractId": "mf_ground_site_scale_v1",
+      "sourceUnitMeters": 1,
+      "sourceGridMeters": 4,
+      "macroModuleGridMeters": 16,
+      "runtimeImportIntent": "one source meter to one MASSFRONT world unit until a descriptor-driven import probe proves otherwise",
+      "splineUpAxis": "Y",
+      "splineForwardAxis": "-Z",
+      "runtimeUpAxis": "Z",
+      "runtimeForwardAxis": "+Y",
+      "origin": "site datum at floor height; modular-piece origins on grid-ready floor contact",
+      "titanDiagnostic": {
+        "runtimeCollisionDiameterWorldUnits": 36,
+        "runtimeVisualSizeWorldUnits": 46,
+        "compactGroundSitesAdmitTitan": false,
+        "reason": "The 9-17-unit roads called out in the audit cannot prove TITAN clearance. These compact mission sites explicitly admit only the listed P/L/V/M classes; TITAN and unrestricted strategic forces require a separate measured map contract."
+      }
+    },
+    "navClasses": [
+      {
+        "id": "P_PERSONNEL",
+        "minimumPortalMeters": [3, 3],
+        "minimumRouteWidthMeters": 3,
+        "notes": "Personnel flanks may be narrower than vehicle routes but cannot be the only objective path on a combined-arms site."
+      },
+      {
+        "id": "L_LIGHT_MECH",
+        "minimumPortalMeters": [14, 7],
+        "minimumRouteWidthMeters": 14,
+        "notes": "Includes light mechs and compact support chassis."
+      },
+      {
+        "id": "V_SMALL_VEHICLE",
+        "minimumPortalMeters": [18, 8],
+        "minimumOneWayLaneMeters": 16,
+        "minimumTwoWayLaneMeters": 28,
+        "maximumRampGradePercent": 8.3
+      },
+      {
+        "id": "M_MEDIUM_MECH",
+        "minimumPortalMeters": [24, 12],
+        "minimumTurningCourtDiameterMeters": 42,
+        "preferredTurningCourtDiameterMeters": 48,
+        "notes": "Admission is site- and landing-zone-specific, never inferred from mood art."
+      }
+    ],
+    "combinedArmsClearance": {
+      "contractId": "mf_ground_site_clearance_v1",
+      "vehiclePassingBayMeters": [32, 36],
+      "passingBaySpacingMeters": [60, 80],
+      "requiredRouteRedundancy": "Every V/M-admitting site needs two complete legal routes, or one primary route plus a breach route that is open before permanent primary-route loss.",
+      "clearanceEnvelopeRule": "Cover, debris, decals, doors, props, effects, damage meshes, and collision proxies may not intrude into a validated class envelope.",
+      "routeProof": "Test every admitted class from every compatible landing zone to objective and extraction in every persistent destruction state."
+    },
+    "modeling": {
+      "contractId": "mf_ground_site_model_v1",
+      "modularity": "Author straight, corner, T, X, end-cap, portal, vertical, damage, and terrain-contact pieces where the site grammar needs them.",
+      "heroRule": "Every named objective and skyline landmark is a dedicated hero family; no generic cube, universal seven-mesh kit, or renamed orbital-contact model may stand in.",
+      "requiredNodePrefixes": [
+        "GEO_",
+        "LOD0_",
+        "LOD1_",
+        "LOD2_",
+        "COLL_",
+        "NAV_",
+        "PORTAL_",
+        "COVER_",
+        "LOS_",
+        "SHOT_",
+        "OBJ_",
+        "LZ_",
+        "EXTRACT_",
+        "HAZARD_",
+        "DESTRUCT_",
+        "ROOF_",
+        "OCCLUDER_"
+      ],
+      "transformRule": "Apply transforms before export. Keep reusable pivots at floor contact and rotating or opening pivots on the actual hinge/axis."
+    },
+    "materialsAndDecals": {
+      "contractId": "mf_ground_site_material_v1",
+      "sourceTextureResolution": 2048,
+      "pbrChannels": [
+        "basecolor_srgb",
+        "normal_tangent_linear",
+        "orm_linear_red_ao_green_roughness_blue_metallic",
+        "height_linear_optional",
+        "emissive_srgb_optional"
+      ],
+      "decalChannels": [
+        "basecolor_alpha",
+        "normal_optional",
+        "orm_optional",
+        "emissive_optional"
+      ],
+      "requirements": [
+        "Keep source maps and runtime derivatives separate.",
+        "Author seam and channel-alignment proofs before runtime promotion.",
+        "Pack decals by site/system ownership; do not bake every marking into every floor tile.",
+        "Unique material response, wear, contamination, and signage are mandatory; hue shifts of a shared texture do not satisfy a preset."
+      ]
+    },
+    "destruction": {
+      "contractId": "mf_ground_site_destruction_v1",
+      "requiredStates": [
+        "intact",
+        "damaged",
+        "breached",
+        "collapsed_or_disabled"
+      ],
+      "rules": [
+        "Use named deterministic state meshes, not randomized physics piles, for route-affecting destruction.",
+        "Every state declares collision, nav, cover, LOS, shot, blast, hazard, and extraction effects.",
+        "Objective death or extraction may not strand the player before mission state advances.",
+        "Rubble is class-aware: personnel-passable and vehicle-blocking are distinct authored outcomes."
+      ]
+    },
+    "lod": {
+      "contractId": "mf_ground_site_lod_v1",
+      "levels": [
+        "LOD0",
+        "LOD1",
+        "LOD2"
+      ],
+      "triangleRatioCeilingsRelativeToLod0": {
+        "LOD1": 0.4,
+        "LOD2": 0.12
+      },
+      "rules": [
+        "Author each LOD deliberately; blind decimation of thin rails, portals, route silhouettes, or objective landmarks is rejected.",
+        "Preserve silhouette, openings, hazard boundaries, emissive landmarks, and damage-state readability at every LOD.",
+        "Collision and nav proxies never switch with visual LOD.",
+        "Final whole-site triangle, draw-call, and texture residency budgets remain blocked until measured phone GPU evidence exists."
+      ]
+    },
+    "collision": {
+      "contractId": "mf_ground_site_collision_v1",
+      "rules": [
+        "Never use the render mesh as production collision.",
+        "Use simple watertight box, capsule, convex, or low-poly static proxies under COLL_ nodes.",
+        "Keep walkable NAV_ surfaces, physical collision, gameplay LOS, and projectile blockers separate.",
+        "Do not export hidden duplicate render geometry as collision.",
+        "Validate gates, ramps, turning courts, landing zones, cover edges, and destruction swaps at source scale."
+      ]
+    },
+    "export": {
+      "contractId": "mf_ground_site_export_v1",
+      "authoringFormat": "Spline scene plus editable source GLB",
+      "candidateFormat": "glTF 2.0 binary GLB",
+      "rootNamePattern": "GSITE_<SITE_ID_UPPER>",
+      "meshRules": [
+        "triangles only",
+        "UV0 required for every textured mesh",
+        "tangent basis required for normal-mapped meshes",
+        "no negative scale",
+        "no unapplied transforms",
+        "no cameras or lights in runtime candidate unless explicitly whitelisted",
+        "no embedded concept images or reference-game imagery"
+      ],
+      "materialRules": [
+        "standards-bound glTF PBR only",
+        "stable material names",
+        "no unsupported procedural nodes in the candidate export",
+        "alpha mode declared explicitly"
+      ],
+      "requiredFuturePackageFiles": [
+        "<site-id>-source.glb",
+        "<site-id>-runtime-candidate.glb",
+        "<site-id>.spline-or-source-url.txt",
+        "intake.json",
+        "PROVENANCE.md"
+      ]
+    },
+    "conceptGate": {
+      "contractId": "mf_ground_site_concept_gate_v1",
+      "requiredBoardPanels": [
+        "mood_isometric",
+        "measured_plan",
+        "clearance_sections",
+        "phone_portrait_gameplay_crop"
+      ],
+      "label": "CONCEPT ART - NOT RUNTIME EVIDENCE",
+      "finalGeometryBeforeApprovedBoard": false,
+      "greyboxBeforeApprovedBoard": true,
+      "matchedRuntimeCaptureRequired": true
+    },
+    "runtimeGate": {
+      "contractId": "mf_ground_site_runtime_gate_v1",
+      "requiredEvidence": [
+        "versioned ground-operation map descriptor",
+        "source and package fingerprints",
+        "class-aware path and portal tests",
+        "LOS, projectile, blast, hazard, and destruction-state tests",
+        "phone portrait tactical and overview captures",
+        "phone landscape, tablet, desktop, and foldable captures",
+        "hardware GPU and context-loss report"
+      ],
+      "catalogPresenceDoesNotEqualRuntime": true,
+      "passMeansSourceMatchedNotVisualApproval": true
+    }
+  },
+  "locationPresets": [
+    {
+      "id": "preset_aelos_caldris_arcology_city",
+      "siteId": "aelos_caldris",
+      "locationClass": "city_colony",
+      "status": "brief_only",
+      "identity": "Curved inhabited orbital ward with ocean-blue civic glazing, tram circulation, customs governance, and civilian shelter infrastructure."
+    },
+    {
+      "id": "preset_aelos_caldris_customs_spaceport",
+      "siteId": "aelos_caldris",
+      "locationClass": "spaceport",
+      "status": "brief_only",
+      "identity": "Regulated cargo lock, inspection apron, mag-tram interchange, and pressure-safe customs core shaped by Aelos civilian traffic."
+    },
+    {
+      "id": "preset_aelos_heliograph_relay_outpost",
+      "siteId": "aelos_heliograph",
+      "locationClass": "outpost",
+      "status": "brief_only",
+      "identity": "Exposed phase-relay outpost built around heliostats, radiation shadows, maintenance spars, and a compact control spine."
+    },
+    {
+      "id": "preset_aelos_heliograph_security_base",
+      "siteId": "aelos_heliograph",
+      "locationClass": "military_base",
+      "status": "brief_only",
+      "identity": "Aelos relay-security cordon with a dedicated motor apron, hardened control bunker, sensor pickets, and two breachable approach gates."
+    },
+    {
+      "id": "preset_aelos_morrow_trade_spaceport",
+      "siteId": "aelos_freeport",
+      "locationClass": "spaceport",
+      "status": "brief_only",
+      "identity": "Crowded commercial docks, cargo carousel, market galleries, cranes, docking clamps, and covert service access."
+    },
+    {
+      "id": "preset_aelos_morrow_refinery_quay",
+      "siteId": "aelos_freeport",
+      "locationClass": "refinery",
+      "status": "brief_only",
+      "identity": "Dedicated zero-g fuel and cryogenic processing quay with pressure vessels, valve forests, spill containment, and a service-vehicle loop."
+    },
+    {
+      "id": "preset_veyra_orison_derelict_megastructure",
+      "siteId": "veyra_orison",
+      "locationClass": "derelict_megastructure",
+      "status": "brief_only",
+      "identity": "Broken pre-UGA archive/transit megaframe under vacuum and gravitic shear, centered on the Orison memory vault."
+    },
+    {
+      "id": "preset_veyra_lensing_observatory",
+      "siteId": "veyra_lens",
+      "locationClass": "research_observatory",
+      "status": "brief_only",
+      "identity": "Black-hole calibration campus of lens petals, umbra platforms, baffles, coolant trenches, and chronometric instruments."
+    },
+    {
+      "id": "preset_veyra_ossuary_relic_vault",
+      "siteId": "veyra_ossuary",
+      "locationClass": "relic_ruin",
+      "status": "brief_only",
+      "identity": "Ancient subsurface processional vault with autonomous apertures, phase machinery, relief walls, and excavation damage."
+    },
+    {
+      "id": "preset_karak_meridian_silent_colony",
+      "siteId": "karak_meridian",
+      "locationClass": "city_colony",
+      "status": "brief_only",
+      "identity": "Ordinary civic colony grid made tragic by silence, evacuation evidence, spore fog, and a breeder nest overtaking recognizable public spaces."
+    },
+    {
+      "id": "preset_karak_meridian_pressure_biodome",
+      "siteId": "karak_meridian",
+      "locationClass": "pressure_dome",
+      "status": "brief_only",
+      "identity": "Civilian greenhouse and clinic biodomes with pressure tunnels, quarantine shutters, intact and ruptured shells, and no reused Aelos dome silhouette."
+    },
+    {
+      "id": "preset_karak_meridian_containment_base",
+      "siteId": "karak_meridian",
+      "locationClass": "military_base",
+      "status": "brief_only",
+      "identity": "Late UGA containment cordon layered onto a civilian transit court with decon gantries, burn lanes, deployable hardpoints, and visible failed perimeter states."
+    },
+    {
+      "id": "preset_karak_spine_transit_infestation",
+      "siteId": "karak_spine",
+      "locationClass": "infested_infrastructure",
+      "status": "brief_only",
+      "identity": "Subterranean magrail and service artery whose distinct gestation cluster and feeder root occupy different route layers."
+    },
+    {
+      "id": "preset_karak_primary_hive_infestation",
+      "siteId": "karak_hive",
+      "locationClass": "brood_infestation",
+      "status": "brief_only",
+      "identity": "Living non-humanoid Brood megastructure of arteries, membrane gates, neural tissues, thermal vents, and the hive heart."
+    }
+  ],
+  "baseGamePresetLibrary": {
+    "libraryId": "massfront_base_world_location_presets_v1",
+    "status": "AUTHORING_TARGETS_ONLY",
+    "runtimeReady": false,
+    "sourceAudit": {
+      "repositoryRelativePath": "tmp/galactic-ground-site-audit/GALACTIC_GROUND_SITE_ASSET_MATRIX_2026-08-25.md",
+      "section": "5. Broader base-game location content library"
+    },
+    "scope": {
+      "planetCount": 4,
+      "regionCount": 16,
+      "locationClassCount": 8,
+      "presetCount": 32,
+      "matrixRule": "Every planet receives exactly one lore-specific preset for every location class, with two presets allocated to each of its four regions."
+    },
+    "locationClasses": [
+      "outpost",
+      "city_colony",
+      "relic_ruin",
+      "spaceport",
+      "pressure_dome",
+      "military_base",
+      "refinery",
+      "derelict_megastructure"
+    ],
+    "planets": [
+      {
+        "id": "aelos",
+        "displayName": "Aelos",
+        "factionLanguage": "Nova",
+        "worldIdentity": "temperate civic capital with intact working infrastructure",
+        "identityKitCounts": {
+          "models": 16,
+          "pbrFamilies2k": 8,
+          "decalEntries": 24
+        },
+        "regionIds": [
+          "aelos_north",
+          "aelos_basin",
+          "aelos_coast",
+          "aelos_ridge"
+        ]
+      },
+      {
+        "id": "pyraeth",
+        "displayName": "Pyraeth",
+        "factionLanguage": "Crimson Dominion",
+        "worldIdentity": "dusk-storm foundry world of pressure cities, armor works, and orbital aprons",
+        "identityKitCounts": {
+          "models": 16,
+          "pbrFamilies2k": 8,
+          "decalEntries": 24
+        },
+        "regionIds": [
+          "pyraeth_crater",
+          "pyraeth_belt",
+          "pyraeth_caldera",
+          "pyraeth_flats"
+        ]
+      },
+      {
+        "id": "nordhall",
+        "displayName": "Nordhall",
+        "factionLanguage": "Syndicate Coalition",
+        "worldIdentity": "glacial machine-vault world of automation, frontline scars, cryogenic industry, and orbital weather",
+        "identityKitCounts": {
+          "models": 16,
+          "pbrFamilies2k": 8,
+          "decalEntries": 24
+        },
+        "regionIds": [
+          "nordhall_isles",
+          "nordhall_cliff",
+          "nordhall_frost",
+          "nordhall_peaks"
+        ]
+      },
+      {
+        "id": "vespera",
+        "displayName": "Vespera",
+        "factionLanguage": "abandoned civilization under non-playable Brood infestation",
+        "worldIdentity": "volcanic and overgrown hiveworld where infestation is structure and terrain, not a palette modifier",
+        "identityKitCounts": {
+          "models": 16,
+          "pbrFamilies2k": 8,
+          "decalEntries": 24
+        },
+        "regionIds": [
+          "vespera_spire",
+          "vespera_dunes",
+          "vespera_refinery",
+          "vespera_plateau"
+        ]
+      }
+    ],
+    "regions": [
+      {
+        "id": "aelos_north",
+        "planetId": "aelos",
+        "displayName": "Capital Circumference",
+        "biomeDescriptor": "verdant civic"
+      },
+      {
+        "id": "aelos_basin",
+        "planetId": "aelos",
+        "displayName": "Heartland Yards",
+        "biomeDescriptor": "verdant industrial"
+      },
+      {
+        "id": "aelos_coast",
+        "planetId": "aelos",
+        "displayName": "Harbor Command",
+        "biomeDescriptor": "wet verdant coast"
+      },
+      {
+        "id": "aelos_ridge",
+        "planetId": "aelos",
+        "displayName": "High Shelf",
+        "biomeDescriptor": "arctic ridge"
+      },
+      {
+        "id": "pyraeth_crater",
+        "planetId": "pyraeth",
+        "displayName": "Buried Court",
+        "biomeDescriptor": "Vespera-to-ashland crater and ashland ruin"
+      },
+      {
+        "id": "pyraeth_belt",
+        "planetId": "pyraeth",
+        "displayName": "Mech Foundry",
+        "biomeDescriptor": "Vespera industrial"
+      },
+      {
+        "id": "pyraeth_caldera",
+        "planetId": "pyraeth",
+        "displayName": "Dome Arcology",
+        "biomeDescriptor": "Vespera caldera"
+      },
+      {
+        "id": "pyraeth_flats",
+        "planetId": "pyraeth",
+        "displayName": "Orbital Aprons",
+        "biomeDescriptor": "Vespera flats"
+      },
+      {
+        "id": "nordhall_isles",
+        "planetId": "nordhall",
+        "displayName": "Frostwake Grid",
+        "biomeDescriptor": "arctic isles"
+      },
+      {
+        "id": "nordhall_cliff",
+        "planetId": "nordhall",
+        "displayName": "Frontline Shelf",
+        "biomeDescriptor": "arctic cliff"
+      },
+      {
+        "id": "nordhall_frost",
+        "planetId": "nordhall",
+        "displayName": "Reactor Rift",
+        "biomeDescriptor": "arctic fault"
+      },
+      {
+        "id": "nordhall_peaks",
+        "planetId": "nordhall",
+        "displayName": "Orbital Weather",
+        "biomeDescriptor": "arctic peaks"
+      },
+      {
+        "id": "vespera_spire",
+        "planetId": "vespera",
+        "displayName": "Caldera Nests",
+        "biomeDescriptor": "ashland"
+      },
+      {
+        "id": "vespera_dunes",
+        "planetId": "vespera",
+        "displayName": "Infestation Fields",
+        "biomeDescriptor": "ashland dunes"
+      },
+      {
+        "id": "vespera_refinery",
+        "planetId": "vespera",
+        "displayName": "Magma Hatcheries",
+        "biomeDescriptor": "ashland refinery"
+      },
+      {
+        "id": "vespera_plateau",
+        "planetId": "vespera",
+        "displayName": "Overgrown Front",
+        "biomeDescriptor": "verdant-to-ashland"
+      }
+    ],
+    "sharedFoundation": {
+      "globalOutdoorCombinedArmsKit": {
+        "counts": {
+          "models": 31,
+          "pbrFamilies2k": 8,
+          "decalEntries": 24
+        },
+        "contents": "Roads, junctions, bridges, gates, walls, pads, utilities, cover, and damage/rubble with 16-30 m lanes and 42-48 m turning courts."
+      },
+      "eightLocationClassKits": {
+        "counts": {
+          "models": 64,
+          "pbrFamilies2k": 9,
+          "decalEntries": 48
+        },
+        "contents": "Dedicated outpost, city/colony, relic/ruin, spaceport, pressure-dome, military-base, refinery, and derelict-megastructure mechanics."
+      },
+      "fourPlanetIdentityKits": {
+        "counts": {
+          "models": 64,
+          "pbrFamilies2k": 32,
+          "decalEntries": 96
+        },
+        "contents": "Sixteen models, eight PBR families, and 24 decals per planet; identity grammar never migrates wholesale to another planet."
+      }
+    },
+    "exactTotals": {
+      "thirtyTwoUniquePresets": {
+        "models": 220,
+        "pbrFamilies2k": 64,
+        "decalEntries": 384
+      },
+      "completePlannedBaseLocationLibrary": {
+        "models": 379,
+        "pbrFamilies2k": 113,
+        "decalEntries": 552
+      },
+      "runtimeResidencyRule": "Load only the current planet identity kit, current location-class kit, and current preset heroes. Source-quality maps remain non-runtime until compressed derivatives and source-matched captures pass."
+    },
+    "reuseBoundaries": {
+      "safeToShare": [
+        "Hidden gameplay proxies, global lane dimensions, portal metadata schema, collision naming, generic bolts/cables/pipes, generic emergency fixtures, and portable UGA objective/deployment hardware.",
+        "System-level structural grammar within Aelos, Veyra, or Karak.",
+        "Planet-level weathering and terrain contact layers across that planet's regions.",
+        "Class kits such as gantry mechanics or refinery valve logic when the silhouette/material skin remains world-specific."
+      ],
+      "mustRemainUnique": [
+        "Every primary objective hero: caldris_customs_core, heliograph_control_spine, morrow_archive_stack, orison_memory_vault, lensing_calibration_core, ossuary_phase_engine, and the four Brood target families.",
+        "Site skyline/plan silhouette, landing-zone geometry, damage route, faction/lore signage, story landmark, and objective-state animation.",
+        "Ancient Veyra glyphs/phase materials, Aelos civic identity, Meridian civilian signage, and Karak living hive tissue.",
+        "Brood biology cannot become a generic playable-faction building skin. Brood remains non-playable and non-humanoid.",
+        "NEXUS-VII interior materials cannot be copied wholesale onto orbital sites, and exterior hull material cannot become a universal interior surface."
+      ]
+    },
+    "presets": [
+      {
+        "id": "aelos_north_capital_ward",
+        "planetId": "aelos",
+        "regionId": "aelos_north",
+        "locationClass": "city_colony",
+        "status": "brief_only",
+        "identity": "Layered civic blocks, tram spine, command plaza, inhabited windows, and parks that do not erase vehicle roads.",
+        "counts": {
+          "models": 7,
+          "pbrFamilies2k": 2,
+          "decalEntries": 12
+        },
+        "originality": {
+          "genericRecolorOnly": false,
+          "uniqueGeometry": "layered ward blocks, tram spine, command plaza, inhabited facade modules, and road-preserving park edges",
+          "uniqueMaterialResponse": "maintained Nova civic concrete, cyan transit glass, planted drainage, and occupied facade emission",
+          "uniqueDecalLanguage": "capital ward, tram platform, plaza, occupancy, municipal service, and evacuation markings"
+        }
+      },
+      {
+        "id": "aelos_north_circumference_bastion",
+        "planetId": "aelos",
+        "regionId": "aelos_north",
+      "locationClass": "military_base",
+      "status": "brief_only",
+      "conceptReference": {
+        "path": "../../concepts/location-kits/aelos-industrial/aelos-industrial-combined-arms-reference-v1.png",
+        "provenance": "../../concepts/location-kits/aelos-industrial/PROVENANCE.md",
+        "sha256": "1d4dcd9d38bc48caad2b07d585a9fa4215643b6c9545387bac078a7581263468",
+        "status": "available_needs_measurement_and_approval"
+      },
+      "identity": "Ceremonial bastion, motor court, command bunker, and two breachable gates.",
+        "counts": {
+          "models": 8,
+          "pbrFamilies2k": 2,
+          "decalEntries": 14
+        },
+        "originality": {
+          "genericRecolorOnly": false,
+          "uniqueGeometry": "stepped ceremonial rampart, full motor court, buried command bunker, and two independently breachable gatehouses",
+          "uniqueMaterialResponse": "maintained civic armor stone, blast steel, parade metal, and localized gate scorching",
+          "uniqueDecalLanguage": "garrison sectors, motor circulation, honor court, restricted fire, gate state, and evacuation markings"
+        }
+      },
+      {
+        "id": "aelos_basin_heartland_refinery",
+        "planetId": "aelos",
+        "regionId": "aelos_basin",
+      "locationClass": "refinery",
+      "status": "brief_only",
+      "conceptReference": {
+        "path": "../../concepts/location-kits/aelos-industrial/aelos-industrial-combined-arms-reference-v1.png",
+        "provenance": "../../concepts/location-kits/aelos-industrial/PROVENANCE.md",
+        "sha256": "1d4dcd9d38bc48caad2b07d585a9fa4215643b6c9545387bac078a7581263468",
+        "status": "available_needs_measurement_and_approval"
+      },
+      "identity": "Canal-fed clean refinery, pressure vessels, service loop, and overhead catwalks.",
+        "counts": {
+          "models": 8,
+          "pbrFamilies2k": 2,
+          "decalEntries": 14
+        },
+        "originality": {
+          "genericRecolorOnly": false,
+          "uniqueGeometry": "canal intake, clean pressure-vessel train, overhead pipe/catwalk rack, and complete service-vehicle loop",
+          "uniqueMaterialResponse": "clean process steel, canal moisture, maintained thermal insulation, and restrained chemical staining",
+          "uniqueDecalLanguage": "flow direction, valve groups, pressure classes, quay service lanes, spill control, and maintenance dates"
+        }
+      },
+      {
+        "id": "aelos_basin_greenbelt_outpost",
+        "planetId": "aelos",
+        "regionId": "aelos_basin",
+      "locationClass": "outpost",
+      "status": "brief_only",
+      "conceptReference": {
+        "path": "../../concepts/location-kits/aelos-industrial/aelos-industrial-combined-arms-reference-v1.png",
+        "provenance": "../../concepts/location-kits/aelos-industrial/PROVENANCE.md",
+        "sha256": "1d4dcd9d38bc48caad2b07d585a9fa4215643b6c9545387bac078a7581263468",
+        "status": "available_needs_measurement_and_approval"
+      },
+      "identity": "Survey/agricultural perimeter, relay mast, and compact vehicle loop.",
+        "counts": {
+          "models": 4,
+          "pbrFamilies2k": 1,
+          "decalEntries": 8
+        },
+        "originality": {
+          "genericRecolorOnly": false,
+          "uniqueGeometry": "field survey shelter, agricultural sensor beds, relay mast, compact service loop, and drainage crossings",
+          "uniqueMaterialResponse": "weathered field composite, cultivated soil contact, irrigation metal, and solar laminate",
+          "uniqueDecalLanguage": "survey grids, crop zones, irrigation controls, relay azimuth, utility routes, and vehicle limits"
+        }
+      },
+      {
+        "id": "aelos_coast_admiralty_spaceport",
+        "planetId": "aelos",
+        "regionId": "aelos_coast",
+      "locationClass": "spaceport",
+      "status": "brief_only",
+      "conceptReference": {
+        "path": "../../concepts/location-kits/aelos-industrial/aelos-industrial-combined-arms-reference-v1.png",
+        "provenance": "../../concepts/location-kits/aelos-industrial/PROVENANCE.md",
+        "sha256": "1d4dcd9d38bc48caad2b07d585a9fa4215643b6c9545387bac078a7581263468",
+        "status": "available_needs_measurement_and_approval"
+      },
+      "identity": "Pelagic landing apron, gantries, air-unit/deployer relationship, and harbor control.",
+        "counts": {
+          "models": 7,
+          "pbrFamilies2k": 2,
+          "decalEntries": 12
+        },
+        "originality": {
+          "genericRecolorOnly": false,
+          "uniqueGeometry": "pelagic apron, deployer bay, crane gantries, sea-wall approach, harbor-control tower, and blast-safe egress",
+          "uniqueMaterialResponse": "salt-wet concrete, aerospace panels, anti-corrosion steel, runway emission, and foam residue",
+          "uniqueDecalLanguage": "approach vectors, apron numbers, harbor channels, crane limits, blast zones, and deployer service marks"
+        }
+      },
+      {
+        "id": "aelos_coast_pelagic_dome",
+        "planetId": "aelos",
+        "regionId": "aelos_coast",
+        "locationClass": "pressure_dome",
+        "status": "brief_only",
+        "identity": "Marine research domes linked by dry glass and vehicle pressure tunnels.",
+        "counts": {
+          "models": 6,
+          "pbrFamilies2k": 2,
+          "decalEntries": 10
+        },
+        "originality": {
+          "genericRecolorOnly": false,
+          "uniqueGeometry": "marine lab domes, dry glass connectors, vehicle airlocks, sea anchors, and intact/ruptured shell states",
+          "uniqueMaterialResponse": "anti-salt pressure glass, wet seals, marine laboratory composite, algae contact, and dry-tunnel floors",
+          "uniqueDecalLanguage": "pressure zones, marine hazards, dry tunnel, airlock sequence, specimen handling, and evacuation marks"
+        }
+      },
+      {
+        "id": "aelos_ridge_divide_relic",
+        "planetId": "aelos",
+        "regionId": "aelos_ridge",
+        "locationClass": "relic_ruin",
+        "status": "brief_only",
+        "identity": "Great Divide gate ruins, old Nova monument, and ice-loaded damage states.",
+        "counts": {
+          "models": 6,
+          "pbrFamilies2k": 2,
+          "decalEntries": 10
+        },
+        "originality": {
+          "genericRecolorOnly": false,
+          "uniqueGeometry": "broken divide gate, civic monument, elevated processional route, ice-loaded arches, and surveyed collapse states",
+          "uniqueMaterialResponse": "aged Nova civic stone, wind ice, exposed alloy, mineral streaking, and frost-fractured inlay",
+          "uniqueDecalLanguage": "monument history, ridge coordinates, archaeology grids, weather closures, collapse risk, and recovery marks"
+        }
+      },
+      {
+        "id": "aelos_ridge_shelf_megastructure",
+        "planetId": "aelos",
+        "regionId": "aelos_ridge",
+        "locationClass": "derelict_megastructure",
+        "status": "brief_only",
+        "identity": "Collapsed cliff elevator and trans-ridge freight span.",
+        "counts": {
+          "models": 9,
+          "pbrFamilies2k": 3,
+          "decalEntries": 16
+        },
+        "originality": {
+          "genericRecolorOnly": false,
+          "uniqueGeometry": "cliff elevator towers, trans-ridge freight span, counterweight house, cable galleries, and authored partial collapses",
+          "uniqueMaterialResponse": "weathered structural steel, cold concrete, cable grease, rime ice, and exposed fracture faces",
+          "uniqueDecalLanguage": "lift capacity, span sectors, freight clearance, wind shutdown, cable service, and collapse-state markings"
+        }
+      },
+      {
+        "id": "pyraeth_crater_buried_court_dome",
+        "planetId": "pyraeth",
+        "regionId": "pyraeth_crater",
+        "locationClass": "pressure_dome",
+        "status": "brief_only",
+        "identity": "Armored pressure court embedded in a crater wall with red emergency glazing.",
+        "counts": {
+          "models": 6,
+          "pbrFamilies2k": 2,
+          "decalEntries": 10
+        },
+        "originality": {
+          "genericRecolorOnly": false,
+          "uniqueGeometry": "crater-wall dome court, armored concourses, buried pressure locks, buttressed shell, and storm shutters",
+          "uniqueMaterialResponse": "slag-dusted armor, red emergency glazing, heat-stressed seals, and crater mineral contact",
+          "uniqueDecalLanguage": "Dominion pressure sectors, lockdown, storm seal, court access, emergency shelter, and breach-state markings"
+        }
+      },
+      {
+        "id": "pyraeth_crater_court_of_iron_ruin",
+        "planetId": "pyraeth",
+        "regionId": "pyraeth_crater",
+        "locationClass": "relic_ruin",
+        "status": "brief_only",
+        "identity": "Dynasty forge shrine, broken statues, and a slag-buried processional route.",
+        "counts": {
+          "models": 6,
+          "pbrFamilies2k": 2,
+          "decalEntries": 10
+        },
+        "originality": {
+          "genericRecolorOnly": false,
+          "uniqueGeometry": "forge shrine, fractured dynasty statues, slag-buried court, processional stairs, and exposed furnace crypt",
+          "uniqueMaterialResponse": "oxidized iron stone, cooled slag, soot, heat-cracked relief, and emberless furnace scale",
+          "uniqueDecalLanguage": "dynasty foundry seals, memorial text, excavation grids, slag hazard, denial marks, and route recovery"
+        }
+      },
+      {
+        "id": "pyraeth_belt_promethean_base",
+        "planetId": "pyraeth",
+        "regionId": "pyraeth_belt",
+        "locationClass": "military_base",
+        "status": "brief_only",
+        "identity": "Mech motor pool, proving lane, command keep, and heavy gates.",
+        "counts": {
+          "models": 8,
+          "pbrFamilies2k": 2,
+          "decalEntries": 14
+        },
+        "originality": {
+          "genericRecolorOnly": false,
+          "uniqueGeometry": "mech motor pool, measured proving lane, command keep, repair gantries, and two heavy gate systems",
+          "uniqueMaterialResponse": "Dominion armor plate, hot hydraulic steel, scorched proving concrete, and storm-wet bunker skin",
+          "uniqueDecalLanguage": "mech bays, proving metrics, firing arcs, gate control, command sectors, and repair safety markings"
+        }
+      },
+      {
+        "id": "pyraeth_belt_iron_pyre_refinery",
+        "planetId": "pyraeth",
+        "regionId": "pyraeth_belt",
+        "locationClass": "refinery",
+        "status": "brief_only",
+        "identity": "Slag refinery, furnace stack, pressure hazards, and vehicle circulation.",
+        "counts": {
+          "models": 8,
+          "pbrFamilies2k": 2,
+          "decalEntries": 14
+        },
+        "originality": {
+          "genericRecolorOnly": false,
+          "uniqueGeometry": "slag separators, furnace stack, pressure manifold, casting trench, and complete heavy-vehicle service loop",
+          "uniqueMaterialResponse": "heat-scaled steel, vitrified slag, refractory brick, hydraulic residue, and storm oxidation",
+          "uniqueDecalLanguage": "furnace zones, pressure class, slag routes, casting danger, service circulation, and emergency cutoff markings"
+        }
+      },
+      {
+        "id": "pyraeth_caldera_ignis_arcology",
+        "planetId": "pyraeth",
+        "regionId": "pyraeth_caldera",
+        "locationClass": "city_colony",
+        "status": "brief_only",
+        "identity": "Dense stacked habitation under thermal domes and armored concourses.",
+        "counts": {
+          "models": 7,
+          "pbrFamilies2k": 2,
+          "decalEntries": 12
+        },
+        "originality": {
+          "genericRecolorOnly": false,
+          "uniqueGeometry": "stacked thermal habitats, linked dome courts, armored concourses, heat bridges, and inhabited service tiers",
+          "uniqueMaterialResponse": "thermal ceramic, red pressure glass, armored hab composite, ash contact, and occupied-window emission",
+          "uniqueDecalLanguage": "arcology sectors, hab services, dome pressure, heat routes, transit levels, and civilian shelter markings"
+        }
+      },
+      {
+        "id": "pyraeth_caldera_crucible_megastructure",
+        "planetId": "pyraeth",
+        "regionId": "pyraeth_caldera",
+        "locationClass": "derelict_megastructure",
+        "status": "brief_only",
+        "identity": "Broken caldera heat exchanger and abandoned arcology lift spine.",
+        "counts": {
+          "models": 9,
+          "pbrFamilies2k": 3,
+          "decalEntries": 16
+        },
+        "originality": {
+          "genericRecolorOnly": false,
+          "uniqueGeometry": "caldera heat-exchanger crown, arcology lift spine, intake bridges, thermal vanes, and authored collapse tiers",
+          "uniqueMaterialResponse": "heat-bleached superalloy, ash, ceramic insulation, oxidized lift rails, and cooled mineral accretion",
+          "uniqueDecalLanguage": "thermal flow, exchanger sectors, lift limits, evacuation, shutdown chronology, and structural breach markings"
+        }
+      },
+      {
+        "id": "pyraeth_flats_hub_delta_spaceport",
+        "planetId": "pyraeth",
+        "regionId": "pyraeth_flats",
+        "locationClass": "spaceport",
+        "status": "brief_only",
+        "identity": "Heavy-lift pads, blast trenches, deployer bays, and visible apron markings.",
+        "counts": {
+          "models": 7,
+          "pbrFamilies2k": 2,
+          "decalEntries": 12
+        },
+        "originality": {
+          "genericRecolorOnly": false,
+          "uniqueGeometry": "heavy-lift pads, deep blast trenches, deployer service bays, storm barriers, and armored approach lanes",
+          "uniqueMaterialResponse": "vitrified apron concrete, blast-scorched armor, storm grit, pad emission, and fuel-resistant seals",
+          "uniqueDecalLanguage": "Hub Delta pad IDs, heavy-lift vectors, blast clearance, deployer service, storm closure, and convoy routes"
+        }
+      },
+      {
+        "id": "pyraeth_flats_blackwind_outpost",
+        "planetId": "pyraeth",
+        "regionId": "pyraeth_flats",
+        "locationClass": "outpost",
+        "status": "brief_only",
+        "identity": "Storm monitoring and convoy hold with a low armored silhouette.",
+        "counts": {
+          "models": 4,
+          "pbrFamilies2k": 1,
+          "decalEntries": 8
+        },
+        "originality": {
+          "genericRecolorOnly": false,
+          "uniqueGeometry": "low storm bunker, sensor mast, convoy hold, windbreak walls, and compact armored loop",
+          "uniqueMaterialResponse": "sandblasted plate, storm grit, sealed sensor glass, rubber barriers, and static-discharge metal",
+          "uniqueDecalLanguage": "Blackwind telemetry, convoy staging, wind hazard, grounding points, shelter, and approach limits"
+        }
+      },
+      {
+        "id": "nordhall_isles_frostwake_spaceport",
+        "planetId": "nordhall",
+        "regionId": "nordhall_isles",
+        "locationClass": "spaceport",
+        "status": "brief_only",
+        "identity": "Ice-dock landing decks, heated lane strips, crane bridges, and sealed hangars.",
+        "counts": {
+          "models": 7,
+          "pbrFamilies2k": 2,
+          "decalEntries": 12
+        },
+        "originality": {
+          "genericRecolorOnly": false,
+          "uniqueGeometry": "ice-dock decks, heated approach strips, crane bridges, sealed machine hangars, and sub-ice service supports",
+          "uniqueMaterialResponse": "frosted automation alloy, heated wet lanes, rime glass, deicing residue, and polar emission",
+          "uniqueDecalLanguage": "Frostwake dock IDs, heated routes, ice load, crane clearance, hangar sequence, and whiteout approach marks"
+        }
+      },
+      {
+        "id": "nordhall_isles_core_vault_outpost",
+        "planetId": "nordhall",
+        "regionId": "nordhall_isles",
+        "locationClass": "outpost",
+        "status": "brief_only",
+        "identity": "Concealed sensor vault and sub-ice service loop.",
+        "counts": {
+          "models": 4,
+          "pbrFamilies2k": 1,
+          "decalEntries": 8
+        },
+        "originality": {
+          "genericRecolorOnly": false,
+          "uniqueGeometry": "concealed sensor vault, retractable mast, sub-ice service loop, thermal hatch, and compact drone recess",
+          "uniqueMaterialResponse": "low-reflectance vault alloy, ice crust, heated seals, sensor glass, and machine oil contact",
+          "uniqueDecalLanguage": "vault access, drone lanes, thermal hatch, sensor bearings, ice limits, and covert service markings"
+        }
+      },
+      {
+        "id": "nordhall_cliff_citadel_base",
+        "planetId": "nordhall",
+        "regionId": "nordhall_cliff",
+        "locationClass": "military_base",
+        "status": "brief_only",
+        "identity": "Stepped cliff fortress, drone bays, and two approach ramps.",
+        "counts": {
+          "models": 8,
+          "pbrFamilies2k": 2,
+          "decalEntries": 14
+        },
+        "originality": {
+          "genericRecolorOnly": false,
+          "uniqueGeometry": "stepped cliff fortress, drone bays, command vault, two measured approach ramps, and artillery-scarred terraces",
+          "uniqueMaterialResponse": "cold fortress alloy, impact-scarred ice concrete, drone-bay emission, wind frost, and exposed cliff anchors",
+          "uniqueDecalLanguage": "citadel tiers, drone launch, ramp priority, artillery danger, command access, and whiteout evacuation"
+        }
+      },
+      {
+        "id": "nordhall_cliff_arcology_steps_colony",
+        "planetId": "nordhall",
+        "regionId": "nordhall_cliff",
+        "locationClass": "city_colony",
+        "status": "brief_only",
+        "identity": "Terraced machine-city and protected civilian/service cores.",
+        "counts": {
+          "models": 7,
+          "pbrFamilies2k": 2,
+          "decalEntries": 12
+        },
+        "originality": {
+          "genericRecolorOnly": false,
+          "uniqueGeometry": "terraced machine-city, protected service cores, cliff lifts, heat corridors, and inhabited automation courts",
+          "uniqueMaterialResponse": "machine-vault alloy, insulated hab panels, heated glazing, frost shadow, and occupied core emission",
+          "uniqueDecalLanguage": "terrace levels, machine service, protected cores, lift routes, heat shelter, and civilian circulation"
+        }
+      },
+      {
+        "id": "nordhall_frost_pale_trench_refinery",
+        "planetId": "nordhall",
+        "regionId": "nordhall_frost",
+        "locationClass": "refinery",
+        "status": "brief_only",
+        "identity": "Cryogenic reactor/refinery across a crevasse with service bridges.",
+        "counts": {
+          "models": 8,
+          "pbrFamilies2k": 2,
+          "decalEntries": 14
+        },
+        "originality": {
+          "genericRecolorOnly": false,
+          "uniqueGeometry": "cryo reactor train, crevasse-spanning service bridges, coolant towers, buried processing vault, and bypass loop",
+          "uniqueMaterialResponse": "cryogenic alloy, condensate ice, insulated pipe skin, coolant staining, and fractured shelf contact",
+          "uniqueDecalLanguage": "coolant flow, reactor zones, bridge load, thermal warning, isolation valves, and crevasse evacuation"
+        }
+      },
+      {
+        "id": "nordhall_frost_reactor_megastructure",
+        "planetId": "nordhall",
+        "regionId": "nordhall_frost",
+        "locationClass": "derelict_megastructure",
+        "status": "brief_only",
+        "identity": "Failed planetary heat sink and fractured cooling cathedral.",
+        "counts": {
+          "models": 9,
+          "pbrFamilies2k": 3,
+          "decalEntries": 16
+        },
+        "originality": {
+          "genericRecolorOnly": false,
+          "uniqueGeometry": "planetary heat-sink fins, cooling cathedral, reactor spine, collapsed coolant bridges, and exposed thermal wells",
+          "uniqueMaterialResponse": "frost-fractured superalloy, frozen coolant, thermal ceramic, rime accretion, and rupture discoloration",
+          "uniqueDecalLanguage": "heat-sink sectors, coolant circuits, reactor chronology, bridge closure, collapse zones, and recovery routes"
+        }
+      },
+      {
+        "id": "nordhall_peaks_skyshield_dome",
+        "planetId": "nordhall",
+        "regionId": "nordhall_peaks",
+        "locationClass": "pressure_dome",
+        "status": "brief_only",
+        "identity": "Weather-control domes, sensor crown, and lightning-ground grid.",
+        "counts": {
+          "models": 6,
+          "pbrFamilies2k": 2,
+          "decalEntries": 10
+        },
+        "originality": {
+          "genericRecolorOnly": false,
+          "uniqueGeometry": "weather-control domes, sensor crown, lightning-ground towers, pressure connectors, and meteor shutter states",
+          "uniqueMaterialResponse": "polar pressure glass, conductive alloy, arc scoring, rime seals, and weather-sensor emission",
+          "uniqueDecalLanguage": "Skyshield sectors, grounding grid, meteor alert, pressure sequence, sensor exclusion, and storm shelter"
+        }
+      },
+      {
+        "id": "nordhall_peaks_valkyrie_relic",
+        "planetId": "nordhall",
+        "regionId": "nordhall_peaks",
+        "locationClass": "relic_ruin",
+        "status": "brief_only",
+        "identity": "Ancient storm beacon and buried machine oracle.",
+        "counts": {
+          "models": 6,
+          "pbrFamilies2k": 2,
+          "decalEntries": 10
+        },
+        "originality": {
+          "genericRecolorOnly": false,
+          "uniqueGeometry": "storm beacon, buried machine oracle, wind-cut processional path, antenna fragments, and surveyed ice exposure",
+          "uniqueMaterialResponse": "ancient machine metal, wind-polished ice, mineral oxide, dead sensor glass, and meteor pitting",
+          "uniqueDecalLanguage": "Valkyrie survey grids, beacon bearings, oracle access, weather history, excavation, and recovery markings"
+        }
+      },
+      {
+        "id": "vespera_spire_caldera_colony_shell",
+        "planetId": "vespera",
+        "regionId": "vespera_spire",
+        "locationClass": "city_colony",
+        "status": "brief_only",
+        "identity": "Evacuated colony shell split by a Brood spire, never portrayed as a Brood civilian city.",
+        "counts": {
+          "models": 7,
+          "pbrFamilies2k": 2,
+          "decalEntries": 12
+        },
+        "originality": {
+          "genericRecolorOnly": false,
+          "uniqueGeometry": "recognizable evacuated colony blocks, civic route, rupture line, dedicated Brood spire, and survivor access shells",
+          "uniqueMaterialResponse": "abandoned colony composite, ash, heat damage, dedicated living chitin, and graded tissue contact",
+          "uniqueDecalLanguage": "colony districts, evacuation, quarantine, survivor routes, spire hazard, and infestation progression"
+        }
+      },
+      {
+        "id": "vespera_spire_infested_pressure_dome",
+        "planetId": "vespera",
+        "regionId": "vespera_spire",
+        "locationClass": "pressure_dome",
+        "status": "brief_only",
+        "identity": "Ruptured colonial domes with membrane breaches and quarantine locks.",
+        "counts": {
+          "models": 6,
+          "pbrFamilies2k": 2,
+          "decalEntries": 10
+        },
+        "originality": {
+          "genericRecolorOnly": false,
+          "uniqueGeometry": "colonial pressure domes, quarantine locks, membrane breaches, collapsed connectors, and intact/infested shell states",
+          "uniqueMaterialResponse": "heat-clouded pressure glass, failed seals, ash, living membrane, and acidic contact staining",
+          "uniqueDecalLanguage": "pressure loss, quarantine, habitat sectors, breach severity, spore danger, and sealed survivor routes"
+        }
+      },
+      {
+        "id": "vespera_dunes_tide_relay_outpost",
+        "planetId": "vespera",
+        "regionId": "vespera_dunes",
+        "locationClass": "outpost",
+        "status": "brief_only",
+        "identity": "Abandoned UGA/resident relay now surrounded by spore fields.",
+        "counts": {
+          "models": 4,
+          "pbrFamilies2k": 1,
+          "decalEntries": 8
+        },
+        "originality": {
+          "genericRecolorOnly": false,
+          "uniqueGeometry": "abandoned relay shelter, damaged mast, compact loop, spore-field berms, and authored tissue encroachment",
+          "uniqueMaterialResponse": "sun-bleached relay composite, ash dust, spore crust, oxidized antenna metal, and organic contact",
+          "uniqueDecalLanguage": "relay identity, last service, quarantine, spore field, signal loss, and UGA containment markings"
+        }
+      },
+      {
+        "id": "vespera_dunes_ichor_relic",
+        "planetId": "vespera",
+        "regionId": "vespera_dunes",
+        "locationClass": "relic_ruin",
+        "status": "brief_only",
+        "identity": "Pre-infestation landmark fossilized into living crust.",
+        "counts": {
+          "models": 6,
+          "pbrFamilies2k": 2,
+          "decalEntries": 10
+        },
+        "originality": {
+          "genericRecolorOnly": false,
+          "uniqueGeometry": "pre-infestation landmark, buried processional stones, fossilized tissue ribs, ichor channels, and excavation cuts",
+          "uniqueMaterialResponse": "ancient mineral surface, ash polish, calcified Brood crust, dried ichor, and fresh living seams",
+          "uniqueDecalLanguage": "archaeology grids, landmark history, containment survey, ichor hazard, tissue age, and recovery paths"
+        }
+      },
+      {
+        "id": "vespera_refinery_megaforge_refinery",
+        "planetId": "vespera",
+        "regionId": "vespera_refinery",
+        "locationClass": "refinery",
+        "status": "brief_only",
+        "identity": "Industrial megaforge with magma services and hostile hatchery takeover.",
+        "counts": {
+          "models": 8,
+          "pbrFamilies2k": 2,
+          "decalEntries": 14
+        },
+        "originality": {
+          "genericRecolorOnly": false,
+          "uniqueGeometry": "magma intake, industrial megaforge line, vehicle service loop, hatchery chambers, and tissue-clogged process gates",
+          "uniqueMaterialResponse": "vitrified forge metal, refractory stone, magma glow, living hatchery membrane, and acid slag contact",
+          "uniqueDecalLanguage": "forge flow, magma danger, process lanes, shutdown, quarantine, hatchery objective, and purge states"
+        }
+      },
+      {
+        "id": "vespera_refinery_silent_megaforge",
+        "planetId": "vespera",
+        "regionId": "vespera_refinery",
+        "locationClass": "derelict_megastructure",
+        "status": "brief_only",
+        "identity": "Collapsed forge spine inhabited by Brood arteries.",
+        "counts": {
+          "models": 9,
+          "pbrFamilies2k": 3,
+          "decalEntries": 16
+        },
+        "originality": {
+          "genericRecolorOnly": false,
+          "uniqueGeometry": "collapsed forge spine, giant casting halls, broken logistics lattice, Brood arteries, and deterministic bridge failures",
+          "uniqueMaterialResponse": "heat-dead superstructure, cooled slag, ash, vascular tissue, acid wetness, and calcified contact",
+          "uniqueDecalLanguage": "megaforge sectors, collapse chronology, artery hazard, logistics closure, purge routes, and extraction boundaries"
+        }
+      },
+      {
+        "id": "vespera_plateau_quarantine_bastion",
+        "planetId": "vespera",
+        "regionId": "vespera_plateau",
+        "locationClass": "military_base",
+        "status": "brief_only",
+        "identity": "Failed coalition containment fort, burn corridors, and Brood breach states.",
+        "counts": {
+          "models": 8,
+          "pbrFamilies2k": 2,
+          "decalEntries": 14
+        },
+        "originality": {
+          "genericRecolorOnly": false,
+          "uniqueGeometry": "coalition bastion, decontamination gate, burn corridors, command shelter, and multiple authored Brood breaches",
+          "uniqueMaterialResponse": "failed armor plate, verdant overgrowth, burn residue, quarantine polymer, and dedicated living tissue",
+          "uniqueDecalLanguage": "coalition sectors, containment status, burn lanes, decon sequence, breach severity, and evacuation failure"
+        }
+      },
+      {
+        "id": "vespera_plateau_evac_spaceport",
+        "planetId": "vespera",
+        "regionId": "vespera_plateau",
+        "locationClass": "spaceport",
+        "status": "brief_only",
+        "identity": "Overgrown evacuation apron, abandoned landers, and sealed survivor routes.",
+        "counts": {
+          "models": 7,
+          "pbrFamilies2k": 2,
+          "decalEntries": 12
+        },
+        "originality": {
+          "genericRecolorOnly": false,
+          "uniqueGeometry": "evacuation apron, abandoned lander silhouettes, sealed survivor concourse, overgrown approach, and membrane-blocked gates",
+          "uniqueMaterialResponse": "aged apron concrete, verdant growth, abandoned aerospace panels, spore film, and organic gate contact",
+          "uniqueDecalLanguage": "evac pad numbers, survivor routes, last-flight status, quarantine, approach closure, and extraction marks"
+        }
+      }
+    ]
+  },
+  "sites": [
+    {
+      "siteId": "aelos_caldris",
+      "mapAssetId": "gsite_aelos_caldris_customs_01",
+      "brief": "aelos_caldris.md",
+      "systemId": "aelos",
+      "displayName": "Caldris Orbital Ring",
+      "biome": "orbital_arcology",
+      "hazards": [
+        "civilian_density"
+      ],
+      "mission": {
+        "id": "dominion_caldris_claim",
+        "title": "Caldris Claim",
+        "objectiveType": "hold_infrastructure",
+        "objectiveTargetIds": [
+          "caldris_customs_core"
+        ],
+        "landingZoneIds": [
+          "customs_ring",
+          "cargo_lock"
+        ]
+      },
+      "presetIds": [
+        "preset_aelos_caldris_arcology_city",
+        "preset_aelos_caldris_customs_spaceport"
+      ],
+      "siteEnvelope": {
+        "sizeClass": "small",
+        "meters": [
+          320,
+          256
+        ],
+        "navCellMeters": 0.8
+      },
+      "admittedNavClasses": [
+        "P_PERSONNEL",
+        "L_LIGHT_MECH",
+        "V_SMALL_VEHICLE",
+        "M_MEDIUM_MECH"
+      ],
+      "navAdmissionNotes": "M_MEDIUM_MECH is limited to one unit on the cargo_high_bay route and cargo_lock landing zone.",
+      "heroModelFamilies": [
+        "caldris_customs_core",
+        "caldris_curved_habitat_viewport",
+        "caldris_mag_tram_station",
+        "caldris_civic_concourse_tower",
+        "caldris_cargo_lock",
+        "caldris_inspection_gantry",
+        "caldris_ring_service_elevator"
+      ],
+      "materialFamilies": [
+        "caldris_pearl_arcology_ceramic",
+        "caldris_teal_civic_glazing_transit_inlay",
+        "caldris_customs_scanner_alloy"
+      ],
+      "decalProgram": {
+        "entryCount": 12,
+        "families": [
+          "UGA customs and ring-sector identity",
+          "resident-faction claim overlays",
+          "tram, cargo-weight, evacuation, shelter, restricted-fire, and decompression markings"
+        ]
+      },
+      "routes": [
+        {
+          "id": "customs_loop",
+          "classes": [
+            "P_PERSONNEL",
+            "L_LIGHT_MECH",
+            "V_SMALL_VEHICLE"
+          ],
+          "minimumWidthMeters": 18
+        },
+        {
+          "id": "cargo_high_bay",
+          "classes": [
+            "P_PERSONNEL",
+            "L_LIGHT_MECH",
+            "V_SMALL_VEHICLE",
+            "M_MEDIUM_MECH"
+          ],
+          "minimumPortalMeters": [
+            24,
+            12
+          ],
+          "maximumMediumMechs": 1
+        },
+        {
+          "id": "customs_office_flank",
+          "classes": [
+            "P_PERSONNEL"
+          ],
+          "minimumWidthMeters": 3
+        }
+      ],
+      "landingZones": [
+        {
+          "id": "customs_ring",
+          "meters": [
+            40,
+            36
+          ],
+          "classes": [
+            "P_PERSONNEL",
+            "L_LIGHT_MECH",
+            "V_SMALL_VEHICLE"
+          ]
+        },
+        {
+          "id": "cargo_lock",
+          "meters": [
+            48,
+            40
+          ],
+          "classes": [
+            "P_PERSONNEL",
+            "L_LIGHT_MECH",
+            "V_SMALL_VEHICLE",
+            "M_MEDIUM_MECH"
+          ]
+        }
+      ],
+      "destructionVariants": [
+        "intact_civic",
+        "customs_lockdown",
+        "pressure_breach",
+        "post_breach_sealed"
+      ],
+      "conceptArt": {
+        "status": "candidate_review",
+        "requiredSubject": "curved inhabited ring plan, cargo high bay, civilian-safe fire lanes, and decompression route states",
+        "source": "aelos_caldris/concepts/caldris-modular-kit-concept-v1.png",
+        "sha256": "75cb5efbc15ce642533fa67f1c72fbd09a0fd16cd438189e3c73232a16148fab",
+        "pixelUsage": "concept-reference-only"
+      },
+      "contractIds": [
+        "mf_ground_site_scale_v1",
+        "mf_ground_site_clearance_v1",
+        "mf_ground_site_model_v1",
+        "mf_ground_site_material_v1",
+        "mf_ground_site_destruction_v1",
+        "mf_ground_site_lod_v1",
+        "mf_ground_site_collision_v1",
+        "mf_ground_site_export_v1",
+        "mf_ground_site_concept_gate_v1",
+        "mf_ground_site_runtime_gate_v1"
+      ],
+      "provenance": {
+        "siteData": "../../../../src/domain/catalog.js",
+        "splineScene": "https://my.spline.design/gsiteaeloscaldrisherov1-lwL0GOgAhye1BRh3R0qkk0Gl/",
+        "modelSource": "aelos_caldris/aelos-caldris-source.glb",
+        "textureSource": null
+      },
+      "runtimeStatus": {
+        "catalog": "DATA_ONLY",
+        "tacticalGeometry": false,
+        "navigation": false,
+        "collision": false,
+        "dedicatedMaterials": false,
+        "runtimeCapture": false
+      }
+    },
+    {
+      "siteId": "aelos_heliograph",
+      "mapAssetId": "gsite_aelos_heliograph_relay_01",
+      "brief": "aelos_heliograph.md",
+      "systemId": "aelos",
+      "displayName": "Heliograph Relay",
+      "biome": "relay_superstructure",
+      "hazards": [
+        "radiation_pulse"
+      ],
+      "mission": {
+        "id": "nova_heliograph_wake",
+        "title": "Heliograph Wake",
+        "objectiveType": "secure_relay",
+        "objectiveTargetIds": [
+          "heliograph_control_spine"
+        ],
+        "landingZoneIds": [
+          "relay_shadow",
+          "maintenance_spar"
+        ]
+      },
+      "presetIds": [
+        "preset_aelos_heliograph_relay_outpost",
+        "preset_aelos_heliograph_security_base"
+      ],
+      "siteEnvelope": {
+        "sizeClass": "xs",
+        "meters": [
+          192,
+          160
+        ],
+        "navCellMeters": 0.5
+      },
+      "admittedNavClasses": [
+        "P_PERSONNEL",
+        "L_LIGHT_MECH",
+        "V_SMALL_VEHICLE"
+      ],
+      "heroModelFamilies": [
+        "heliograph_array",
+        "heliograph_control_spine",
+        "heliograph_phase_coil_tower",
+        "heliograph_maintenance_spar",
+        "heliograph_radiation_shutter_bank",
+        "heliograph_coolant_mast",
+        "heliograph_signal_lens",
+        "heliograph_service_capsule"
+      ],
+      "materialFamilies": [
+        "heliograph_solar_ceramic_gold_foil",
+        "heliograph_radiation_blackened_titanium",
+        "heliograph_phase_coil_emissive"
+      ],
+      "decalProgram": {
+        "entryCount": 12,
+        "families": [
+          "azimuth, spectrum, and phase-lock calibration",
+          "radiation, antenna keep-clear, and emergency-shadow warnings",
+          "maintenance spar IDs and faction seizure/recovery overlays"
+        ]
+      },
+      "routes": [
+        {
+          "id": "maintenance_apron_loop",
+          "classes": [
+            "P_PERSONNEL",
+            "L_LIGHT_MECH",
+            "V_SMALL_VEHICLE"
+          ],
+          "minimumPortalMeters": [
+            18,
+            8
+          ]
+        },
+        {
+          "id": "relay_spine",
+          "classes": [
+            "P_PERSONNEL",
+            "L_LIGHT_MECH"
+          ],
+          "minimumPortalMeters": [
+            14,
+            7
+          ]
+        },
+        {
+          "id": "service_branch",
+          "classes": [
+            "P_PERSONNEL"
+          ],
+          "minimumWidthMeters": 3
+        }
+      ],
+      "landingZones": [
+        {
+          "id": "relay_shadow",
+          "meters": [
+            36,
+            32
+          ],
+          "classes": [
+            "P_PERSONNEL",
+            "L_LIGHT_MECH",
+            "V_SMALL_VEHICLE"
+          ]
+        },
+        {
+          "id": "maintenance_spar",
+          "meters": [
+            40,
+            32
+          ],
+          "classes": [
+            "P_PERSONNEL",
+            "L_LIGHT_MECH"
+          ]
+        }
+      ],
+      "destructionVariants": [
+        "calibrated",
+        "arc_flash_damage",
+        "spar_breach",
+        "relay_disabled"
+      ],
+      "conceptArt": {
+        "status": "missing_blocking",
+        "requiredSubject": "solar relay silhouette, radiation-shadow cover, fixed heliostat LOS states, and security-cordon variant"
+      },
+      "contractIds": [
+        "mf_ground_site_scale_v1",
+        "mf_ground_site_clearance_v1",
+        "mf_ground_site_model_v1",
+        "mf_ground_site_material_v1",
+        "mf_ground_site_destruction_v1",
+        "mf_ground_site_lod_v1",
+        "mf_ground_site_collision_v1",
+        "mf_ground_site_export_v1",
+        "mf_ground_site_concept_gate_v1",
+        "mf_ground_site_runtime_gate_v1"
+      ],
+      "provenance": {
+        "siteData": "../../../../src/domain/catalog.js",
+        "splineScene": null,
+        "modelSource": null,
+        "textureSource": null
+      },
+      "runtimeStatus": {
+        "catalog": "DATA_ONLY",
+        "tacticalGeometry": false,
+        "navigation": false,
+        "collision": false,
+        "dedicatedMaterials": false,
+        "runtimeCapture": false
+      }
+    },
+    {
+      "siteId": "aelos_freeport",
+      "mapAssetId": "gsite_aelos_freeport_morrow_01",
+      "brief": "aelos_freeport.md",
+      "systemId": "aelos",
+      "displayName": "Morrow Freeport",
+      "biome": "industrial_station",
+      "hazards": [
+        "dense_cargo"
+      ],
+      "mission": {
+        "id": "syndicate_black_manifest",
+        "title": "Black Manifest",
+        "objectiveType": "recover_manifest",
+        "objectiveTargetIds": [
+          "morrow_archive_stack"
+        ],
+        "landingZoneIds": [
+          "service_lock",
+          "freight_shadow"
+        ]
+      },
+      "presetIds": [
+        "preset_aelos_morrow_trade_spaceport",
+        "preset_aelos_morrow_refinery_quay"
+      ],
+      "siteEnvelope": {
+        "sizeClass": "small",
+        "meters": [
+          320,
+          256
+        ],
+        "navCellMeters": 0.8
+      },
+      "admittedNavClasses": [
+        "P_PERSONNEL",
+        "L_LIGHT_MECH",
+        "V_SMALL_VEHICLE"
+      ],
+      "heroModelFamilies": [
+        "morrow_archive_stack",
+        "morrow_market_hall",
+        "morrow_cargo_carousel",
+        "morrow_docking_clamp",
+        "morrow_crane_gantry",
+        "morrow_freight_lift",
+        "morrow_smuggler_vault",
+        "morrow_customs_booth",
+        "morrow_fuel_manifold"
+      ],
+      "materialFamilies": [
+        "morrow_greasy_cargo_steel",
+        "morrow_worn_market_composite",
+        "morrow_fuel_stained_deck_rubber",
+        "morrow_faded_commercial_panel_emissive"
+      ],
+      "decalProgram": {
+        "entryCount": 16,
+        "families": [
+          "original cargo-company and stall identities",
+          "hazardous freight, fuel, forklift, customs, and clamp warnings",
+          "Syndicate dead-drop and manifest-objective overlays"
+        ]
+      },
+      "routes": [
+        {
+          "id": "freight_vehicle_loop",
+          "classes": [
+            "P_PERSONNEL",
+            "L_LIGHT_MECH",
+            "V_SMALL_VEHICLE"
+          ],
+          "minimumTwoWayWidthMeters": 28
+        },
+        {
+          "id": "market_service_flank",
+          "classes": [
+            "P_PERSONNEL"
+          ],
+          "minimumWidthMeters": 3
+        },
+        {
+          "id": "archive_breach_route",
+          "classes": [
+            "P_PERSONNEL",
+            "L_LIGHT_MECH"
+          ],
+          "availability": "deterministic_breach_state"
+        }
+      ],
+      "landingZones": [
+        {
+          "id": "service_lock",
+          "meters": [
+            40,
+            32
+          ],
+          "classes": [
+            "P_PERSONNEL",
+            "L_LIGHT_MECH"
+          ]
+        },
+        {
+          "id": "freight_shadow",
+          "meters": [
+            48,
+            36
+          ],
+          "classes": [
+            "P_PERSONNEL",
+            "L_LIGHT_MECH",
+            "V_SMALL_VEHICLE"
+          ]
+        }
+      ],
+      "destructionVariants": [
+        "operational_trade",
+        "crane_fall_indexed",
+        "archive_breach",
+        "fuel_lock_burned"
+      ],
+      "conceptArt": {
+        "status": "missing_blocking",
+        "requiredSubject": "commercial cargo loop, covert archive route, original brand/decal language, and dedicated refinery-quay option"
+      },
+      "contractIds": [
+        "mf_ground_site_scale_v1",
+        "mf_ground_site_clearance_v1",
+        "mf_ground_site_model_v1",
+        "mf_ground_site_material_v1",
+        "mf_ground_site_destruction_v1",
+        "mf_ground_site_lod_v1",
+        "mf_ground_site_collision_v1",
+        "mf_ground_site_export_v1",
+        "mf_ground_site_concept_gate_v1",
+        "mf_ground_site_runtime_gate_v1"
+      ],
+      "provenance": {
+        "siteData": "../../../../src/domain/catalog.js",
+        "splineScene": null,
+        "modelSource": null,
+        "textureSource": null
+      },
+      "runtimeStatus": {
+        "catalog": "DATA_ONLY",
+        "tacticalGeometry": false,
+        "navigation": false,
+        "collision": false,
+        "dedicatedMaterials": false,
+        "runtimeCapture": false
+      }
+    },
+    {
+      "siteId": "veyra_orison",
+      "mapAssetId": "gsite_veyra_orison_archive_01",
+      "brief": "veyra_orison.md",
+      "systemId": "veyra",
+      "displayName": "Orison Derelict",
+      "biome": "derelict_megaframe",
+      "hazards": [
+        "vacuum_breaches",
+        "debris_motion"
+      ],
+      "mission": {
+        "id": "nova_orison_recovery",
+        "title": "Orison Recovery",
+        "objectiveType": "recover_archive",
+        "objectiveTargetIds": [
+          "orison_memory_vault"
+        ],
+        "landingZoneIds": [
+          "broken_spine",
+          "aft_lattice"
+        ]
+      },
+      "presetIds": [
+        "preset_veyra_orison_derelict_megastructure"
+      ],
+      "siteEnvelope": {
+        "sizeClass": "xs",
+        "meters": [
+          192,
+          160
+        ],
+        "navCellMeters": 0.5
+      },
+      "admittedNavClasses": [
+        "P_PERSONNEL",
+        "L_LIGHT_MECH",
+        "V_SMALL_VEHICLE",
+        "M_MEDIUM_MECH"
+      ],
+      "navAdmissionNotes": "M_MEDIUM_MECH is conditional on approval of the measured_high_bay clearance section and is admitted only from aft_lattice.",
+      "heroModelFamilies": [
+        "orison_memory_vault",
+        "orison_broken_axial_spine",
+        "orison_aft_lattice",
+        "orison_archive_chamber",
+        "orison_collapsed_docking_jaw",
+        "orison_shattered_reactor_ring",
+        "orison_breach_shutters",
+        "orison_debris_bridge",
+        "orison_emergency_lift",
+        "orison_escape_pod_cluster"
+      ],
+      "materialFamilies": [
+        "orison_burnt_megaframe_alloy",
+        "orison_fractured_data_glass",
+        "orison_frost_vacuum_residue",
+        "orison_emergency_emissive"
+      ],
+      "decalProgram": {
+        "entryCount": 14,
+        "families": [
+          "original pre-UGA archive script",
+          "fracture, vacuum, shear-vector, deck, and rescue markings",
+          "Nova recovery, Syndicate salvage, and memory-vault objective overlays"
+        ]
+      },
+      "routes": [
+        {
+          "id": "archive_recovery_loop",
+          "classes": [
+            "P_PERSONNEL",
+            "L_LIGHT_MECH",
+            "V_SMALL_VEHICLE"
+          ],
+          "minimumPortalMeters": [
+            18,
+            8
+          ]
+        },
+        {
+          "id": "measured_high_bay",
+          "classes": [
+            "P_PERSONNEL",
+            "L_LIGHT_MECH",
+            "V_SMALL_VEHICLE",
+            "M_MEDIUM_MECH"
+          ],
+          "minimumPortalMeters": [
+            24,
+            12
+          ],
+          "availability": "only_after_clearance_section_approval"
+        },
+        {
+          "id": "data_duct_flank",
+          "classes": [
+            "P_PERSONNEL"
+          ],
+          "minimumWidthMeters": 3
+        }
+      ],
+      "landingZones": [
+        {
+          "id": "broken_spine",
+          "meters": [
+            44,
+            36
+          ],
+          "classes": [
+            "P_PERSONNEL",
+            "L_LIGHT_MECH",
+            "V_SMALL_VEHICLE"
+          ]
+        },
+        {
+          "id": "aft_lattice",
+          "meters": [
+            48,
+            40
+          ],
+          "classes": [
+            "P_PERSONNEL",
+            "L_LIGHT_MECH",
+            "V_SMALL_VEHICLE",
+            "M_MEDIUM_MECH"
+          ]
+        }
+      ],
+      "destructionVariants": [
+        "sealed_archive",
+        "shear_damaged",
+        "breach_open",
+        "lattice_collapse_safe_extraction"
+      ],
+      "conceptArt": {
+        "status": "available_needs_measurement_and_approval",
+        "path": "../../concepts/ground-sites/orison-derelict/orison-derelict-combined-arms-concept-v1.png",
+        "sha256": "be4f697930285ef0e2c2843d0be5beedb2f66bf9c9c56977d523b6409fea2da2",
+        "bytes": 2560237,
+        "provenance": "../../concepts/ground-sites/orison-derelict/PROVENANCE.md",
+        "blockingGap": "Convert the board into an approved measured plan and class-clearance section before final geometry."
+      },
+      "contractIds": [
+        "mf_ground_site_scale_v1",
+        "mf_ground_site_clearance_v1",
+        "mf_ground_site_model_v1",
+        "mf_ground_site_material_v1",
+        "mf_ground_site_destruction_v1",
+        "mf_ground_site_lod_v1",
+        "mf_ground_site_collision_v1",
+        "mf_ground_site_export_v1",
+        "mf_ground_site_concept_gate_v1",
+        "mf_ground_site_runtime_gate_v1"
+      ],
+      "provenance": {
+        "siteData": "../../../../src/domain/catalog.js",
+        "splineScene": null,
+        "modelSource": null,
+        "textureSource": null
+      },
+      "runtimeStatus": {
+        "catalog": "DATA_ONLY",
+        "tacticalGeometry": false,
+        "navigation": false,
+        "collision": false,
+        "dedicatedMaterials": false,
+        "runtimeCapture": false
+      }
+    },
+    {
+      "siteId": "veyra_lens",
+      "mapAssetId": "gsite_veyra_lens_observatory_01",
+      "brief": "veyra_lens.md",
+      "systemId": "veyra",
+      "displayName": "Lensing Observatory",
+      "biome": "gravitic_observatory",
+      "hazards": [
+        "time_shear",
+        "radiation"
+      ],
+      "mission": {
+        "id": "dominion_lens_perimeter",
+        "title": "Lensing Perimeter",
+        "objectiveType": "secure_observatory",
+        "objectiveTargetIds": [
+          "lensing_calibration_core"
+        ],
+        "landingZoneIds": [
+          "umbra_platform",
+          "coolant_trench"
+        ]
+      },
+      "presetIds": [
+        "preset_veyra_lensing_observatory"
+      ],
+      "siteEnvelope": {
+        "sizeClass": "small",
+        "meters": [
+          320,
+          256
+        ],
+        "navCellMeters": 0.8
+      },
+      "admittedNavClasses": [
+        "P_PERSONNEL",
+        "L_LIGHT_MECH",
+        "V_SMALL_VEHICLE",
+        "M_MEDIUM_MECH"
+      ],
+      "heroModelFamilies": [
+        "lensing_calibration_core",
+        "lensing_gravitic_dish",
+        "lensing_umbra_platform",
+        "lensing_coolant_turbine",
+        "lensing_chronometric_mast",
+        "lensing_sensor_petal",
+        "lensing_shielded_laboratory",
+        "lensing_shear_baffle",
+        "lensing_observation_bridge"
+      ],
+      "materialFamilies": [
+        "lensing_black_gravitic_ceramic",
+        "lensing_silver_sensor_metal",
+        "lensing_coolant_ice_wet_film",
+        "lensing_temporal_emissive"
+      ],
+      "decalProgram": {
+        "entryCount": 14,
+        "families": [
+          "calibration arcs and time-offset ticks",
+          "radiation, umbra, coolant-flow, bridge, and heavy-lift markings",
+          "Dominion perimeter, Nova research, objective, and emergency phase overlays"
+        ]
+      },
+      "routes": [
+        {
+          "id": "full_class_perimeter",
+          "classes": [
+            "P_PERSONNEL",
+            "L_LIGHT_MECH",
+            "V_SMALL_VEHICLE",
+            "M_MEDIUM_MECH"
+          ],
+          "minimumPortalMeters": [
+            24,
+            12
+          ],
+          "turningCourtDiameterMeters": 48
+        },
+        {
+          "id": "calibration_gallery_flank",
+          "classes": [
+            "P_PERSONNEL"
+          ],
+          "minimumWidthMeters": 3
+        },
+        {
+          "id": "baffle_breach_flank",
+          "classes": [
+            "P_PERSONNEL",
+            "L_LIGHT_MECH"
+          ],
+          "availability": "deterministic_baffle_destroyed_state"
+        }
+      ],
+      "landingZones": [
+        {
+          "id": "umbra_platform",
+          "meters": [
+            52,
+            44
+          ],
+          "classes": [
+            "P_PERSONNEL",
+            "L_LIGHT_MECH",
+            "V_SMALL_VEHICLE",
+            "M_MEDIUM_MECH"
+          ]
+        },
+        {
+          "id": "coolant_trench",
+          "meters": [
+            44,
+            36
+          ],
+          "classes": [
+            "P_PERSONNEL",
+            "L_LIGHT_MECH",
+            "V_SMALL_VEHICLE"
+          ]
+        }
+      ],
+      "destructionVariants": [
+        "calibrated",
+        "coolant_rupture",
+        "baffle_breach",
+        "lens_disabled"
+      ],
+      "conceptArt": {
+        "status": "missing_blocking",
+        "requiredSubject": "black-hole lens silhouette, deterministic baffle states, full-class turning court, and coolant hazard volumes"
+      },
+      "contractIds": [
+        "mf_ground_site_scale_v1",
+        "mf_ground_site_clearance_v1",
+        "mf_ground_site_model_v1",
+        "mf_ground_site_material_v1",
+        "mf_ground_site_destruction_v1",
+        "mf_ground_site_lod_v1",
+        "mf_ground_site_collision_v1",
+        "mf_ground_site_export_v1",
+        "mf_ground_site_concept_gate_v1",
+        "mf_ground_site_runtime_gate_v1"
+      ],
+      "provenance": {
+        "siteData": "../../../../src/domain/catalog.js",
+        "splineScene": null,
+        "modelSource": null,
+        "textureSource": null
+      },
+      "runtimeStatus": {
+        "catalog": "DATA_ONLY",
+        "tacticalGeometry": false,
+        "navigation": false,
+        "collision": false,
+        "dedicatedMaterials": false,
+        "runtimeCapture": false
+      }
+    },
+    {
+      "siteId": "veyra_ossuary",
+      "mapAssetId": "gsite_veyra_ossuary_vault_01",
+      "brief": "veyra_ossuary.md",
+      "systemId": "veyra",
+      "displayName": "Ossuary Vault",
+      "biome": "ancient_subsurface",
+      "hazards": [
+        "unknown_automation"
+      ],
+      "mission": {
+        "id": "syndicate_ossuary_dividend",
+        "title": "Ossuary Dividend",
+        "objectiveType": "extract_artifact",
+        "objectiveTargetIds": [
+          "ossuary_phase_engine"
+        ],
+        "landingZoneIds": [
+          "vault_aperture",
+          "collapsed_gallery"
+        ]
+      },
+      "presetIds": [
+        "preset_veyra_ossuary_relic_vault"
+      ],
+      "siteEnvelope": {
+        "sizeClass": "xs",
+        "meters": [
+          192,
+          160
+        ],
+        "navCellMeters": 0.5
+      },
+      "admittedNavClasses": [
+        "P_PERSONNEL",
+        "L_LIGHT_MECH",
+        "V_SMALL_VEHICLE"
+      ],
+      "heroModelFamilies": [
+        "ossuary_phase_engine",
+        "ossuary_vault_aperture_iris",
+        "ossuary_processional_arch",
+        "ossuary_guardian_plinth",
+        "ossuary_sarcophagus_bank",
+        "ossuary_collapsed_gallery",
+        "ossuary_artifact_cradle",
+        "ossuary_phase_conduit",
+        "ossuary_sealed_lift",
+        "ossuary_sentinel_gate",
+        "ossuary_relief_wall"
+      ],
+      "materialFamilies": [
+        "ossuary_ancient_stone_metal",
+        "ossuary_phase_crystal",
+        "ossuary_bone_white_ceramic",
+        "ossuary_oxidized_bronze",
+        "ossuary_sealed_mineral_dust"
+      ],
+      "decalProgram": {
+        "entryCount": 16,
+        "families": [
+          "original non-linguistic relief motifs and phase-flow glyphs",
+          "excavation, lockdown, and collapsed-gallery markings",
+          "Syndicate extraction, Dominion denial, and artifact-objective overlays"
+        ]
+      },
+      "routes": [
+        {
+          "id": "processional_vehicle_route",
+          "classes": [
+            "P_PERSONNEL",
+            "L_LIGHT_MECH",
+            "V_SMALL_VEHICLE"
+          ],
+          "minimumPortalMeters": [
+            18,
+            8
+          ]
+        },
+        {
+          "id": "research_gallery_flanks",
+          "classes": [
+            "P_PERSONNEL"
+          ],
+          "minimumWidthMeters": 3
+        },
+        {
+          "id": "automation_portal_graph",
+          "classes": [
+            "P_PERSONNEL",
+            "L_LIGHT_MECH"
+          ],
+          "states": [
+            "locked",
+            "open",
+            "failed"
+          ]
+        }
+      ],
+      "landingZones": [
+        {
+          "id": "vault_aperture",
+          "meters": [
+            40,
+            32
+          ],
+          "classes": [
+            "P_PERSONNEL",
+            "L_LIGHT_MECH",
+            "V_SMALL_VEHICLE"
+          ]
+        },
+        {
+          "id": "collapsed_gallery",
+          "meters": [
+            32,
+            28
+          ],
+          "classes": [
+            "P_PERSONNEL",
+            "L_LIGHT_MECH"
+          ]
+        }
+      ],
+      "destructionVariants": [
+        "dormant_sealed",
+        "automation_awake",
+        "gallery_collapse",
+        "phase_engine_extraction"
+      ],
+      "conceptArt": {
+        "status": "missing_blocking",
+        "requiredSubject": "ancient processional route, portal-state diagram, artifact extraction state, and original relief language"
+      },
+      "contractIds": [
+        "mf_ground_site_scale_v1",
+        "mf_ground_site_clearance_v1",
+        "mf_ground_site_model_v1",
+        "mf_ground_site_material_v1",
+        "mf_ground_site_destruction_v1",
+        "mf_ground_site_lod_v1",
+        "mf_ground_site_collision_v1",
+        "mf_ground_site_export_v1",
+        "mf_ground_site_concept_gate_v1",
+        "mf_ground_site_runtime_gate_v1"
+      ],
+      "provenance": {
+        "siteData": "../../../../src/domain/catalog.js",
+        "splineScene": null,
+        "modelSource": null,
+        "textureSource": null
+      },
+      "runtimeStatus": {
+        "catalog": "DATA_ONLY",
+        "tacticalGeometry": false,
+        "navigation": false,
+        "collision": false,
+        "dedicatedMaterials": false,
+        "runtimeCapture": false
+      }
+    },
+    {
+      "siteId": "karak_meridian",
+      "mapAssetId": "gsite_karak_meridian_colony_01",
+      "brief": "karak_meridian.md",
+      "systemId": "karak",
+      "displayName": "Meridian Colony",
+      "biome": "abandoned_colony",
+      "hazards": [
+        "spore_fog",
+        "civilian_remains"
+      ],
+      "mission": {
+        "id": "uga_pale_bloom",
+        "title": "Pale Bloom",
+        "objectiveType": "purge_brood",
+        "objectiveTargetIds": [
+          "meridian_breeder_nest"
+        ],
+        "landingZoneIds": [
+          "clinic_roof",
+          "transit_court"
+        ]
+      },
+      "presetIds": [
+        "preset_karak_meridian_silent_colony",
+        "preset_karak_meridian_pressure_biodome",
+        "preset_karak_meridian_containment_base"
+      ],
+      "siteEnvelope": {
+        "sizeClass": "medium",
+        "meters": [
+          480,
+          384
+        ],
+        "navCellMeters": 1.25
+      },
+      "admittedNavClasses": [
+        "P_PERSONNEL",
+        "L_LIGHT_MECH",
+        "V_SMALL_VEHICLE",
+        "M_MEDIUM_MECH"
+      ],
+      "heroModelFamilies": [
+        "meridian_breeder_nest",
+        "meridian_clinic",
+        "meridian_transit_court",
+        "meridian_colony_habitat",
+        "meridian_evacuation_depot",
+        "meridian_water_tower",
+        "meridian_comms_mast",
+        "meridian_school_civic_hall",
+        "meridian_greenhouse_biodome",
+        "meridian_road_bridge",
+        "meridian_quarantine_gate"
+      ],
+      "materialFamilies": [
+        "meridian_colony_concrete_paving",
+        "meridian_hab_composite",
+        "meridian_wet_vegetation_spore_residue",
+        "meridian_quarantine_steel_plastic",
+        "meridian_brood_infestation_blend"
+      ],
+      "decalProgram": {
+        "entryCount": 18,
+        "families": [
+          "district, clinic, utility, shelter, and evacuation identity",
+          "missing-person, quarantine, spore-danger, and UGA containment markings",
+          "breeder-nest objective and purge-state overlays"
+        ]
+      },
+      "routes": [
+        {
+          "id": "colony_road_loop_a",
+          "classes": [
+            "P_PERSONNEL",
+            "L_LIGHT_MECH",
+            "V_SMALL_VEHICLE",
+            "M_MEDIUM_MECH"
+          ],
+          "minimumPortalMeters": [
+            24,
+            12
+          ],
+          "turningCourtDiameterMeters": 48
+        },
+        {
+          "id": "colony_road_loop_b",
+          "classes": [
+            "P_PERSONNEL",
+            "L_LIGHT_MECH",
+            "V_SMALL_VEHICLE",
+            "M_MEDIUM_MECH"
+          ],
+          "minimumTwoWayWidthMeters": 28
+        },
+        {
+          "id": "clinic_service_flanks",
+          "classes": [
+            "P_PERSONNEL"
+          ],
+          "minimumWidthMeters": 3
+        }
+      ],
+      "landingZones": [
+        {
+          "id": "clinic_roof",
+          "meters": [
+            32,
+            28
+          ],
+          "classes": [
+            "P_PERSONNEL",
+            "L_LIGHT_MECH"
+          ],
+          "vehicleAdmission": false
+        },
+        {
+          "id": "transit_court",
+          "meters": [
+            56,
+            48
+          ],
+          "classes": [
+            "P_PERSONNEL",
+            "L_LIGHT_MECH",
+            "V_SMALL_VEHICLE",
+            "M_MEDIUM_MECH"
+          ]
+        }
+      ],
+      "destructionVariants": [
+        "silent_intact",
+        "brood_overgrown",
+        "nest_purged",
+        "civic_collapse_safe_evacuation"
+      ],
+      "conceptArt": {
+        "status": "available_needs_measurement_and_approval",
+        "path": "../../concepts/ground-sites/meridian-colony/meridian-colony-brood-infestation-concept-v1.png",
+        "sha256": "61d7d3b697c62b024b0db6e717c1fbb44a49327975ae5fb75afb892c6c018a87",
+        "bytes": 2894693,
+        "provenance": "../../concepts/ground-sites/meridian-colony/PROVENANCE.md",
+        "blockingGap": "Convert the board into an approved measured plan with rooftop-versus-court class restrictions, route sections, and phone crop before final geometry."
+      },
+      "contractIds": [
+        "mf_ground_site_scale_v1",
+        "mf_ground_site_clearance_v1",
+        "mf_ground_site_model_v1",
+        "mf_ground_site_material_v1",
+        "mf_ground_site_destruction_v1",
+        "mf_ground_site_lod_v1",
+        "mf_ground_site_collision_v1",
+        "mf_ground_site_export_v1",
+        "mf_ground_site_concept_gate_v1",
+        "mf_ground_site_runtime_gate_v1"
+      ],
+      "provenance": {
+        "siteData": "../../../../src/domain/catalog.js",
+        "splineScene": null,
+        "modelSource": null,
+        "textureSource": null
+      },
+      "runtimeStatus": {
+        "catalog": "DATA_ONLY",
+        "tacticalGeometry": false,
+        "navigation": false,
+        "collision": false,
+        "dedicatedMaterials": false,
+        "runtimeCapture": false
+      }
+    },
+    {
+      "siteId": "karak_spine",
+      "mapAssetId": "gsite_karak_spine_transit_01",
+      "brief": "karak_spine.md",
+      "systemId": "karak",
+      "displayName": "Colony Transit Spine",
+      "biome": "subterranean_transit",
+      "hazards": [
+        "organic_occlusion",
+        "power_failure"
+      ],
+      "mission": {
+        "id": "uga_silent_spine",
+        "title": "Silent Spine",
+        "objectiveType": "purge_brood",
+        "objectiveTargetIds": [
+          "spine_gestation_cluster",
+          "spine_feeder_root"
+        ],
+        "landingZoneIds": [
+          "maintenance_shaft",
+          "sealed_platform"
+        ]
+      },
+      "presetIds": [
+        "preset_karak_spine_transit_infestation"
+      ],
+      "siteEnvelope": {
+        "sizeClass": "small",
+        "meters": [
+          320,
+          256
+        ],
+        "navCellMeters": 0.8
+      },
+      "admittedNavClasses": [
+        "P_PERSONNEL",
+        "L_LIGHT_MECH",
+        "V_SMALL_VEHICLE",
+        "M_MEDIUM_MECH"
+      ],
+      "navAdmissionNotes": "M_MEDIUM_MECH is limited to station chambers and the sealed_platform landing zone; it is not admitted through maintenance_shaft.",
+      "heroModelFamilies": [
+        "spine_gestation_cluster",
+        "spine_feeder_root",
+        "spine_sealed_platform",
+        "spine_rail_car",
+        "spine_magrail_track",
+        "spine_station_concourse",
+        "spine_maintenance_shaft",
+        "spine_service_lift",
+        "spine_power_substation",
+        "spine_collapsed_tunnel_mouth"
+      ],
+      "materialFamilies": [
+        "spine_transit_tile",
+        "spine_rail_steel",
+        "spine_soot_service_concrete",
+        "spine_emergency_light_strip",
+        "spine_organic_overgrowth_blend"
+      ],
+      "decalProgram": {
+        "entryCount": 16,
+        "families": [
+          "line maps, platform IDs, maintenance, power, and evacuation markings",
+          "sealed, quarantine, emergency-path, and UGA purge overlays",
+          "distinct gestation-cluster and feeder-root objective marks"
+        ]
+      },
+      "routes": [
+        {
+          "id": "parallel_rail_service_route",
+          "classes": [
+            "P_PERSONNEL",
+            "L_LIGHT_MECH",
+            "V_SMALL_VEHICLE",
+            "M_MEDIUM_MECH"
+          ],
+          "widthMeters": [
+            18,
+            24
+          ],
+          "stationTurningCourtDiameterMeters": 48
+        },
+        {
+          "id": "maintenance_shaft_branch",
+          "classes": [
+            "P_PERSONNEL",
+            "L_LIGHT_MECH"
+          ],
+          "vehicleAdmission": false
+        },
+        {
+          "id": "railcar_wreck_bypass",
+          "classes": [
+            "P_PERSONNEL"
+          ],
+          "availability": "railcar_destroyed_state"
+        }
+      ],
+      "landingZones": [
+        {
+          "id": "maintenance_shaft",
+          "meters": [
+            32,
+            28
+          ],
+          "classes": [
+            "P_PERSONNEL",
+            "L_LIGHT_MECH"
+          ],
+          "vehicleAdmission": false
+        },
+        {
+          "id": "sealed_platform",
+          "meters": [
+            52,
+            44
+          ],
+          "classes": [
+            "P_PERSONNEL",
+            "L_LIGHT_MECH",
+            "V_SMALL_VEHICLE",
+            "M_MEDIUM_MECH"
+          ]
+        }
+      ],
+      "destructionVariants": [
+        "blackout",
+        "tissue_occluded",
+        "railcar_wreck_class_split",
+        "targets_purged"
+      ],
+      "conceptArt": {
+        "status": "missing_blocking",
+        "requiredSubject": "parallel magrail and service routes, station-only medium-mech clearances, separate Brood targets, and blackout readability"
+      },
+      "contractIds": [
+        "mf_ground_site_scale_v1",
+        "mf_ground_site_clearance_v1",
+        "mf_ground_site_model_v1",
+        "mf_ground_site_material_v1",
+        "mf_ground_site_destruction_v1",
+        "mf_ground_site_lod_v1",
+        "mf_ground_site_collision_v1",
+        "mf_ground_site_export_v1",
+        "mf_ground_site_concept_gate_v1",
+        "mf_ground_site_runtime_gate_v1"
+      ],
+      "provenance": {
+        "siteData": "../../../../src/domain/catalog.js",
+        "splineScene": null,
+        "modelSource": null,
+        "textureSource": null
+      },
+      "runtimeStatus": {
+        "catalog": "DATA_ONLY",
+        "tacticalGeometry": false,
+        "navigation": false,
+        "collision": false,
+        "dedicatedMaterials": false,
+        "runtimeCapture": false
+      }
+    },
+    {
+      "siteId": "karak_hive",
+      "mapAssetId": "gsite_karak_hive_heart_01",
+      "brief": "karak_hive.md",
+      "systemId": "karak",
+      "displayName": "Karak Primary Hive",
+      "biome": "brood_hive_depths",
+      "hazards": [
+        "acidic_atmosphere",
+        "neural_spores",
+        "living_terrain"
+      ],
+      "mission": {
+        "id": "uga_hive_heart",
+        "title": "Hive Heart",
+        "objectiveType": "purge_brood",
+        "objectiveTargetIds": [
+          "karak_hive_heart"
+        ],
+        "landingZoneIds": [
+          "vascular_breach",
+          "thermal_vent"
+        ]
+      },
+      "presetIds": [
+        "preset_karak_primary_hive_infestation"
+      ],
+      "siteEnvelope": {
+        "sizeClass": "medium",
+        "meters": [
+          480,
+          384
+        ],
+        "navCellMeters": 1.25
+      },
+      "admittedNavClasses": [
+        "P_PERSONNEL",
+        "L_LIGHT_MECH",
+        "V_SMALL_VEHICLE",
+        "M_MEDIUM_MECH"
+      ],
+      "heroModelFamilies": [
+        "karak_hive_heart",
+        "karak_vascular_gate",
+        "karak_thermal_vent",
+        "karak_brood_chamber",
+        "karak_egg_sac_cathedral",
+        "karak_acid_pool_basin",
+        "karak_neural_node",
+        "karak_root_bridge",
+        "karak_bone_arch",
+        "karak_feeding_pit",
+        "karak_spore_chimney",
+        "karak_membrane_valve",
+        "karak_fossilized_colony_remnant"
+      ],
+      "materialFamilies": [
+        "karak_living_chitin",
+        "karak_vascular_tissue",
+        "karak_acid_wet_film",
+        "karak_calcified_bone",
+        "karak_spore_crust",
+        "karak_neural_emissive_tissue"
+      ],
+      "decalProgram": {
+        "entryCount": 20,
+        "families": [
+          "UGA containment, probe, route-breadcrumb, and extraction overlays",
+          "organic wound, acid residue, and spore-danger state marks",
+          "neural pulse and hive-heart objective masks"
+        ]
+      },
+      "routes": [
+        {
+          "id": "organic_artery_a",
+          "classes": [
+            "P_PERSONNEL",
+            "L_LIGHT_MECH",
+            "V_SMALL_VEHICLE",
+            "M_MEDIUM_MECH"
+          ],
+          "minimumPortalMeters": [
+            24,
+            12
+          ],
+          "turningCourtDiameterMeters": 48
+        },
+        {
+          "id": "organic_artery_b",
+          "classes": [
+            "P_PERSONNEL",
+            "L_LIGHT_MECH",
+            "V_SMALL_VEHICLE",
+            "M_MEDIUM_MECH"
+          ],
+          "minimumPortalMeters": [
+            24,
+            12
+          ]
+        },
+        {
+          "id": "crawl_observation_channels",
+          "classes": [
+            "P_PERSONNEL"
+          ],
+          "minimumWidthMeters": 3
+        }
+      ],
+      "landingZones": [
+        {
+          "id": "vascular_breach",
+          "meters": [
+            44,
+            36
+          ],
+          "classes": [
+            "P_PERSONNEL",
+            "L_LIGHT_MECH",
+            "V_SMALL_VEHICLE"
+          ]
+        },
+        {
+          "id": "thermal_vent",
+          "meters": [
+            56,
+            48
+          ],
+          "classes": [
+            "P_PERSONNEL",
+            "L_LIGHT_MECH",
+            "V_SMALL_VEHICLE",
+            "M_MEDIUM_MECH"
+          ]
+        }
+      ],
+      "destructionVariants": [
+        "dormant",
+        "alert",
+        "wounded",
+        "heart_purged_safe_extraction"
+      ],
+      "conceptArt": {
+        "status": "missing_blocking",
+        "requiredSubject": "non-humanoid living megastructure, dual combined-arms arteries, heart-state sequence, acid hazards, and original Brood biology"
+      },
+      "contractIds": [
+        "mf_ground_site_scale_v1",
+        "mf_ground_site_clearance_v1",
+        "mf_ground_site_model_v1",
+        "mf_ground_site_material_v1",
+        "mf_ground_site_destruction_v1",
+        "mf_ground_site_lod_v1",
+        "mf_ground_site_collision_v1",
+        "mf_ground_site_export_v1",
+        "mf_ground_site_concept_gate_v1",
+        "mf_ground_site_runtime_gate_v1"
+      ],
+      "provenance": {
+        "siteData": "../../../../src/domain/catalog.js",
+        "splineScene": null,
+        "modelSource": null,
+        "textureSource": null
+      },
+      "runtimeStatus": {
+        "catalog": "DATA_ONLY",
+        "tacticalGeometry": false,
+        "navigation": false,
+        "collision": false,
+        "dedicatedMaterials": false,
+        "runtimeCapture": false
+      }
+    }
+  ]
+}

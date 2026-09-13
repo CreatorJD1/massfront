@@ -1,0 +1,331 @@
+{
+  "schema": "MassfrontStage10OrbitalLayoutBindingsV1",
+  "version": 1,
+  "bindingSetId": "massfront-stage10-orbital-layout-bindings-v1",
+  "status": "SOURCE_ONLY_BINDING_CANDIDATE",
+  "runtimeReady": false,
+  "modelsClaimedToExist": false,
+  "purpose": "Bind the six source-matched Stage 10 orbital contacts to geometry-family requirements and topology proxies without claiming that production models, collision, navigation, LODs, or runtime registration exist.",
+  "authorities": {
+    "showcaseContacts": {
+      "path": "modules/space_exploration/src/systems/showcase_systems.js",
+      "export": "SHOWCASE_SYSTEMS"
+    },
+    "theatreSeeds": {
+      "path": "assets/data/theatreprofiles-stage10.js",
+      "schema": "Stage10TheatreCatalogV1"
+    },
+    "topologyPlans": {
+      "path": "assets/data/orbitaltopology-stage10.js",
+      "schema": "Stage10OrbitalTopologyV1"
+    }
+  },
+  "sourcePolicy": {
+    "geometryStatus": "REQUIRED_NOT_AUTHORED_OR_VERIFIED",
+    "proxyStatus": "SOURCE_ONLY_PROXY_SPEC",
+    "measurementStatus": "UNMEASURED_TARGET",
+    "modelPathsMayBeInferred": false,
+    "directRuntimeUseAuthorized": false
+  },
+  "schemaPolicy": {
+    "unknownFields": "REJECT",
+    "modelLikeStrings": "REJECT",
+    "modelLikeExtensions": ["glb", "gltf", "blend", "blend1", "fbx", "obj", "dae", "stl", "ply", "usd", "usdz"]
+  },
+  "destructionStateMachine": {
+    "id": "deterministic_recovery_v1",
+    "states": ["intact", "damaged", "disabled", "destroyed", "recovering", "restored"],
+    "transitions": [
+      ["intact", "damaged"],
+      ["damaged", "disabled"],
+      ["disabled", "destroyed"],
+      ["damaged", "recovering"],
+      ["disabled", "recovering"],
+      ["destroyed", "recovering"],
+      ["recovering", "restored"],
+      ["restored", "damaged"]
+    ],
+    "failureContract": "ROLL_BACK_TO_LAST_COMPLETE_STATE"
+  },
+  "performanceTargetProfiles": {
+    "orbital_smallcraft_small_v1": {
+      "status": "UNMEASURED_TARGET",
+      "requiredLods": [
+        {"id": "LOD0", "maximumTriangles": 220000},
+        {"id": "LOD1", "maximumTriangles": 110000},
+        {"id": "LOD2", "maximumTriangles": 44000}
+      ],
+      "maximumActiveDrawCalls": 180,
+      "maximumCollisionProxyShapes": 192,
+      "maximumNavigationProxyElements": 96,
+      "requiredMeasurements": ["hardware_gpu_frame_time", "draw_calls", "triangles", "gpu_memory", "context_recovery"]
+    },
+    "infantry_boarding_xs_v1": {
+      "status": "UNMEASURED_TARGET",
+      "requiredLods": [
+        {"id": "LOD0", "maximumTriangles": 160000},
+        {"id": "LOD1", "maximumTriangles": 80000},
+        {"id": "LOD2", "maximumTriangles": 32000}
+      ],
+      "maximumActiveDrawCalls": 140,
+      "maximumCollisionProxyShapes": 160,
+      "maximumNavigationProxyElements": 96,
+      "requiredMeasurements": ["hardware_gpu_frame_time", "draw_calls", "triangles", "gpu_memory", "context_recovery"]
+    },
+    "infantry_boarding_small_v1": {
+      "status": "UNMEASURED_TARGET",
+      "requiredLods": [
+        {"id": "LOD0", "maximumTriangles": 240000},
+        {"id": "LOD1", "maximumTriangles": 120000},
+        {"id": "LOD2", "maximumTriangles": 48000}
+      ],
+      "maximumActiveDrawCalls": 200,
+      "maximumCollisionProxyShapes": 224,
+      "maximumNavigationProxyElements": 128,
+      "requiredMeasurements": ["hardware_gpu_frame_time", "draw_calls", "triangles", "gpu_memory", "context_recovery"]
+    }
+  },
+  "requiredEvidenceGates": [
+    {"id": "source_contact_match", "requires": "Exact showcase contact, theatre seed, and topology plan identity match."},
+    {"id": "topology_plan_preflight", "requires": "The production topology preflight passes without mutation."},
+    {"id": "geometry_source_admission", "requires": "Every required geometry family has inspected, admitted source geometry and provenance."},
+    {"id": "collision_navigation", "requires": "Collision and navigation proxies are authored and tested against the bound routes or deck graph."},
+    {"id": "route_traversal", "requires": "Every insertion, route, objective, and extraction path completes with the restricted envelope."},
+    {"id": "hazard_objective", "requires": "All bound hazards and objectives activate, resolve, and reset deterministically."},
+    {"id": "destruction_recovery", "requires": "Injected destruction and recovery follow the bound order and roll back atomically on failure."},
+    {"id": "lod_generation", "requires": "LOD0, LOD1, and LOD2 exist, preserve silhouette and sockets, and meet the declared targets."},
+    {"id": "hardware_gpu_performance", "requires": "Real hardware GPU evidence records frame time, draw calls, triangles, and GPU memory."},
+    {"id": "context_loss_recovery", "requires": "WebGL context loss and recovery restore geometry, proxies, materials, and the selected quality."},
+    {"id": "packaging_registration", "requires": "Any future runtime files are registered, packaged, and hash-matched across the intended channels."},
+    {"id": "human_visual_approval", "requires": "A human accepts close, tactical, and command-zoom captures after all other gates pass."}
+  ],
+  "bindings": [
+    {
+      "bindingId": "aelos_embassy_spindle_layout_binding_v1",
+      "seedId": "aelos_embassy_spindle",
+      "topologyPlanId": "aelos_embassy_spindle",
+      "status": "SOURCE_ONLY_CANDIDATE",
+      "runtimeReady": false,
+      "modelExistsClaimed": false,
+      "geometryStatus": "REQUIRED_NOT_AUTHORED_OR_VERIFIED",
+      "sourceContact": {
+        "sourcePath": "modules/space_exploration/src/systems/showcase_systems.js",
+        "systemId": "aelos",
+        "contactId": "aelos_embassy_spindle",
+        "name": "Concord Spindle",
+        "kind": "station",
+        "interaction": "faction-residency"
+      },
+      "topologyPlan": {
+        "sourcePath": "assets/data/orbitaltopology-stage10.js",
+        "schema": "Stage10OrbitalTopologyV1",
+        "planId": "aelos_embassy_spindle",
+        "topologyKind": "route_volumes_3d",
+        "coordinateSpace": "CONTACT_LOCAL_METERS_CENTERED",
+        "sourceIdentity": {"systemId": "aelos", "contactKind": "station", "interaction": "faction-residency"}
+      },
+      "envelope": {"topology": "orbital_smallcraft", "theatre": "orbital_smallcraft"},
+      "sizeBounds": {"sizeClass": "SMALL", "units": "meters", "width": 80, "height": 72, "depth": 64},
+      "requiredGeometryFamilies": [
+        {"familyId": "embassy_spindle_primary_structure", "role": "primary diplomatic spindle and structural silhouette", "availability": "REQUIRED_NOT_PROVEN"},
+        {"familyId": "embassy_residency_ring", "role": "residency ring and readable faction offices", "availability": "REQUIRED_NOT_PROVEN"},
+        {"familyId": "embassy_docking_arms", "role": "diplomatic docking arms and inspection clearance", "availability": "REQUIRED_NOT_PROVEN"},
+        {"familyId": "embassy_navigation_beacons", "role": "route, dock, and recoverable navigation markers", "availability": "REQUIRED_NOT_PROVEN"}
+      ],
+      "proxyBinding": {
+        "status": "SOURCE_ONLY_PROXY_SPEC",
+        "topologyKind": "route_volumes_3d",
+        "routeVolumeIds": ["embassy_approach_west", "embassy_orbit_port", "embassy_spine_transfer", "embassy_orbit_starboard", "embassy_egress_east", "embassy_diplomatic_dock", "embassy_inspection_arc"],
+        "spawnZoneIds": ["embassy_spawn_arrivals", "embassy_spawn_patrol"],
+        "insertionZoneIds": ["embassy_insertion_west"],
+        "extractionZoneIds": ["embassy_extraction_east"],
+        "collision": {"status": "PENDING_AUTHORING_AND_VERIFICATION", "proxyType": "closed_obstacle_shells_and_exclusion_volumes", "requirements": ["sealed primary obstacle hull", "docking arm blockers", "traffic exclusion volume"]},
+        "navigation": {"status": "PENDING_AUTHORING_AND_VERIFICATION", "proxyType": "zero_g_route_volume_graph", "binds": ["embassy_approach_west", "embassy_orbit_port", "embassy_spine_transfer", "embassy_orbit_starboard", "embassy_egress_east", "embassy_diplomatic_dock", "embassy_inspection_arc"]}
+      },
+      "hazardsObjectives": {"status": "PENDING_AUTHORING_AND_VERIFICATION", "hazardIds": ["embassy_traffic_exclusion"], "objectiveIds": ["embassy_objective_clearance", "embassy_objective_residency_scan"]},
+      "destructionRecovery": {"status": "PENDING_AUTHORING_AND_VERIFICATION", "stateMachineId": "deterministic_recovery_v1", "destructibleIds": ["embassy_docking_beacon"], "mode": "deterministic", "repairOrder": ["embassy_docking_beacon"], "checkpoint": "last-complete-state", "onFailure": "ROLL_BACK_TO_LAST_COMPLETE_STATE"},
+      "lodPerformance": {"profileId": "orbital_smallcraft_small_v1", "status": "UNMEASURED_TARGET", "requiredLodIds": ["LOD0", "LOD1", "LOD2"], "measurements": null},
+      "evidence": {"status": "PENDING", "passedGateIds": [], "pendingGateIds": ["source_contact_match", "topology_plan_preflight", "geometry_source_admission", "collision_navigation", "route_traversal", "hazard_objective", "destruction_recovery", "lod_generation", "hardware_gpu_performance", "context_loss_recovery", "packaging_registration", "human_visual_approval"]},
+      "activation": {"runtime": false, "registrationAuthorized": false, "reason": "SOURCE_ONLY_REQUIRES_GEOMETRY_PROXY_RUNTIME_AND_HUMAN_EVIDENCE"}
+    },
+    {
+      "bindingId": "aelos_logistics_array_layout_binding_v1",
+      "seedId": "aelos_logistics_array",
+      "topologyPlanId": "aelos_logistics_array",
+      "status": "SOURCE_ONLY_CANDIDATE",
+      "runtimeReady": false,
+      "modelExistsClaimed": false,
+      "geometryStatus": "REQUIRED_NOT_AUTHORED_OR_VERIFIED",
+      "sourceContact": {
+        "sourcePath": "modules/space_exploration/src/systems/showcase_systems.js",
+        "systemId": "aelos",
+        "contactId": "aelos_logistics_array",
+        "name": "Peregrine Logistics Array",
+        "kind": "fuel",
+        "interaction": "logistics"
+      },
+      "topologyPlan": {"sourcePath": "assets/data/orbitaltopology-stage10.js", "schema": "Stage10OrbitalTopologyV1", "planId": "aelos_logistics_array", "topologyKind": "route_volumes_3d", "coordinateSpace": "CONTACT_LOCAL_METERS_CENTERED", "sourceIdentity": {"systemId": "aelos", "contactKind": "fuel", "interaction": "logistics"}},
+      "envelope": {"topology": "orbital_smallcraft", "theatre": "orbital_smallcraft"},
+      "sizeBounds": {"sizeClass": "SMALL", "units": "meters", "width": 80, "height": 80, "depth": 64},
+      "requiredGeometryFamilies": [
+        {"familyId": "logistics_array_primary_structure", "role": "primary freight and service structure", "availability": "REQUIRED_NOT_PROVEN"},
+        {"familyId": "logistics_cargo_drums", "role": "cargo storage massing and readable freight lanes", "availability": "REQUIRED_NOT_PROVEN"},
+        {"familyId": "logistics_fuel_manifold", "role": "hazard-bearing fuel manifold and isolation valve", "availability": "REQUIRED_NOT_PROVEN"},
+        {"familyId": "logistics_transfer_booms", "role": "dock, bypass, and recoverable cargo-transfer geometry", "availability": "REQUIRED_NOT_PROVEN"}
+      ],
+      "proxyBinding": {
+        "status": "SOURCE_ONLY_PROXY_SPEC", "topologyKind": "route_volumes_3d",
+        "routeVolumeIds": ["logistics_inbound", "logistics_cargo_port", "logistics_central_axis", "logistics_fuel_dock", "logistics_cargo_starboard", "logistics_outbound", "logistics_service_bypass"],
+        "spawnZoneIds": ["logistics_spawn_freight", "logistics_spawn_service"], "insertionZoneIds": ["logistics_insertion"], "extractionZoneIds": ["logistics_extraction"],
+        "collision": {"status": "PENDING_AUTHORING_AND_VERIFICATION", "proxyType": "closed_obstacle_shells_and_exclusion_volumes", "requirements": ["sealed array obstacle hull", "cargo and fuel blockers", "vent and freight hazard volumes"]},
+        "navigation": {"status": "PENDING_AUTHORING_AND_VERIFICATION", "proxyType": "zero_g_route_volume_graph", "binds": ["logistics_inbound", "logistics_cargo_port", "logistics_central_axis", "logistics_fuel_dock", "logistics_cargo_starboard", "logistics_outbound", "logistics_service_bypass"]}
+      },
+      "hazardsObjectives": {"status": "PENDING_AUTHORING_AND_VERIFICATION", "hazardIds": ["logistics_cryogenic_vent", "logistics_freight_drift"], "objectiveIds": ["logistics_objective_fuel", "logistics_objective_manifest"]},
+      "destructionRecovery": {"status": "PENDING_AUTHORING_AND_VERIFICATION", "stateMachineId": "deterministic_recovery_v1", "destructibleIds": ["logistics_fuel_valve", "logistics_cargo_boom"], "mode": "deterministic", "repairOrder": ["logistics_fuel_valve", "logistics_cargo_boom"], "checkpoint": "last-complete-state", "onFailure": "ROLL_BACK_TO_LAST_COMPLETE_STATE"},
+      "lodPerformance": {"profileId": "orbital_smallcraft_small_v1", "status": "UNMEASURED_TARGET", "requiredLodIds": ["LOD0", "LOD1", "LOD2"], "measurements": null},
+      "evidence": {"status": "PENDING", "passedGateIds": [], "pendingGateIds": ["source_contact_match", "topology_plan_preflight", "geometry_source_admission", "collision_navigation", "route_traversal", "hazard_objective", "destruction_recovery", "lod_generation", "hardware_gpu_performance", "context_loss_recovery", "packaging_registration", "human_visual_approval"]},
+      "activation": {"runtime": false, "registrationAuthorized": false, "reason": "SOURCE_ONLY_REQUIRES_GEOMETRY_PROXY_RUNTIME_AND_HUMAN_EVIDENCE"}
+    },
+    {
+      "bindingId": "veyra_archive_hulk_layout_binding_v1",
+      "seedId": "veyra_archive_hulk",
+      "topologyPlanId": "veyra_archive_hulk",
+      "status": "SOURCE_ONLY_CANDIDATE",
+      "runtimeReady": false,
+      "modelExistsClaimed": false,
+      "geometryStatus": "REQUIRED_NOT_AUTHORED_OR_VERIFIED",
+      "sourceContact": {
+        "sourcePath": "modules/space_exploration/src/systems/showcase_systems.js", "systemId": "veyra", "contactId": "veyra_archive_hulk", "name": "Archive Hulk KX-19", "kind": "derelict", "interaction": "discovery", "siteId": "veyra_archive_hulk"
+      },
+      "topologyPlan": {"sourcePath": "assets/data/orbitaltopology-stage10.js", "schema": "Stage10OrbitalTopologyV1", "planId": "veyra_archive_hulk", "topologyKind": "deck_route_graph", "coordinateSpace": "CONTACT_LOCAL_METERS_CENTERED", "sourceIdentity": {"systemId": "veyra", "contactKind": "derelict", "interaction": "discovery", "siteId": "veyra_archive_hulk"}},
+      "envelope": {"topology": "infantry_boarding", "theatre": "infantry_only"},
+      "sizeBounds": {"sizeClass": "XS", "units": "meters", "width": 48, "height": 36, "depth": 24},
+      "requiredGeometryFamilies": [
+        {"familyId": "archive_hulk_outer_shell", "role": "damaged pre-UGA vessel silhouette and breach shell", "availability": "REQUIRED_NOT_PROVEN"},
+        {"familyId": "archive_boarding_decks", "role": "walkable deck, junction, vault, and observation surfaces", "availability": "REQUIRED_NOT_PROVEN"},
+        {"familyId": "archive_pressure_bulkheads", "role": "pressure boundaries and deterministic decompression blockers", "availability": "REQUIRED_NOT_PROVEN"},
+        {"familyId": "archive_vault_and_service_hatches", "role": "objective vault, service bypass, and recoverable hatches", "availability": "REQUIRED_NOT_PROVEN"}
+      ],
+      "proxyBinding": {
+        "status": "SOURCE_ONLY_PROXY_SPEC", "topologyKind": "deck_route_graph",
+        "deckNodeIds": ["archive_insertion_airlock", "archive_fore_junction", "archive_core", "archive_sealed_vault", "archive_extraction_lock", "archive_service_bypass", "archive_observation"],
+        "deckEdgeIds": ["archive_edge_airlock", "archive_edge_fore", "archive_edge_vault", "archive_edge_aft", "archive_edge_bypass_in", "archive_edge_bypass_out", "archive_edge_observation"],
+        "spawnZoneIds": ["archive_spawn_boarding", "archive_spawn_dormant_defense"], "insertionZoneIds": ["archive_insertion"], "extractionZoneIds": ["archive_extraction"],
+        "collision": {"status": "PENDING_AUTHORING_AND_VERIFICATION", "proxyType": "deck_walkable_shells_and_bulkhead_blockers", "requirements": ["walkable deck shells", "sealed bulkhead blockers", "decompression and radiation trigger volumes"]},
+        "navigation": {"status": "PENDING_AUTHORING_AND_VERIFICATION", "proxyType": "boarding_deck_graph", "binds": ["archive_insertion_airlock", "archive_fore_junction", "archive_core", "archive_sealed_vault", "archive_extraction_lock", "archive_service_bypass", "archive_observation"]}
+      },
+      "hazardsObjectives": {"status": "PENDING_AUTHORING_AND_VERIFICATION", "hazardIds": ["archive_decompression", "archive_radiation"], "objectiveIds": ["archive_objective_core", "archive_objective_vault"]},
+      "destructionRecovery": {"status": "PENDING_AUTHORING_AND_VERIFICATION", "stateMachineId": "deterministic_recovery_v1", "destructibleIds": ["archive_pressure_bulkhead", "archive_service_hatch"], "mode": "deterministic", "repairOrder": ["archive_pressure_bulkhead", "archive_service_hatch"], "checkpoint": "last-complete-state", "onFailure": "ROLL_BACK_TO_LAST_COMPLETE_STATE"},
+      "lodPerformance": {"profileId": "infantry_boarding_xs_v1", "status": "UNMEASURED_TARGET", "requiredLodIds": ["LOD0", "LOD1", "LOD2"], "measurements": null},
+      "evidence": {"status": "PENDING", "passedGateIds": [], "pendingGateIds": ["source_contact_match", "topology_plan_preflight", "geometry_source_admission", "collision_navigation", "route_traversal", "hazard_objective", "destruction_recovery", "lod_generation", "hardware_gpu_performance", "context_loss_recovery", "packaging_registration", "human_visual_approval"]},
+      "activation": {"runtime": false, "registrationAuthorized": false, "reason": "SOURCE_ONLY_REQUIRES_GEOMETRY_PROXY_RUNTIME_AND_HUMAN_EVIDENCE"}
+    },
+    {
+      "bindingId": "karak_colony_spine_layout_binding_v1",
+      "seedId": "karak_colony_spine",
+      "topologyPlanId": "karak_colony_spine",
+      "status": "SOURCE_ONLY_CANDIDATE",
+      "runtimeReady": false,
+      "modelExistsClaimed": false,
+      "geometryStatus": "REQUIRED_NOT_AUTHORED_OR_VERIFIED",
+      "sourceContact": {
+        "sourcePath": "modules/space_exploration/src/systems/showcase_systems.js", "systemId": "karak", "contactId": "karak_colony_spine", "name": "Karak Colony Spine", "kind": "station", "interaction": "brood-intelligence", "siteId": "karak_colony_spine"
+      },
+      "topologyPlan": {"sourcePath": "assets/data/orbitaltopology-stage10.js", "schema": "Stage10OrbitalTopologyV1", "planId": "karak_colony_spine", "topologyKind": "deck_route_graph", "coordinateSpace": "CONTACT_LOCAL_METERS_CENTERED", "sourceIdentity": {"systemId": "karak", "contactKind": "station", "interaction": "brood-intelligence", "siteId": "karak_colony_spine"}},
+      "envelope": {"topology": "infantry_boarding", "theatre": "infantry_only"},
+      "sizeBounds": {"sizeClass": "SMALL", "units": "meters", "width": 80, "height": 56, "depth": 64},
+      "requiredGeometryFamilies": [
+        {"familyId": "colony_spine_primary_structure", "role": "colony spine hull, breach threshold, and readable station section", "availability": "REQUIRED_NOT_PROVEN"},
+        {"familyId": "colony_boarding_decks", "role": "lower axis, upper walk, command lift, and service routes", "availability": "REQUIRED_NOT_PROVEN"},
+        {"familyId": "colony_life_support_section", "role": "life-support objective compartment and recovery interfaces", "availability": "REQUIRED_NOT_PROVEN"},
+        {"familyId": "colony_quarantine_and_service_hatches", "role": "quarantine boundaries, lift actuator, and service hatch blockers", "availability": "REQUIRED_NOT_PROVEN"},
+        {"familyId": "colony_brood_infestation_masks", "role": "bounded infestation surfaces and nest hazard volumes", "availability": "REQUIRED_NOT_PROVEN"}
+      ],
+      "proxyBinding": {
+        "status": "SOURCE_ONLY_PROXY_SPEC", "topologyKind": "deck_route_graph",
+        "deckNodeIds": ["spine_breach_airlock", "spine_quarantine_junction", "spine_lower_axis", "spine_command_lift", "spine_life_support", "spine_extraction_lock", "spine_upper_walk", "spine_brood_nest", "spine_service_duct"],
+        "deckEdgeIds": ["spine_edge_breach", "spine_edge_lower", "spine_edge_command", "spine_edge_life_support", "spine_edge_extraction", "spine_edge_upper_access", "spine_edge_nest", "spine_edge_service_in", "spine_edge_service_out"],
+        "spawnZoneIds": ["spine_spawn_boarding", "spine_spawn_brood"], "insertionZoneIds": ["spine_insertion"], "extractionZoneIds": ["spine_extraction"],
+        "collision": {"status": "PENDING_AUTHORING_AND_VERIFICATION", "proxyType": "deck_walkable_shells_and_bulkhead_blockers", "requirements": ["walkable deck shells", "quarantine and lift blockers", "vacuum breach and Brood hazard volumes"]},
+        "navigation": {"status": "PENDING_AUTHORING_AND_VERIFICATION", "proxyType": "boarding_deck_graph", "binds": ["spine_breach_airlock", "spine_quarantine_junction", "spine_lower_axis", "spine_command_lift", "spine_life_support", "spine_extraction_lock", "spine_upper_walk", "spine_brood_nest", "spine_service_duct"]}
+      },
+      "hazardsObjectives": {"status": "PENDING_AUTHORING_AND_VERIFICATION", "hazardIds": ["spine_brood_growth", "spine_vacuum_breach"], "objectiveIds": ["spine_objective_nest", "spine_objective_life_support"]},
+      "destructionRecovery": {"status": "PENDING_AUTHORING_AND_VERIFICATION", "stateMachineId": "deterministic_recovery_v1", "destructibleIds": ["spine_quarantine_door", "spine_lift_actuator", "spine_service_hatch"], "mode": "deterministic", "repairOrder": ["spine_quarantine_door", "spine_lift_actuator", "spine_service_hatch"], "checkpoint": "last-complete-state", "onFailure": "ROLL_BACK_TO_LAST_COMPLETE_STATE"},
+      "lodPerformance": {"profileId": "infantry_boarding_small_v1", "status": "UNMEASURED_TARGET", "requiredLodIds": ["LOD0", "LOD1", "LOD2"], "measurements": null},
+      "evidence": {"status": "PENDING", "passedGateIds": [], "pendingGateIds": ["source_contact_match", "topology_plan_preflight", "geometry_source_admission", "collision_navigation", "route_traversal", "hazard_objective", "destruction_recovery", "lod_generation", "hardware_gpu_performance", "context_loss_recovery", "packaging_registration", "human_visual_approval"]},
+      "activation": {"runtime": false, "registrationAuthorized": false, "reason": "SOURCE_ONLY_REQUIRES_GEOMETRY_PROXY_RUNTIME_AND_HUMAN_EVIDENCE"}
+    },
+    {
+      "bindingId": "karak_lifeboat_field_layout_binding_v1",
+      "seedId": "karak_lifeboat_field",
+      "topologyPlanId": "karak_lifeboat_field",
+      "status": "SOURCE_ONLY_CANDIDATE",
+      "runtimeReady": false,
+      "modelExistsClaimed": false,
+      "geometryStatus": "REQUIRED_NOT_AUTHORED_OR_VERIFIED",
+      "sourceContact": {
+        "sourcePath": "modules/space_exploration/src/systems/showcase_systems.js", "systemId": "karak", "contactId": "karak_lifeboat_field", "name": "Lifeboat Debris Field", "kind": "derelict", "interaction": "discovery", "siteId": "karak_lifeboat_field"
+      },
+      "topologyPlan": {"sourcePath": "assets/data/orbitaltopology-stage10.js", "schema": "Stage10OrbitalTopologyV1", "planId": "karak_lifeboat_field", "topologyKind": "route_volumes_3d", "coordinateSpace": "CONTACT_LOCAL_METERS_CENTERED", "sourceIdentity": {"systemId": "karak", "contactKind": "derelict", "interaction": "discovery", "siteId": "karak_lifeboat_field"}},
+      "envelope": {"topology": "orbital_smallcraft", "theatre": "orbital_smallcraft"},
+      "sizeBounds": {"sizeClass": "SMALL", "units": "meters", "width": 80, "height": 80, "depth": 80},
+      "requiredGeometryFamilies": [
+        {"familyId": "lifeboat_field_craft_cluster", "role": "empty lifeboat silhouettes and searchable pod cluster", "availability": "REQUIRED_NOT_PROVEN"},
+        {"familyId": "lifeboat_debris_shells", "role": "bounded kinetic debris and collision-safe wreck fragments", "availability": "REQUIRED_NOT_PROVEN"},
+        {"familyId": "lifeboat_navigation_beacons", "role": "survey, bypass, and recoverable navigation markers", "availability": "REQUIRED_NOT_PROVEN"},
+        {"familyId": "lifeboat_tether_and_residue_markers", "role": "recoverable tether cluster and bounded organic residue evidence", "availability": "REQUIRED_NOT_PROVEN"}
+      ],
+      "proxyBinding": {
+        "status": "SOURCE_ONLY_PROXY_SPEC", "topologyKind": "route_volumes_3d",
+        "routeVolumeIds": ["lifeboat_inbound", "lifeboat_outer_scan", "lifeboat_pod_cluster", "lifeboat_residue_pass", "lifeboat_outbound", "lifeboat_upper_bypass", "lifeboat_lower_bypass"],
+        "spawnZoneIds": ["lifeboat_spawn_survey", "lifeboat_spawn_drift"], "insertionZoneIds": ["lifeboat_insertion"], "extractionZoneIds": ["lifeboat_extraction"],
+        "collision": {"status": "PENDING_AUTHORING_AND_VERIFICATION", "proxyType": "closed_obstacle_shells_and_exclusion_volumes", "requirements": ["pod obstacle shells", "bounded debris blockers", "kinetic debris and residue hazard volumes"]},
+        "navigation": {"status": "PENDING_AUTHORING_AND_VERIFICATION", "proxyType": "zero_g_route_volume_graph", "binds": ["lifeboat_inbound", "lifeboat_outer_scan", "lifeboat_pod_cluster", "lifeboat_residue_pass", "lifeboat_outbound", "lifeboat_upper_bypass", "lifeboat_lower_bypass"]}
+      },
+      "hazardsObjectives": {"status": "PENDING_AUTHORING_AND_VERIFICATION", "hazardIds": ["lifeboat_kinetic_debris", "lifeboat_organic_residue"], "objectiveIds": ["lifeboat_objective_transponders", "lifeboat_objective_residue"]},
+      "destructionRecovery": {"status": "PENDING_AUTHORING_AND_VERIFICATION", "stateMachineId": "deterministic_recovery_v1", "destructibleIds": ["lifeboat_nav_beacon", "lifeboat_tether_cluster"], "mode": "deterministic", "repairOrder": ["lifeboat_nav_beacon", "lifeboat_tether_cluster"], "checkpoint": "last-complete-state", "onFailure": "ROLL_BACK_TO_LAST_COMPLETE_STATE"},
+      "lodPerformance": {"profileId": "orbital_smallcraft_small_v1", "status": "UNMEASURED_TARGET", "requiredLodIds": ["LOD0", "LOD1", "LOD2"], "measurements": null},
+      "evidence": {"status": "PENDING", "passedGateIds": [], "pendingGateIds": ["source_contact_match", "topology_plan_preflight", "geometry_source_admission", "collision_navigation", "route_traversal", "hazard_objective", "destruction_recovery", "lod_generation", "hardware_gpu_performance", "context_loss_recovery", "packaging_registration", "human_visual_approval"]},
+      "activation": {"runtime": false, "registrationAuthorized": false, "reason": "SOURCE_ONLY_REQUIRES_GEOMETRY_PROXY_RUNTIME_AND_HUMAN_EVIDENCE"}
+    },
+    {
+      "bindingId": "veyra_karak_gate_layout_binding_v1",
+      "seedId": "veyra_karak_gate",
+      "topologyPlanId": "veyra_karak_gate",
+      "status": "SOURCE_ONLY_CANDIDATE",
+      "runtimeReady": false,
+      "modelExistsClaimed": false,
+      "geometryStatus": "REQUIRED_NOT_AUTHORED_OR_VERIFIED",
+      "sourceContact": {
+        "sourcePath": "modules/space_exploration/src/systems/showcase_systems.js", "systemId": "veyra", "contactId": "veyra_karak_gate", "name": "Karak Phase Gate", "kind": "relay", "interaction": "system-jump", "jumpTo": "karak"
+      },
+      "topologyPlan": {"sourcePath": "assets/data/orbitaltopology-stage10.js", "schema": "Stage10OrbitalTopologyV1", "planId": "veyra_karak_gate", "topologyKind": "route_volumes_3d", "coordinateSpace": "CONTACT_LOCAL_METERS_CENTERED", "sourceIdentity": {"systemId": "veyra", "contactKind": "relay", "interaction": "system-jump", "jumpTo": "karak"}},
+      "envelope": {"topology": "orbital_smallcraft", "theatre": "orbital_smallcraft"},
+      "sizeBounds": {"sizeClass": "SMALL", "units": "meters", "width": 80, "height": 80, "depth": 80},
+      "requiredGeometryFamilies": [
+        {"familyId": "phase_gate_primary_ring", "role": "readable transit ring and route-safe aperture", "availability": "REQUIRED_NOT_PROVEN"},
+        {"familyId": "phase_gate_relay_pylons", "role": "relay perimeter, obstacle silhouette, and recoverable pylon", "availability": "REQUIRED_NOT_PROVEN"},
+        {"familyId": "phase_gate_stabilizer", "role": "phase stabilizer objective and deterministic recovery interface", "availability": "REQUIRED_NOT_PROVEN"},
+        {"familyId": "phase_gate_navigation_beacons", "role": "approach, perimeter, bypass, and egress markers", "availability": "REQUIRED_NOT_PROVEN"}
+      ],
+      "proxyBinding": {
+        "status": "SOURCE_ONLY_PROXY_SPEC", "topologyKind": "route_volumes_3d",
+        "routeVolumeIds": ["gate_veyra_approach", "gate_perimeter_port", "gate_stabilization_arc", "gate_perimeter_starboard", "gate_karak_egress", "gate_transit_axis", "gate_shear_bypass"],
+        "spawnZoneIds": ["gate_spawn_veyra", "gate_spawn_relay_drones"], "insertionZoneIds": ["gate_insertion_veyra"], "extractionZoneIds": ["gate_extraction_karak"],
+        "collision": {"status": "PENDING_AUTHORING_AND_VERIFICATION", "proxyType": "closed_obstacle_shells_and_exclusion_volumes", "requirements": ["sealed gate and pylon obstacle shells", "transit aperture exclusion boundary", "gravitic shear and lensing hazard volumes"]},
+        "navigation": {"status": "PENDING_AUTHORING_AND_VERIFICATION", "proxyType": "zero_g_route_volume_graph", "binds": ["gate_veyra_approach", "gate_perimeter_port", "gate_stabilization_arc", "gate_perimeter_starboard", "gate_karak_egress", "gate_transit_axis", "gate_shear_bypass"]}
+      },
+      "hazardsObjectives": {"status": "PENDING_AUTHORING_AND_VERIFICATION", "hazardIds": ["gate_gravitic_shear", "gate_lensing_wake"], "objectiveIds": ["gate_objective_stabilizer", "gate_objective_corridor"]},
+      "destructionRecovery": {"status": "PENDING_AUTHORING_AND_VERIFICATION", "stateMachineId": "deterministic_recovery_v1", "destructibleIds": ["gate_relay_pylon", "gate_phase_stabilizer"], "mode": "deterministic", "repairOrder": ["gate_relay_pylon", "gate_phase_stabilizer"], "checkpoint": "last-complete-state", "onFailure": "ROLL_BACK_TO_LAST_COMPLETE_STATE"},
+      "lodPerformance": {"profileId": "orbital_smallcraft_small_v1", "status": "UNMEASURED_TARGET", "requiredLodIds": ["LOD0", "LOD1", "LOD2"], "measurements": null},
+      "evidence": {"status": "PENDING", "passedGateIds": [], "pendingGateIds": ["source_contact_match", "topology_plan_preflight", "geometry_source_admission", "collision_navigation", "route_traversal", "hazard_objective", "destruction_recovery", "lod_generation", "hardware_gpu_performance", "context_loss_recovery", "packaging_registration", "human_visual_approval"]},
+      "activation": {"runtime": false, "registrationAuthorized": false, "reason": "SOURCE_ONLY_REQUIRES_GEOMETRY_PROXY_RUNTIME_AND_HUMAN_EVIDENCE"}
+    }
+  ],
+  "activation": {
+    "runtime": false,
+    "registrationAuthorized": false,
+    "manifestRegistrationAuthorized": false,
+    "reason": "SOURCE_ONLY_BINDINGS_REQUIRE_ALL_EVIDENCE_GATES_AND_SEPARATE_HUMAN_ACTIVATION"
+  }
+}

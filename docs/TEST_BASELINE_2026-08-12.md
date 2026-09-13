@@ -132,7 +132,8 @@ Two drifts, one behind the other:
 ### Gating status
 Neither test is in CI — `.github/workflows/ios-ipa.yml` runs only
 `tools/pack-www.mjs`. Both are listed as focused gates in
-`docs/HANDOFF_CLAUDE_CODE.md:240` and `docs/HANDOFF_CODEX_SPARK.md:211`.
+`docs/archive/handoffs/2026-08/HANDOFF_CLAUDE_CODE.md:240` and
+`docs/archive/handoffs/2026-08/HANDOFF_CODEX_SPARK.md:211`.
 
 ### Genuine (pre-existing, non-regressive) art gap found on the way
 `BLD_MDL_LEGION.nova` is **missing from the remap key list** at

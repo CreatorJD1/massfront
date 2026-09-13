@@ -1,10 +1,15 @@
 import http from 'http';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'node:url';
 import { spawnProjectChrome } from './pw-browser.mjs';
 
-const wwwDir = path.resolve('www');
-const artifactDir = 'C:\\Users\\Jason\\.gemini\\antigravity\\brain\\c902b81e-2bc5-48ac-9392-b0068d1f28de';
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const wwwDir = path.join(root, 'www');
+// Captures are repository-local scratch evidence, never writes into an agent's
+// global state directory. File-relative resolution also makes CWD irrelevant.
+const artifactDir = path.join(root, '.tmp', 'agent-captures', 'antigravity', 'ingame');
+fs.mkdirSync(artifactDir, { recursive: true });
 
 const server = http.createServer((req, res) => {
   let reqUrl = req.url.split('?')[0];

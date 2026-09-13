@@ -1,0 +1,2784 @@
+{
+  "pack": "MASSFRONT UI Production V3",
+  "version": "3.0.0",
+  "asset_count": 36,
+  "unique_components_including_states": 36,
+  "logical_coordinate_units": "SVG viewBox units",
+  "raster_scales": [
+    2,
+    4
+  ],
+  "alpha": "straight/unassociated RGBA, not premultiplied",
+  "color_encoding": "sRGB",
+  "edge_rgb_bleed": "RGB extends 2 logical pixels into clear edge texels; alpha remains zero. This is intentional filtering padding, not a background.",
+  "art_method": "Individually authored vector artwork; independently rasterized for each resolution. No screenshot or sprite-sheet crops, no bitmap upscaling.",
+  "excludes": [
+    "environment/background illustrations",
+    "portrait artwork",
+    "unit artwork",
+    "MASSFRONT logo artwork",
+    "baked UI labels or numbers"
+  ],
+  "assets": [
+    {
+      "id": "panel_player_info",
+      "index": 1,
+      "title": "Player information plate",
+      "category": "panels",
+      "logical_size": [
+        384,
+        112
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "files": {
+        "svg": "svg/panel_player_info.svg",
+        "png_2x": "png_2x/panel_player_info.png",
+        "png_4x": "png_4x/panel_player_info.png"
+      },
+      "pixel_sizes": {
+        "png_2x": [
+          768,
+          224
+        ],
+        "png_4x": [
+          1536,
+          448
+        ]
+      },
+      "content_rect_logical": [
+        30,
+        26,
+        324,
+        60
+      ],
+      "resizing": {
+        "mode": "nine_slice",
+        "borders_logical": [
+          24,
+          24,
+          24,
+          24
+        ]
+      },
+      "state_group": null,
+      "state": null,
+      "hit_polygon_logical": [
+        [
+          22,
+          14
+        ],
+        [
+          362,
+          14
+        ],
+        [
+          370,
+          22
+        ],
+        [
+          370,
+          90
+        ],
+        [
+          362,
+          98
+        ],
+        [
+          22,
+          98
+        ],
+        [
+          14,
+          90
+        ],
+        [
+          14,
+          22
+        ]
+      ],
+      "shape_sha256": "6bdf49d60240163feaeba4e7c99af2df70ac1d7200451c1326695bcbbc09c5b9",
+      "required_transparent_points_logical": [],
+      "note": "Text plate only. Portrait frame is a separate asset.",
+      "sha256": {
+        "png_2x": "509d76614315dad8d994bdffead76ea21716271b324990e4a19fd8a9e494638a",
+        "png_4x": "d6d7d5c4ae4d209db8136052a26f19d70f617e813fabc85e6e9f232a27ba8eb0",
+        "svg": "d6ced9c175037e317751c43b9e11aee3374949829f9755f81a1eac1f8c82fdb5"
+      }
+    },
+    {
+      "id": "panel_statistics",
+      "index": 2,
+      "title": "Statistics plate with divider",
+      "category": "panels",
+      "logical_size": [
+        384,
+        144
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "files": {
+        "svg": "svg/panel_statistics.svg",
+        "png_2x": "png_2x/panel_statistics.png",
+        "png_4x": "png_4x/panel_statistics.png"
+      },
+      "pixel_sizes": {
+        "png_2x": [
+          768,
+          288
+        ],
+        "png_4x": [
+          1536,
+          576
+        ]
+      },
+      "content_rect_logical": [
+        110,
+        30,
+        244,
+        82
+      ],
+      "resizing": {
+        "mode": "nine_slice",
+        "borders_logical": [
+          108,
+          24,
+          24,
+          24
+        ]
+      },
+      "state_group": null,
+      "state": null,
+      "hit_polygon_logical": [
+        [
+          22,
+          14
+        ],
+        [
+          362,
+          14
+        ],
+        [
+          370,
+          22
+        ],
+        [
+          370,
+          122
+        ],
+        [
+          362,
+          130
+        ],
+        [
+          22,
+          130
+        ],
+        [
+          14,
+          122
+        ],
+        [
+          14,
+          22
+        ]
+      ],
+      "shape_sha256": "5275ca9d55eab78ce0975c22585b4ea6850cca7a2b9d6d8ea832a508812d9f06",
+      "required_transparent_points_logical": [],
+      "note": "Currency icon and every stat value remain separate.",
+      "sha256": {
+        "png_2x": "477e072c74852cd06c6748e860b8b2c79a20325d01bbf4af0d20841143d71587",
+        "png_4x": "3a3555615b6ef73bb6e37ec2f76b67d9faee806aa60443816fb05ebb0dc5abb4",
+        "svg": "0645c61fe01d2adcfbdf83f7c88dd6ed82c826c9929f99bdb0bc68ce6c3be114"
+      }
+    },
+    {
+      "id": "panel_rank",
+      "index": 3,
+      "title": "Rank and progression plate",
+      "category": "panels",
+      "logical_size": [
+        240,
+        200
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "files": {
+        "svg": "svg/panel_rank.svg",
+        "png_2x": "png_2x/panel_rank.png",
+        "png_4x": "png_4x/panel_rank.png"
+      },
+      "pixel_sizes": {
+        "png_2x": [
+          480,
+          400
+        ],
+        "png_4x": [
+          960,
+          800
+        ]
+      },
+      "content_rect_logical": [
+        30,
+        29,
+        180,
+        139
+      ],
+      "resizing": {
+        "mode": "nine_slice",
+        "borders_logical": [
+          24,
+          64,
+          24,
+          24
+        ]
+      },
+      "state_group": null,
+      "state": null,
+      "hit_polygon_logical": [
+        [
+          22,
+          14
+        ],
+        [
+          218,
+          14
+        ],
+        [
+          226,
+          22
+        ],
+        [
+          226,
+          178
+        ],
+        [
+          218,
+          186
+        ],
+        [
+          22,
+          186
+        ],
+        [
+          14,
+          178
+        ],
+        [
+          14,
+          22
+        ]
+      ],
+      "shape_sha256": "835f8d728f988e33ac7320e283877a8af1a8e91640a4b767eab54ffa920a6b8c",
+      "required_transparent_points_logical": [],
+      "note": "Empty panel: rank star, XP track, fill and labels are separate.",
+      "sha256": {
+        "png_2x": "d497be2ddcac04555442d6fc14b8091ce637543e0cc3dce51671bdcaf1a400b5",
+        "png_4x": "b64a1175ab12446b9e48b0a0bde7df81d51c5410e90cf0169c93906445dbef0c",
+        "svg": "46491d5c66f3b198a881dc40f848d08eb209fbd87e83f9c4458ef79b538fca4b"
+      }
+    },
+    {
+      "id": "panel_requisition",
+      "index": 4,
+      "title": "Requisition information plate",
+      "category": "panels",
+      "logical_size": [
+        256,
+        176
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "files": {
+        "svg": "svg/panel_requisition.svg",
+        "png_2x": "png_2x/panel_requisition.png",
+        "png_4x": "png_4x/panel_requisition.png"
+      },
+      "pixel_sizes": {
+        "png_2x": [
+          512,
+          352
+        ],
+        "png_4x": [
+          1024,
+          704
+        ]
+      },
+      "content_rect_logical": [
+        30,
+        30,
+        196,
+        116
+      ],
+      "resizing": {
+        "mode": "nine_slice",
+        "borders_logical": [
+          24,
+          72,
+          24,
+          24
+        ]
+      },
+      "state_group": null,
+      "state": null,
+      "hit_polygon_logical": [
+        [
+          22,
+          14
+        ],
+        [
+          234,
+          14
+        ],
+        [
+          242,
+          22
+        ],
+        [
+          242,
+          154
+        ],
+        [
+          234,
+          162
+        ],
+        [
+          22,
+          162
+        ],
+        [
+          14,
+          154
+        ],
+        [
+          14,
+          22
+        ]
+      ],
+      "shape_sha256": "ab7f9c8d220cdc686ce803b03fc7f5d3788848c42eee4a09c23a89af6d35184c",
+      "required_transparent_points_logical": [],
+      "note": "No baked currency amount, icon, or progress.",
+      "sha256": {
+        "png_2x": "5026049204cb8b5c3f72de8b50dc7a5aeeffd21d092cd4fba19bb6b887e8c34f",
+        "png_4x": "62dc1b59dfeec01d3371107568ec6ca48ea7c53e60806c3778eae65edc1b5000",
+        "svg": "41ef888af92c07c26b9c29391ca25b98b67e0c15d870a81dbcc260ae92307ddf"
+      }
+    },
+    {
+      "id": "frame_viewport",
+      "index": 5,
+      "title": "Main live-model viewport frame",
+      "category": "frames",
+      "logical_size": [
+        560,
+        384
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "files": {
+        "svg": "svg/frame_viewport.svg",
+        "png_2x": "png_2x/frame_viewport.png",
+        "png_4x": "png_4x/frame_viewport.png"
+      },
+      "pixel_sizes": {
+        "png_2x": [
+          1120,
+          768
+        ],
+        "png_4x": [
+          2240,
+          1536
+        ]
+      },
+      "content_rect_logical": [
+        42,
+        42,
+        476,
+        300
+      ],
+      "resizing": {
+        "mode": "nine_slice",
+        "borders_logical": [
+          92,
+          92,
+          92,
+          92
+        ]
+      },
+      "state_group": null,
+      "state": null,
+      "hit_polygon_logical": [
+        [
+          44,
+          16
+        ],
+        [
+          516,
+          16
+        ],
+        [
+          544,
+          44
+        ],
+        [
+          544,
+          340
+        ],
+        [
+          516,
+          368
+        ],
+        [
+          44,
+          368
+        ],
+        [
+          16,
+          340
+        ],
+        [
+          16,
+          44
+        ]
+      ],
+      "shape_sha256": "d48c8abca80b5add2ee7ff2f6a761d357851da173636b595152932547fcb063e",
+      "required_transparent_points_logical": [
+        [
+          280,
+          192
+        ],
+        [
+          80,
+          80
+        ],
+        [
+          480,
+          304
+        ]
+      ],
+      "note": "True alpha cutout. Place the 3D viewport below this frame; no glass or model image is baked in.",
+      "sha256": {
+        "png_2x": "8a552a18cd13a3c30d0ffeedeb543368aa57dd82852184389693618afee6a065",
+        "png_4x": "f3deb21406f88a59af67640bd47706e0a6b98d70304a4e6da12075b427c11789",
+        "svg": "78020951948e34a187c031a537733e993955af9f659be663da6a6139e298cf45"
+      }
+    },
+    {
+      "id": "overlay_target_brackets",
+      "index": 6,
+      "title": "Holographic targeting brackets",
+      "category": "overlays",
+      "logical_size": [
+        560,
+        384
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "files": {
+        "svg": "svg/overlay_target_brackets.svg",
+        "png_2x": "png_2x/overlay_target_brackets.png",
+        "png_4x": "png_4x/overlay_target_brackets.png"
+      },
+      "pixel_sizes": {
+        "png_2x": [
+          1120,
+          768
+        ],
+        "png_4x": [
+          2240,
+          1536
+        ]
+      },
+      "content_rect_logical": null,
+      "resizing": {
+        "mode": "uniform"
+      },
+      "state_group": null,
+      "state": null,
+      "hit_polygon_logical": null,
+      "shape_sha256": null,
+      "required_transparent_points_logical": [
+        [
+          280,
+          192
+        ]
+      ],
+      "note": "Shares the viewport canvas for direct layering. Transparent between all four brackets.",
+      "sha256": {
+        "png_2x": "ef490af39d3e7aeef6547421367072ca15b95de08601506ed56e208be4ad4525",
+        "png_4x": "5c57b830383effb150f5f9a54db60299af1bce19f637130442c9b2a5bd1aa423",
+        "svg": "310bee14a7f5937b5feb5b0ddf8c460a4924456e71f65bb3e2ba370f146ef17b"
+      }
+    },
+    {
+      "id": "frame_faction",
+      "index": 7,
+      "title": "Faction badge plate",
+      "category": "frames",
+      "logical_size": [
+        160,
+        184
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "files": {
+        "svg": "svg/frame_faction.svg",
+        "png_2x": "png_2x/frame_faction.png",
+        "png_4x": "png_4x/frame_faction.png"
+      },
+      "pixel_sizes": {
+        "png_2x": [
+          320,
+          368
+        ],
+        "png_4x": [
+          640,
+          736
+        ]
+      },
+      "content_rect_logical": [
+        38,
+        48,
+        84,
+        89
+      ],
+      "resizing": {
+        "mode": "uniform"
+      },
+      "state_group": null,
+      "state": null,
+      "hit_polygon_logical": [
+        [
+          80,
+          16
+        ],
+        [
+          146,
+          54
+        ],
+        [
+          146,
+          130
+        ],
+        [
+          80,
+          168
+        ],
+        [
+          14,
+          130
+        ],
+        [
+          14,
+          54
+        ]
+      ],
+      "shape_sha256": "d39e62eb4393dd40533cd005081b2817ce8cbacc211e7d2bf6d5f4812fbc81e3",
+      "required_transparent_points_logical": [],
+      "note": "Use icon_faction as a separate overlaid graphic.",
+      "sha256": {
+        "png_2x": "fccad4f8aebbdee5f9c0e2efd163a574ccedb4c78c915d6f4c3d0b8b329686fc",
+        "png_4x": "4b95788a2a846db5cb822e2baeb2eb54c8fcef910f5a25733d0d65e6d556d99c",
+        "svg": "34c47a14a22704763868bb8259478519c18efe0e9dcfe0d8018a897f43bba4fd"
+      }
+    },
+    {
+      "id": "frame_unit_thumbnail",
+      "index": 8,
+      "title": "Empty unit thumbnail frame",
+      "category": "frames",
+      "logical_size": [
+        160,
+        160
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "files": {
+        "svg": "svg/frame_unit_thumbnail.svg",
+        "png_2x": "png_2x/frame_unit_thumbnail.png",
+        "png_4x": "png_4x/frame_unit_thumbnail.png"
+      },
+      "pixel_sizes": {
+        "png_2x": [
+          320,
+          320
+        ],
+        "png_4x": [
+          640,
+          640
+        ]
+      },
+      "content_rect_logical": [
+        31,
+        31,
+        98,
+        98
+      ],
+      "resizing": {
+        "mode": "uniform"
+      },
+      "state_group": null,
+      "state": null,
+      "hit_polygon_logical": [
+        [
+          30,
+          14
+        ],
+        [
+          130,
+          14
+        ],
+        [
+          146,
+          30
+        ],
+        [
+          146,
+          130
+        ],
+        [
+          130,
+          146
+        ],
+        [
+          30,
+          146
+        ],
+        [
+          14,
+          130
+        ],
+        [
+          14,
+          30
+        ]
+      ],
+      "shape_sha256": "1b2b1e6530ba2adec053809e36d6cdd2853ef5893a155c12bec3e413a172c7aa",
+      "required_transparent_points_logical": [
+        [
+          80,
+          80
+        ]
+      ],
+      "note": "Transparent aperture, no unit or background artwork.",
+      "sha256": {
+        "png_2x": "8485b9d808a7c3827ecbee4b676ae6413dcc0ae889c4bcc82741125f78272de4",
+        "png_4x": "1add5823c493786b2e4a20259a98fc1958bcbfd7f3179eb592460ad9a6c922b5",
+        "svg": "073d5d2b6b0d8252e4f3eb58871ac58d16a519f923884c3aaf90e4e603ed83af"
+      }
+    },
+    {
+      "id": "panel_unit_description",
+      "index": 9,
+      "title": "Unit information card",
+      "category": "panels",
+      "logical_size": [
+        336,
+        176
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "files": {
+        "svg": "svg/panel_unit_description.svg",
+        "png_2x": "png_2x/panel_unit_description.png",
+        "png_4x": "png_4x/panel_unit_description.png"
+      },
+      "pixel_sizes": {
+        "png_2x": [
+          672,
+          352
+        ],
+        "png_4x": [
+          1344,
+          704
+        ]
+      },
+      "content_rect_logical": [
+        30,
+        28,
+        262,
+        116
+      ],
+      "resizing": {
+        "mode": "nine_slice",
+        "borders_logical": [
+          26,
+          68,
+          46,
+          54
+        ]
+      },
+      "state_group": null,
+      "state": null,
+      "hit_polygon_logical": [
+        [
+          22,
+          14
+        ],
+        [
+          314,
+          14
+        ],
+        [
+          322,
+          22
+        ],
+        [
+          322,
+          122
+        ],
+        [
+          296,
+          162
+        ],
+        [
+          22,
+          162
+        ],
+        [
+          14,
+          154
+        ],
+        [
+          14,
+          22
+        ]
+      ],
+      "shape_sha256": "eb7a3cf41910bd27ad0208dfaa2ed125ae921411600eca095dd4c85d3ead22dc",
+      "required_transparent_points_logical": [],
+      "note": "Empty text card. The diagonal lower-right corner is preserved in its slice margin.",
+      "sha256": {
+        "png_2x": "47d53d15973c7fd1c78cb3fa7a49eb4d35eaa722685ec3a4d7377c35d0ceaf2f",
+        "png_4x": "54ae5bf4cd74d702f0f745b8d333bee9712939b4fa6331cb68717a1fecea8cba",
+        "svg": "4837026cd1702219739519b59474088789f1f40d9c75532d5733a99fc9df6029"
+      }
+    },
+    {
+      "id": "menu_normal",
+      "index": 10,
+      "title": "Angled menu button \u2014 normal",
+      "category": "buttons",
+      "logical_size": [
+        560,
+        128
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "files": {
+        "svg": "svg/menu_normal.svg",
+        "png_2x": "png_2x/menu_normal.png",
+        "png_4x": "png_4x/menu_normal.png"
+      },
+      "pixel_sizes": {
+        "png_2x": [
+          1120,
+          256
+        ],
+        "png_4x": [
+          2240,
+          512
+        ]
+      },
+      "content_rect_logical": [
+        68,
+        29,
+        458,
+        70
+      ],
+      "resizing": {
+        "mode": "horizontal_three_slice",
+        "borders_logical": [
+          72,
+          0,
+          28,
+          0
+        ],
+        "height_logical": 128
+      },
+      "state_group": "menu",
+      "state": "normal",
+      "hit_polygon_logical": [
+        [
+          56.941142489555425,
+          16
+        ],
+        [
+          538,
+          16
+        ],
+        [
+          544,
+          22
+        ],
+        [
+          544,
+          106
+        ],
+        [
+          538,
+          112
+        ],
+        [
+          22,
+          112
+        ],
+        [
+          17.601077025535005,
+          107.601077025535
+        ],
+        [
+          47.50762172802675,
+          25.433520761528676
+        ]
+      ],
+      "shape_sha256": "6ae0dbcf32e756d62fd7e9e111c6195539fcdc3df0403bd5dd3152347b1426d4",
+      "required_transparent_points_logical": [],
+      "note": "Exact 20-degree left rake from vertical, vertical right edge. No text or slash icon baked in.",
+      "sha256": {
+        "png_2x": "9e98629deaaf70b734af8e52bb8365fc995f382a7c73c987670fe6720f5da212",
+        "png_4x": "bc52f89f39b4e147eee972008150c704e5ef4dca18cdc13eb30113e8a280b30b",
+        "svg": "8554a53159de735a096eacde5f9a1a41dad384e0a68b518d2d06ea6c3d21f100"
+      }
+    },
+    {
+      "id": "menu_selected",
+      "index": 11,
+      "title": "Angled menu button \u2014 selected",
+      "category": "buttons",
+      "logical_size": [
+        560,
+        128
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "files": {
+        "svg": "svg/menu_selected.svg",
+        "png_2x": "png_2x/menu_selected.png",
+        "png_4x": "png_4x/menu_selected.png"
+      },
+      "pixel_sizes": {
+        "png_2x": [
+          1120,
+          256
+        ],
+        "png_4x": [
+          2240,
+          512
+        ]
+      },
+      "content_rect_logical": [
+        68,
+        29,
+        458,
+        70
+      ],
+      "resizing": {
+        "mode": "horizontal_three_slice",
+        "borders_logical": [
+          72,
+          0,
+          28,
+          0
+        ],
+        "height_logical": 128
+      },
+      "state_group": "menu",
+      "state": "selected",
+      "hit_polygon_logical": [
+        [
+          56.941142489555425,
+          16
+        ],
+        [
+          538,
+          16
+        ],
+        [
+          544,
+          22
+        ],
+        [
+          544,
+          106
+        ],
+        [
+          538,
+          112
+        ],
+        [
+          22,
+          112
+        ],
+        [
+          17.601077025535005,
+          107.601077025535
+        ],
+        [
+          47.50762172802675,
+          25.433520761528676
+        ]
+      ],
+      "shape_sha256": "6ae0dbcf32e756d62fd7e9e111c6195539fcdc3df0403bd5dd3152347b1426d4",
+      "required_transparent_points_logical": [],
+      "note": "Exact 20-degree left rake from vertical, vertical right edge. No text or slash icon baked in.",
+      "sha256": {
+        "png_2x": "c572bb6cea82863e4b4764981037f4d38e7450f942ce3d307e17a7cc3f9fcee4",
+        "png_4x": "b739971cc51da3b3743418f36515f054e3a014936d7bc3af6443a7ae712b54b7",
+        "svg": "d7ca7aa12272130b3ebbdf806a923db358728db324299a11716663b42e61747e"
+      }
+    },
+    {
+      "id": "menu_pressed",
+      "index": 12,
+      "title": "Angled menu button \u2014 pressed",
+      "category": "buttons",
+      "logical_size": [
+        560,
+        128
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "files": {
+        "svg": "svg/menu_pressed.svg",
+        "png_2x": "png_2x/menu_pressed.png",
+        "png_4x": "png_4x/menu_pressed.png"
+      },
+      "pixel_sizes": {
+        "png_2x": [
+          1120,
+          256
+        ],
+        "png_4x": [
+          2240,
+          512
+        ]
+      },
+      "content_rect_logical": [
+        68,
+        29,
+        458,
+        70
+      ],
+      "resizing": {
+        "mode": "horizontal_three_slice",
+        "borders_logical": [
+          72,
+          0,
+          28,
+          0
+        ],
+        "height_logical": 128
+      },
+      "state_group": "menu",
+      "state": "pressed",
+      "hit_polygon_logical": [
+        [
+          56.941142489555425,
+          16
+        ],
+        [
+          538,
+          16
+        ],
+        [
+          544,
+          22
+        ],
+        [
+          544,
+          106
+        ],
+        [
+          538,
+          112
+        ],
+        [
+          22,
+          112
+        ],
+        [
+          17.601077025535005,
+          107.601077025535
+        ],
+        [
+          47.50762172802675,
+          25.433520761528676
+        ]
+      ],
+      "shape_sha256": "6ae0dbcf32e756d62fd7e9e111c6195539fcdc3df0403bd5dd3152347b1426d4",
+      "required_transparent_points_logical": [],
+      "note": "Exact 20-degree left rake from vertical, vertical right edge. No text or slash icon baked in.",
+      "sha256": {
+        "png_2x": "e70f0da6d5d3f02973db822c9b4b47ce1ca5f16b611a58291ba70f61c7752d18",
+        "png_4x": "8d340fc8e6d01217d34b6b09476043187a3ef9edda48a440b4c2c03c49eefa4b",
+        "svg": "45daf72b35c53e4c42f85da89e721290a12207560c680fbfee409698a85cff2a"
+      }
+    },
+    {
+      "id": "menu_disabled",
+      "index": 13,
+      "title": "Angled menu button \u2014 disabled",
+      "category": "buttons",
+      "logical_size": [
+        560,
+        128
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "files": {
+        "svg": "svg/menu_disabled.svg",
+        "png_2x": "png_2x/menu_disabled.png",
+        "png_4x": "png_4x/menu_disabled.png"
+      },
+      "pixel_sizes": {
+        "png_2x": [
+          1120,
+          256
+        ],
+        "png_4x": [
+          2240,
+          512
+        ]
+      },
+      "content_rect_logical": [
+        68,
+        29,
+        458,
+        70
+      ],
+      "resizing": {
+        "mode": "horizontal_three_slice",
+        "borders_logical": [
+          72,
+          0,
+          28,
+          0
+        ],
+        "height_logical": 128
+      },
+      "state_group": "menu",
+      "state": "disabled",
+      "hit_polygon_logical": [
+        [
+          56.941142489555425,
+          16
+        ],
+        [
+          538,
+          16
+        ],
+        [
+          544,
+          22
+        ],
+        [
+          544,
+          106
+        ],
+        [
+          538,
+          112
+        ],
+        [
+          22,
+          112
+        ],
+        [
+          17.601077025535005,
+          107.601077025535
+        ],
+        [
+          47.50762172802675,
+          25.433520761528676
+        ]
+      ],
+      "shape_sha256": "6ae0dbcf32e756d62fd7e9e111c6195539fcdc3df0403bd5dd3152347b1426d4",
+      "required_transparent_points_logical": [],
+      "note": "Exact 20-degree left rake from vertical, vertical right edge. No text or slash icon baked in.",
+      "sha256": {
+        "png_2x": "6f08ef0326584d36e279fe8effb461a56281a79babbc048e393be35bed053749",
+        "png_4x": "d6a5e1a260e7f5896038392a6b8a4c4dc52d465d125fa166554199b8dbd36745",
+        "svg": "39621baeb99f4c8bcec3a6c0accb5e205daa55402df36b08d763d63fee6dcda8"
+      }
+    },
+    {
+      "id": "deploy_normal",
+      "index": 14,
+      "title": "Deploy action plate \u2014 normal",
+      "category": "buttons",
+      "logical_size": [
+        704,
+        160
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "files": {
+        "svg": "svg/deploy_normal.svg",
+        "png_2x": "png_2x/deploy_normal.png",
+        "png_4x": "png_4x/deploy_normal.png"
+      },
+      "pixel_sizes": {
+        "png_2x": [
+          1408,
+          320
+        ],
+        "png_4x": [
+          2816,
+          640
+        ]
+      },
+      "content_rect_logical": [
+        57,
+        56,
+        590,
+        48
+      ],
+      "resizing": {
+        "mode": "horizontal_three_slice",
+        "borders_logical": [
+          182,
+          0,
+          182,
+          0
+        ],
+        "height_logical": 160
+      },
+      "state_group": "deploy",
+      "state": "normal",
+      "hit_polygon_logical": [
+        [
+          34,
+          16
+        ],
+        [
+          151,
+          16
+        ],
+        [
+          169,
+          30
+        ],
+        [
+          535,
+          30
+        ],
+        [
+          553,
+          16
+        ],
+        [
+          670,
+          16
+        ],
+        [
+          688,
+          34
+        ],
+        [
+          688,
+          126
+        ],
+        [
+          670,
+          144
+        ],
+        [
+          553,
+          144
+        ],
+        [
+          535,
+          130
+        ],
+        [
+          169,
+          130
+        ],
+        [
+          151,
+          144
+        ],
+        [
+          34,
+          144
+        ],
+        [
+          16,
+          126
+        ],
+        [
+          16,
+          34
+        ]
+      ],
+      "shape_sha256": "e9d11280af479bcfea448c4875df81f580be4b1538c80b186ae97fc1b2eb5f43",
+      "required_transparent_points_logical": [],
+      "note": "No label or chevron baked in. Caution stripes appear only on end-cap rims.",
+      "sha256": {
+        "png_2x": "33e2095b7eff7d13f282dc79b06ab558fb095077447e34e0f6b409fb8111809e",
+        "png_4x": "d4ef36709ecd320ea1108bfaa9bcdd42fe03dbfb68f0fa028a224bd6fffc1b3d",
+        "svg": "49ab76a6c511e4b981f27a6ba2ed0e99d21076d3274df990134903998b982d52"
+      }
+    },
+    {
+      "id": "deploy_selected",
+      "index": 15,
+      "title": "Deploy action plate \u2014 selected",
+      "category": "buttons",
+      "logical_size": [
+        704,
+        160
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "files": {
+        "svg": "svg/deploy_selected.svg",
+        "png_2x": "png_2x/deploy_selected.png",
+        "png_4x": "png_4x/deploy_selected.png"
+      },
+      "pixel_sizes": {
+        "png_2x": [
+          1408,
+          320
+        ],
+        "png_4x": [
+          2816,
+          640
+        ]
+      },
+      "content_rect_logical": [
+        57,
+        56,
+        590,
+        48
+      ],
+      "resizing": {
+        "mode": "horizontal_three_slice",
+        "borders_logical": [
+          182,
+          0,
+          182,
+          0
+        ],
+        "height_logical": 160
+      },
+      "state_group": "deploy",
+      "state": "selected",
+      "hit_polygon_logical": [
+        [
+          34,
+          16
+        ],
+        [
+          151,
+          16
+        ],
+        [
+          169,
+          30
+        ],
+        [
+          535,
+          30
+        ],
+        [
+          553,
+          16
+        ],
+        [
+          670,
+          16
+        ],
+        [
+          688,
+          34
+        ],
+        [
+          688,
+          126
+        ],
+        [
+          670,
+          144
+        ],
+        [
+          553,
+          144
+        ],
+        [
+          535,
+          130
+        ],
+        [
+          169,
+          130
+        ],
+        [
+          151,
+          144
+        ],
+        [
+          34,
+          144
+        ],
+        [
+          16,
+          126
+        ],
+        [
+          16,
+          34
+        ]
+      ],
+      "shape_sha256": "e9d11280af479bcfea448c4875df81f580be4b1538c80b186ae97fc1b2eb5f43",
+      "required_transparent_points_logical": [],
+      "note": "No label or chevron baked in. Caution stripes appear only on end-cap rims.",
+      "sha256": {
+        "png_2x": "cb2eb1358dc10a154226e4747ba9d1317196cd9b971c6bf76717252b88667501",
+        "png_4x": "450f43770fca44c057cae3fc50b0eda10cb36c3fc1693d8f5ad79544b61c9c5b",
+        "svg": "d2d911866b03794deed8ef02536692b4a6f36e35c50705a03677c654753eeedd"
+      }
+    },
+    {
+      "id": "deploy_pressed",
+      "index": 16,
+      "title": "Deploy action plate \u2014 pressed",
+      "category": "buttons",
+      "logical_size": [
+        704,
+        160
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "files": {
+        "svg": "svg/deploy_pressed.svg",
+        "png_2x": "png_2x/deploy_pressed.png",
+        "png_4x": "png_4x/deploy_pressed.png"
+      },
+      "pixel_sizes": {
+        "png_2x": [
+          1408,
+          320
+        ],
+        "png_4x": [
+          2816,
+          640
+        ]
+      },
+      "content_rect_logical": [
+        57,
+        56,
+        590,
+        48
+      ],
+      "resizing": {
+        "mode": "horizontal_three_slice",
+        "borders_logical": [
+          182,
+          0,
+          182,
+          0
+        ],
+        "height_logical": 160
+      },
+      "state_group": "deploy",
+      "state": "pressed",
+      "hit_polygon_logical": [
+        [
+          34,
+          16
+        ],
+        [
+          151,
+          16
+        ],
+        [
+          169,
+          30
+        ],
+        [
+          535,
+          30
+        ],
+        [
+          553,
+          16
+        ],
+        [
+          670,
+          16
+        ],
+        [
+          688,
+          34
+        ],
+        [
+          688,
+          126
+        ],
+        [
+          670,
+          144
+        ],
+        [
+          553,
+          144
+        ],
+        [
+          535,
+          130
+        ],
+        [
+          169,
+          130
+        ],
+        [
+          151,
+          144
+        ],
+        [
+          34,
+          144
+        ],
+        [
+          16,
+          126
+        ],
+        [
+          16,
+          34
+        ]
+      ],
+      "shape_sha256": "e9d11280af479bcfea448c4875df81f580be4b1538c80b186ae97fc1b2eb5f43",
+      "required_transparent_points_logical": [],
+      "note": "No label or chevron baked in. Caution stripes appear only on end-cap rims.",
+      "sha256": {
+        "png_2x": "edc318723778846591d63508255b83858eeccfe0eccb39ad4dc75805a0126f35",
+        "png_4x": "4bc52f244f124a60836f0e30f620eb8204c8602d05eb29d959d9b260caf61311",
+        "svg": "5e4b99e38978a398a309b1d1b9f2e12b4fbe8a02db1ced5b288b8e67c94b843c"
+      }
+    },
+    {
+      "id": "footer_base",
+      "index": 17,
+      "title": "Bottom navigation backing plate",
+      "category": "panels",
+      "logical_size": [
+        704,
+        168
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "files": {
+        "svg": "svg/footer_base.svg",
+        "png_2x": "png_2x/footer_base.png",
+        "png_4x": "png_4x/footer_base.png"
+      },
+      "pixel_sizes": {
+        "png_2x": [
+          1408,
+          336
+        ],
+        "png_4x": [
+          2816,
+          672
+        ]
+      },
+      "content_rect_logical": [
+        28,
+        26,
+        648,
+        116
+      ],
+      "resizing": {
+        "mode": "nine_slice",
+        "borders_logical": [
+          30,
+          28,
+          30,
+          28
+        ]
+      },
+      "state_group": null,
+      "state": null,
+      "hit_polygon_logical": [
+        [
+          26,
+          12
+        ],
+        [
+          678,
+          12
+        ],
+        [
+          692,
+          26
+        ],
+        [
+          692,
+          142
+        ],
+        [
+          678,
+          156
+        ],
+        [
+          26,
+          156
+        ],
+        [
+          12,
+          142
+        ],
+        [
+          12,
+          26
+        ]
+      ],
+      "shape_sha256": "d70d567b9ad7002fcc17bd68c55a6f44cbb6b307e8576a0f6768cfc77e879aad",
+      "required_transparent_points_logical": [],
+      "note": "A neutral backing plate only; four independent nav cells are placed over it.",
+      "sha256": {
+        "png_2x": "d549049c0007e56c32336ae82ed0374119c5d1978b6723a9b03d0d19d48844c8",
+        "png_4x": "173ba0ce8b14318be581042a4d0f5cf99ecc983b48adbd8fc5b983cedc8b84e1",
+        "svg": "9615f08b0a262dbf8eb50a691dea9bc80dd3098b6c1ee432ec8b41141518a996"
+      }
+    },
+    {
+      "id": "nav_normal",
+      "index": 18,
+      "title": "Bottom nav cell \u2014 normal",
+      "category": "buttons",
+      "logical_size": [
+        176,
+        144
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "files": {
+        "svg": "svg/nav_normal.svg",
+        "png_2x": "png_2x/nav_normal.png",
+        "png_4x": "png_4x/nav_normal.png"
+      },
+      "pixel_sizes": {
+        "png_2x": [
+          352,
+          288
+        ],
+        "png_4x": [
+          704,
+          576
+        ]
+      },
+      "content_rect_logical": [
+        24,
+        23,
+        128,
+        96
+      ],
+      "resizing": {
+        "mode": "nine_slice",
+        "borders_logical": [
+          24,
+          24,
+          24,
+          24
+        ]
+      },
+      "state_group": "nav",
+      "state": "normal",
+      "hit_polygon_logical": [
+        [
+          20,
+          12
+        ],
+        [
+          156,
+          12
+        ],
+        [
+          164,
+          20
+        ],
+        [
+          164,
+          124
+        ],
+        [
+          156,
+          132
+        ],
+        [
+          20,
+          132
+        ],
+        [
+          12,
+          124
+        ],
+        [
+          12,
+          20
+        ]
+      ],
+      "shape_sha256": "dccc76a641b8a5f2f63d335e13dd601a3bce8479ced9ce8ce3247f0641f75aa7",
+      "required_transparent_points_logical": [],
+      "note": "Blank cell. Place icon and label as separate layers; orange selection is not attached to any specific tab.",
+      "sha256": {
+        "png_2x": "61947ab07e661c79e458834a3c367fcf8fac0c53d676761bb934483f4f4ef840",
+        "png_4x": "4378bda289992b340a102a56ffc0000b143b4c9a1dc798e9d5a25610494421d6",
+        "svg": "0eca5aa25a6cef8d6ee57e68317e7765fdb7aa00254baa9cc925d1be3063d959"
+      }
+    },
+    {
+      "id": "nav_selected",
+      "index": 19,
+      "title": "Bottom nav cell \u2014 selected",
+      "category": "buttons",
+      "logical_size": [
+        176,
+        144
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "files": {
+        "svg": "svg/nav_selected.svg",
+        "png_2x": "png_2x/nav_selected.png",
+        "png_4x": "png_4x/nav_selected.png"
+      },
+      "pixel_sizes": {
+        "png_2x": [
+          352,
+          288
+        ],
+        "png_4x": [
+          704,
+          576
+        ]
+      },
+      "content_rect_logical": [
+        24,
+        23,
+        128,
+        96
+      ],
+      "resizing": {
+        "mode": "nine_slice",
+        "borders_logical": [
+          24,
+          24,
+          24,
+          24
+        ]
+      },
+      "state_group": "nav",
+      "state": "selected",
+      "hit_polygon_logical": [
+        [
+          20,
+          12
+        ],
+        [
+          156,
+          12
+        ],
+        [
+          164,
+          20
+        ],
+        [
+          164,
+          124
+        ],
+        [
+          156,
+          132
+        ],
+        [
+          20,
+          132
+        ],
+        [
+          12,
+          124
+        ],
+        [
+          12,
+          20
+        ]
+      ],
+      "shape_sha256": "dccc76a641b8a5f2f63d335e13dd601a3bce8479ced9ce8ce3247f0641f75aa7",
+      "required_transparent_points_logical": [],
+      "note": "Blank cell. Place icon and label as separate layers; orange selection is not attached to any specific tab.",
+      "sha256": {
+        "png_2x": "5ad18045caf5eeef618e0d743160749866ad73dc37009e275a09ecb87c273286",
+        "png_4x": "c83e1c6cb205d8612e55c94c40bac45335586ccf8cc0175d4ccf353c158340a4",
+        "svg": "d13870f47b82ec69f4fc4882f070f4aae4a97b0f6abccf90bdc779723460e4cf"
+      }
+    },
+    {
+      "id": "nav_pressed",
+      "index": 20,
+      "title": "Bottom nav cell \u2014 pressed",
+      "category": "buttons",
+      "logical_size": [
+        176,
+        144
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "files": {
+        "svg": "svg/nav_pressed.svg",
+        "png_2x": "png_2x/nav_pressed.png",
+        "png_4x": "png_4x/nav_pressed.png"
+      },
+      "pixel_sizes": {
+        "png_2x": [
+          352,
+          288
+        ],
+        "png_4x": [
+          704,
+          576
+        ]
+      },
+      "content_rect_logical": [
+        24,
+        23,
+        128,
+        96
+      ],
+      "resizing": {
+        "mode": "nine_slice",
+        "borders_logical": [
+          24,
+          24,
+          24,
+          24
+        ]
+      },
+      "state_group": "nav",
+      "state": "pressed",
+      "hit_polygon_logical": [
+        [
+          20,
+          12
+        ],
+        [
+          156,
+          12
+        ],
+        [
+          164,
+          20
+        ],
+        [
+          164,
+          124
+        ],
+        [
+          156,
+          132
+        ],
+        [
+          20,
+          132
+        ],
+        [
+          12,
+          124
+        ],
+        [
+          12,
+          20
+        ]
+      ],
+      "shape_sha256": "dccc76a641b8a5f2f63d335e13dd601a3bce8479ced9ce8ce3247f0641f75aa7",
+      "required_transparent_points_logical": [],
+      "note": "Blank cell. Place icon and label as separate layers; orange selection is not attached to any specific tab.",
+      "sha256": {
+        "png_2x": "e6382c73ee2a6cfdaa38633994f00741bbf04f232225d526b5a9777061d82177",
+        "png_4x": "572db6786dad61632e5acdf633fa12f065ba55ab9d9e98fc5d16b5d56fb6c0e3",
+        "svg": "a50458cf43aa5dc9cc004d37a016cda1ed345b44503a28fda18f6af8177af6eb"
+      }
+    },
+    {
+      "id": "progress_track",
+      "index": 21,
+      "title": "Progress bar empty track",
+      "category": "progress",
+      "logical_size": [
+        512,
+        40
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "files": {
+        "svg": "svg/progress_track.svg",
+        "png_2x": "png_2x/progress_track.png",
+        "png_4x": "png_4x/progress_track.png"
+      },
+      "pixel_sizes": {
+        "png_2x": [
+          1024,
+          80
+        ],
+        "png_4x": [
+          2048,
+          160
+        ]
+      },
+      "content_rect_logical": [
+        15,
+        15,
+        482,
+        10
+      ],
+      "resizing": {
+        "mode": "horizontal_three_slice",
+        "borders_logical": [
+          22,
+          0,
+          22,
+          0
+        ],
+        "height_logical": 40
+      },
+      "state_group": null,
+      "state": null,
+      "hit_polygon_logical": [
+        [
+          16,
+          12
+        ],
+        [
+          496,
+          12
+        ],
+        [
+          500,
+          16
+        ],
+        [
+          500,
+          24
+        ],
+        [
+          496,
+          28
+        ],
+        [
+          16,
+          28
+        ],
+        [
+          12,
+          24
+        ],
+        [
+          12,
+          16
+        ]
+      ],
+      "shape_sha256": "dcae3130eeb22da9f1f9d04322e858bd51f2ec07dce1cbf0a888ad2e7e078737",
+      "required_transparent_points_logical": [],
+      "note": "Overlay a fill with the same canvas, then clip the fill. The track never contains a fixed value.",
+      "sha256": {
+        "png_2x": "59cd7a720241d6d73f83e18a47470c14b22c760aecd7f96f6a0118a88c953532",
+        "png_4x": "da03c07e8ad15f7c364b017f60e2f3dc29ef13ead08d61d4bb3356484af617a1",
+        "svg": "1ce5cdb4ed807e39fc019b92dd015d96190904d585b0460c67c0c6266926df2c"
+      }
+    },
+    {
+      "id": "progress_fill_gold",
+      "index": 22,
+      "title": "Full progress fill \u2014 gold",
+      "category": "progress",
+      "logical_size": [
+        512,
+        40
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "files": {
+        "svg": "svg/progress_fill_gold.svg",
+        "png_2x": "png_2x/progress_fill_gold.png",
+        "png_4x": "png_4x/progress_fill_gold.png"
+      },
+      "pixel_sizes": {
+        "png_2x": [
+          1024,
+          80
+        ],
+        "png_4x": [
+          2048,
+          160
+        ]
+      },
+      "content_rect_logical": [
+        15,
+        15,
+        482,
+        10
+      ],
+      "resizing": {
+        "mode": "clip_not_scale",
+        "fill_rect_logical": [
+          15,
+          15,
+          482,
+          10
+        ]
+      },
+      "state_group": null,
+      "state": null,
+      "hit_polygon_logical": [
+        [
+          18,
+          15
+        ],
+        [
+          494,
+          15
+        ],
+        [
+          497,
+          18
+        ],
+        [
+          497,
+          22
+        ],
+        [
+          494,
+          25
+        ],
+        [
+          18,
+          25
+        ],
+        [
+          15,
+          22
+        ],
+        [
+          15,
+          18
+        ]
+      ],
+      "shape_sha256": "e105ff50bb92c369d5c27090fdfb7c9eb3605c4a109a66b3e6630c9b5fa6cce1",
+      "required_transparent_points_logical": [],
+      "note": "100% fill artwork, never a baked percentage. Reveal from the left with a runtime clipping mask.",
+      "sha256": {
+        "png_2x": "5d2abadad0d5a824b1e83956f357c9d5e403214816f48f8b5ee355df42588e19",
+        "png_4x": "264c889510aba1830abd9f34092ad0a6c60bf0a58c0637029e33aa435558902f",
+        "svg": "cace756e4dfe23c7288e5654e523504f6e956df040f1cbecd9c625a7bc526bad"
+      }
+    },
+    {
+      "id": "progress_fill_cyan",
+      "index": 23,
+      "title": "Full progress fill \u2014 cyan",
+      "category": "progress",
+      "logical_size": [
+        512,
+        40
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "files": {
+        "svg": "svg/progress_fill_cyan.svg",
+        "png_2x": "png_2x/progress_fill_cyan.png",
+        "png_4x": "png_4x/progress_fill_cyan.png"
+      },
+      "pixel_sizes": {
+        "png_2x": [
+          1024,
+          80
+        ],
+        "png_4x": [
+          2048,
+          160
+        ]
+      },
+      "content_rect_logical": [
+        15,
+        15,
+        482,
+        10
+      ],
+      "resizing": {
+        "mode": "clip_not_scale",
+        "fill_rect_logical": [
+          15,
+          15,
+          482,
+          10
+        ]
+      },
+      "state_group": null,
+      "state": null,
+      "hit_polygon_logical": [
+        [
+          18,
+          15
+        ],
+        [
+          494,
+          15
+        ],
+        [
+          497,
+          18
+        ],
+        [
+          497,
+          22
+        ],
+        [
+          494,
+          25
+        ],
+        [
+          18,
+          25
+        ],
+        [
+          15,
+          22
+        ],
+        [
+          15,
+          18
+        ]
+      ],
+      "shape_sha256": "e105ff50bb92c369d5c27090fdfb7c9eb3605c4a109a66b3e6630c9b5fa6cce1",
+      "required_transparent_points_logical": [],
+      "note": "100% fill artwork, never a baked percentage. Reveal from the left with a runtime clipping mask.",
+      "sha256": {
+        "png_2x": "8eb532b70086398f6a943b156e76745f5ab2a30cf9d4e3e85641998613280f4e",
+        "png_4x": "6f77be45c0d529dff47682d2694f8a6c66345d71d01ca2687c157aabbba5c4c9",
+        "svg": "7e1130fd951a794efd255fd5d8b2dfb375e0400f7cbdd0a8f9ac43551b45b705"
+      }
+    },
+    {
+      "id": "notification_badge",
+      "index": 24,
+      "title": "Blank notification counter plate",
+      "category": "badges",
+      "logical_size": [
+        64,
+        64
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "files": {
+        "svg": "svg/notification_badge.svg",
+        "png_2x": "png_2x/notification_badge.png",
+        "png_4x": "png_4x/notification_badge.png"
+      },
+      "pixel_sizes": {
+        "png_2x": [
+          128,
+          128
+        ],
+        "png_4x": [
+          256,
+          256
+        ]
+      },
+      "content_rect_logical": [
+        20,
+        18,
+        24,
+        28
+      ],
+      "resizing": {
+        "mode": "uniform"
+      },
+      "state_group": null,
+      "state": null,
+      "hit_polygon_logical": [
+        [
+          19,
+          12
+        ],
+        [
+          45,
+          12
+        ],
+        [
+          52,
+          19
+        ],
+        [
+          52,
+          45
+        ],
+        [
+          45,
+          52
+        ],
+        [
+          19,
+          52
+        ],
+        [
+          12,
+          45
+        ],
+        [
+          12,
+          19
+        ]
+      ],
+      "shape_sha256": "af78d98a0eca11259fe226de710bd26fb7ca5b3848ae4d331dde2fc49610166a",
+      "required_transparent_points_logical": [],
+      "note": "No number is baked in; the preview uses live HTML text.",
+      "sha256": {
+        "png_2x": "814746162952418e7e5deccd202c41be0022a0734642dfa840796d204abff228",
+        "png_4x": "fb315a02647bb20ebfa2e071e3a84ee5d3a6269ded80f37078ab02a51ee2d4c2",
+        "svg": "6317d011aa63d40f99f894494bab9f9d1857456589659154898541137301e5cb"
+      }
+    },
+    {
+      "id": "icon_war_table",
+      "index": 25,
+      "title": "War Table icon",
+      "category": "icons",
+      "logical_size": [
+        128,
+        128
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "files": {
+        "svg": "svg/icon_war_table.svg",
+        "png_2x": "png_2x/icon_war_table.png",
+        "png_4x": "png_4x/icon_war_table.png"
+      },
+      "pixel_sizes": {
+        "png_2x": [
+          256,
+          256
+        ],
+        "png_4x": [
+          512,
+          512
+        ]
+      },
+      "content_rect_logical": null,
+      "resizing": {
+        "mode": "uniform"
+      },
+      "state_group": null,
+      "state": null,
+      "hit_polygon_logical": null,
+      "shape_sha256": null,
+      "required_transparent_points_logical": [],
+      "note": "Standalone icon, no nav background or label.",
+      "sha256": {
+        "png_2x": "9dc6936be90106915fd6345c27e981852c1ba2149a8c7023e4a33482bf70588d",
+        "png_4x": "f9d41d73d2ab5753f027641dcb6ce32ef17e4df8cf31472ddcd55d11bacb7be2",
+        "svg": "2f4e8a5755e0596fafe1e1429e3f1c6cedb335ca0ee11cce16035137c217f803"
+      }
+    },
+    {
+      "id": "icon_contracts",
+      "index": 26,
+      "title": "Contracts ticket icon",
+      "category": "icons",
+      "logical_size": [
+        128,
+        128
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "files": {
+        "svg": "svg/icon_contracts.svg",
+        "png_2x": "png_2x/icon_contracts.png",
+        "png_4x": "png_4x/icon_contracts.png"
+      },
+      "pixel_sizes": {
+        "png_2x": [
+          256,
+          256
+        ],
+        "png_4x": [
+          512,
+          512
+        ]
+      },
+      "content_rect_logical": null,
+      "resizing": {
+        "mode": "uniform"
+      },
+      "state_group": null,
+      "state": null,
+      "hit_polygon_logical": null,
+      "shape_sha256": null,
+      "required_transparent_points_logical": [],
+      "note": "",
+      "sha256": {
+        "png_2x": "50bf0d35a958fbcb8d19055b62a9e55dda7125f11c5595b789beeb30f0352cba",
+        "png_4x": "245ef031c208627a1403b1fdb62c43565a3a34bf80bf2dfb61c049949918fdab",
+        "svg": "18d9f89afcff1e6a7fc9a9375dd320fcd30d42a7fc7aad4365bd1b4042e182bf"
+      }
+    },
+    {
+      "id": "icon_social",
+      "index": 27,
+      "title": "Social group and chat icon",
+      "category": "icons",
+      "logical_size": [
+        128,
+        128
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "files": {
+        "svg": "svg/icon_social.svg",
+        "png_2x": "png_2x/icon_social.png",
+        "png_4x": "png_4x/icon_social.png"
+      },
+      "pixel_sizes": {
+        "png_2x": [
+          256,
+          256
+        ],
+        "png_4x": [
+          512,
+          512
+        ]
+      },
+      "content_rect_logical": null,
+      "resizing": {
+        "mode": "uniform"
+      },
+      "state_group": null,
+      "state": null,
+      "hit_polygon_logical": null,
+      "shape_sha256": null,
+      "required_transparent_points_logical": [],
+      "note": "",
+      "sha256": {
+        "png_2x": "ac38d88f165df0b128e2d0c0e6b294ffe4a989214e2d2019a1c0f5c83d17b335",
+        "png_4x": "b1678a7e841e27f56b4c3b53b1336c916c58cbbcd4c6b50e750a2e1574071f7b",
+        "svg": "6b48a7592b3ce6e94074a6b0b8d4e147d78976d23cd4cc0d31c786d82ffd2346"
+      }
+    },
+    {
+      "id": "icon_settings",
+      "index": 28,
+      "title": "Eight-tooth settings gear",
+      "category": "icons",
+      "logical_size": [
+        128,
+        128
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "files": {
+        "svg": "svg/icon_settings.svg",
+        "png_2x": "png_2x/icon_settings.png",
+        "png_4x": "png_4x/icon_settings.png"
+      },
+      "pixel_sizes": {
+        "png_2x": [
+          256,
+          256
+        ],
+        "png_4x": [
+          512,
+          512
+        ]
+      },
+      "content_rect_logical": null,
+      "resizing": {
+        "mode": "uniform"
+      },
+      "state_group": null,
+      "state": null,
+      "hit_polygon_logical": null,
+      "shape_sha256": null,
+      "required_transparent_points_logical": [
+        [
+          64,
+          64
+        ]
+      ],
+      "note": "",
+      "sha256": {
+        "png_2x": "a318ea1f2801e14b4edf9ffe1e442b357aa52b7aaf768de521b4907ca64e839f",
+        "png_4x": "be65589f7c0ee49626b6c5a346ead4c98c82bfcb3cdb88d1ba01e42ae71b3249",
+        "svg": "78267d9d5534ca58d01235b50ef78b2c754843539a8d4e9f87096a2f8c14e382"
+      }
+    },
+    {
+      "id": "icon_core",
+      "index": 29,
+      "title": "Core currency processor icon",
+      "category": "icons",
+      "logical_size": [
+        128,
+        128
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "files": {
+        "svg": "svg/icon_core.svg",
+        "png_2x": "png_2x/icon_core.png",
+        "png_4x": "png_4x/icon_core.png"
+      },
+      "pixel_sizes": {
+        "png_2x": [
+          256,
+          256
+        ],
+        "png_4x": [
+          512,
+          512
+        ]
+      },
+      "content_rect_logical": null,
+      "resizing": {
+        "mode": "uniform"
+      },
+      "state_group": null,
+      "state": null,
+      "hit_polygon_logical": null,
+      "shape_sha256": null,
+      "required_transparent_points_logical": [],
+      "note": "",
+      "sha256": {
+        "png_2x": "2a1aa6aca9480648d81479730dd186f0ee463075020dbfea9513d593a23766e1",
+        "png_4x": "55b27a9f13424d557d0c666c3ad895b5d6fea21acd422414a538b634dba9dc04",
+        "svg": "5bfd33e2ab8b341e640acdb2c2fe710c9aa23826cdae4a9bd6dbdb7567f576f3"
+      }
+    },
+    {
+      "id": "icon_rank_star",
+      "index": 30,
+      "title": "Faceted rank star",
+      "category": "icons",
+      "logical_size": [
+        128,
+        128
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "files": {
+        "svg": "svg/icon_rank_star.svg",
+        "png_2x": "png_2x/icon_rank_star.png",
+        "png_4x": "png_4x/icon_rank_star.png"
+      },
+      "pixel_sizes": {
+        "png_2x": [
+          256,
+          256
+        ],
+        "png_4x": [
+          512,
+          512
+        ]
+      },
+      "content_rect_logical": null,
+      "resizing": {
+        "mode": "uniform"
+      },
+      "state_group": null,
+      "state": null,
+      "hit_polygon_logical": null,
+      "shape_sha256": null,
+      "required_transparent_points_logical": [],
+      "note": "",
+      "sha256": {
+        "png_2x": "e010d211a88ab65133b8330c17ed82c073a0333f91b7ecc49d08e69217191f6e",
+        "png_4x": "7a2cf67d6dd7fb749207d70030b21b6a27466ff7683db265deafdc0ba67f465d",
+        "svg": "94cea328dbebea56b97e79888843bf53f0c73eff35ff58397a084175947917c3"
+      }
+    },
+    {
+      "id": "icon_requisition",
+      "index": 31,
+      "title": "Requisition conversation icon",
+      "category": "icons",
+      "logical_size": [
+        128,
+        128
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "files": {
+        "svg": "svg/icon_requisition.svg",
+        "png_2x": "png_2x/icon_requisition.png",
+        "png_4x": "png_4x/icon_requisition.png"
+      },
+      "pixel_sizes": {
+        "png_2x": [
+          256,
+          256
+        ],
+        "png_4x": [
+          512,
+          512
+        ]
+      },
+      "content_rect_logical": null,
+      "resizing": {
+        "mode": "uniform"
+      },
+      "state_group": null,
+      "state": null,
+      "hit_polygon_logical": null,
+      "shape_sha256": null,
+      "required_transparent_points_logical": [],
+      "note": "",
+      "sha256": {
+        "png_2x": "c8c67441118ba1ff27e410604cbba94b614ed7be2ce4593881bd564fa282dcb1",
+        "png_4x": "f16f91c9151bbd35b16abc53a538e5032e3870f01577877a3698c642b8e2e015",
+        "svg": "9bef5e18687515903c0fd756d9b646a1020d1b325b9274024d6899d4304a218e"
+      }
+    },
+    {
+      "id": "icon_faction",
+      "index": 32,
+      "title": "Three-prong faction insignia",
+      "category": "icons",
+      "logical_size": [
+        160,
+        184
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "files": {
+        "svg": "svg/icon_faction.svg",
+        "png_2x": "png_2x/icon_faction.png",
+        "png_4x": "png_4x/icon_faction.png"
+      },
+      "pixel_sizes": {
+        "png_2x": [
+          320,
+          368
+        ],
+        "png_4x": [
+          640,
+          736
+        ]
+      },
+      "content_rect_logical": null,
+      "resizing": {
+        "mode": "uniform"
+      },
+      "state_group": null,
+      "state": null,
+      "hit_polygon_logical": null,
+      "shape_sha256": null,
+      "required_transparent_points_logical": [],
+      "note": "Same 160\u00d7184 logical canvas as frame_faction; overlay without changing position.",
+      "sha256": {
+        "png_2x": "73e02b1a672fde8b4b69a2f1f85c61423f0dc10741a61792e25b95520922ba1a",
+        "png_4x": "57e62899866be54f3fdff4103aa9d3c7355b51d52356dc5a317f2984bd9c5532",
+        "svg": "0ff3aab75c0d27e81b3e4377d711d98dc5b8670449e95ca674d0f2a69c347cba"
+      }
+    },
+    {
+      "id": "accent_triple_slash",
+      "index": 33,
+      "title": "Three-slash menu accent",
+      "category": "accents",
+      "logical_size": [
+        128,
+        64
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "files": {
+        "svg": "svg/accent_triple_slash.svg",
+        "png_2x": "png_2x/accent_triple_slash.png",
+        "png_4x": "png_4x/accent_triple_slash.png"
+      },
+      "pixel_sizes": {
+        "png_2x": [
+          256,
+          128
+        ],
+        "png_4x": [
+          512,
+          256
+        ]
+      },
+      "content_rect_logical": null,
+      "resizing": {
+        "mode": "uniform"
+      },
+      "state_group": null,
+      "state": null,
+      "hit_polygon_logical": null,
+      "shape_sha256": null,
+      "required_transparent_points_logical": [],
+      "note": "",
+      "sha256": {
+        "png_2x": "f645f0a9ea31c44bb8da1f31c8b25d404ac5a6a3301d8db8549d35b3e7720978",
+        "png_4x": "37e2ff2a826442c1d8fa08cf2c19783715b2a5bec1c88a95002d03d565fcd6ec",
+        "svg": "1f4914adc2eb83567389a66bc83501446bc5a0b1539e558c18977ac1e27e4d4c"
+      }
+    },
+    {
+      "id": "accent_deploy_chevrons",
+      "index": 34,
+      "title": "Three deploy chevrons",
+      "category": "accents",
+      "logical_size": [
+        128,
+        64
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "files": {
+        "svg": "svg/accent_deploy_chevrons.svg",
+        "png_2x": "png_2x/accent_deploy_chevrons.png",
+        "png_4x": "png_4x/accent_deploy_chevrons.png"
+      },
+      "pixel_sizes": {
+        "png_2x": [
+          256,
+          128
+        ],
+        "png_4x": [
+          512,
+          256
+        ]
+      },
+      "content_rect_logical": null,
+      "resizing": {
+        "mode": "uniform"
+      },
+      "state_group": null,
+      "state": null,
+      "hit_polygon_logical": null,
+      "shape_sha256": null,
+      "required_transparent_points_logical": [],
+      "note": "Dark chevrons intended for the gold CTA face, separate from the button.",
+      "sha256": {
+        "png_2x": "5ad30c079b657b16aaaa4c4d1c2605c70fd43326e58fc297c4ca7b25584964f8",
+        "png_4x": "1327f71491c9b98047e65f7e940d3b2aa56745d4ab48d75c20bf979e020bde36",
+        "svg": "4b33074e1e27731359b1e8f902bb266840941c33f37767982227ccd21ca83fe8"
+      }
+    },
+    {
+      "id": "divider_cyan",
+      "index": 35,
+      "title": "Cyan separator line",
+      "category": "accents",
+      "logical_size": [
+        512,
+        32
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "files": {
+        "svg": "svg/divider_cyan.svg",
+        "png_2x": "png_2x/divider_cyan.png",
+        "png_4x": "png_4x/divider_cyan.png"
+      },
+      "pixel_sizes": {
+        "png_2x": [
+          1024,
+          64
+        ],
+        "png_4x": [
+          2048,
+          128
+        ]
+      },
+      "content_rect_logical": null,
+      "resizing": {
+        "mode": "horizontal"
+      },
+      "state_group": null,
+      "state": null,
+      "hit_polygon_logical": null,
+      "shape_sha256": null,
+      "required_transparent_points_logical": [],
+      "note": "Fades to alpha at both ends; no backing rectangle.",
+      "sha256": {
+        "png_2x": "2e05f4b08fe1851f0aaeb3aba2b46da5b20749820f7250a4f7dfc8690ae90563",
+        "png_4x": "6e9e559d76d086d909bb2d496a395e9ef7257e9c0f2d169b636b95b6cc8b6dba",
+        "svg": "811202740139288d806f03f3cd6f2d48c1621e0de32b0c6f7352d466cf57d4b0"
+      }
+    },
+    {
+      "id": "frame_portrait_empty",
+      "index": 36,
+      "title": "Empty portrait aperture frame",
+      "category": "frames",
+      "logical_size": [
+        176,
+        200
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "files": {
+        "svg": "svg/frame_portrait_empty.svg",
+        "png_2x": "png_2x/frame_portrait_empty.png",
+        "png_4x": "png_4x/frame_portrait_empty.png"
+      },
+      "pixel_sizes": {
+        "png_2x": [
+          352,
+          400
+        ],
+        "png_4x": [
+          704,
+          800
+        ]
+      },
+      "content_rect_logical": [
+        35,
+        45,
+        106,
+        110
+      ],
+      "resizing": {
+        "mode": "uniform"
+      },
+      "state_group": null,
+      "state": null,
+      "hit_polygon_logical": [
+        [
+          88,
+          16
+        ],
+        [
+          158,
+          56
+        ],
+        [
+          158,
+          144
+        ],
+        [
+          88,
+          184
+        ],
+        [
+          18,
+          144
+        ],
+        [
+          18,
+          56
+        ]
+      ],
+      "shape_sha256": "e47eb743d09d2744d20c3130f03a69b589c6d0e8d75a176a5551558cb8aa8113",
+      "required_transparent_points_logical": [
+        [
+          88,
+          100
+        ]
+      ],
+      "note": "GUI frame only: no person, profile illustration, or background image.",
+      "sha256": {
+        "png_2x": "40239f1083677a6e3ce24de02544f14a09bb583dfb6672567dc3b189cdb07d47",
+        "png_4x": "e09fc41745d4a3ae8b703bdd8276a9ee5a4803bc62d3ba57eb613f25dc0397e9",
+        "svg": "915ed131171425e8840ab09a5754e06a9eb8c47a118f07a5dbca357acfd54f95"
+      }
+    }
+  ],
+  "state_groups": {
+    "menu": {
+      "normal": "menu_normal",
+      "selected": "menu_selected",
+      "pressed": "menu_pressed",
+      "disabled": "menu_disabled"
+    },
+    "deploy": {
+      "normal": "deploy_normal",
+      "selected": "deploy_selected",
+      "pressed": "deploy_pressed"
+    },
+    "nav": {
+      "normal": "nav_normal",
+      "selected": "nav_selected",
+      "pressed": "nav_pressed"
+    }
+  },
+  "coordinate_order": {
+    "rect": "[x,y,width,height]",
+    "border": "[left,top,right,bottom]",
+    "pivot": "[x,y] normalized"
+  }
+}

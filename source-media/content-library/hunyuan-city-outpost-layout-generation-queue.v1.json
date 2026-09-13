@@ -1,0 +1,285 @@
+{
+  "schemaVersion": 1,
+  "queueId": "massfront-hunyuan-city-outpost-layout-kit-v1",
+  "createdDate": "2026-08-26",
+  "status": "SOURCE_AUTHORING_QUEUE_ONLY",
+  "runtimeReady": false,
+  "purpose": "Prioritize repeatable road, access, service, and district-layout pieces before isolated landmarks so generated assets assemble into believable MASSFRONT cities, colonies, and outposts.",
+  "contract": {
+    "kitContract": "source-media/content-library/modular-city-colony-kit-contract.v1.json",
+    "units": "meters",
+    "upAxis": "+Y",
+    "northAxis": "+Z",
+    "detailSnapMeters": 4,
+    "macroGridMeters": 16,
+    "districtBlockMeters": 64,
+    "allowedYawDegrees": [0, 90, 180, 270],
+    "socketGapToleranceMeters": 0.01,
+    "runtimeAdmission": "Every generated GLB is a retained source candidate only. Runtime admission requires normalized scale, socket, topology, UV, semantic material, collision, navigation, LOD, provenance, package, and matched mobile evidence gates."
+  },
+  "generationPolicy": {
+    "provider": "hunyuan3d",
+    "mode": "concept_image_to_3d",
+    "oneSourceRootPerExport": true,
+    "conceptFirst": true,
+    "sourceRetention": true,
+    "originalityBoundary": "Original MASSFRONT heavy civic and industrial science-fiction construction only. Reject weapons, Brood biology, creature forms, franchise copying, random greeble masses, baked scenes, and incoherent one-off silhouettes.",
+    "sharedMaterialSlots": [
+      "MAT_STRUCTURAL",
+      "MAT_FACADE",
+      "MAT_ROOF",
+      "MAT_CONTACT",
+      "MAT_GLAZING",
+      "MAT_EMISSIVE",
+      "MAT_DECAL",
+      "MAT_DAMAGE"
+    ]
+  },
+  "jobCount": 13,
+  "jobs": [
+    {
+      "priority": 1,
+      "jobId": "hy3d_layout_road_primary_straight_32",
+      "assetId": "mf_hi_road_primary_straight_32_01",
+      "assetClass": "road",
+      "conceptPath": "source-media/concepts/city-outpost-layout-kit-v1/road-primary-straight-32-v1.png",
+      "splineDocumentName": "MF_HY3D_LAYOUT_ROAD_PRIMARY_STRAIGHT_32_V1",
+      "intendedSourceGlb": "source-media/models/city-outpost-layout-kit-v1/mf_hi_road_primary_straight_32_01_source.glb",
+      "dimensionsMeters": { "x": 32, "y": 0.6, "z": 32 },
+      "sockets": [
+        { "id": "road_n", "profile": "road_primary_18", "face": "+Z", "center": [0, 0, 16] },
+        { "id": "road_s", "profile": "road_primary_18", "face": "-Z", "center": [0, 0, -16] }
+      ],
+      "status": "BLOCKED_CONCEPT",
+      "runtimeReady": false,
+      "evidence": "UNKNOWN"
+    },
+    {
+      "priority": 2,
+      "jobId": "hy3d_layout_road_primary_corner_32",
+      "assetId": "mf_hi_road_primary_corner_32_01",
+      "assetClass": "road",
+      "conceptPath": "source-media/concepts/city-outpost-layout-kit-v1/road-primary-corner-32-v1.png",
+      "splineDocumentName": "MF_HY3D_LAYOUT_ROAD_PRIMARY_CORNER_32_V1",
+      "intendedSourceGlb": "source-media/models/city-outpost-layout-kit-v1/mf_hi_road_primary_corner_32_01_source.glb",
+      "dimensionsMeters": { "x": 32, "y": 0.6, "z": 32 },
+      "sockets": [
+        { "id": "road_n", "profile": "road_primary_18", "face": "+Z", "center": [0, 0, 16] },
+        { "id": "road_e", "profile": "road_primary_18", "face": "+X", "center": [16, 0, 0] }
+      ],
+      "status": "BLOCKED_CONCEPT",
+      "runtimeReady": false,
+      "evidence": "UNKNOWN"
+    },
+    {
+      "priority": 3,
+      "jobId": "hy3d_layout_road_primary_t_32",
+      "assetId": "mf_hi_road_primary_t_32_01",
+      "assetClass": "road",
+      "conceptPath": "source-media/concepts/city-outpost-layout-kit-v1/road-primary-t-32-v1.png",
+      "splineDocumentName": "MF_HY3D_LAYOUT_ROAD_PRIMARY_T_32_V1",
+      "intendedSourceGlb": "source-media/models/city-outpost-layout-kit-v1/mf_hi_road_primary_t_32_01_source.glb",
+      "dimensionsMeters": { "x": 32, "y": 0.6, "z": 32 },
+      "sockets": [
+        { "id": "road_n", "profile": "road_primary_18", "face": "+Z", "center": [0, 0, 16] },
+        { "id": "road_e", "profile": "road_primary_18", "face": "+X", "center": [16, 0, 0] },
+        { "id": "road_w", "profile": "road_primary_18", "face": "-X", "center": [-16, 0, 0] }
+      ],
+      "status": "BLOCKED_CONCEPT",
+      "runtimeReady": false,
+      "evidence": "UNKNOWN"
+    },
+    {
+      "priority": 4,
+      "jobId": "hy3d_layout_road_primary_x_plaza_48",
+      "assetId": "mf_hi_road_primary_x_plaza_48_01",
+      "assetClass": "road",
+      "conceptPath": "source-media/concepts/city-outpost-layout-kit-v1/road-primary-x-plaza-48-v1.png",
+      "splineDocumentName": "MF_HY3D_LAYOUT_ROAD_PRIMARY_X_PLAZA_48_V1",
+      "intendedSourceGlb": "source-media/models/city-outpost-layout-kit-v1/mf_hi_road_primary_x_plaza_48_01_source.glb",
+      "dimensionsMeters": { "x": 48, "y": 0.6, "z": 48 },
+      "sockets": [
+        { "id": "road_n", "profile": "road_primary_18", "face": "+Z", "center": [0, 0, 24] },
+        { "id": "road_e", "profile": "road_primary_18", "face": "+X", "center": [24, 0, 0] },
+        { "id": "road_s", "profile": "road_primary_18", "face": "-Z", "center": [0, 0, -24] },
+        { "id": "road_w", "profile": "road_primary_18", "face": "-X", "center": [-24, 0, 0] }
+      ],
+      "status": "BLOCKED_CONCEPT",
+      "runtimeReady": false,
+      "evidence": "UNKNOWN"
+    },
+    {
+      "priority": 5,
+      "jobId": "hy3d_layout_road_primary_endcap_32x16",
+      "assetId": "mf_hi_road_primary_endcap_32x16_01",
+      "assetClass": "road",
+      "conceptPath": "source-media/concepts/city-outpost-layout-kit-v1/road-primary-endcap-32x16-v1.png",
+      "splineDocumentName": "MF_HY3D_LAYOUT_ROAD_PRIMARY_ENDCAP_32X16_V1",
+      "intendedSourceGlb": "source-media/models/city-outpost-layout-kit-v1/mf_hi_road_primary_endcap_32x16_01_source.glb",
+      "dimensionsMeters": { "x": 32, "y": 2, "z": 16 },
+      "sockets": [
+        { "id": "road_s", "profile": "road_primary_18", "face": "-Z", "center": [0, 0, -8] }
+      ],
+      "status": "BLOCKED_CONCEPT",
+      "runtimeReady": false,
+      "evidence": "UNKNOWN"
+    },
+    {
+      "priority": 6,
+      "jobId": "hy3d_layout_wall_gate_32",
+      "assetId": "mf_hi_wall_gate_32_01",
+      "assetClass": "perimeter_access",
+      "conceptPath": "source-media/concepts/city-outpost-layout-kit-v1/wall-gate-32-v1.png",
+      "splineDocumentName": "MF_HY3D_LAYOUT_WALL_GATE_32_V1",
+      "intendedSourceGlb": "source-media/models/city-outpost-layout-kit-v1/mf_hi_wall_gate_32_01_source.glb",
+      "dimensionsMeters": { "x": 32, "y": 14, "z": 8 },
+      "sockets": [
+        { "id": "road_n", "profile": "road_primary_18", "face": "+Z", "center": [0, 0, 4] },
+        { "id": "road_s", "profile": "road_primary_18", "face": "-Z", "center": [0, 0, -4] }
+      ],
+      "status": "BLOCKED_CONCEPT",
+      "runtimeReady": false,
+      "evidence": "UNKNOWN"
+    },
+    {
+      "priority": 7,
+      "jobId": "hy3d_layout_outpost_operations_block",
+      "assetId": "mf_hi_outpost_operations_block_01",
+      "assetClass": "outpost_core",
+      "conceptPath": "source-media/concepts/hunyuan/city_outpost_layout_kits/outpost_operations_block/mf_outpost_operations_block-concept-v1.png",
+      "conceptSha256": "1C10BBC4BAE58CE421414A1F53897B1F000699E1D71A69ADCF68DA2B90ABF51D",
+      "splineDocumentName": "MF_HY3D_OUTPOST_OPERATIONS_BLOCK_V1",
+      "intendedSourceGlb": "source-media/models/city-outpost-layout-kit-v1/mf_hi_outpost_operations_block_01_source.glb",
+      "dimensionsMeters": { "x": 32, "y": 20, "z": 32 },
+      "sockets": [
+        { "id": "front_s", "profile": "road_local_12", "face": "-Z", "center": [0, 0, -16], "clearanceMeters": { "width": 12, "height": 8 } },
+        { "id": "rear_n", "profile": "lane_service_8", "face": "+Z", "center": [0, 0, 16], "clearanceMeters": { "width": 8, "height": 4 } },
+        { "id": "public_w", "profile": "concourse_ped_6", "face": "-X", "center": [-16, 0, 0], "clearanceMeters": { "width": 6, "height": 3.5 } },
+        { "id": "public_e", "profile": "concourse_ped_6", "face": "+X", "center": [16, 0, 0], "clearanceMeters": { "width": 6, "height": 3.5 } }
+      ],
+      "status": "GENERATING",
+      "runtimeReady": false,
+      "evidence": "UNKNOWN"
+    },
+    {
+      "priority": 8,
+      "jobId": "hy3d_layout_logistics_depot",
+      "assetId": "mf_hi_logistics_depot_01",
+      "assetClass": "logistics",
+      "conceptPath": "source-media/concepts/city-outpost-layout-kit-v1/logistics-depot-v1.png",
+      "splineDocumentName": "MF_HY3D_LAYOUT_LOGISTICS_DEPOT_V1",
+      "intendedSourceGlb": "source-media/models/city-outpost-layout-kit-v1/mf_hi_logistics_depot_01_source.glb",
+      "dimensionsMeters": { "x": 48, "y": 20, "z": 32 },
+      "sockets": [
+        { "id": "road_n", "profile": "road_local_12", "face": "+Z", "center": [0, 0, 16] },
+        { "id": "road_s", "profile": "road_local_12", "face": "-Z", "center": [0, 0, -16] },
+        { "id": "cargo_e", "profile": "corridor_cargo_12x8", "face": "+X", "center": [24, 0, 0] },
+        { "id": "cargo_w", "profile": "corridor_cargo_12x8", "face": "-X", "center": [-24, 0, 0] }
+      ],
+      "status": "BLOCKED_CONCEPT",
+      "runtimeReady": false,
+      "evidence": "UNKNOWN"
+    },
+    {
+      "priority": 9,
+      "jobId": "hy3d_layout_service_annex",
+      "assetId": "mf_hi_service_annex_01",
+      "assetClass": "service",
+      "conceptPath": "source-media/concepts/city-outpost-layout-kit-v1/service-annex-v1.png",
+      "splineDocumentName": "MF_HY3D_LAYOUT_SERVICE_ANNEX_V1",
+      "intendedSourceGlb": "source-media/models/city-outpost-layout-kit-v1/mf_hi_service_annex_01_source.glb",
+      "dimensionsMeters": { "x": 32, "y": 14, "z": 16 },
+      "sockets": [
+        { "id": "utility_e", "profile": "utility_service_4x4", "face": "+X", "center": [16, 0, 0] },
+        { "id": "utility_w", "profile": "utility_service_4x4", "face": "-X", "center": [-16, 0, 0] },
+        { "id": "service_s", "profile": "lane_service_8", "face": "-Z", "center": [0, 0, -8] }
+      ],
+      "status": "BLOCKED_CONCEPT",
+      "runtimeReady": false,
+      "evidence": "UNKNOWN"
+    },
+    {
+      "priority": 10,
+      "jobId": "hy3d_layout_utility_block",
+      "assetId": "mf_hi_utility_block_01",
+      "assetClass": "utility",
+      "conceptPath": "source-media/concepts/city-outpost-layout-kit-v1/utility-block-v1.png",
+      "splineDocumentName": "MF_HY3D_LAYOUT_UTILITY_BLOCK_V1",
+      "intendedSourceGlb": "source-media/models/city-outpost-layout-kit-v1/mf_hi_utility_block_01_source.glb",
+      "dimensionsMeters": { "x": 16, "y": 24, "z": 16 },
+      "sockets": [
+        { "id": "service_s", "profile": "lane_service_8", "face": "-Z", "center": [0, 0, -8] },
+        { "id": "utility_n", "profile": "utility_service_4x4", "face": "+Z", "center": [0, 0, 8] }
+      ],
+      "status": "BLOCKED_CONCEPT",
+      "runtimeReady": false,
+      "evidence": "UNKNOWN"
+    },
+    {
+      "priority": 11,
+      "jobId": "hy3d_layout_refinery_spine",
+      "assetId": "mf_hi_refinery_spine_01",
+      "assetClass": "refinery",
+      "conceptPath": "source-media/concepts/city-outpost-layout-kit-v1/refinery-spine-v1.png",
+      "splineDocumentName": "MF_HY3D_LAYOUT_REFINERY_SPINE_V1",
+      "intendedSourceGlb": "source-media/models/city-outpost-layout-kit-v1/mf_hi_refinery_spine_01_source.glb",
+      "dimensionsMeters": { "x": 32, "y": 28, "z": 64 },
+      "sockets": [
+        { "id": "service_n", "profile": "lane_service_8", "face": "+Z", "center": [0, 0, 32] },
+        { "id": "service_s", "profile": "lane_service_8", "face": "-Z", "center": [0, 0, -32] },
+        { "id": "cargo_e", "profile": "corridor_cargo_12x8", "face": "+X", "center": [16, 0, 0] },
+        { "id": "utility_w", "profile": "utility_service_4x4", "face": "-X", "center": [-16, 0, 0] }
+      ],
+      "status": "BLOCKED_CONCEPT",
+      "runtimeReady": false,
+      "evidence": "UNKNOWN"
+    },
+    {
+      "priority": 12,
+      "jobId": "hy3d_layout_command_hub",
+      "assetId": "mf_hi_command_hub_01",
+      "assetClass": "civic_command",
+      "conceptPath": "source-media/concepts/city-outpost-layout-kit-v1/command-hub-v1.png",
+      "splineDocumentName": "MF_HY3D_LAYOUT_COMMAND_HUB_V1",
+      "intendedSourceGlb": "source-media/models/city-outpost-layout-kit-v1/mf_hi_command_hub_01_source.glb",
+      "dimensionsMeters": { "x": 64, "y": 56, "z": 64 },
+      "sockets": [
+        { "id": "road_n", "profile": "road_primary_18", "face": "+Z", "center": [0, 0, 32] },
+        { "id": "road_s", "profile": "road_local_12", "face": "-Z", "center": [0, 0, -32] },
+        { "id": "public_e", "profile": "concourse_ped_6", "face": "+X", "center": [32, 0, 0] },
+        { "id": "service_w", "profile": "lane_service_8", "face": "-X", "center": [-32, 0, 0] }
+      ],
+      "status": "BLOCKED_CONCEPT",
+      "runtimeReady": false,
+      "evidence": "UNKNOWN"
+    },
+    {
+      "priority": 13,
+      "jobId": "hy3d_layout_industrial_ruin",
+      "assetId": "mf_hi_industrial_ruin_01",
+      "assetClass": "ruin",
+      "conceptPath": "source-media/concepts/city-outpost-layout-kit-v1/industrial-ruin-v1.png",
+      "splineDocumentName": "MF_HY3D_LAYOUT_INDUSTRIAL_RUIN_V1",
+      "intendedSourceGlb": "source-media/models/city-outpost-layout-kit-v1/mf_hi_industrial_ruin_01_source.glb",
+      "dimensionsMeters": { "x": 64, "y": 28, "z": 48 },
+      "sockets": [
+        { "id": "road_s", "profile": "road_local_12", "face": "-Z", "center": [0, 0, -24] },
+        { "id": "cargo_e", "profile": "corridor_cargo_12x8", "face": "+X", "center": [32, 0, 0] },
+        { "id": "service_w", "profile": "lane_service_8", "face": "-X", "center": [-32, 0, 0] }
+      ],
+      "status": "BLOCKED_CONCEPT",
+      "runtimeReady": false,
+      "evidence": "UNKNOWN"
+    }
+  ],
+  "admissionState": {
+    "acceptedSourceCount": 0,
+    "runtimeReadyCount": 0,
+    "evidenceStatus": "UNKNOWN",
+    "blockers": [
+      "Twelve declared concept references remain missing; the operations-block concept is present and hashed but its source candidate is not yet accepted.",
+      "No Hunyuan source export in this queue has passed source acceptance and normalized socket/bounds checks.",
+      "Socket, collision, navigation, material, LOD, package, and matched mobile evidence are absent."
+    ]
+  }
+}

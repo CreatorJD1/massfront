@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "conceptSetId": "massfront_world_environment_library_v1",
+  "status": "approved_for_preproduction_reference",
+  "file": "verdant-arctic-ashland-vespera-world-kit-v1.png",
+  "sha256": "f48f802c5a5ad4b3ae36d76e668cda281d27f01989a57c557da49fbf1d9777fd",
+  "bytes": 2541078,
+  "resolution": [1536, 1024],
+  "originalProjectArt": true,
+  "generatedWith": "OpenAI built-in image generation",
+  "contentCategory": "environment.world.modular-kit",
+  "faction": ["neutral"],
+  "biomeOrBiodome": ["verdant", "arctic", "ashland", "vespera"],
+  "intention": [
+    "world_landmark",
+    "cliff_and_rock_kit",
+    "flora_kit",
+    "destructible_cover",
+    "road_and_bridge_kit",
+    "civic_ruin",
+    "resource_site",
+    "crater_and_scorch_insert",
+    "damage_state"
+  ],
+  "authoringContract": {
+    "conceptRequiredBeforeGeometry": true,
+    "conceptPixelsAreRuntimeTextures": false,
+    "gridMeters": 4,
+    "heightStepMeters": 2,
+    "requiredLods": ["LOD0", "LOD1", "LOD2"],
+    "primaryCamera": "tilted_top_down_mobile_rts",
+    "matchedInEngineCaptureRequired": true
+  }
+}

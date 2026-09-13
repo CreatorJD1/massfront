@@ -1,0 +1,98 @@
+/* Authoritative gameplay divergence digest. Camera, selection, particles,
+   animation, audio and performance state are intentionally outside this file. */
+const MF_SH_MAGIC='massfront-gameplay-state-v1',MF_SH_HEX=/^[0-9a-f]{64}$/;
+const MF_SH_TEXT=new TextEncoder(),MF_SH_TEXT_CACHE=new Map(),MF_SH_UNITS=[],MF_SH_SHOTS=[];
+function MF_SH_error(code){const e=new Error(code);e.code=code;return e;}
+function MF_SH_writer(){
+  let out=new Uint8Array(65536),view=new DataView(out.buffer),size=0,nextRef=1;const refs=new WeakMap();
+  /* PASS alone contributes 147,456 scalar values on a medium map. The prior
+     writer allocated a separate Uint8Array (and usually a DataView) for every
+     tag and number, then copied hundreds of thousands of tiny chunks at the
+     end. Connected play hashes once per second, so that allocation storm froze
+     the main thread. A grow-only byte buffer emits the identical canonical
+     little-endian stream while keeping allocation proportional to output size. */
+  const reserve=n=>{
+    const need=size+n;if(need<=out.length)return;
+    let cap=out.length;while(cap<need)cap*=2;
+    const grown=new Uint8Array(cap);grown.set(out);out=grown;view=new DataView(out.buffer);
+  };
+  return {u8(v){reserve(1);out[size++]=v&255;},u32(v){reserve(4);view.setUint32(size,v>>>0,true);size+=4;},
+    f64(v){if(!Number.isFinite(v))throw MF_SH_error('gameplay_state_nonfinite');reserve(8);view.setFloat64(size,Object.is(v,-0)?0:v,true);size+=8;},
+    num(v){this.u8(3);this.f64(v);},
+    str(v){
+      const s=String(v);let a=MF_SH_TEXT_CACHE.get(s);
+      if(!a){a=MF_SH_TEXT.encode(s);if(s.length<=64&&MF_SH_TEXT_CACHE.size<512)MF_SH_TEXT_CACHE.set(s,a);}
+      this.u32(a.length);reserve(a.length);out.set(a,size);size+=a.length;
+    },
+    typed(v){
+      if(v.length>1000000)throw MF_SH_error('gameplay_state_array_bound');
+      this.u8(5);this.str(v.constructor.name);this.u32(v.length);
+      for(let i=0;i<v.length;i++)this.f64(v[i]);
+    },
+    ref(v){if(refs.has(v))return [true,refs.get(v)];const id=nextRef++;refs.set(v,id);return [false,id];},
+    finish(){return out.slice(0,size);}};
+}
+function MF_SH_value(w,v,depth=0){
+  if(depth>32)throw MF_SH_error('gameplay_state_depth');
+  if(v===null){w.u8(0);return;}if(typeof v==='boolean'){w.u8(v?2:1);return;}
+  if(typeof v==='number'){w.num(v);return;}if(typeof v==='string'){w.u8(4);w.str(v);return;}
+  if(ArrayBuffer.isView(v)){w.typed(v);return;}
+  if(Array.isArray(v)){if(v.length>65536)throw MF_SH_error('gameplay_state_array_bound');const r=w.ref(v);if(r[0]){w.u8(8);w.u32(r[1]);return;}w.u8(6);w.u32(r[1]);w.u32(v.length);for(const x of v)MF_SH_value(w,x===undefined?null:x,depth+1);return;}
+  if(typeof v==='object'){const r=w.ref(v);if(r[0]){w.u8(8);w.u32(r[1]);return;}const keys=Object.keys(v).filter(k=>v[k]!==undefined&&typeof v[k]!=='function').sort();if(keys.length>512)throw MF_SH_error('gameplay_state_object_bound');w.u8(7);w.u32(r[1]);w.u32(keys.length);for(const k of keys){w.str(k);MF_SH_value(w,v[k],depth+1);}return;}
+  throw MF_SH_error('gameplay_state_type');
+}
+function MF_SH_named(w,n,v){w.str(n);MF_SH_value(w,v);}
+function MF_SH_indexed(w,n,a,ids){
+  w.str(n);w.u32(ids.length);
+  if(ArrayBuffer.isView(a)){for(const i of ids){w.u32(i);w.num(a[i]);}return;}
+  for(const i of ids){w.u32(i);MF_SH_value(w,a[i]);}
+}
+function MF_SH_indexedRange(w,n,a,count){
+  w.str(n);w.u32(count);
+  if(ArrayBuffer.isView(a)){for(let i=0;i<count;i++){w.u32(i);w.num(a[i]);}return;}
+  for(let i=0;i<count;i++){w.u32(i);MF_SH_value(w,a[i]);}
+}
+function MF_SH_fields(o,names){const r={};if(o)for(const n of names)if(o[n]!==undefined&&typeof o[n]!=='function')r[n]=o[n];return r;}
+function MF_SH_snapshot(){
+  if(typeof tick==='undefined'||typeof unitHigh==='undefined'||typeof ualive==='undefined'||typeof ugen==='undefined'||typeof blds==='undefined'||typeof pHigh==='undefined'||typeof palive==='undefined')throw MF_SH_error('gameplay_state_unavailable');
+  if(!Number.isInteger(unitHigh)||unitHigh<0||unitHigh>65536||!Number.isInteger(pHigh)||pHigh<0||pHigh>65536)throw MF_SH_error('gameplay_state_pool_bound');
+  const w=MF_SH_writer(),units=MF_SH_UNITS,shots=MF_SH_SHOTS;units.length=0;shots.length=0;
+  /* Slot generations/alive flags stay high-water and index ordered because the
+     multiplayer digest must detect dead-slot reuse. Live payloads can reuse a
+     dense scratch list without allocating two new index arrays every second. */
+  for(let i=0;i<unitHigh;i++)if(ualive[i])units.push(i);for(let i=0;i<pHigh;i++)if(palive[i])shots.push(i);
+  w.str(MF_SH_MAGIC);MF_SH_named(w,'tick',tick);MF_SH_named(w,'unitHigh',unitHigh);MF_SH_named(w,'unitFree',typeof freeList!=='undefined'?freeList:[]);MF_SH_indexedRange(w,'ugen',ugen,unitHigh);MF_SH_indexedRange(w,'ualive',ualive,unitHigh);
+  const ua=[['ux',ux],['uy',uy],['uang',uang],['uturr',uturr],['ugunPitch',ugunPitch],['utx',utx],['uty',uty],['uhp',uhp],['uhpm',uhpm],['ucool',ucool],['ubuff',ubuff],['ustomp',ustomp],['ureclaim',ureclaim],['uclassBuff',uclassBuff],['uclassBuffT',uclassBuffT],['ubroodLed',ubroodLed],['uMineT',uMineT],['uMineNode',uMineNode],['utype',utype],['uteam',uteam],['uAllyBase',uAllyBase],['uCmd',uCmd],['ustate',ustate],['utgt',utgt],['utgtg',utgtg],['ukills',ukills],['uvet',uvet],['ushielded',ushielded],['ufield',ufield],['uhaz',uhaz],['ufireT',ufireT],['umarch',umarch],['ustun',ustun],['uHurtT',uHurtT],['uheal',uheal],['uStuckFor',uStuckFor],['upx1',upx1],['upy1',upy1],['upx2',upx2],['upy2',upy2],['uPatrolRoute',uPatrolRoute],['uPatrolStep',uPatrolStep],['uPatrolSlot',uPatrolSlot],['uMoveCohort',uMoveCohort],['uCohesion',uCohesion],['uhold',uhold],['uGuard',uGuard],['uGuardG',uGuardG],['uQkind',uQkind],['umode',umode],['umodeT',umodeT],['uCrash',uCrash],['uCbreak',uCbreak],['ualt',ualt],['uCvx',uCvx],['uCvy',uCvy],['uCvz',uCvz],['uCdPitch',uCdPitch],['uCdRoll',uCdRoll],['uCspin',uCspin],['uCtime',uCtime]];
+  for(const x of ua)MF_SH_indexed(w,x[0],x[1],units);
+  const opt=[['uUtilityJob',typeof uUtilityJob!=='undefined'?uUtilityJob:null],['uUtilityGoalX',typeof uUtilityGoalX!=='undefined'?uUtilityGoalX:null],['uUtilityGoalY',typeof uUtilityGoalY!=='undefined'?uUtilityGoalY:null],['uUtilityAuto',typeof uUtilityAuto!=='undefined'?uUtilityAuto:null],['uUtilityProgressX',typeof uUtilityProgressX!=='undefined'?uUtilityProgressX:null],['uUtilityProgressY',typeof uUtilityProgressY!=='undefined'?uUtilityProgressY:null],['uUtilityProgressAt',typeof uUtilityProgressAt!=='undefined'?uUtilityProgressAt:null],['uUtilityRetryAt',typeof uUtilityRetryAt!=='undefined'?uUtilityRetryAt:null],['uAirGen',typeof uAirGen!=='undefined'?uAirGen:null],['uAirTarget',typeof uAirTarget!=='undefined'?uAirTarget:null],['uAirTargetG',typeof uAirTargetG!=='undefined'?uAirTargetG:null],['uAirEscort',typeof uAirEscort!=='undefined'?uAirEscort:null],['uAirEscortG',typeof uAirEscortG!=='undefined'?uAirEscortG:null],['uAirBand',typeof uAirBand!=='undefined'?uAirBand:null],['uAirBandReq',typeof uAirBandReq!=='undefined'?uAirBandReq:null],['uAirMission',typeof uAirMission!=='undefined'?uAirMission:null],['uAirHomeMission',typeof uAirHomeMission!=='undefined'?uAirHomeMission:null],['uAirPhase',typeof uAirPhase!=='undefined'?uAirPhase:null],['uAirFire',typeof uAirFire!=='undefined'?uAirFire:null],['uAirScanClock',typeof uAirScanClock!=='undefined'?uAirScanClock:null],['uAirAlt',typeof uAirAlt!=='undefined'?uAirAlt:null],['uAirPhaseT',typeof uAirPhaseT!=='undefined'?uAirPhaseT:null],['uAirAnchorX',typeof uAirAnchorX!=='undefined'?uAirAnchorX:null],['uAirAnchorY',typeof uAirAnchorY!=='undefined'?uAirAnchorY:null],['uAirGoalX',typeof uAirGoalX!=='undefined'?uAirGoalX:null],['uAirGoalY',typeof uAirGoalY!=='undefined'?uAirGoalY:null],['uAirAimX',typeof uAirAimX!=='undefined'?uAirAimX:null],['uAirAimY',typeof uAirAimY!=='undefined'?uAirAimY:null],['uAirVx',typeof uAirVx!=='undefined'?uAirVx:null],['uAirVy',typeof uAirVy!=='undefined'?uAirVy:null],['uAirCourse',typeof uAirCourse!=='undefined'?uAirCourse:null],['uAirYawRate',typeof uAirYawRate!=='undefined'?uAirYawRate:null],['uAirPass',typeof uAirPass!=='undefined'?uAirPass:null],['uAirReleaseN',typeof uAirReleaseN!=='undefined'?uAirReleaseN:null],['uAirReacquireN',typeof uAirReacquireN!=='undefined'?uAirReacquireN:null],['uAirSortie',typeof uAirSortie!=='undefined'?uAirSortie:null]];
+  for(const x of opt)if(x[1])MF_SH_indexed(w,x[0],x[1],units);
+  const nav=[['uNavProgressGen',typeof uNavProgressGen!=='undefined'?uNavProgressGen:null],
+    ['uNavGoalX',typeof uNavGoalX!=='undefined'?uNavGoalX:null],['uNavGoalY',typeof uNavGoalY!=='undefined'?uNavGoalY:null],
+    ['uNavProbeX',typeof uNavProbeX!=='undefined'?uNavProbeX:null],['uNavProbeY',typeof uNavProbeY!=='undefined'?uNavProbeY:null],
+    ['uNavProbeAge',typeof uNavProbeAge!=='undefined'?uNavProbeAge:null],['uNavRetryFor',typeof uNavRetryFor!=='undefined'?uNavRetryFor:null],
+    ['uNavPursuitField',typeof uNavPursuitField!=='undefined'?uNavPursuitField:null]];
+  for(const x of nav)if(x[1])MF_SH_indexed(w,x[0],x[1],units);
+  MF_SH_named(w,'unitQueues',units.map(i=>[i,uQueue[i]||null]));MF_SH_named(w,'patrolRoutes',typeof patrolRoutes!=='undefined'?patrolRoutes:[]);MF_SH_named(w,'moveCohorts',typeof moveCohorts!=='undefined'?moveCohorts:[]);
+  const bf=['type','team','fac','x','y','hp','hpm','r','alive','prog','cool','queue','queueRevision','repeat','prodT','heal','tier','lvl','upT','upMax','tang','gunPitch','boost','boostM','res','resT','rally','rich','dep','geo','shield','shieldMax','shieldT','guardReady','guardT','guardCharge','rot','footTier','link','conduit','buildPaidM','buildPaidE','buildStalled','repairOn','dmgT','aim','aimG','target','targetG','mode','state','stun','haz'];
+  MF_SH_named(w,'buildings',blds.map((b,i)=>[i,MF_SH_fields(b,bf)]));MF_SH_named(w,'economy',{resM:typeof resM!=='undefined'?resM:[],resE:typeof resE!=='undefined'?resE:[],mSpendAcc:typeof mSpendAcc!=='undefined'?mSpendAcc:0,eSpendAcc:typeof eSpendAcc!=='undefined'?eSpendAcc:0,spendT:typeof spendT!=='undefined'?spendT:0,stats:typeof stats!=='undefined'?stats:{},researched:typeof researched!=='undefined'?researched:{},researchCarry:typeof researchCarry!=='undefined'?researchCarry:{},researching:typeof researching!=='undefined'?researching:null});
+  MF_SH_named(w,'pHigh',pHigh);MF_SH_named(w,'projectileFree',typeof pFree!=='undefined'?pFree:[]);
+  const pa=[['px',px],['py',py],['pvx',pvx],['pvy',pvy],['plife',plife],['pdmg',pdmg],['paoe',paoe],['ptype',ptype],['pteam',pteam],['ptgt',ptgt],['ptgtg',ptgtg],['pmu0',pmu0],['pwk',pwk],['psx',psx],['psy',psy],['pex',pex],['pey',pey],['pt',pt],['pmax',pmax],['pSplit',pSplit],['pCannon',pCannon],['pBio',pBio],['pBarrage',pBarrage],['pFlightId',pFlightId],['pBaseSpeed',pBaseSpeed],['pSpeed',pSpeed],['pAge',pAge],['pSrcUnit',pSrcUnit],['pSrcGen',pSrcGen],['pArc',pArc],['pz0',pz0],['pz1',pz1],['pz',pz],['pLastTX',pLastTX],['pLastTY',pLastTY]];for(const x of pa)MF_SH_indexed(w,x[0],x[1],shots);
+  MF_SH_named(w,'projectileBuildingSources',shots.map(i=>[i,typeof pSrcBld!=='undefined'&&pSrcBld[i]?blds.indexOf(pSrcBld[i]):-1]));MF_SH_named(w,'ai',typeof AI!=='undefined'?AI:{});MF_SH_named(w,'airAuthority',{seed:typeof mfAirSeed!=='undefined'?mfAirSeed:0,acc:typeof mfAirAiAcc!=='undefined'?mfAirAiAcc:0});MF_SH_named(w,'determinism',typeof mfDeterminismSnapshot==='function'?mfDeterminismSnapshot():{});MF_SH_named(w,'hazards',typeof HAZ!=='undefined'?HAZ:{});
+  const nf=['x','y','taken','rich','starter','initialTier','tier','capacity','remaining','depleted','team','alive','hp','hpm','amount','type','gen','owner','cool','t','state'],world=a=>a.map((o,i)=>[i,MF_SH_fields(o,nf)]);
+  MF_SH_named(w,'deposits',typeof deposits!=='undefined'?world(deposits):[]);MF_SH_named(w,'geysers',typeof geysers!=='undefined'?world(geysers):[]);MF_SH_named(w,'crates',typeof crates!=='undefined'?world(crates):[]);MF_SH_named(w,'relics',typeof relics!=='undefined'?world(relics):[]);MF_SH_named(w,'tanks',typeof tanks!=='undefined'?world(tanks):[]);MF_SH_named(w,'wrecks',typeof wrecks!=='undefined'?world(wrecks):[]);
+  MF_SH_named(w,'carrier',typeof carrier!=='undefined'?MF_SH_fields(carrier,['active','x','y','tx','ty','alt','clearance','ang','phase','fac']):{});MF_SH_named(w,'deformQueue',typeof deformQ!=='undefined'?deformQ:[]);MF_SH_named(w,'passability',typeof PASS!=='undefined'&&PASS?PASS:new Uint8Array(0));MF_SH_named(w,'match',{live:typeof matchLive!=='undefined'?matchLive:false,setup:typeof matchSetupArmed!=='undefined'?matchSetupArmed:false});return w.finish();
+}
+async function MF_SH_digest(){
+  if(!globalThis.crypto||!crypto.subtle||typeof crypto.subtle.digest!=='function')throw MF_SH_error('gameplay_hash_unavailable');
+  /* The profiler measures only canonical-state construction on the main
+     thread. WebCrypto time is asynchronous and must not be mislabeled as a
+     simulation/network hitch. These hooks are optional and do not alter the
+     hashed bytes, cadence, authority, or Promise contract. */
+  const measured=typeof window!=='undefined'&&typeof window.mfPerfBegin==='function'&&typeof window.mfPerfEnd==='function';
+  if(measured)window.mfPerfBegin('networkSync');
+  let bytes;try{bytes=MF_SH_snapshot();}finally{if(measured)window.mfPerfEnd('networkSync');}
+  const digest=new Uint8Array(await crypto.subtle.digest('SHA-256',bytes));let hex='';for(const b of digest)hex+=b.toString(16).padStart(2,'0');if(!MF_SH_HEX.test(hex))throw MF_SH_error('gameplay_hash_invalid');return hex;
+}
+/* Some focused browser probes install a strict mock before loading the normal
+   source order. Preserve that test seam and avoid redefining a sealed global. */
+if(typeof window.mfGameplayStateHash!=='function')Object.defineProperty(window,'mfGameplayStateHash',{value:MF_SH_digest,writable:false,configurable:false,enumerable:false});

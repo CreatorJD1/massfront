@@ -1,0 +1,228 @@
+{
+  "schema": "MassfrontExplorationDracoVisualEvidenceV1",
+  "capturedAt": "2026-09-06T01:00:49.823Z",
+  "url": "http://127.0.0.1:8917",
+  "viewport": {
+    "width": 1320,
+    "height": 1420,
+    "deviceScaleFactor": 1
+  },
+  "gpu": {
+    "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4060 Laptop GPU (0x000028E0) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+    "vendor": "Google Inc. (NVIDIA)"
+  },
+  "candidateReport": ".tmp/exploration-draco-20260905-r3-report.json",
+  "screenshot": "audit/exploration-pack-optimization-20260905/before-after-contact-sheet.png",
+  "hashes": {
+    "tools/compress-exploration-geometry.mjs": "c62a59212f1848080acaff872fc03eaa1a7eea858b5b694d0a5822128b82bb28",
+    "tools/compress-exploration-textures.mjs": "6e23521ae137a0687762ecf31a68e793191e527a4d4623342009157aebd9b16c",
+    "modules/space_exploration/src/core/gltf_runtime_loader.js": "f32ee759f9ab434045c2c348a5243e9abbd6212950bdb82b1d0d2eadf2efec47"
+  },
+  "consoleErrors": [],
+  "httpErrors": [],
+  "rows": [
+    {
+      "model": "civic-hall",
+      "variant": "before",
+      "meshes": 8,
+      "triangles": 13811,
+      "materials": 8,
+      "hiddenLods": [
+        "MF_BLD_HS_brutalist_civic_hall_LOD1",
+        "MF_BLD_HS_brutalist_civic_hall_LOD1_MESH001",
+        "MF_BLD_HS_brutalist_civic_hall_LOD1_MESH001_1",
+        "MF_BLD_HS_brutalist_civic_hall_LOD1_MESH001_2",
+        "MF_BLD_HS_brutalist_civic_hall_LOD1_MESH001_3",
+        "MF_BLD_HS_brutalist_civic_hall_LOD1_MESH001_4",
+        "MF_BLD_HS_brutalist_civic_hall_LOD1_MESH001_5",
+        "MF_BLD_HS_brutalist_civic_hall_LOD1_MESH001_6",
+        "MF_BLD_HS_brutalist_civic_hall_LOD1_MESH001_7",
+        "MF_BLD_HS_brutalist_civic_hall_LOD2",
+        "MF_BLD_HS_brutalist_civic_hall_LOD2_MESH001",
+        "MF_BLD_HS_brutalist_civic_hall_LOD2_MESH001_1",
+        "MF_BLD_HS_brutalist_civic_hall_LOD2_MESH001_2",
+        "MF_BLD_HS_brutalist_civic_hall_LOD2_MESH001_3",
+        "MF_BLD_HS_brutalist_civic_hall_LOD2_MESH001_4",
+        "MF_BLD_HS_brutalist_civic_hall_LOD2_MESH001_5",
+        "MF_BLD_HS_brutalist_civic_hall_LOD2_MESH001_6",
+        "MF_BLD_HS_brutalist_civic_hall_LOD2_MESH001_7"
+      ],
+      "bounds": {
+        "min": [
+          -33.290061950683594,
+          -1.3249276876449585,
+          -32.33192443847656
+        ],
+        "max": [
+          31.940000534057617,
+          24.219289779663086,
+          33.540000915527344
+        ]
+      }
+    },
+    {
+      "model": "civic-hall",
+      "variant": "after",
+      "meshes": 8,
+      "triangles": 13811,
+      "materials": 8,
+      "hiddenLods": [
+        "MF_BLD_HS_brutalist_civic_hall_LOD2",
+        "MF_BLD_HS_brutalist_civic_hall_LOD2_MESH001",
+        "MF_BLD_HS_brutalist_civic_hall_LOD2_MESH001_1",
+        "MF_BLD_HS_brutalist_civic_hall_LOD2_MESH001_2",
+        "MF_BLD_HS_brutalist_civic_hall_LOD2_MESH001_3",
+        "MF_BLD_HS_brutalist_civic_hall_LOD2_MESH001_4",
+        "MF_BLD_HS_brutalist_civic_hall_LOD2_MESH001_5",
+        "MF_BLD_HS_brutalist_civic_hall_LOD2_MESH001_6",
+        "MF_BLD_HS_brutalist_civic_hall_LOD2_MESH001_7",
+        "MF_BLD_HS_brutalist_civic_hall_LOD1",
+        "MF_BLD_HS_brutalist_civic_hall_LOD1_MESH001",
+        "MF_BLD_HS_brutalist_civic_hall_LOD1_MESH001_1",
+        "MF_BLD_HS_brutalist_civic_hall_LOD1_MESH001_2",
+        "MF_BLD_HS_brutalist_civic_hall_LOD1_MESH001_3",
+        "MF_BLD_HS_brutalist_civic_hall_LOD1_MESH001_4",
+        "MF_BLD_HS_brutalist_civic_hall_LOD1_MESH001_5",
+        "MF_BLD_HS_brutalist_civic_hall_LOD1_MESH001_6",
+        "MF_BLD_HS_brutalist_civic_hall_LOD1_MESH001_7"
+      ],
+      "bounds": {
+        "min": [
+          -33.290061950683594,
+          -1.3249276876449585,
+          -32.33192443847656
+        ],
+        "max": [
+          31.940000534057617,
+          24.219289779663086,
+          33.540000915527344
+        ]
+      }
+    },
+    {
+      "model": "spire-crown",
+      "variant": "before",
+      "meshes": 12,
+      "triangles": 16186,
+      "materials": 12,
+      "hiddenLods": [
+        "MF_SUPER_V1_brutalist_spire_crown_LOD2",
+        "MF_SUPER_V1_brutalist_spire_crown_LOD2_MESH",
+        "MF_SUPER_V1_brutalist_spire_crown_LOD2_MESH_1",
+        "MF_SUPER_V1_brutalist_spire_crown_LOD2_MESH_2",
+        "MF_SUPER_V1_brutalist_spire_crown_LOD1",
+        "MF_SUPER_V1_brutalist_spire_crown_LOD1_MESH",
+        "MF_SUPER_V1_brutalist_spire_crown_LOD1_MESH_1",
+        "MF_SUPER_V1_brutalist_spire_crown_LOD1_MESH_2",
+        "MF_SUPER_V1_brutalist_spire_crown_LOD1_MESH_3",
+        "MF_SUPER_V1_brutalist_spire_crown_LOD1_MESH_4",
+        "MF_SUPER_V1_brutalist_spire_crown_LOD1_MESH_5"
+      ],
+      "bounds": {
+        "min": [
+          3618.06005859375,
+          0,
+          308.05999755859375
+        ],
+        "max": [
+          3681.93994140625,
+          295.25,
+          371.94000244140625
+        ]
+      }
+    },
+    {
+      "model": "spire-crown",
+      "variant": "after",
+      "meshes": 12,
+      "triangles": 16184,
+      "materials": 12,
+      "hiddenLods": [
+        "MF_SUPER_V1_brutalist_spire_crown_LOD1",
+        "MF_SUPER_V1_brutalist_spire_crown_LOD1_MESH",
+        "MF_SUPER_V1_brutalist_spire_crown_LOD1_MESH_1",
+        "MF_SUPER_V1_brutalist_spire_crown_LOD1_MESH_2",
+        "MF_SUPER_V1_brutalist_spire_crown_LOD1_MESH_3",
+        "MF_SUPER_V1_brutalist_spire_crown_LOD1_MESH_4",
+        "MF_SUPER_V1_brutalist_spire_crown_LOD1_MESH_5",
+        "MF_SUPER_V1_brutalist_spire_crown_LOD2",
+        "MF_SUPER_V1_brutalist_spire_crown_LOD2_MESH",
+        "MF_SUPER_V1_brutalist_spire_crown_LOD2_MESH_1",
+        "MF_SUPER_V1_brutalist_spire_crown_LOD2_MESH_2"
+      ],
+      "bounds": {
+        "min": [
+          3618.06005859375,
+          0,
+          308.05999755859375
+        ],
+        "max": [
+          3681.93994140625,
+          295.25,
+          371.94000244140625
+        ]
+      }
+    },
+    {
+      "model": "command-cutaway",
+      "variant": "before",
+      "meshes": 902,
+      "triangles": 262248,
+      "materials": 33,
+      "hiddenLods": [],
+      "bounds": {
+        "min": [
+          -33.5,
+          -4.400000095367432,
+          -4.369999885559082
+        ],
+        "max": [
+          30.199999839411515,
+          9.119999885559082,
+          13.869999885559082
+        ]
+      }
+    },
+    {
+      "model": "command-cutaway",
+      "variant": "after",
+      "meshes": 902,
+      "triangles": 262248,
+      "materials": 33,
+      "hiddenLods": [],
+      "bounds": {
+        "min": [
+          -33.5,
+          -4.400000095367432,
+          -4.369999885559082
+        ],
+        "max": [
+          30.199999839411515,
+          9.119999885559082,
+          13.869999885559082
+        ]
+      }
+    }
+  ],
+  "pixelDiffs": [
+    {
+      "model": "civic-hall",
+      "meanRgbDelta": 0.042241319444444446,
+      "changedPixelPercent": 0.25677083333333334,
+      "maxRgbDeltaSum": 139
+    },
+    {
+      "model": "spire-crown",
+      "meanRgbDelta": 0.0005486111111111112,
+      "changedPixelPercent": 0,
+      "maxRgbDeltaSum": 7
+    },
+    {
+      "model": "command-cutaway",
+      "meanRgbDelta": 0.00007638888888888889,
+      "changedPixelPercent": 0.0005208333333333333,
+      "maxRgbDeltaSum": 44
+    }
+  ],
+  "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/152.0.0.0 Safari/537.36"
+}

@@ -1,0 +1,522 @@
+{
+  "schemaVersion": 1,
+  "blueprintId": "massfront-city-outpost-modular-layout-blueprints-v1",
+  "auditDate": "2026-08-26",
+  "status": "SOURCE_AUTHORING_BLUEPRINT_ONLY",
+  "runtimeReady": false,
+  "purpose": "Define deterministic, socket-valid city and outpost assemblies around the source gatehouse, the contracted operations block, and the planned primary-road modules without producing random masses of unrelated models.",
+  "authorities": [
+    "source-media/content-library/modular-city-colony-kit-contract.v1.json",
+    "source-media/content-library/hunyuan-spline-generation-ledger.v1.json",
+    "source-media/content-library/outpost-operations-block-source-acceptance.v1.json",
+    "source-media/content-library/city-outpost-layout-next-generation-wave.v1.json",
+    "source-media/content-library/hunyuan-city-outpost-layout-generation-queue.v1.json"
+  ],
+  "assetReadiness": [
+    {
+      "familyId": "gatehouse_command_tower_64",
+      "assetId": "mf_city_outpost_gatehouse_command_tower",
+      "role": "fortified entry, command landmark, and controlled primary-road threshold",
+      "sourcePath": "modules/space_exploration/assets/source/spline/hunyuan/city_outpost_layout_kits/outpost_gatehouse_command_tower/mf_city_outpost_gatehouse_command_tower_source.glb",
+      "sourceStatus": "HASH_VERIFIED_RECLASSIFIED_SOURCE_CANDIDATE",
+      "sourceSha256": "6b9577a2ac476503261fe53539323854bd956711e45d7ed457cf1922a1f68829",
+      "measuredSourceBoundsMeters": [64, 72, 64],
+      "plannedFootprintMeters": [64, 64],
+      "runtimeReady": false,
+      "blockers": [
+        "author and verify the through-road and public/service sockets",
+        "retopology, LOD, collision, navigation, and semantic material separation",
+        "matched mobile runtime evidence"
+      ]
+    },
+    {
+      "familyId": "outpost_operations_block_32",
+      "assetId": "mf_hi_outpost_operations_block_01",
+      "role": "compact staffed operations core with public, vehicle, and service access",
+      "sourceStatus": "CONTRACT_VALIDATED_SOURCE_CANDIDATE_PENDING_FINAL_ADMISSION",
+      "targetBoundsMeters": [32, 20, 32],
+      "runtimeReady": false,
+      "contractPath": "source-media/content-library/outpost-operations-block-source-acceptance.v1.json",
+      "blockers": [
+        "finish and inspect the source candidate",
+        "verify every socket clearance and source-hygiene condition",
+        "retopology, LOD, collision, navigation, semantic materials, and matched mobile evidence"
+      ]
+    },
+    {
+      "familyId": "road_primary_straight_32",
+      "assetId": "mf_hi_road_primary_straight_32_01",
+      "sourceStatus": "PLANNED_CONCEPT_BLOCKED",
+      "targetBoundsMeters": [32, 0.6, 32],
+      "runtimeReady": false
+    },
+    {
+      "familyId": "road_primary_corner_32",
+      "assetId": "mf_hi_road_primary_corner_32_01",
+      "sourceStatus": "PLANNED_CONCEPT_BLOCKED",
+      "targetBoundsMeters": [32, 0.6, 32],
+      "runtimeReady": false
+    },
+    {
+      "familyId": "road_primary_x_plaza_48",
+      "assetId": "mf_hi_road_primary_x_plaza_48_01",
+      "sourceStatus": "PLANNED_CONCEPT_BLOCKED",
+      "targetBoundsMeters": [48, 0.6, 48],
+      "runtimeReady": false
+    }
+  ],
+  "coordinateAndGridGrammar": {
+    "units": "meters",
+    "upAxis": "+Y",
+    "northAxis": "+Z",
+    "eastAxis": "+X",
+    "originRule": "Ground-module and building origins are at footprint center on floor Y=0; portal positions are the bottom-center of the clear opening.",
+    "detailSnapMeters": 4,
+    "macroGridMeters": 16,
+    "districtBlockMeters": 64,
+    "verticalStepMeters": 2,
+    "allowedYawDegrees": [0, 90, 180, 270],
+    "runtimeScale": 1,
+    "positionToleranceMeters": 0.005,
+    "socketGapToleranceMeters": 0.01,
+    "maximumSurfaceStepMeters": 0.02,
+    "placementOrder": [
+      "instantiate authored road graph",
+      "validate connected sockets and authored terminations",
+      "reserve road, intersection, visibility, and frontage clearances",
+      "instantiate required functional plots",
+      "instantiate restricted optional plots",
+      "add service, pedestrian, and utility links",
+      "add bounded props, decals, damage, and infestation last"
+    ]
+  },
+  "socketProfiles": [
+    {
+      "profileId": "road_primary_18",
+      "clearWidthMeters": 18,
+      "clearHeightMeters": 0,
+      "navigation": ["infantry", "light_vehicle", "heavy_vehicle", "superheavy"],
+      "mateWith": ["road_primary_18"],
+      "edgeStopBeforeSocketMeters": 1
+    },
+    {
+      "profileId": "road_local_12",
+      "clearWidthMeters": 12,
+      "clearHeightMeters": 0,
+      "navigation": ["infantry", "light_vehicle", "heavy_vehicle"],
+      "mateWith": ["road_local_12", "road_primary_18_to_local_12"],
+      "edgeStopBeforeSocketMeters": 0.75
+    },
+    {
+      "profileId": "lane_service_8",
+      "clearWidthMeters": 8,
+      "clearHeightMeters": 0,
+      "navigation": ["infantry", "light_vehicle"],
+      "mateWith": ["lane_service_8"],
+      "edgeStopBeforeSocketMeters": 0.75
+    },
+    {
+      "profileId": "concourse_ped_6",
+      "clearWidthMeters": 6,
+      "clearHeightMeters": 3.5,
+      "navigation": ["infantry"],
+      "mateWith": ["concourse_ped_6"],
+      "edgeStopBeforeSocketMeters": 0.5
+    },
+    {
+      "profileId": "corridor_cargo_12x8",
+      "clearWidthMeters": 12,
+      "clearHeightMeters": 8,
+      "navigation": ["infantry", "light_vehicle", "heavy_vehicle"],
+      "mateWith": ["corridor_cargo_12x8"],
+      "edgeStopBeforeSocketMeters": 1
+    },
+    {
+      "profileId": "utility_service_4x4",
+      "clearWidthMeters": 4,
+      "clearHeightMeters": 4,
+      "navigation": ["infantry"],
+      "mateWith": ["utility_service_4x4"],
+      "edgeStopBeforeSocketMeters": 0.5
+    }
+  ],
+  "structureSocketTargets": {
+    "gatehouse_command_tower_64": {
+      "status": "AUTHORING_TARGET_NOT_YET_SOURCE_APPROVED",
+      "footprintMeters": [64, 64],
+      "sockets": [
+        {"socketId": "road_s", "profileId": "road_primary_18", "localPositionMeters": [0, 0, -32], "outward": [0, 0, -1], "minimumPortalHeightMeters": 16},
+        {"socketId": "road_n", "profileId": "road_primary_18", "localPositionMeters": [0, 0, 32], "outward": [0, 0, 1], "minimumPortalHeightMeters": 16},
+        {"socketId": "public_w", "profileId": "concourse_ped_6", "localPositionMeters": [-32, 0, 16], "outward": [-1, 0, 0]},
+        {"socketId": "public_e", "profileId": "concourse_ped_6", "localPositionMeters": [32, 0, 16], "outward": [1, 0, 0]},
+        {"socketId": "service_e", "profileId": "lane_service_8", "localPositionMeters": [32, 0, -16], "outward": [1, 0, 0]}
+      ],
+      "reservedClearances": [
+        "continuous 18 m by 16 m primary through-route",
+        "12 m deep unobstructed approach fan on both primary-road faces",
+        "8 m emergency bypass from service socket to the northern interior apron",
+        "no tower buttress, barrier, decal geometry, or collision may enter any socket volume"
+      ]
+    },
+    "outpost_operations_block_32": {
+      "status": "CONTRACT_AUTHORITY",
+      "footprintMeters": [32, 32],
+      "heightMeters": 20,
+      "sockets": [
+        {"socketId": "front_s", "profileId": "road_local_12", "localPositionMeters": [0, 0, -16], "outward": [0, 0, -1], "clearanceMeters": [12, 8]},
+        {"socketId": "rear_n", "profileId": "lane_service_8", "localPositionMeters": [0, 0, 16], "outward": [0, 0, 1], "clearanceMeters": [8, 4]},
+        {"socketId": "public_w", "profileId": "concourse_ped_6", "localPositionMeters": [-16, 0, 0], "outward": [-1, 0, 0], "clearanceMeters": [6, 3.5]},
+        {"socketId": "public_e", "profileId": "concourse_ped_6", "localPositionMeters": [16, 0, 0], "outward": [1, 0, 0], "clearanceMeters": [6, 3.5]}
+      ]
+    }
+  },
+  "frontageAndClearanceGrammar": {
+    "roadPrimary18": {
+      "moduleReservationWidthMeters": 32,
+      "clearCarriagewayMeters": 18,
+      "sideServiceBandMeters": 7,
+      "minimumCurbToBuildingFrontageMeters": 14,
+      "minimumIntersectionSightTriangleLegMeters": 24
+    },
+    "roadLocal12": {
+      "minimumReservationWidthMeters": 16,
+      "clearCarriagewayMeters": 12,
+      "minimumCurbToBuildingFrontageMeters": 8,
+      "minimumIntersectionSightTriangleLegMeters": 16
+    },
+    "laneService8": {
+      "minimumReservationWidthMeters": 12,
+      "clearCarriagewayMeters": 8,
+      "minimumStructureSetbackMeters": 4
+    },
+    "concoursePed6": {
+      "minimumClearWidthMeters": 6,
+      "minimumClearHeightMeters": 3.5,
+      "minimumStructureSetbackMeters": 2
+    },
+    "betweenStructures": {
+      "ordinaryMinimumMeters": 8,
+      "towerToTowerMinimumMeters": 16,
+      "industrialHazardMinimumMeters": 24,
+      "gatehouseApproachFanDepthMeters": 12,
+      "operationsFrontApronDepthMeters": 12,
+      "operationsRearServiceApronDepthMeters": 8
+    },
+    "plotRules": [
+      "A plot apron is tested against every road and intersection reservation, not only the nearest street.",
+      "No required plot may occupy the 28 m by 28 m no-plot center of the primary X plaza.",
+      "Public entrances face a public road or concourse; freight and waste faces never substitute for a public entrance.",
+      "Service access must reach a map edge or logistics node without crossing a pedestrian-only concourse.",
+      "Every structure retains one readable open frontage from tactical and command zoom."
+    ]
+  },
+  "assemblyNotation": {
+    "placement": "Each placement declares an ID, family, center in meters, cardinal yaw, required/optional state, and functional role.",
+    "connection": "Each connection names two placement.socket endpoints. The compiler accepts it only when profiles are compatible, positions match within 0.01 m, outward vectors oppose, and surface step is at most 0.02 m.",
+    "plot": "A plot is an authored footprint plus access and clearance reservations. A model may fill it only when its declared family and podium profile match.",
+    "optionalSlot": "Optional slots select from an explicit ordered family allowlist using the deterministic site hash; an empty state is authored and valid.",
+    "termination": "Every external road socket must mate to another road, a gate/endcap, a declared map boundary, or a damaged authored termination. Unmatched sockets fail validation."
+  },
+  "layoutArchetypes": [
+    {
+      "archetypeId": "checkpoint_outpost",
+      "function": "Controlled frontier threshold with a staffed command landmark, an operations core, inspection space, and a bypassable service route.",
+      "siteEnvelopeMeters": [160, 160],
+      "requiredFamilies": [
+        "gatehouse_command_tower_64",
+        "outpost_operations_block_32",
+        "road_primary_straight_32",
+        "road_primary_endcap_or_map_boundary",
+        "road_primary_to_local_adapter",
+        "road_local_straight_16",
+        "lane_service_straight_16",
+        "concourse_ped_straight_16"
+      ],
+      "authoredPlacementIntent": [
+        {"id": "gate", "family": "gatehouse_command_tower_64", "centerMeters": [0, 0, 0], "yawDegrees": 0, "required": true, "role": "primary controlled threshold"},
+        {"id": "approach", "family": "road_primary_straight_32", "centerMeters": [0, 0, -48], "yawDegrees": 0, "required": true, "role": "external approach"},
+        {"id": "interior", "family": "road_primary_straight_32", "centerMeters": [0, 0, 48], "yawDegrees": 0, "required": true, "role": "interior dispersal spine"},
+        {"id": "operations", "family": "outpost_operations_block_32", "centerMeters": [48, 0, 80], "yawDegrees": 0, "required": true, "role": "staffed checkpoint operations"}
+      ],
+      "requiredConnections": [
+        "approach.road_n -> gate.road_s",
+        "gate.road_n -> interior.road_s",
+        "interior road graph -> authored primary/local adapter -> operations.front_s",
+        "gate.public_e -> authored pedestrian concourse -> operations.public_w",
+        "operations.rear_n -> service loop -> declared map service boundary"
+      ],
+      "restrictedOptionalPlots": [
+        {"plotId": "inspection_left", "allowedFamilies": ["inspection_canopy", "customs_scanner", "empty_hardstand"], "maximumFootprintMeters": [32, 24]},
+        {"plotId": "inspection_right", "allowedFamilies": ["vehicle_hold", "maintenance_shed", "empty_hardstand"], "maximumFootprintMeters": [32, 24]}
+      ],
+      "identityRule": "The gatehouse is the dominant silhouette; optional structures stay lower than 20 m and may not obscure the portal from the approach."
+    },
+    {
+      "archetypeId": "logistics_outpost",
+      "function": "A compact supply node where heavy road traffic, cargo transfer, service maintenance, and operations oversight form a legible loop.",
+      "siteEnvelopeMeters": [192, 160],
+      "requiredFamilies": [
+        "road_primary_x_plaza_48",
+        "road_primary_straight_32",
+        "road_primary_corner_32",
+        "outpost_operations_block_32",
+        "logistics_depot_48x32",
+        "cargo_corridor_32x16",
+        "lane_service_straight_16",
+        "service_lane_corner_or_branch",
+        "primary_to_local_adapter"
+      ],
+      "authoredPlacementIntent": [
+        {"id": "freight_plaza", "family": "road_primary_x_plaza_48", "centerMeters": [0, 0, 0], "yawDegrees": 0, "required": true, "role": "heavy traffic distributor and no-plot hardstand"},
+        {"id": "operations", "family": "outpost_operations_block_32", "centerMeters": [64, 0, 48], "yawDegrees": 90, "required": true, "role": "dispatch and route control"},
+        {"id": "depot", "family": "logistics_depot_48x32", "centerMeters": [-64, 0, 48], "yawDegrees": 0, "required": true, "role": "cargo storage and transfer"}
+      ],
+      "requiredConnections": [
+        "freight_plaza road graph -> authored approach and exit roads on at least three faces",
+        "freight_plaza -> primary/local adapter -> operations.front_s",
+        "depot cargo socket -> cargo corridor -> bounded loading hardstand",
+        "operations.rear_n -> service loop -> depot service entrance",
+        "every unused freight-plaza face -> authored road continuation, gate, or map boundary"
+      ],
+      "restrictedOptionalPlots": [
+        {"plotId": "fuel_yard", "allowedFamilies": ["tank_farm_small", "battery_exchange_yard", "empty_hazard_pad"], "minimumSeparationFromPublicMeters": 24},
+        {"plotId": "repair_yard", "allowedFamilies": ["vehicle_maintenance_bay", "cargo_crane_low", "empty_hardstand"], "maximumHeightMeters": 20}
+      ],
+      "identityRule": "Cargo paths form one obvious loop; tanks, containers, cranes, and maintenance props remain in their assigned yards instead of being scattered across civic frontage."
+    },
+    {
+      "archetypeId": "frontier_colony_block",
+      "function": "A believable inhabited district block with a public cross-plaza, administrative operations, mixed-height housing/services, and a separate service backplane.",
+      "siteEnvelopeMeters": [256, 256],
+      "requiredFamilies": [
+        "road_primary_x_plaza_48",
+        "road_primary_straight_32",
+        "road_primary_corner_32",
+        "road_primary_t_32",
+        "outpost_operations_block_32",
+        "concourse_ped_straight_16",
+        "concourse_ped_corner_16",
+        "lane_service_straight_16",
+        "colony_low_civic",
+        "colony_mid_habitat",
+        "colony_tall_mixed_use",
+        "utility_block_16"
+      ],
+      "authoredPlacementIntent": [
+        {"id": "civic_plaza", "family": "road_primary_x_plaza_48", "centerMeters": [0, 0, 0], "yawDegrees": 0, "required": true, "role": "public orientation and traffic distribution"},
+        {"id": "operations", "family": "outpost_operations_block_32", "centerMeters": [0, 0, 64], "yawDegrees": 0, "required": true, "role": "colony administration and emergency coordination"},
+        {"id": "northwest_block", "family": "authored_mixed_height_colony_plot_64", "centerMeters": [-64, 0, 64], "yawDegrees": 0, "required": true, "role": "habitat and public service cluster"},
+        {"id": "northeast_block", "family": "authored_mixed_height_colony_plot_64", "centerMeters": [64, 0, 64], "yawDegrees": 0, "required": true, "role": "commerce, clinic, and utility cluster"}
+      ],
+      "requiredConnections": [
+        "civic_plaza road sockets -> connected cardinal road graph",
+        "operations.front_s -> local-road adapter from the plaza's north spine",
+        "operations.public_w and public_e -> occupied pedestrian destinations",
+        "all inhabited plots -> public concourse plus independent rear service lane",
+        "service lane -> utility block -> declared map service boundary"
+      ],
+      "restrictedOptionalPlots": [
+        {"plotId": "civic_low", "allowedFamilies": ["clinic_low", "market_low", "school_low", "empty_park_hardscape"], "heightBandMeters": [6, 20]},
+        {"plotId": "habitat_mid", "allowedFamilies": ["habitat_mid_a", "habitat_mid_b", "mixed_use_mid"], "heightBandMeters": [24, 56]},
+        {"plotId": "district_tall", "allowedFamilies": ["habitat_tall_a", "commerce_tall_a", "water_reclamation_tower"], "heightBandMeters": [64, 110]}
+      ],
+      "identityRule": "Every 64 m block contains a functionally related low/mid/tall composition; palette swaps do not count as silhouette variety, and no 2x2 area may repeat one building family four times."
+    },
+    {
+      "archetypeId": "military_base_edge",
+      "function": "A hardened base boundary where checkpoint control, unit deployment, maintenance, and personnel spaces remain separated but mutually reachable.",
+      "siteEnvelopeMeters": [224, 160],
+      "requiredFamilies": [
+        "gatehouse_command_tower_64",
+        "road_primary_straight_32",
+        "road_primary_corner_32",
+        "outpost_operations_block_32",
+        "perimeter_wall_straight_32",
+        "perimeter_wall_corner_32",
+        "wall_gate_32",
+        "barracks_32",
+        "vehicle_maintenance_bay_48x32",
+        "deployment_hangar_64x48",
+        "lane_service_straight_16"
+      ],
+      "authoredPlacementIntent": [
+        {"id": "edge_gate", "family": "gatehouse_command_tower_64", "centerMeters": [0, 0, -48], "yawDegrees": 0, "required": true, "role": "base boundary and command observation"},
+        {"id": "base_spine", "family": "road_primary_straight_32", "centerMeters": [0, 0, 0], "yawDegrees": 0, "required": true, "role": "heavy deployment route"},
+        {"id": "operations", "family": "outpost_operations_block_32", "centerMeters": [48, 0, 48], "yawDegrees": 90, "required": true, "role": "base operations"},
+        {"id": "deployment", "family": "deployment_hangar_64x48", "centerMeters": [-64, 0, 48], "yawDegrees": 0, "required": true, "role": "base-deployer and striker shared hangar"}
+      ],
+      "requiredConnections": [
+        "edge_gate.road_n -> base_spine.road_s",
+        "base_spine -> authored corner or T -> deployment heavy apron",
+        "operations.front_s -> local spur from base spine",
+        "operations.rear_n -> service route -> maintenance and deployment",
+        "perimeter wall graph closes or terminates only at authored terrain/map-boundary anchors"
+      ],
+      "restrictedOptionalPlots": [
+        {"plotId": "personnel", "allowedFamilies": ["barracks_32", "medical_block_32", "mess_hall_32"], "minimumDistanceFromHazardMeters": 24},
+        {"plotId": "support", "allowedFamilies": ["power_block_16", "sensor_mast_compound", "ammunition_bunker_low"], "maximumHeightMeters": 32}
+      ],
+      "identityRule": "The deployment route remains visually and physically clear for large units; defenses occupy perimeter frontage, personnel occupy protected interior plots, and no turret or prop blocks a road socket."
+    },
+    {
+      "archetypeId": "city_district_entry",
+      "function": "A major urban arrival sequence that transitions from a primary boulevard through a landmark threshold into a readable public plaza and mixed-use skyline.",
+      "siteEnvelopeMeters": [320, 256],
+      "requiredFamilies": [
+        "gatehouse_command_tower_64",
+        "road_primary_straight_32",
+        "road_primary_corner_32",
+        "road_primary_x_plaza_48",
+        "road_primary_t_32",
+        "outpost_operations_block_32",
+        "concourse_ped_straight_16",
+        "civic_low_pair",
+        "commercial_mid_pair",
+        "residential_tall_pair",
+        "city_hero_landmark",
+        "service_annex_32x16"
+      ],
+      "authoredPlacementIntent": [
+        {"id": "district_gate", "family": "gatehouse_command_tower_64", "centerMeters": [0, 0, -80], "yawDegrees": 0, "required": true, "role": "district threshold and long-axis landmark"},
+        {"id": "boulevard", "family": "road_primary_straight_32", "centerMeters": [0, 0, -32], "yawDegrees": 0, "required": true, "role": "entry boulevard"},
+        {"id": "arrival_plaza", "family": "road_primary_x_plaza_48", "centerMeters": [0, 0, 16], "yawDegrees": 0, "required": true, "role": "district traffic and public orientation"},
+        {"id": "district_operations", "family": "outpost_operations_block_32", "centerMeters": [64, 0, 80], "yawDegrees": 90, "required": true, "role": "district administration and services"},
+        {"id": "hero_plot", "family": "city_hero_landmark", "centerMeters": [0, 0, 112], "yawDegrees": 180, "required": true, "role": "terminal skyline focus"}
+      ],
+      "requiredConnections": [
+        "district_gate.road_n -> boulevard.road_s",
+        "boulevard.road_n -> arrival_plaza.road_s",
+        "arrival_plaza cardinal sockets -> authored streets or explicit district boundaries",
+        "district_operations front and public sockets -> local road and occupied concourse destinations",
+        "every tower plot -> public frontage plus rear service access that does not cross the plaza"
+      ],
+      "restrictedOptionalPlots": [
+        {"plotId": "west_midrise_pair", "allowedFamilies": ["commerce_mid_a", "habitat_mid_a", "civic_mid_a"], "countRange": [2, 3]},
+        {"plotId": "east_midrise_pair", "allowedFamilies": ["commerce_mid_b", "habitat_mid_b", "civic_mid_b"], "countRange": [2, 3]},
+        {"plotId": "skyline_tall", "allowedFamilies": ["tower_tall_a", "tower_tall_b", "tower_tall_c"], "countRange": [2, 4]}
+      ],
+      "identityRule": "The boulevard, gatehouse, plaza, and terminal hero form one visible axis; side towers frame rather than occlude it, and skyline variation comes from authored silhouettes rather than random scale."
+    }
+  ],
+  "deterministicSelection": {
+    "seedFormula": "hash(worldSeed, planetId, regionId, siteId, archetypeId, plotId, kitVersion)",
+    "stableSort": ["placementPhase", "plotId", "familyId", "assetId", "variantId"],
+    "forbiddenInputs": ["Math.random", "clock_time", "filesystem_order", "GPU_readback", "network_response_order"],
+    "rules": [
+      "Required placements never roll or disappear.",
+      "Optional slots select only from their declared family allowlist and may resolve to an authored empty state.",
+      "A deterministic choice still fails when sockets, clearances, material bindings, or evidence fail; a stable bad placement is not acceptable.",
+      "Damage and infestation are deterministic post-assembly overlays and may not alter undeclared road topology."
+    ]
+  },
+  "noRandomMassOfModelsRules": [
+    "Build and validate the complete road graph before placing any structure.",
+    "Never scatter buildings from a global list; every model must occupy a named authored plot with a functional-family allowlist.",
+    "Never use arbitrary rotation or scale to make a model fit; only cardinal yaw and runtime scale 1 are legal.",
+    "Never place a required plot on an intersection, road reservation, sight triangle, gate approach fan, service route, or plaza no-plot zone.",
+    "Never allow a road, pipe, tunnel, concourse, door, loading bay, or utility line to terminate without a plausible source, destination, endcap, or map boundary.",
+    "Never treat color, decal, mirrored texture, or random greebles as a new silhouette family.",
+    "Never repeat one asset in all four plots of a 2x2 block or more than twice adjacently.",
+    "Never mix civic, residential, logistics, industrial, and military props outside their declared functional zones.",
+    "Never obscure the gatehouse portal, operations frontage, road turn, or plaza topology with optional models or props.",
+    "Never admit generated source geometry directly to runtime; source hash, topology, UV/material semantics, collision, navigation, LODs, package allowlist, and matched phone evidence remain separate gates."
+  ],
+  "missingModelFamilies": {
+    "blockingTransit": [
+      "road_primary_t_32",
+      "road_primary_endcap_32x16",
+      "road_primary_to_local_adapter",
+      "road_local_straight_16",
+      "road_local_corner_16",
+      "road_local_t_16",
+      "road_local_endcap_16",
+      "lane_service_straight_16",
+      "lane_service_corner_16",
+      "lane_service_branch_16",
+      "lane_service_endcap_16",
+      "concourse_ped_straight_16",
+      "concourse_ped_corner_16",
+      "concourse_ped_t_16",
+      "concourse_ped_endcap_16",
+      "cargo_corridor_straight_32x16",
+      "cargo_corridor_loading_end",
+      "perimeter_wall_straight_32",
+      "perimeter_wall_corner_32",
+      "wall_gate_32"
+    ],
+    "blockingOutpost": [
+      "true_broad_command_hub_64",
+      "logistics_depot_48x32",
+      "service_annex_32x16",
+      "utility_block_16",
+      "inspection_canopy",
+      "customs_scanner",
+      "vehicle_hold",
+      "vehicle_maintenance_bay_48x32",
+      "deployment_hangar_64x48",
+      "barracks_32",
+      "medical_block_32",
+      "power_block_16",
+      "sensor_mast_compound"
+    ],
+    "blockingCityAndColony": [
+      "two distinct low civic/service silhouettes",
+      "two distinct low commercial silhouettes",
+      "two distinct mid habitat silhouettes",
+      "two distinct mid mixed-use silhouettes",
+      "two distinct tall residential silhouettes",
+      "two distinct tall commercial silhouettes",
+      "one true city hero landmark",
+      "one water or atmosphere utility tower",
+      "one transit or parking structure",
+      "authored 64 m mixed-height plot compositions"
+    ],
+    "blockingIndustrial": [
+      "refinery_spine_32x64",
+      "tank_farm_small",
+      "pipe_rack_straight_corner_and_t",
+      "processing_block",
+      "cargo_crane_low",
+      "battery_exchange_yard"
+    ],
+    "blockingStatesAndBindings": [
+      "light_damage_variants",
+      "heavy_damage_and_ruin_variants",
+      "Brood contact, encroached, and consumed infestation overlays",
+      "Aelos, Pyraeth, Nordhall, and Vespera foundation/contact variants",
+      "Nova, Dominion, Syndicate, and UGA semantic material/silhouette bindings",
+      "separate collision and navigation roots",
+      "LOD0, LOD1, LOD2, and strategic LOD3 or impostor outputs"
+    ]
+  },
+  "builderValidation": {
+    "requiredChecks": [
+      "schema and unique identifier validation",
+      "every declared asset path/hash/status is truthful",
+      "road graph connected before structure placement",
+      "every socket profile known and every mate transform valid",
+      "every external socket terminated",
+      "every occupied plot has valid public and service access",
+      "every road/intersection/frontage/apron clearance preserved",
+      "repetition, silhouette, height-band, and functional-zone rules pass",
+      "collision and navigation visualization pass for declared agent classes",
+      "matched phone tactical and command captures exist for the same source/runtime fingerprint"
+    ],
+    "rejectCodes": [
+      "ROAD_GRAPH_DISCONNECTED",
+      "SOCKET_PROFILE_OR_TRANSFORM_INVALID",
+      "UNMATCHED_SOCKET_WITHOUT_TERMINATION",
+      "ROAD_OR_PORTAL_CLEARANCE_BLOCKED",
+      "INTERSECTION_SIGHT_TRIANGLE_BLOCKED",
+      "REQUIRED_PLOT_IN_NO_PLOT_ZONE",
+      "PUBLIC_ENTRANCE_UNREACHABLE",
+      "SERVICE_ROUTE_UNREACHABLE",
+      "CORRIDOR_OR_UTILITY_TO_NOWHERE",
+      "ARBITRARY_SCALE_OR_ROTATION",
+      "FUNCTIONAL_ZONE_MISMATCH",
+      "REPETITION_OR_SILHOUETTE_FAILURE",
+      "SOURCE_CANDIDATE_USED_AS_RUNTIME",
+      "EVIDENCE_STALE_MISSING_OR_MISMATCHED"
+    ]
+  }
+}

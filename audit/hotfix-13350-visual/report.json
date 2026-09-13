@@ -1,0 +1,214 @@
+{
+  "gpu": {
+    "renderer": "ANGLE (AMD, AMD Radeon(TM) 610M (0x0000164E) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+    "vendor": "Google Inc. (AMD)"
+  },
+  "mobile": {
+    "ua": "Mozilla/5.0 (Linux; Android 15; SM-S938U Build/AP3A.240905.015.A2; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/131.0.6778.260 Mobile Safari/537.36",
+    "mobileGpu": true
+  },
+  "deployment": {
+    "deployedViaUi": true,
+    "playOfflineUsed": true,
+    "warRoomUsed": true,
+    "setupStagesCompleted": true,
+    "setupClicks": 5,
+    "authUiVisible": false,
+    "menuUiVisible": false,
+    "battleHudVisible": true,
+    "matchLive": true,
+    "running": true,
+    "atPerformanceMs": 63935.09999999963
+  },
+  "cloudProbe": {
+    "quality": "high",
+    "post": {
+      "frames": 21,
+      "armed": 21,
+      "presented": 21,
+      "fallbackFrames": 0,
+      "fallbackLayers": 0,
+      "tacticalFrames": 21,
+      "highFrames": 0,
+      "orbitalFrames": 0,
+      "draws": 63,
+      "marchedPx": 4495932,
+      "compositePx": 17983728,
+      "allocFailures": 0,
+      "shaderFailures": 0,
+      "driverFailures": 0,
+      "glFailures": 0,
+      "contextResets": 0,
+      "lastQuality": "high",
+      "lastLod": "tactical",
+      "lastSteps": 20,
+      "lastProxies": 3,
+      "lastScale": 0.5,
+      "lastError": "",
+      "pending": false,
+      "fallbackCached": 0,
+      "proxyCached": 0,
+      "failMode": "",
+      "epoch": 1
+    },
+    "fx": {
+      "frames": 2227,
+      "pausedFrames": 0,
+      "sameTimeFrames": 1076,
+      "timeRegressions": 1,
+      "invalidTime": 0,
+      "generatedLayers": 8996,
+      "emittedLayers": 4586,
+      "culledLayers": 4410,
+      "suppressedPaused": 0,
+      "shadowLayers": 2293,
+      "bodyLayers": 2293,
+      "maxFrameLayers": 8,
+      "maxClouds": 5,
+      "maxBodyLayers": 2,
+      "maxLayers": 15,
+      "bounded": true,
+      "lastTime": 20.633333333333518,
+      "lastHash": "a8b37882",
+      "lastQuality": "high",
+      "lastClouds": 4
+    },
+    "span": 680,
+    "tabs": [
+      "⌁ORDERS",
+      "ⅣPLATOONS",
+      "✦ABILITIES",
+      "◇VIEW"
+    ],
+    "dock": true
+  },
+  "cinematicProbe": {
+    "frames": 268,
+    "armed": 268,
+    "presented": 268,
+    "fallbackFrames": 0,
+    "fallbackLayers": 0,
+    "tacticalFrames": 204,
+    "highFrames": 64,
+    "orbitalFrames": 0,
+    "draws": 868,
+    "marchedPx": 62527824,
+    "compositePx": 147686496,
+    "allocFailures": 0,
+    "shaderFailures": 0,
+    "driverFailures": 0,
+    "glFailures": 0,
+    "contextResets": 0,
+    "lastQuality": "cinematic",
+    "lastLod": "high",
+    "lastSteps": 20,
+    "lastProxies": 4,
+    "lastScale": 0.5,
+    "lastError": "",
+    "pending": false,
+    "fallbackCached": 0,
+    "proxyCached": 0,
+    "failMode": "",
+    "epoch": 1
+  },
+  "screenshots": [
+    {
+      "name": "00-account-or-boot-stamped",
+      "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\audit\\hotfix-13350-visual\\00-account-or-boot-stamped.png",
+      "sha256": "10ae5605d2ab180e68deb90830a07ea90cc051797c070ed5173658231e140452",
+      "width": 824,
+      "height": 1800,
+      "screen": "pre-offline"
+    },
+    {
+      "name": "00b-main-menu-stamped",
+      "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\audit\\hotfix-13350-visual\\00b-main-menu-stamped.png",
+      "sha256": "1f5030a8a3d0d62dcb7ac5331a59743597d82865607824e81ed82e43b7f60e26",
+      "width": 824,
+      "height": 1800,
+      "screen": "main-menu"
+    },
+    {
+      "name": "01-battle-high-minimap-dock",
+      "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\audit\\hotfix-13350-visual\\01-battle-high-minimap-dock.png",
+      "sha256": "61bdc973b9e5e2116029354532aff24330a58574b19004f4db9846569372d0e9",
+      "width": 824,
+      "height": 1800,
+      "preset": "high",
+      "dock": true
+    },
+    {
+      "name": "02-map-edge-southeast-high",
+      "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\audit\\hotfix-13350-visual\\02-map-edge-southeast-high.png",
+      "sha256": "e3dca371a48225e0b78881c97f472ed968c2e932efb36f5034fb8a7b5ebc2ad8",
+      "width": 824,
+      "height": 1800,
+      "edge": "se",
+      "span": 1200
+    },
+    {
+      "name": "03-map-edge-northwest-high",
+      "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\audit\\hotfix-13350-visual\\03-map-edge-northwest-high.png",
+      "sha256": "aa2bf76db205e7e448ff1e7c5335c4fb9cb8ab58d24e9226eba1a3c12d7e86ed",
+      "width": 824,
+      "height": 1800,
+      "edge": "nw",
+      "span": 900
+    },
+    {
+      "name": "04-cinematic-clouds-mid-span",
+      "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\audit\\hotfix-13350-visual\\04-cinematic-clouds-mid-span.png",
+      "sha256": "c4ac030dc64ac806116f1ecc05f35277b64c9e73fe15bcc63fb919edd91b1592",
+      "width": 824,
+      "height": 1800
+    }
+  ],
+  "checks": [
+    {
+      "label": "high preset active",
+      "ok": true
+    },
+    {
+      "label": "clouds presented at tactical zoom",
+      "ok": true
+    },
+    {
+      "label": "deck tabs still labelled",
+      "ok": true
+    },
+    {
+      "label": "cinematic post presented",
+      "ok": true
+    }
+  ],
+  "errors": [],
+  "networkIsolation": {
+    "installed": true,
+    "finalized": true,
+    "pageClosed": true,
+    "finalLabel": "hotfix-13350-visual",
+    "finalError": null,
+    "offlineStorage": {
+      "verified": true,
+      "mf_offline": "1",
+      "massfront_offline": "1",
+      "bootstrap": {
+        "attempted": true,
+        "mf_offline": "1",
+        "massfront_offline": "1",
+        "errors": []
+      },
+      "error": null
+    },
+    "serviceWorkers": {
+      "bypassConfigured": true,
+      "verified": true,
+      "supported": true,
+      "controller": null,
+      "registrations": [],
+      "error": null
+    },
+    "blockedRequests": [],
+    "blockedWebSockets": []
+  }
+}

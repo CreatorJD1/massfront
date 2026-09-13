@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "exportedDate": "2026-08-28",
+  "method": "Spline desktop UI, Export > 3D Formats > GLB, Material 'Color & Texture'",
+  "note": "The Spline MCP bridge has no export verb, so these were driven through the application UI. Format defaults to GLTF with grey material per document and must be set to GLB + Color & Texture each time.",
+  "status": "SOURCE_AUTHORING_ONLY - not runtime accepted, no LOD or collision derived",
+  "files": [
+    {
+      "id": "mf-hy3d-n7-deployer-lane-8x8-spline-v1",
+      "file": "modules/space_exploration/assets/source/spline/hunyuan/spline-exports/mf-hy3d-n7-deployer-lane-8x8-spline-v1.glb",
+      "bytes": 560240,
+      "sha256": "ef1786b89f9638efca030cf7ede82591535933a116bb3b44d47708ac2d186abe"
+    },
+    {
+      "id": "mf-hy3d-nordhall-skyscraper-spline-v1",
+      "file": "modules/space_exploration/assets/source/spline/hunyuan/spline-exports/mf-hy3d-nordhall-skyscraper-spline-v1.glb",
+      "bytes": 13080756,
+      "sha256": "db71920b3aa9ba24bf4886b7253ffb0c2394a0709c25d4b16b809e09056e38fc"
+    },
+    {
+      "id": "MF_STRUCT_CITYDOME_01",
+      "file": "modules/space_exploration/assets/source/spline/world-prefabs/exports/MF_STRUCT_CITYDOME_01.glb",
+      "bytes": 140396,
+      "sha256": "e2ce12ef66c4983e80da4d6cb04a48c7caab89f787935ec228938040c8d65d08"
+    },
+    {
+      "id": "MF_STRUCT_CITYTOWER_01",
+      "file": "modules/space_exploration/assets/source/spline/world-prefabs/exports/MF_STRUCT_CITYTOWER_01.glb",
+      "bytes": 66948,
+      "sha256": "971dcbc622405b60166a7e73773bcee2dd58a69f8c9c4e02a001a5a779f8ded6"
+    },
+    {
+      "id": "MF_STRUCT_CIVICBLOCK_01",
+      "file": "modules/space_exploration/assets/source/spline/world-prefabs/exports/MF_STRUCT_CIVICBLOCK_01.glb",
+      "bytes": 49956,
+      "sha256": "b073cbf6c708ffb8c373237c05ea23f974ec8f79c1a7693394c46ecccc9111af"
+    },
+    {
+      "id": "MF_STRUCT_COMMSRELAY_01",
+      "file": "modules/space_exploration/assets/source/spline/world-prefabs/exports/MF_STRUCT_COMMSRELAY_01.glb",
+      "bytes": 296824,
+      "sha256": "031d63181729df1944a96b076321782f1db5d1720a688f246bd9ca4a82afb3aa"
+    },
+    {
+      "id": "MF_STRUCT_REFINERY_01",
+      "file": "modules/space_exploration/assets/source/spline/world-prefabs/exports/MF_STRUCT_REFINERY_01.glb",
+      "bytes": 256276,
+      "sha256": "59d29d3a9fc9e1e8d5484f02b041211126932f2706d71c0c178bb97da4358d4a"
+    }
+  ]
+}

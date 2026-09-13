@@ -28,18 +28,12 @@ const browser = await launchPwBrowser({
 const page = await browser.newPage({ viewport: { width: 412, height: 915 }, hasTouch: true, deviceScaleFactor: 2 });
 const errors = [];
 page.on('pageerror', e => errors.push('PAGEERR ' + e.message));
-/* tacticons.png is deliberately absent. src/engine/tacticons.js probes for it so
-   authored art is picked up with no code change, and its onerror explicitly
-   lets the procedural placeholders stand — a 404 here is the contract working,
-   not a fault. Everything else still fails the run. */
-const OPTIONAL = /tacticons\.png/;
 page.on('console', m => {
   if (m.type() !== 'error') return;
   const where = (m.location() || {}).url || '';
-  if (OPTIONAL.test(where) || OPTIONAL.test(m.text())) return;
   errors.push('CONSOLE ' + m.text().slice(0, 140) + ' <- ' + where.slice(-45));
 });
-page.on('requestfailed', r => { if (!OPTIONAL.test(r.url())) errors.push('REQFAIL ' + r.url().slice(-55)); });
+page.on('requestfailed', r => errors.push('REQFAIL ' + r.url().slice(-55)));
 
 await page.goto(`http://127.0.0.1:${PORT}/`, { waitUntil: 'domcontentloaded' });
 await page.waitForTimeout(13000);
