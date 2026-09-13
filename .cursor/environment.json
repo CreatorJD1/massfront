@@ -5,7 +5,7 @@
   "terminals": [
     {
       "name": "dev-server",
-      "command": "npm run dev",
+      "command": "git lfs pull; npm run dev",
       "description": "MASSFRONT static dev server (serve.mjs) on http://127.0.0.1:8100 serving the packed www/ with correct wasm/ktx2 MIME types. Open in a browser to load the game. NOTE: the WebGL2 engine requires a hardware GPU; on GPU-less VMs it shows 'GRAPHICS SESSION UNAVAILABLE' by design."
     }
   ],
