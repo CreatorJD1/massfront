@@ -1,6 +1,7 @@
 {
   "name": "MASSFRONT",
   "install": "bash .cursor/install.sh",
+  "start": "git lfs pull",
   "terminals": [
     {
       "name": "dev-server",
