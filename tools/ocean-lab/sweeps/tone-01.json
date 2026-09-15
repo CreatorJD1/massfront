@@ -1,0 +1,12 @@
+{
+  "name": "tone-01",
+  "shot": "S1",
+  "variants": [
+    { "id": "v0-base", "style": {} },
+    { "id": "v1-lift35", "style": { "deep": [0.024, 0.125, 0.188], "body": [0.118, 0.333, 0.439], "scatter": [0.5, 0.9, 1.15], "crestLift": 0.35 } },
+    { "id": "v2-lift50", "style": { "deep": [0.024, 0.125, 0.188], "body": [0.118, 0.333, 0.439], "scatter": [0.5, 0.9, 1.15], "crestLift": 0.5 } },
+    { "id": "v3-darkbody", "style": { "deep": [0.024, 0.125, 0.188], "body": [0.09, 0.28, 0.38], "scatter": [0.5, 0.9, 1.15], "crestLift": 0.5, "glow": 1.0 } },
+    { "id": "v4-lift60-exp120", "style": { "deep": [0.024, 0.125, 0.188], "body": [0.118, 0.333, 0.439], "scatter": [0.42, 0.82, 1.05], "crestLift": 0.6, "exposure": 1.2 } },
+    { "id": "v5-bright", "style": { "deep": [0.02, 0.11, 0.17], "body": [0.13, 0.36, 0.47], "scatter": [0.55, 0.95, 1.2], "crestLift": 0.45, "exposure": 1.15 } }
+  ]
+}

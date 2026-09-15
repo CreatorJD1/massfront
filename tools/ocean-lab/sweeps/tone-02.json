@@ -1,0 +1,12 @@
+{
+  "name": "tone-02",
+  "shot": "S1",
+  "variants": [
+    { "id": "t1-darklow-teal", "style": { "deep": [0.008, 0.075, 0.13], "body": [0.12, 0.36, 0.46], "scatter": [0.30, 0.95, 0.95], "crestLift": 0.45, "exposure": 1.15 } },
+    { "id": "t2-hotglow", "style": { "deep": [0.008, 0.075, 0.13], "body": [0.12, 0.36, 0.46], "scatter": [0.40, 1.05, 1.05], "crestLift": 0.45, "glow": 1.1, "exposure": 1.15 } },
+    { "id": "t3-tealbody", "style": { "deep": [0.008, 0.075, 0.13], "body": [0.10, 0.40, 0.47], "scatter": [0.30, 0.95, 0.95], "crestLift": 0.45, "exposure": 1.22 } },
+    { "id": "t4-lift60", "style": { "deep": [0.008, 0.075, 0.13], "body": [0.12, 0.36, 0.46], "scatter": [0.30, 0.95, 0.95], "crestLift": 0.6, "glow": 1.15, "exposure": 1.25 } },
+    { "id": "t5-contrast", "style": { "deep": [0.004, 0.06, 0.11], "body": [0.14, 0.40, 0.50], "scatter": [0.35, 1.0, 1.0], "crestLift": 0.55, "glow": 1.1, "exposure": 1.25 } },
+    { "id": "t6-contrast-gloss", "style": { "deep": [0.004, 0.06, 0.11], "body": [0.14, 0.40, 0.50], "scatter": [0.35, 1.0, 1.0], "crestLift": 0.55, "glow": 1.1, "exposure": 1.25, "rough": 0.16 } }
+  ]
+}

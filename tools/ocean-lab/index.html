@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Ocean Lab · Stormbreak</title>
+<style>
+  html,body{margin:0;height:100%;background:#03080c;overflow:hidden;color:#cfe3e1;
+    font:12px/1.35 ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace}
+  canvas{display:block;width:100vw;height:100vh;touch-action:none}
+  #hud{position:fixed;left:10px;top:10px;padding:8px 10px;background:rgba(3,10,16,.72);
+    border:1px solid rgba(120,190,190,.25);border-radius:4px;pointer-events:none;white-space:pre}
+  #hud.hidden{display:none}
+  #err{position:fixed;inset:auto 10px 10px 10px;color:#ffb46b;white-space:pre-wrap}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div id="hud">booting…</div>
+<div id="err"></div>
+<script>
+  window.addEventListener('error', e => {
+    document.getElementById('err').textContent += (e.message || e) + '\n';
+    window.__oceanLabError = String(e.message || e);
+  });
+</script>
+<script src="../../src/sea.js"></script>
+<script src="../../src/engine/ocean-spectrum.js"></script>
+<script src="../../src/engine/ocean-fft.js"></script>
+<script src="../../src/engine/ocean-cascades.js"></script>
+<script src="../../src/engine/ocean-foam-sim.js"></script>
+<script src="../../src/engine/ocean-mirror.js"></script>
+<script src="../../src/engine/ocean-surface.js"></script>
+<script src="lab.js"></script>
+</body>
+</html>
