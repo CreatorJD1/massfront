@@ -2,7 +2,7 @@
 
 **This is not the ship path.** Production remains the hand-written WebGL2 engine (`src/engine/mesh.js`, live `index.html` / `boot.js`). Capacitor / `tools/pack-www.mjs` does not copy this folder. Do not point the APK at it.
 
-The preview is **Babylon.js only**. Three.js is not a dependency and is not used.
+The `preview/` app is **Babylon.js only**; Three.js is not one of its dependencies. `stormpeak-ocean/` (below) is a separate three.js app with its own `package.json`.
 
 ## How to run
 
@@ -61,4 +61,16 @@ Controls: drag to pan, wheel or pinch to zoom, shift-drag or two-finger twist to
 - Production WebGL2 renderer is untouched
 - `FACTION_POP_CAP` in production is unchanged
 - `galaxyui.js` is untouched
-- One WebGL context (Babylon). No Three.js
+- One WebGL context (Babylon). No Three.js in `preview/`
+
+## Stormpeak ocean theatre (`stormpeak-ocean/`)
+
+An ocean map experiment: a Tessendorf FFT storm ocean with RTS command, hull buoyancy and a sonar layer, built by Grok Bot in Grok's app builder (TanStack Start + React + three.js). Imported unchanged from `CreatorJD1/Stormpeak-MASSFRONT` at `v1.0` (`794cc8f`); this branch is now where it continues. Like `preview/`, it is **not the ship path** and `tools/pack-www.mjs` never copies `experimental/`.
+
+```bash
+cd experimental/stormpeak-ocean
+npm install
+npm run dev        # http://127.0.0.1:8080
+```
+
+Needs Node 20+ and WebGL2 with floating-point render targets. The ocean design and the look-dev findings it should be judged against are in `docs/OCEAN_SYSTEM_DESIGN.md`; the engine-side look lab is `tools/ocean-lab/`.
