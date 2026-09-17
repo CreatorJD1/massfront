@@ -1060,7 +1060,6 @@ function mdlDomDread(){
 function mdlDomSubmarine(){
   /* Leviathan: the Nautilus hull with a bolted belt, a thicker sail, and a
      bow door big enough to read as a torpedo room from command camera. */
-  const base=mdlSubmarine();
   const m=MB();
   const hull=[[-9.6,-1.22],[-7.4,-1.95],[2.9,-2.12],[7.8,-1.28],[10.1,-.48],
               [10.1,.48],[7.8,1.28],[2.9,2.12],[-7.4,1.95],[-9.6,1.22]];

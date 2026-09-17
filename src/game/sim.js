@@ -8824,7 +8824,8 @@ function unitTick(dt){
         const vet=1+uvet[i]*0.15;
         if(T.air&&typeof mfAirOnWeaponRelease==='function') mfAirOnWeaponRelease(i);
         ucool[i]=T.cool*modeCoolMul(md)*classCoolMul(i)*broodCoolMul(i)/(ubuff[i]>0?1.4:1);
-        if(md===4){ umode[i]=0; umodeT[i]=MODE_SWITCH*0.4; }   // firing breaks GHOST cover
+        if(T.sub&&typeof mfSubOnFire==='function') mfSubOnFire(i);
+        else if(md===4){ umode[i]=0; umodeT[i]=MODE_SWITCH*0.4; }   // firing breaks GHOST cover
         const facDmg=(typeof factionDoctrineAttackMul==='function')?factionDoctrineAttackMul(uteam[i],i):1;
         const dmg=T.dmg*vet*modeDmgMul(md)*classDmgMul(i)*broodDmgMul(i)*facDmg*mfDomainDamageMul(i,tg)*(ubuff[i]>0?1.5:1)*(uteam[i]===1?aiDmgMult:(uteam[i]===0?armyDmgMult*stimDmgMult*typeDmgMult[utype[i]]:1))*(i===heroIdx?heroDmgMult:1);
         const mz=mfUnitMuzzle(i);

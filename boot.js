@@ -36,7 +36,7 @@
      an older gl.js merely because its ?v= version string is unchanged. */
   /* Factory command and native content fixes change the same candidate's
      source bytes. A new cache key prevents an earlier local preview lingering. */
-  var PACKAGED_SRC_REV=PACKAGED_REV+'-sub1';
+  var PACKAGED_SRC_REV=PACKAGED_REV+'-sub2';
   var DB='massfront-updates', STORE='bundles';
   /* Packaged boot capability flag. OTA source checks this before staging a
      descriptor that references per-artifact records. Old APK-bound boot

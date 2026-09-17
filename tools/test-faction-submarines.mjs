@@ -17,6 +17,7 @@ assert.match(src, /UT_SUB=33/);
 assert.match(src, /\[0,4\],\s*\/\/ 33 Submarine/);
 assert.match(src, /Submarine:'nav'/);
 assert.match(src, /!T\.sub\|\|typeof mfSubCanFire/);
+assert.match(src, /T\.sub&&typeof mfSubOnFire/);
 
 const boot = await readFile(new URL('../boot.js', import.meta.url), 'utf8');
 assert.match(boot, /src\/submarines\.js/);
@@ -31,6 +32,7 @@ assert.equal([...doc.matchAll(/harbor:new Set\(\[14,15,33\]\)/g)].length, 4);
 const sub = await readFile(new URL('../src/submarines.js', import.meta.url), 'utf8');
 assert.match(sub, /surfaceFire:1/);
 assert.match(sub, /function mfSubCanFire/);
+assert.match(sub, /function mfSubOnFire/);
 assert.match(sub, /umode\[i\]=4/);
 
 console.log(`faction submarines: PASS (${roster.length} chassis, ${roster[33]} at 33)`);

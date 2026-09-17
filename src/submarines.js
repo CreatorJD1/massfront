@@ -81,6 +81,19 @@ function mfSubCanFire(i){
   return true;
 }
 
+function mfSubOnFire(i){
+  /* Hunter-killers stay dived. Shot bloom stamps detect so they are not an
+     invisible eraser; Legion never reaches this path (surfaceFire). */
+  const T=TYPES[utype[i]];
+  if(!T||!T.sub) return;
+  umode[i]=4;
+  umodeT[i]=0;
+  if(typeof intelStamp==='function'&&typeof fogDetect!=='undefined'){
+    const vis=typeof intelVisionScale==='function'?intelVisionScale:n=>n;
+    intelStamp(fogDetect,ux[i],uy[i],Math.max(6,Math.round(vis(8))),7);
+  }
+}
+
 if(typeof intelStampSensors==='function'){
   const _mfSubStamp=intelStampSensors;
   intelStampSensors=function(){
