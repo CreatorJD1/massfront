@@ -37,6 +37,10 @@ second repository.
 
 ## Current boundaries
 
+- **Two ocean systems.** Production lockstep sea + War Table ocean tester is
+  `src/sea.js` on `main` (Claude / Codex). The Tessendorf theatre is branch
+  `stormpeak/ocean` → `modules/stormpeak/` ([PR #6](https://github.com/CreatorJD1/massfront/pull/6)).
+  Do not reimplement Stormpeak on `main`. Do not register it in `boot.js`.
 - Stage 10 model repair remains Cursor-owned and in progress. Do not rewrite,
   archive, or reinterpret its active ledgers.
 - Stage 15 has verified local backend and compatibility-foundation work, but is

@@ -1,0 +1,24 @@
+---
+description: Stormpeak ocean theatre lives on stormpeak/ocean — do not rebuild it
+alwaysApply: true
+---
+
+# Two ocean systems
+
+Claude / Codex own the **War Table ocean tester** on production `src/sea.js`
+(deterministic Douglas sea, lockstep). Keep that work on `main`.
+
+The **Tessendorf FFT theatre** (100ft Gerstner, hydrophone, Snell, sonar) is
+already on this repo:
+
+- Branch: `stormpeak/ocean`
+- Path: `modules/stormpeak/`
+- PR: https://github.com/CreatorJD1/massfront/pull/6
+
+Isolated ES-module (same contract as `space_exploration`). Do **not** register
+in `boot.js` or `manifest.json`. Do **not** reimplement on `main`. Do **not**
+use sidecar repo `CreatorJD1/Stormpeak-MASSFRONT` (redirect only).
+
+If the War Table tester should look like Stormpeak, pull `stormpeak/ocean` and
+drive `src/sea.js` from that spectrum — never concatenate three.js into the
+WebGL2 bundle.

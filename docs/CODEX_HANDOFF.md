@@ -219,7 +219,30 @@ camelCase token.
 
 ---
 
-## Open, and deliberately not done
+## Ocean — two systems, do not mix
+
+Claude and Codex already own the **War Table ocean tester** on production
+`src/sea.js` (deterministic Douglas sea, lockstep height, glass-plane water).
+Keep iterating that on `main`.
+
+A separate Tessendorf FFT theatre (100ft Gerstner, hydrophone, Snell window,
+Mackenzie sonar) already exists on this same repo:
+
+| | |
+|---|---|
+| Branch | `stormpeak/ocean` |
+| Path | `modules/stormpeak/` |
+| PR | https://github.com/CreatorJD1/massfront/pull/6 |
+
+Same isolated ES-module contract as `space_exploration`. **Do not** register
+those files in `boot.js` / `manifest.json`. **Do not** rebuild it on `main` or
+in a sidecar repo. `CreatorJD1/Stormpeak-MASSFRONT` is a redirect.
+
+If the War Table tester should *look* like Stormpeak, pull `stormpeak/ocean`
+and drive `src/sea.js` from that spectrum — do not paste three.js into the
+concatenated bundle.
+
+---
 
 - **1.33.89 is not cut.** Nineteen commits are staged for it. Nothing is published.
 - **Loading screens are doubled, structurally.** Measured: `#mfBootCover` for ~32 s,
