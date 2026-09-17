@@ -1,0 +1,10 @@
+---
+description: Stormpeak ocean module (modules/stormpeak)
+globs: modules/stormpeak/**
+alwaysApply: false
+---
+
+`modules/stormpeak` is an isolated ES-module ocean theatre. Do not add it to
+`boot.js` or `assets/data/manifest.json`. Production sea sim remains `src/sea.js`.
+
+Gerstner constants must stay in sync GPU/CPU. Y = `48 * tanh(y/48)`. Ping = P.
