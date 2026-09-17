@@ -90,7 +90,7 @@ vm.createContext(rosterCtx);
 vm.runInContext(sim.slice(typesAt,typesEnd+3)+'\n'+doctrine+'\nthis.runtimeTypes=TYPES;',rosterCtx);
 const facilityPools={
   fac:[0,1,9,18,10,2,3,6,7,11,16,19,20,21,22,23,24,27,32],
-  tgate:[8,26],airfield:[5,17,25],harbor:[14,15]
+  tgate:[8,26],airfield:[5,17,25],harbor:[14,15,33]
 };
 const extremeInfraRaw=1.24*1.22*1.44,legalSummary=[];
 for(const faction of ['nova','legion','syndicate','horde']){

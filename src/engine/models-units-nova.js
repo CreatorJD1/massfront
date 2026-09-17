@@ -1529,6 +1529,7 @@ const UNIT_MDL_NOVA={
   26:tfcNovaFactory(mdlTfcHeavy,26),     // Basilisk     — experimental heavy
   27:tfcNovaFactory(mdlTfcLauncher,27),  // Harbinger    — siege battery
   32:tfcNovaFactory(mdlTfcMiner,32),     // Prospector   — ore miner, UNARMED
+  33:tfcNovaFactory(mdlSubmarine,33),    // Nautilus     — hunter-killer sub
 };
 
 /* Stage N3 bespoke structure contracts.

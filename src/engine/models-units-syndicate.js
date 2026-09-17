@@ -875,6 +875,29 @@ function mdlCoaSkimmer(){
   return {hull:m.build(),tur:t.build(),s:1.0,turH:4.20};
 }
 
+function mdlCoaSubmarine(){
+  /* Blackwake: teardrop inside a hex ring cage — a drone keel, not a boat. */
+  const m=MB();
+  const hull=[[-9.0,-.92],[-6.8,-1.55],[2.6,-1.68],[7.2,-1.02],[9.4,-.36],
+              [9.4,.36],[7.2,1.02],[2.6,1.68],[-6.8,1.55],[-9.0,.92]];
+  m.extrude(0,.35,0,hull,1.85,TWR_ARM_D);
+  m.extrude(.2,2.20,0,hull.map(p=>[p[0]*.9,p[1]*.7]),.48,TWR_ARM);
+  for(const sd of [-1,1]){
+    for(const x of [-5.2,-0.4,4.4]){
+      m.cyl(x,.12,sd*1.55,.55,.42,.55,8,TWR_MACH,false);
+      m.ring(x,.70,sd*1.55,.40,.78,8,ENERGY);
+    }
+    m.box(.4,2.35,sd*1.22,8.8,.16,.28,TEAM_A);
+    m.box(-6.2,.62,sd*.7,2.8,.72,.55,DARKER);
+  }
+  for(const x of [-4.5,0.2,4.8]) ringX(m,x,1.35,0,.85,1.35,8,x>3?TWR_GLOW:TWR_TRIM);
+  m.extrude(-1.2,2.55,0,coaHex(1.15,.7),.85,TWR_COAT);
+  m.cyl(-1.2,3.85,0,.85,.14,.14,8,ENERGY,false);
+  m.box(-1.2,4.55,0,.10,.85,.10,DARKER);
+  for(let k=0;k<3;k++) m.tube(6.4,.48,(k-1)*.38,.20,.08,.36,8,TWR_BORE);
+  return {hull:m.build(),tur:null,s:1.0,naval:1};
+}
+
 /* 15 — DREADNOUGHT. 1,300 hp and 290 range: the capital ship. It reads as
    capital by LENGTH and by a spinal accelerator running most of the deck —
    three lift banks a side, a caged core amidships, and a heavy twin turret
@@ -1401,7 +1424,8 @@ const UNIT_MDL_SYNDICATE={
   23:coaSyndicateFactory(mdlCoaSonic,23),      24:coaSyndicateFactory(mdlCoaService,24),
   25:coaSyndicateFactory(mdlCoaScout,25),      26:coaSyndicateFactory(mdlCoaExp,26),
   27:coaSyndicateFactory(mdlCoaBattery,27),    29:coaSyndicateFactory(mdlArchon,29),
-  32:coaSyndicateFactory(mdlCoaMiner,32)
+  32:coaSyndicateFactory(mdlCoaMiner,32),
+  33:coaSyndicateFactory(mdlCoaSubmarine,33)
 };
 
 function mfCdrDecorateNyx(m){

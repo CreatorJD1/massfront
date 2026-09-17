@@ -1498,6 +1498,33 @@ function mdlCorvette(){                      // 14 — naval light
   t.greeble(-.38,1.83,0,1.65,2.25,.28,4,MET_D,0,151);
   return {hull:m.build(),tur:t.build(),s:1.0,turH:3.8,naval:1};
 }
+function mdlSubmarine(){                     // 33 — teardrop hunter-killer
+  const m=MB();
+  /* Pressure hull first: a long cigar, sail second. From command camera a
+     submarine has to read as LOWER and SMOOTHER than a Corvette, or the two
+     naval lights become the same ship. */
+  const hull=[[-9.4,-1.05],[-7.2,-1.72],[2.8,-1.88],[7.6,-1.15],[9.8,-.42],
+              [9.8,.42],[7.6,1.15],[2.8,1.88],[-7.2,1.72],[-9.4,1.05]];
+  m.extrude(0,0,0,hull,2.15,MET_D);
+  m.extrude(.15,2.15,0,hull.map(p=>[p[0]*.92,p[1]*.78]),.55,MET);
+  for(const sd of [-1,1]){
+    m.box(-.4,1.05,sd*1.78,14.2,.42,.28,DARK);               // continuous belt
+    m.box(.8,1.55,sd*1.58,9.4,.22,.36,TEAM_A);               // faction stripe, low
+    m.box(-6.4,.72,sd*.82,3.2,.95,.72,DARKER);               // pumpjet tunnel
+    tubeX(m,-9.6,.78,sd*.82,.72,.48,.28,10,TWR_BORE);
+    ringX(m,-9.65,.78,sd*.82,.42,.62,10,MET_L);
+    m.box(5.4,.85,sd*1.05,2.4,.38,.22,MET_L);                // bow plane
+  }
+  m.bevelBox(-1.15,2.55,0,2.35,2.85,1.05,.28,MET_L);         // sail
+  m.box(-1.15,5.05,0,1.65,.22,.72,TEAM_T);
+  m.cyl(-1.15,5.55,0,1.15,.16,.16,10,MET_L);                 // periscope
+  m.box(-1.15,6.35,0,.12,.95,.12,DARKER);
+  for(const sd of [-1,1]) m.box(-1.15,3.85,sd*.85,1.85,.18,.55,MET_D); // dive planes
+  for(let k=0;k<4;k++) m.tube(6.15,.55,((k%2)*2-1)*(.35+.28*(k>>1)),.22,.10,.38,8,DARKER);
+  glowStrip(m,-1.15,2.62,0,1.85,ENERGY,0);
+  m.greeble(-2.2,2.28,0,4.2,1.6,.22,5,MET_D,0,331);
+  return {hull:m.build(),tur:null,s:1.0,naval:1};
+}
 function mdlDread(){                         // 15 — naval heavy
   const m=MB();
   const waterline=[[-13.35,-4.15],[-11.55,-5.05],[6.55,-5.65],[11.75,-3.55],[13.35,-1.38],
@@ -2325,6 +2352,7 @@ const UNIT_MDL=[mdlStriker,mdlRhino,mdlGoliath,mdlThumper,mdlCommander,mdlWasp,m
   mdlReaper,mdlCinder,mdlLancer,mdlResonator,mdlWarden,mdlKestrel,mdlBasilisk,mdlHarbinger,
   /* faction heroes — 28..30 */
   mdlPraetor,mdlArchon,mdlBroodmother];
+UNIT_MDL[33]=mdlSubmarine;
 
 /* WHAT A MODEL IS MADE OF, answered by the model tables themselves.
    Salvage needs to know whether the thing that just died was grown or built,

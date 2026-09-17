@@ -163,7 +163,7 @@
   }
   function mcProductionAllowed(B,t){
     if(!TYPES[t]||!Array.isArray(B.queue))return false;
-    let list=B.type==='tgate'?[8,26]:B.type==='harbor'?[14,15]:B.type==='airfield'?[5,17,25]:
+    let list=B.type==='tgate'?[8,26]:B.type==='harbor'?[14,15,33]:B.type==='airfield'?[5,17,25]:
       B.type==='fac'?(B.tier===2?[0,1,9,18,10,2,3,6,7,11,16,19,20,21,22,23,24,27,32]:[0,1,9,10,19,24,32]):[];
     if(typeof factionDoctrineRoster==='function')list=factionDoctrineRoster(list,B.type,B.team);
     return list.indexOf(t)>=0;

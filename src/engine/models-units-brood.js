@@ -1827,6 +1827,30 @@ function mdlBrdRazorfinn(){
   return {hull:m.build(),tur:null,s:1.02};
 }
 
+function mdlBrdAbyssal(){
+  /* Longer, lower Razorfinn — no sail, a hunting eel. */
+  const m=MB();
+  brdShell(m);
+  carapace(m,-0.4,0.95,0,16.8,2.35,1.35,CHITIN,
+    {segs:8,ridge:0.16,bump:0.08,keel:0.18,nose:0.40,tail:0.28,
+     waist:0.22,waistAt:0.48,waistW:0.070,seed:3333,u:18,v:10});
+  brdShell(m);
+  carapace(m,7.4,0.88,0,3.4,1.45,0.95,CHIT_D,
+    {segs:2,ridge:0.12,bump:0.10,keel:0.08,nose:0.36,tail:0.42,seed:333,u:10,v:6});
+  eyeCluster(m,8.2,1.05,0,0.38,2,HOT);
+  brdMaw(m,8.5,0.82,0,{len:3.2,r0:0.48,r1:0.26,flare:0.40,lobes:3,rings:3,
+                       pitch:0.03,col:CHIT_D,seed:333,u:8,v:7});
+  for(const sd of [-1,1]){
+    brdWing(m,-1.2,0.62,0,sd,5.6,3.8,0.22,0.14,BIO_MEM,C(46,44,30),3333+sd);
+    tendril(m,7.6,1.15,sd*0.55,2.8,0.12,sd,1.0,BIO_LEG);
+    m.sphere(-4.2,1.25,sd*0.85,0.48,6,BIO_TEAM,0.84,false);
+  }
+  brdLivery(m);
+  m.team(0);
+  tubercles(m,-5.2,1.35,0,2.8,0.9,5,0.30,CHIT_D,3333);
+  return {hull:m.build(),tur:null,s:1.06,naval:1};
+}
+
 /* ==================== 15 — KEELBACK (was mdlHordeSwimmer) ==================
    Dreadnought slot: tier 2 naval, 1300hp, 88dmg at 290px, splash 34, spd 20.
    VERY LONG and WIDE, LOW, with a row of five chimney throats along the
@@ -2121,7 +2145,8 @@ const UNIT_MDL_BROOD={
   24:brdBroodFactory(mdlBrdIchorleech,24),
   /* was mdlHordeSwimmer x2 */
   14:brdBroodFactory(mdlBrdRazorfinn,14),
-  15:brdBroodFactory(mdlBrdKeelback,15)
+  15:brdBroodFactory(mdlBrdKeelback,15),
+  33:brdBroodFactory(mdlBrdAbyssal,33)
 };
 
 /* Hull skins. initFactionKits already calls mfAssetSkin on hull when the pack

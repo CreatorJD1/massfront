@@ -2716,7 +2716,7 @@ function renderProdMenu(){ if(openBldGone()) return;
      removed entries and render them locked. */
   let list, lockedTier=[], lockedDoc=[];
   if(B.type==='tgate') list=[8,26];
-  else if(B.type==='harbor') list=[14,15];
+  else if(B.type==='harbor') list=[14,15,33];
   else if(B.type==='airfield') list=[5,17,25];
   else {
     const T2=[0,1,9,18,10,2,3,6,7,11,16,19,20,21,22,23,24,27,32];

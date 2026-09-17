@@ -57,7 +57,7 @@ const TYPES=[
     large as a city block and left no room to read a fleet. `vscale` is render
     only: collision, selection tolerance, range, health and spacing stay on the
     measured simulation values above. */
- {name:'Corvette', spr:'corv',   tur:null,     size:20, r:7.5, hp:320,  dmg:24, rng:115, cool:1.0, spd:21, psp:120, ptype:6, aoe:0,  wk:'i', tg:'a',  cm:55,  ce:220,  bt:5.0, air:0, tier:1, naval:1,vscale:.66},
+ {name:'Corvette', spr:'corv',   tur:null,     size:20, r:7.5, hp:320,  dmg:24, rng:115, cool:1.0, spd:21, psp:120, ptype:6, aoe:0,  wk:'i', tg:'a',  cm:55,  ce:220,  bt:5.0, air:0, tier:1, naval:1,vscale:.66,asw:1},
  {name:'Dreadnought',spr:'dread',tur:null,     size:32, r:12,  hp:1300, dmg:88, rng:290, cool:5.0, spd:10, psp:150, ptype:2, aoe:34, wk:'e', tg:'g',  cm:170, ce:680,  bt:12,  air:0, tier:2, naval:1,vscale:.54},
  {name:'Bombard',  spr:'bombH',  tur:'bombT',  size:21, r:8,   hp:400,  dmg:95, rng:400, cool:5.8, spd:8, psp:150, ptype:9, aoe:44, wk:'e', tg:'g',  cm:140, ce:560,  bt:10,  air:0, tier:2, minRng:100},
  {name:'Raptor',   spr:'raptor', tur:null,     size:18, r:6.5, hp:280,  dmg:85, rng:52,  cool:3.8, spd:40, psp:130, ptype:7, aoe:32, wk:'e', tg:'g',  cm:70,  ce:330,  bt:6.5, air:1, tier:1},
@@ -115,6 +115,10 @@ const TYPES=[
     work a field before territory reaches it; the authored mining beam makes
     the economic action readable from the ordinary battle camera. */
  {name:'Prospector',spr:'warden',tur:null, size:17, r:6.2, hp:190, dmg:0, rng:0, cool:9, spd:19, psp:0, ptype:0, aoe:0, wk:'n', tg:'a', cm:52, ce:210, bt:5.0, air:0, tier:1, cat:'sup', miner:1},
+ /* SUBMARINE — one Harbor chassis, four doctrines (src/submarines.js).
+    Born dived (GHOST). Torpedoes hit land and naval, not air. Corvettes are
+    the ASW screen (asw:1 above); a Dreadnought that ignores them dies. */
+ {name:'Submarine', spr:'sub',   tur:null,     size:22, r:8.0, hp:280,  dmg:72, rng:150, cool:3.2, spd:16, psp:110, ptype:2, aoe:12, wk:'e', tg:'g',  cm:78,  ce:310,  bt:7.0, air:0, tier:2, naval:1, sub:1, asw:1, vscale:.62},
 ];
 /* UNIT CATEGORIES. Used by the build menu, the unit card and the AI's
    composition logic, so a role is a real thing the game reasons about rather
@@ -136,7 +140,7 @@ const UCAT={
     Wasp:'air', Longbow:'at', Hornet:'veh', TITAN:'exp', Pyro:'inf',
     Vulture:'aa', Bulwark:'sup', Ravager:'inf', 'Alpha Ravager':'exp',
     Corvette:'nav', Dreadnought:'nav', Bombard:'art', Raptor:'air',
-    Scorcher:'aoe', Constructor:'sup'
+    Scorcher:'aoe', Constructor:'sup', Submarine:'nav'
   };
   for(const T of TYPES) if(!T.cat) T.cat=byName[T.name]||'veh';
 })();
@@ -189,7 +193,7 @@ function mfDomainDamageMul(i,tg){
   return 1;
 }
 const UT_ENGINEER=19;                       // index of the Constructor in TYPES
-const UT_BROOD_CASTER=31, UT_MINER=32;
+const UT_BROOD_CASTER=31, UT_MINER=32, UT_SUB=33;
 const SHIELD_REDUCE=0.72, SHIELD_R=95;
 const AGGRO_MULT=1.9, AGGRO_ADD=70;
 const TITAN_STOMP_DMG=210, TITAN_STOMP_R=85;
@@ -998,6 +1002,7 @@ const UNIT_MODES=[
   [0,3],      // 30 Broodmother  — overdrive
   [0],        // 31 Tidecaster   — biological leader
   [0,6,7],    // 32 Prospector   — mine / assist / survey
+  [0,4],      // 33 Submarine    — dive (GHOST / silent running)
 ];
 const MODE_SWITCH=1.6;                   // seconds locked while deploying
 /* MODES ARE TRADES.
@@ -8814,7 +8819,8 @@ function unitTick(dt){
       // fire
       if(inRange && ucool[i]<=0 && !(T.minRng && er<T.minRng) &&
          (!T.tur||(turretAimError<.14&&unitPitchErr<.12)) &&
-         (!T.air||typeof mfAirCanFire!=='function'||mfAirCanFire(i))){
+         (!T.air||typeof mfAirCanFire!=='function'||mfAirCanFire(i)) &&
+         (!T.sub||typeof mfSubCanFire!=='function'||mfSubCanFire(i))){
         const vet=1+uvet[i]*0.15;
         if(T.air&&typeof mfAirOnWeaponRelease==='function') mfAirOnWeaponRelease(i);
         ucool[i]=T.cool*modeCoolMul(md)*classCoolMul(i)*broodCoolMul(i)/(ubuff[i]>0?1.4:1);

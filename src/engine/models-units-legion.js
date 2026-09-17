@@ -1057,6 +1057,31 @@ function mdlDomDread(){
   return {hull:m.build(),tur:t.build(),s:1.0,turH:5.65,naval:1};
 }
 
+function mdlDomSubmarine(){
+  /* Leviathan: the Nautilus hull with a bolted belt, a thicker sail, and a
+     bow door big enough to read as a torpedo room from command camera. */
+  const base=mdlSubmarine();
+  const m=MB();
+  const hull=[[-9.6,-1.22],[-7.4,-1.95],[2.9,-2.12],[7.8,-1.28],[10.1,-.48],
+              [10.1,.48],[7.8,1.28],[2.9,2.12],[-7.4,1.95],[-9.6,1.22]];
+  m.extrude(0,0,0,hull,2.45,TWR_ARM_D);
+  m.extrude(.12,2.45,0,hull.map(p=>[p[0]*.9,p[1]*.74]),.62,TWR_ARM);
+  for(const sd of [-1,1]){
+    m.box(-.3,1.15,sd*1.95,15.2,.55,.38,TWR_COAT);
+    m.box(.6,1.72,sd*1.72,10.2,.28,.42,sd>0?TEAM_A:HOT);
+    m.box(-6.6,.78,sd*.9,3.4,1.15,.82,DARKER);
+    tubeX(m,-9.9,.85,sd*.9,.82,.52,.32,9,TWR_BORE);
+    ringX(m,-9.95,.85,sd*.9,.48,.70,9,HOT);
+    m.box(5.6,.95,sd*1.18,2.6,.48,.28,TWR_TRIM);
+  }
+  m.bevelBox(-1.05,2.85,0,2.85,3.35,1.35,.32,TWR_ARM);
+  m.box(-1.05,5.55,0,2.05,.28,.92,TEAM_T);
+  m.box(-1.05,6.55,0,.18,1.15,.18,DARKER);
+  m.bevelBox(7.4,.55,0,2.4,1.15,1.55,.22,TWR_COAT);
+  for(let k=0;k<4;k++) m.tube(7.2,.52,((k%2)*2-1)*(.42+.3*(k>>1)),.26,.12,.42,8,TWR_BORE);
+  return {hull:m.build(),tur:null,s:1.04,naval:1};
+}
+
 /* ---------------------------------------------------------------------------
    CRIMSON MATERIAL CONVERSION
    ---------------------------------------------------------------------------
@@ -1347,6 +1372,7 @@ const UNIT_MDL_LEGION={
   27:domLegionFactory(mdlDomBattery,27),   // Harbinger    — siege battery
   28:domLegionFactory(mdlPraetor,28),      // Lord Vex     — Dominion-exclusive commander
   32:domLegionFactory(mdlDomMiner,32),     // Prospector   — ore miner, UNARMED
+  33:domLegionFactory(mdlDomSubmarine,33), // Leviathan    — heavy assault sub
 };
 
 function mfCdrDecorateKorr(m){

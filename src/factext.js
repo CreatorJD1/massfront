@@ -97,7 +97,8 @@ const FAC_TEXT={
       26:{ds:'Experimental heavy with 1,100 hull and a main gun no line unit can trade with'},
       27:{ds:'Siege titan whose area barrage grinds an entrenched position down from 210 range'},
       31:{ds:'A brood caster that forms from 28 nearby creatures and directs the mass as one'},
-      32:{ds:'Unarmed mobile miner that works phase-ore in the field and hauls the mass home'}
+      32:{ds:'Unarmed mobile miner that works phase-ore in the field and hauls the mass home'},
+      33:{nm:'Nautilus',ds:'Hunter-killer that runs silent under the sheet and puts a torpedo through a hull that never saw it'}
     },
     bld:{
       mex:{nm:'Extractor',ds:'+4 Mass, sited on a ◆ deposit and worked for as long as you hold the ground'},
@@ -158,7 +159,8 @@ const FAC_TEXT={
       25:{nm:'Watchman',ds:'Fast scout aircraft that maps the enemy line, armed only enough to leave it'},
       26:{nm:'Tyrant',ds:'Experimental heavy carrying armour and a main gun no line unit can answer'},
       27:{nm:'Warbringer',ds:'Siege titan whose area barrage grinds entrenched defences down from long range'},
-      32:{nm:'Requisitor',ds:'Unarmed mobile miner that strips ore off the field and feeds it to the war machine'}
+      32:{nm:'Requisitor',ds:'Unarmed mobile miner that strips ore off the field and feeds it to the war machine'},
+      33:{nm:'Leviathan',ds:'Heavy assault sub that has to surface to fire — thick hull, slow, a gun the size of a Corvette'}
     },
     bld:{
       mex:{nm:'Tithe Rig',ds:'+4 Mass, clamped onto a ◆ deposit and worked until nothing is left'},
@@ -247,7 +249,8 @@ const FAC_TEXT={
       25:{nm:'Surveyor',ds:'Fast scout drone that maps ground the Coalition later sells by the tile, lightly armed'},
       26:{nm:'Overwrite',ds:'Experimental heavy hull that opens a lane through armor and rewrites who holds it'},
       27:{nm:'Final Notice',ds:'Siege platform that saturates entrenched positions with sustained area fire from range'},
-      32:{nm:'Assayer',ds:'Unarmed mining rig that works ore deposits in the field and converts them to mass'}
+      32:{nm:'Assayer',ds:'Unarmed mining rig that works ore deposits in the field and converts them to mass'},
+      33:{nm:'Blackwake',ds:'Thin drone keel that is the fastest thing in the water and the hardest to keep a lock on'}
     },
     bld:{
       mex:{nm:'Lien Drill',ds:'+4 Mass from a ◆ node, drilled under an exclusive Coalition claim'},
@@ -339,7 +342,8 @@ const FAC_TEXT={
       26:{nm:'Dreadspine',ds:'Thick-shelled hunter, costly to grow, that kills heavy things well before they close'},
       27:{nm:'Harrower',ds:'Siege-grown bulk that showers rot over packed lines and anything rooted, from far back'},
       31:{nm:'Brood Tidecaster',ds:'Rises where 28 broodmates gather, casting the will of the hive and stinging at reach'},
-      32:{nm:'Massgrub',ds:'Soft, harmless grub that chews ore where it lies and carries the mass home to the hive'}
+      32:{nm:'Massgrub',ds:'Soft, harmless grub that chews ore where it lies and carries the mass home to the hive'},
+      33:{nm:'Abyssal',ds:'Eel grown to hunt from below; while it stays dived the wound knits closed'}
     },
     bld:{
       mex:{nm:'Gullet Root',ds:'Root sunk into a ◆ seam, digesting +4 Mass out of the rock'},

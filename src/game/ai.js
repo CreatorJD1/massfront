@@ -63,7 +63,7 @@ function aiSetCohortMoveGoal(cache,i,x,y){
 function aiBehaviorUnitPool(key,tier,facility){
   key=aiBehaviorKey(key);
   if(facility==='airfield')return key==='air'?[5,17,5,17,25]:[5,17];
-  if(facility==='harbor')return key==='naval'?(AI.t>260?[14,14,15]:[14,14,14]):[14,15];
+  if(facility==='harbor')return key==='naval'?(AI.t>260?[14,33,14,15]:[14,33,14]):[14,15,33];
   if(key==='land')return tier===2?[1,2,3,7,16,20,21,22,27]:[0,1,9,10,19];
   if(key==='air')return tier===2?[0,9,10,19,23,24]:[0,9,10,19];
   if(key==='naval')return tier===2?[0,1,10,19,20,24]:[0,9,10,19];

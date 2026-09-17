@@ -45,7 +45,7 @@ const FAC_ARSENAL={
      nova key used to look like an unfinished table. */
   nova:{
     fac:new Set([0,1,2,3,6,7,9,10,11,16,18,19,20,21,22,23,24,26,27,32]),
-    tgate:new Set([8,26]),airfield:new Set([5,17,25]),harbor:new Set([14,15])
+    tgate:new Set([8,26]),airfield:new Set([5,17,25]),harbor:new Set([14,15,33])
   },
   legion:{
     fac:new Set([0,1,2,3,7,9,10,16,18,19,20,21,22,26,27,32]),
@@ -53,18 +53,18 @@ const FAC_ARSENAL={
        already names the Legion TITAN (Ascendant) and says the gate builds
        TITANs. No doctrine comment forbids chassis 8 — the Basilisk-only set
        was an incomplete cut, not a written exclude. Match Nova: TITAN + Tyrant. */
-    tgate:new Set([8,26]),airfield:new Set([5,17]),harbor:new Set([14,15])
+    tgate:new Set([8,26]),airfield:new Set([5,17]),harbor:new Set([14,15,33])
   },
   syndicate:{
     fac:new Set([0,1,2,6,7,10,11,19,20,23,24,26,27,32]),
-    tgate:new Set([8]),airfield:new Set([5,17,25]),harbor:new Set([14,15])
+    tgate:new Set([8]),airfield:new Set([5,17,25]),harbor:new Set([14,15,33])
   },
   /* Brood keeps a complete counter triangle (runners, walkers, bile, AA,
      support) but does not copy Dominion 400-range siege or Coalition
      beam/shield/sonic plant. Nest organisms 12/13/31 stay hive-spawned. */
   horde:{
     fac:new Set([0,1,2,3,7,9,10,18,19,20,21,22,27,32]),
-    tgate:new Set([8]),airfield:new Set([5,17,25]),harbor:new Set([14,15])
+    tgate:new Set([8]),airfield:new Set([5,17,25]),harbor:new Set([14,15,33])
   }
 };
 function factionDoctrineRoster(list,facility,team){
