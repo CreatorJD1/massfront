@@ -1,5 +1,7 @@
 /** Massfront water-world theatre catalog — numbers from economy.js / sea.js / owner water-world rules. */
 
+import { FACTION_META, type FactionId } from "./submarines";
+
 export const PLAYER = 0;
 export const BROOD = 1;
 
@@ -7,8 +9,9 @@ export const TICK = 1 / 30;
 export const POP_CAP = 36;
 
 export type BuildingId = "core" | "extractor" | "reactor" | "silo" | "harbor" | "gun";
-export type UnitId = "commander" | "constructor" | "corvette" | "destroyer";
+export type UnitId = "commander" | "constructor" | "corvette" | "destroyer" | "submarine";
 export type Kind = BuildingId | UnitId;
+export type { FactionId };
 
 export type Def = {
   id: Kind;
@@ -31,6 +34,8 @@ export type Def = {
   ecap: number;
   place: boolean;
   produce: boolean;
+  sub?: boolean;
+  asw?: boolean;
 };
 
 const b = (
@@ -180,7 +185,7 @@ export const DEFS: Record<Kind, Def> = {
   corvette: u({
     id: "corvette",
     name: "Corvette",
-    role: "Screen",
+    role: "ASW screen",
     mass: 70,
     energy: 40,
     time: 12,
@@ -190,6 +195,7 @@ export const DEFS: Record<Kind, Def> = {
     dmg: 16,
     range: 80,
     reload: 0.62,
+    asw: true,
   }),
   destroyer: u({
     id: "destroyer",
@@ -205,20 +211,51 @@ export const DEFS: Record<Kind, Def> = {
     range: 132,
     reload: 1.28,
   }),
+  submarine: u({
+    id: "submarine",
+    name: "Submarine",
+    role: "Silent running",
+    mass: 95,
+    energy: 80,
+    time: 16,
+    hp: 260,
+    radius: 6.4,
+    speed: 22,
+    dmg: 38,
+    range: 110,
+    reload: 2.8,
+    sub: true,
+    asw: true,
+  }),
 };
 
 export const PLACE_ORDER: BuildingId[] = ["extractor", "reactor", "silo", "harbor", "gun"];
-export const PRODUCE_ORDER: UnitId[] = ["constructor", "corvette", "destroyer"];
+export const PRODUCE_ORDER: UnitId[] = ["constructor", "corvette", "destroyer", "submarine"];
 
 export const NODES = [
-  { x: -120, z: 40 },
-  { x: -40, z: 150 },
-  { x: 50, z: 70 },
-  { x: 140, z: -30 },
-  { x: 90, z: -190 },
-  { x: -150, z: -70 },
-  { x: 20, z: -90 },
-  { x: -30, z: -40 },
+  { x: -250, z: 80, kind: "mass" },
+  { x: -190, z: 150, kind: "mass" },
+  { x: -168, z: 58, kind: "mass" },
+  { x: -286, z: 168, kind: "mass" },
+  { x: -120, z: 40, kind: "mass" },
+  { x: -40, z: 150, kind: "mass" },
+  { x: -150, z: -70, kind: "mass" },
+  { x: 20, z: -90, kind: "mass" },
+  { x: -30, z: -40, kind: "mass" },
+  { x: 50, z: 70, kind: "mass" },
+  { x: 0, z: 36, kind: "mass" },
+  { x: 140, z: -30, kind: "mass" },
+  { x: 90, z: -190, kind: "mass" },
+  { x: 220, z: -158, kind: "mass" },
+  { x: 286, z: -226, kind: "mass" },
+  { x: 178, z: -118, kind: "mass" },
+  { x: 318, z: -138, kind: "mass" },
+  { x: -340, z: 240, kind: "mass" },
+  { x: 390, z: -220, kind: "mass" },
+  { x: -80, z: 8, kind: "energy" },
+  { x: 70, z: -12, kind: "energy" },
+  { x: -210, z: 200, kind: "energy" },
+  { x: 240, z: -80, kind: "energy" },
 ];
 
 export const HQ = {
@@ -226,7 +263,9 @@ export const HQ = {
   [BROOD]: { x: 250, z: -190 },
 } as const;
 
-export const FACTION = {
-  [PLAYER]: { id: "nova", name: "Terran Frontline Command", short: "TFC" },
-  [BROOD]: { id: "brood", name: "Brood Infestation", short: "BROOD" },
-} as const;
+export const FACTION = FACTION_META;
+
+export function unitLabel(kind: Kind, faction: FactionId): string {
+  if (kind === "submarine") return FACTION_META[faction].sub;
+  return DEFS[kind].name;
+}

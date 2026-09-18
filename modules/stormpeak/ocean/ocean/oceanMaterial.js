@@ -66,6 +66,16 @@ export function createOceanMaterial(sky, opts = {}) {
     uLodInner: { value: lodInner },
     uLodCenter: { value: new THREE.Vector2() },
     uUnderwater: { value: 0 },
+    uFlash: { value: 0 },
+    uCloudCover: { value: 0.72 },
+    uBlastPos: { value: Array.from({ length: 8 }, () => new THREE.Vector2()) },
+    uBlastData: { value: Array.from({ length: 8 }, () => new THREE.Vector4()) },
+    uBlastAux: { value: Array.from({ length: 8 }, () => new THREE.Vector4()) },
+    uBlastCount: { value: 0 },
+    uNuke: { value: new THREE.Vector4(0, 0, 0, 1) },
+    uNukeOrigin: { value: new THREE.Vector3() },
+    uNukeCloud: { value: 0 },
+    uNukeAge: { value: 0 },
     uWindDir: {
       value: new THREE.Vector2(
         Math.cos((config.spectrum.windDirection / 180) * Math.PI),
@@ -148,6 +158,10 @@ export function createOceanMaterial(sky, opts = {}) {
       uniform float uLodMode, uLodRadius, uLodInner;
       uniform vec2 uLodCenter;
       uniform vec2 uWindDir;
+      uniform vec2 uBlastPos[8];
+      uniform vec4 uBlastData[8];
+      uniform vec4 uBlastAux[8];
+      uniform float uBlastCount;
       varying vec3 vWorldPos;
       varying vec2 vFlatXZ;
       varying float vFoam;
@@ -157,6 +171,8 @@ export function createOceanMaterial(sky, opts = {}) {
       varying float vLodR;
       varying float vVeryHi;
       varying float vMidHi;
+      varying float vBlastHole;
+      varying float vBlastLip;
 
       void addG(vec2 xz, vec2 dir, float amp, float k, float omega, float ph, float Q, float t, inout vec3 d, inout vec2 sl) {
         float th = k * (dir.x * xz.x + dir.y * xz.y) - omega * t + ph;
@@ -167,6 +183,16 @@ export function createOceanMaterial(sky, opts = {}) {
         d.y += amp * s;
         sl.x += dir.x * amp * k * c;
         sl.y += dir.y * amp * k * c;
+      }
+
+      float landYAt(vec2 xz) {
+        vec2 a = xz - vec2(-340.0, 240.0);
+        vec2 b = xz - vec2(390.0, -220.0);
+        float ra = length(a);
+        float rb = length(b);
+        float ya = 11.0 * pow(max(0.0, 1.0 - ra / 96.0), 1.35);
+        float yb = 13.5 * pow(max(0.0, 1.0 - rb / 118.0), 1.35);
+        return max(ya, yb);
       }
 
       void main() {
@@ -213,17 +239,47 @@ export function createOceanMaterial(sky, opts = {}) {
         vec2 p5 = normalize(w + vec2(-w.y, w.x) * -0.51);
         addG(flatPos.xz, p4, 0.14 * swell, 0.0478, 0.686, 0.55, 0.22, t, g, gs);
         addG(flatPos.xz, p5, 0.09 * swell, 0.0685, 0.821, 1.90, 0.18, t, g, gs);
-        float gMul = closeCap * veryHi * min(1.6, swell * 0.08);
-        addG(flatPos.xz, normalize(vec2(0.97, 0.24)), 0.038 * gMul, 2.35, 4.80, 0.40, 0.38, t, g, gs);
-        addG(flatPos.xz, normalize(vec2(0.42, 0.91)), 0.026 * gMul, 3.70, 6.10, 1.70, 0.34, t, g, gs);
-        addG(flatPos.xz, normalize(vec2(-0.62, 0.78)), 0.016 * gMul, 5.90, 7.80, 0.90, 0.28, t, g, gs);
-        addG(flatPos.xz, normalize(vec2(0.88, -0.47)), 0.011 * gMul, 8.80, 9.60, 2.20, 0.24, t, g, gs);
-        addG(flatPos.xz, normalize(vec2(-0.18, 0.98)), 0.007 * gMul, 13.2, 11.8, 0.15, 0.20, t, g, gs);
+        float gMul = closeCap * veryHi * min(1.85, swell * 0.1);
+        addG(flatPos.xz, normalize(vec2(0.97, 0.24)), 0.052 * gMul, 2.35, 4.80, 0.40, 0.38, t, g, gs);
+        addG(flatPos.xz, normalize(vec2(0.42, 0.91)), 0.038 * gMul, 3.70, 6.10, 1.70, 0.34, t, g, gs);
+        addG(flatPos.xz, normalize(vec2(-0.62, 0.78)), 0.026 * gMul, 5.90, 7.80, 0.90, 0.28, t, g, gs);
+        addG(flatPos.xz, normalize(vec2(0.88, -0.47)), 0.018 * gMul, 8.80, 9.60, 2.20, 0.24, t, g, gs);
+        addG(flatPos.xz, normalize(vec2(-0.18, 0.98)), 0.012 * gMul, 13.2, 11.8, 0.15, 0.20, t, g, gs);
+        addG(flatPos.xz, normalize(vec2(0.55, -0.84)), 0.008 * gMul, 17.6, 14.2, 1.05, 0.16, t, g, gs);
+        addG(flatPos.xz, normalize(vec2(-0.91, 0.31)), 0.005 * gMul, 22.4, 16.8, 2.40, 0.12, t, g, gs);
         disp += g;
         disp.y = 48.0 * tanh(disp.y / 48.0);
         vGSlope = gs;
 
         vec3 wp = flatPos + disp;
+        float blastFoam = 0.0;
+        float blastHole = 0.0;
+        float blastLip = 0.0;
+        for (int i = 0; i < 8; i++) {
+          if (float(i) >= uBlastCount) break;
+          vec2 dlt = wp.xz - uBlastPos[i];
+          float rr = length(dlt);
+          vec4 bd = uBlastData[i];
+          vec4 ba = uBlastAux[i];
+          float cavR = max(bd.y, 0.8);
+          float bowl = pow(clamp(1.0 - rr / cavR, 0.0, 1.0), 1.55);
+          float lipW = max(1.4, cavR * 0.18);
+          float lip = exp(-pow((rr - cavR) / lipW, 2.0));
+          float jet = exp(-pow(rr / max(ba.w, 0.5), 2.0));
+          float wid = max(2.2, ba.z);
+          float ring = exp(-pow((rr - bd.x) / wid, 2.0));
+          float bh = -bowl * bd.w + lip * ba.y + jet * ba.x + ring * bd.z;
+          if (rr < bd.x) {
+            float trough = exp(-pow((bd.x - rr) / (wid * 1.35), 2.0));
+            bh -= bd.z * 0.34 * trough * (1.0 - bowl);
+          }
+          wp.y += 18.0 * tanh(bh / 18.0);
+          blastFoam += ring * clamp(bd.z * 0.22, 0.0, 1.0) + lip * clamp(ba.y * 0.18, 0.0, 1.0);
+          blastHole = max(blastHole, bowl * clamp(bd.w / 18.0, 0.0, 1.0));
+          blastLip = max(blastLip, max(lip * clamp(ba.y * 0.2, 0.0, 1.0), ring * clamp(bd.z * 0.16, 0.0, 1.0)));
+        }
+        vBlastHole = blastHole;
+        vBlastLip = blastLip;
         vec2 brel = wp.xz - uBoatPos;
         vec2 bf = uBoatDir;
         vec2 br = vec2(bf.y, -bf.x);
@@ -231,7 +287,11 @@ export function createOceanMaterial(sky, opts = {}) {
         float bc = dot(brel, br) / max(uBoatHalf.y, 0.001);
         float bowl = 1.0 - smoothstep(0.55, 1.15, ba * ba + bc * bc);
         wp.y -= bowl * uBoatDip;
-        vFoam = foam;
+        float landY = landYAt(wp.xz);
+        if (landY > 0.08) {
+          wp.y = min(wp.y, -0.55);
+        }
+        vFoam = foam + blastFoam;
         vHeight = disp.y;
         vChop = length(disp.xz);
         vWorldPos = wp;
@@ -249,15 +309,15 @@ export function createOceanMaterial(sky, opts = {}) {
       uniform float uScatterShadowStrength, uEnvironmentLightStrength, uBubbleDensity, uHeightModifier;
       uniform float uChopSssStrength, uChopSssWrap;
       uniform vec3 uFogColor, uHorizonWater;
-      uniform float uFogNear, uFogFar, uDetailFadeStart, uDetailFadeEnd, uTime, uFoamAmount;
+      uniform float uFogNear, uFogFar, uDetailFadeStart, uDetailFadeEnd, uFoamAmount;
       uniform sampler2D uFoamTex;
-      uniform vec2 uWindDir;
       uniform sampler2D uWakeTex;
       uniform vec2 uWakeCenter;
       uniform float uWakeWorldSize;
       uniform float uLodMode, uLodRadius, uLodInner;
       uniform vec2 uLodCenter;
       uniform float uUnderwater;
+      uniform vec4 uNuke;
       varying vec3 vWorldPos;
       varying vec2 vFlatXZ;
       varying float vFoam;
@@ -267,6 +327,8 @@ export function createOceanMaterial(sky, opts = {}) {
       varying float vLodR;
       varying float vVeryHi;
       varying float vMidHi;
+      varying float vBlastHole;
+      varying float vBlastLip;
 
       float sat(float x) { return clamp(x, 0.0, 1.0); }
       float dotc(vec3 a, vec3 b) { return max(0.0, dot(a, b)); }
@@ -314,7 +376,7 @@ export function createOceanMaterial(sky, opts = {}) {
         vec2 slope = vec2(0.0);
         ${sumSlope}
         slope += vGSlope * 0.85;
-        slope += capillary(vFlatXZ, uTime) * closeN * vVeryHi;
+        slope += capillary(vFlatXZ, uTime) * closeN * vVeryHi * 1.35;
         slope *= uNormalStrength * mix(0.96, mix(1.04, detailFade, distFade), 1.0 - closeN);
 
         vec3 normal = normalize(vec3(-slope.x, 1.0, -slope.y));
@@ -327,29 +389,41 @@ export function createOceanMaterial(sky, opts = {}) {
           vec3 I = normalize(vWorldPos - cameraPosition);
           float ndi = sat(-dot(nUp, I));
           float crit = 0.662;
-          float window = smoothstep(crit - 0.10, crit + 0.04, ndi);
+          float window = smoothstep(crit - 0.14, crit + 0.08, ndi);
           vec3 Rair = refract(I, nUp, 1.333);
-          vec3 sky = skyColor(length(Rair) > 0.01 ? normalize(Rair) : nUp);
-          vec2 cauUv = vFlatXZ * 0.058 + slope * 1.1;
+          vec3 sky = skyColor(length(Rair) > 0.01 ? normalize(Rair) : vec3(0.0, 1.0, 0.0));
+          vec2 cauUv = vFlatXZ * 0.05 + slope * 1.35;
           float cau = 0.0;
           vec2 cq = cauUv;
-          cau += pow(abs(sin(cq.x * 3.05 + uTime * 0.92) * sin(cq.y * 2.62 - uTime * 0.74)), 7.0);
+          cau += pow(abs(sin(cq.x * 2.7 + uTime * 0.88) * sin(cq.y * 2.35 - uTime * 0.7)), 6.0);
           cq = mat2(0.78, -0.62, 0.62, 0.78) * cq + 1.7;
-          cau += pow(abs(sin(cq.x * 4.35 - uTime * 1.08) * sin(cq.y * 3.55 + uTime * 0.66)), 9.0);
+          cau += pow(abs(sin(cq.x * 3.9 - uTime * 1.02) * sin(cq.y * 3.2 + uTime * 0.6)), 8.0);
           cq = mat2(0.6, 0.8, -0.8, 0.6) * cq + 3.1;
-          cau += pow(abs(sin(cq.x * 5.9 + uTime * 0.55) * sin(cq.y * 5.05 - uTime * 0.88)), 10.0);
-          float trough = sat(0.62 - vHeight * 0.035);
-          vec3 transmit = sky * vec3(0.42, 0.78, 0.72) * (0.55 + 0.7 * ndi);
-          transmit += uSunIrradiance * vec3(0.22, 0.62, 0.48) * cau * 0.85 * (0.4 + 0.6 * trough);
+          cau += pow(abs(sin(cq.x * 5.2 + uTime * 0.5) * sin(cq.y * 4.6 - uTime * 0.82)), 9.0);
+          float trough = sat(0.7 - vHeight * 0.04);
+          float crestD = sat(vHeight * 0.045);
+          vec3 waterCeil = vec3(0.07, 0.26, 0.25);
+          vec3 transmit = sky * vec3(0.5, 0.9, 0.82) * (0.7 + 0.9 * ndi);
+          transmit += uSunIrradiance * vec3(0.28, 0.75, 0.55) * cau * (0.55 + 0.9 * trough);
           vec3 refl = reflect(I, nUp);
-          vec3 tir = uDeepColor * 0.55 + skyColor(refl) * 0.22;
-          tir += vec3(0.10, 0.42, 0.40) * cau * 0.9;
+          vec3 tir = waterCeil + skyColor(refl) * 0.18;
+          tir += vec3(0.12, 0.48, 0.42) * cau * 0.7;
           float F = pow(1.0 - ndi, 5.0);
           vec3 under = mix(tir, transmit, window);
-          under = mix(under, tir, F * 0.4);
-          under += uSunIrradiance * vec3(0.35, 0.7, 0.55) * pow(sat(dot(-I, normalize(uSunDirection))), 32.0) * 0.45;
-          float fogU = smoothstep(10.0, 220.0, fftDist);
-          gl_FragColor = vec4(mix(under, vec3(0.03, 0.14, 0.16), fogU * 0.7), 1.0);
+          under = mix(under, tir, F * 0.28);
+          under = mix(under, waterCeil * 0.7, crestD * 0.4);
+          under += uSunIrradiance * vec3(0.4, 0.8, 0.62) * pow(sat(dot(-I, normalize(uSunDirection))), 18.0) * 0.55;
+          vec3 sunU = normalize(uSunDirection);
+          vec3 perp = I - sunU * dot(I, sunU);
+          float ang = atan(perp.x, perp.z);
+          float shafts = pow(abs(sin(ang * 6.0 + uTime * 0.1)), 9.0);
+          shafts += pow(abs(sin(ang * 11.0 - uTime * 0.07)), 14.0) * 0.6;
+          float along = pow(sat(dot(-I, sunU)), 2.2);
+          under += uSunIrradiance * vec3(0.42, 0.88, 0.66) * shafts * along * 0.7;
+          under *= 1.0 - sat(vFoam) * 0.5;
+          float upLook = sat(-I.y);
+          float fogU = smoothstep(55.0, 340.0, fftDist) * (1.0 - upLook * 0.82);
+          gl_FragColor = vec4(mix(under, vec3(0.04, 0.16, 0.17), fogU * 0.65), 1.0);
           return;
         }
         vec3 lightDir = normalize(uSunDirection);
@@ -391,6 +465,8 @@ export function createOceanMaterial(sky, opts = {}) {
         float bodyShade = 0.58 + 0.38 * wrapN + 0.12 * crest - 0.08 * trough;
         vec3 scatter = mix(uHorizonWater, uDeepColor, downLook * 0.82) * uSunIrradiance * bodyShade;
         scatter += uDeepColor * 0.32;
+        scatter = mix(scatter, uDeepColor * vec3(0.22, 0.38, 0.36) * uSunIrradiance, sat(vBlastHole) * 0.82);
+        scatter += uScatterColor * uSunIrradiance * vBlastLip * 0.55;
         vec3 hemi = mix(uSkyBottom * 0.75, uSkyTop, sat(normal.y * 0.55 + 0.45));
         scatter += hemi * 0.24 * uEnvironmentLightStrength;
 
@@ -425,6 +501,8 @@ export function createOceanMaterial(sky, opts = {}) {
 
         vec3 output_ = (1.0 - F) * scatter + specular + F * envReflection;
         output_ = max(vec3(0.0), output_);
+        float csh = cloudShadow(vWorldPos.xz);
+        output_ *= mix(1.0, 0.62, csh * 0.48);
 
         vec2 fdir = normalize(uWindDir);
         vec2 fperp = vec2(-fdir.y, fdir.x);
@@ -436,8 +514,9 @@ export function createOceanMaterial(sky, opts = {}) {
         float streaks = mix(0.35, 1.0, windAlign) * mix(0.4, 1.0, foamNoise);
         float breaking = jacTip * mix(0.08, 1.0, crest) * uFoamAmount;
         float foamMask = smoothstep(0.48, 0.88, breaking) * streaks;
+        foamMask = max(foamMask, sat(vBlastLip) * (0.45 + 0.55 * foamNoise));
         vec3 foamCol = mix(uFoamColor * 0.48, uFoamColor, foamMask);
-        float foamW = foamMask * 0.66;
+        float foamW = foamMask * mix(0.66, 0.92, sat((fftDist - 70.0) / 380.0));
 
         vec2 wuv = (vWorldPos.xz - uWakeCenter) / uWakeWorldSize + 0.5;
         if (wuv.x > 0.0 && wuv.x < 1.0 && wuv.y > 0.0 && wuv.y < 1.0) {
@@ -445,6 +524,15 @@ export function createOceanMaterial(sky, opts = {}) {
           foamW = max(foamW, smoothstep(0.14, 0.56, wake) * 0.58);
         }
         output_ = mix(output_, foamCol, sat(foamW) * 0.74 * detailFade);
+        float bio = trough * (1.0 - sat(foamW)) * (1.0 - jacTip * 0.7);
+        bio *= 0.22 + 0.28 * sat(sin(uTime * 0.65 + vFlatXZ.x * 0.07 + vFlatXZ.y * 0.05));
+        output_ += vec3(0.025, 0.18, 0.14) * bio * mix(0.25, 0.85, uCloudCover);
+        float spark = pow(sat(NdotH), 72.0) * pow(NdotV, 6.0) * closeN * (1.0 - foamW);
+        output_ += uSunIrradiance * spark * 0.42;
+        float nd = length(vWorldPos.xz - uNuke.xy);
+        float nGlow = uNuke.z * exp(-nd / max(8.0, uNuke.w));
+        output_ += mix(vec3(1.0, 0.45, 0.1), vec3(0.72, 0.9, 1.0), sat(uNuke.z * 1.4)) * nGlow * 0.9;
+        output_ = mix(output_, vec3(1.0, 0.78, 0.42), sat(nGlow * 0.22));
 
         float fog = smoothstep(uFogNear, uFogFar, fftDist);
         vec3 farCol = mix(uHorizonWater, uFogColor, sat((fftDist - uFogFar * 0.55) / max(1.0, uFogFar * 0.45)));

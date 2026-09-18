@@ -11,6 +11,17 @@ import {
   type UnitId,
 } from "./catalog";
 import { accuracyMul, headingDrag, smallCraftWarn, swellDir } from "./sea";
+import {
+  CLEARANCE_M,
+  PATROL_M,
+  SHELF_M,
+  crushOf,
+  enemyFactionOf,
+  nextDiveStation,
+  prevDiveStation,
+  subProfile,
+  type FactionId,
+} from "./submarines";
 
 export type Phase = "brief" | "live" | "paused" | "victory" | "defeat";
 
@@ -44,6 +55,16 @@ export type Ent = {
   prodLeft: number;
   alive: boolean;
   order: Order;
+  faction: FactionId;
+  sub: boolean;
+  keelM: number;
+  targetKeelM: number;
+  crushM: number;
+  bedM: number;
+  mode: string;
+  dived: boolean;
+  cloaked: boolean;
+  detected: number;
 };
 
 export type Shot = {
@@ -56,9 +77,27 @@ export type Shot = {
   dmg: number;
   ttl: number;
   alive: boolean;
+  kind: "shell" | "torp";
 };
 
-export type Node = { x: number; z: number; taken: number };
+export type OceanBlast = {
+  x: number;
+  z: number;
+  power: number;
+  kind: "shell" | "torp" | "super" | "rogue" | "nuke";
+};
+
+export type WaveHit = {
+  id: number;
+  load: number;
+  form: number;
+  slam?: number;
+  tag?: string;
+  pushX?: number;
+  pushZ?: number;
+};
+
+export type Node = { x: number; z: number; taken: number; kind: "mass" | "energy" };
 
 export type Bank = {
   mass: number;
@@ -104,8 +143,18 @@ export type Snapshot = {
     selected: boolean;
     alive: boolean;
     hover: boolean;
+    faction: FactionId;
+    sub: boolean;
+    keelM: number;
+    targetKeelM: number;
+    crushM: number;
+    bedM: number;
+    mode: string;
+    dived: boolean;
+    cloaked: boolean;
+    detected: number;
   }>;
-  shots: Array<{ id: number; team: number; x: number; z: number; alive: boolean }>;
+  shots: Array<{ id: number; team: number; x: number; z: number; alive: boolean; kind?: string }>;
   nodes: Node[];
 };
 
@@ -115,7 +164,9 @@ function clamp(n: number, a: number, b: number) {
   return Math.max(a, Math.min(b, n));
 }
 
-export function createMatch(opts: { beaufort?: number; seed?: number; startLive?: boolean } = {}) {
+export function createMatch(
+  opts: { beaufort?: number; seed?: number; startLive?: boolean; playerFaction?: FactionId } = {},
+) {
   let nextId = 1;
   let shotId = 1;
   let noticeId = 1;
@@ -125,14 +176,25 @@ export function createMatch(opts: { beaufort?: number; seed?: number; startLive?
   let acc = 0;
   let aiAcc = 0;
   let boxStart: { x: number; z: number } | null = null;
+  let playerFac: FactionId = opts.playerFaction ?? "nova";
+  let enemyFac: FactionId = enemyFactionOf(playerFac);
   const swell = swellDir(196);
   const ents: Ent[] = [];
   const shots: Shot[] = [];
   const notices: Notice[] = [];
+  const blasts: OceanBlast[] = [];
+  const nukeHit = new Set<string>();
+  let waveLoad = 0;
+  let waveForm = 0;
   const selected: number[] = [];
   let buildKind: BuildingId | null = null;
   let ghost: Snapshot["ghost"] = null;
-  const nodes: Node[] = NODES.map((n) => ({ x: n.x, z: n.z, taken: -1 }));
+  const nodes: Node[] = NODES.map((n) => ({
+    x: n.x,
+    z: n.z,
+    taken: -1,
+    kind: n.kind === "energy" ? "energy" : "mass",
+  }));
   const banks: [Bank, Bank] = [
     { mass: 220, energy: 900, mcap: 1200, ecap: 6000, mi: 0, ei: 0, wasted: 0 },
     { mass: 260, energy: 980, mcap: 1200, ecap: 6000, mi: 0, ei: 0, wasted: 0 },
@@ -146,6 +208,8 @@ export function createMatch(opts: { beaufort?: number; seed?: number; startLive?
 
   function spawn(team: number, kind: Kind, x: number, z: number, built = true) {
     const d = DEFS[kind];
+    const fac = team === PLAYER ? playerFac : enemyFac;
+    const prof = kind === "submarine" ? subProfile(fac) : null;
     const e: Ent = {
       id: nextId++,
       team,
@@ -153,11 +217,11 @@ export function createMatch(opts: { beaufort?: number; seed?: number; startLive?
       x,
       z,
       yaw: team === PLAYER ? 0.4 : 3.5,
-      hp: built ? d.hp : d.hp * 0.12,
-      hpMax: d.hp,
+      hp: built ? d.hp * (prof?.hp || 1) : d.hp * 0.12,
+      hpMax: d.hp * (prof?.hp || 1),
       radius: d.radius,
-      speed: d.speed,
-      dmg: d.dmg,
+      speed: d.speed * (prof?.spd || 1),
+      dmg: d.dmg * (prof?.dmg || 1),
       range: d.range,
       reload: d.reload,
       cool: 0,
@@ -169,19 +233,34 @@ export function createMatch(opts: { beaufort?: number; seed?: number; startLive?
       prodLeft: 0,
       alive: true,
       order: { ...IDLE },
+      faction: fac,
+      sub: !!d.sub,
+      keelM: 0,
+      targetKeelM: 0,
+      crushM: crushOf(fac),
+      bedM: SHELF_M,
+      mode: "SURFACE",
+      dived: false,
+      cloaked: false,
+      detected: 0,
     };
     ents.push(e);
     if (kind === "extractor") {
-      const node = nearestFreeNode(x, z, 22) || nearestNode(x, z);
+      const node = nearestFreeNode(x, z, 22, "mass") || nearestNode(x, z, "mass");
+      if (node) node.taken = e.id;
+    }
+    if (kind === "reactor") {
+      const node = nearestFreeNode(x, z, 22, "energy");
       if (node) node.taken = e.id;
     }
     return e;
   }
 
-  function nearestNode(x: number, z: number) {
+  function nearestNode(x: number, z: number, kind?: Node["kind"]) {
     let best: Node | null = null;
     let bestD = Infinity;
     for (const n of nodes) {
+      if (kind && n.kind !== kind) continue;
       const d = (n.x - x) ** 2 + (n.z - z) ** 2;
       if (d < bestD) {
         bestD = d;
@@ -191,10 +270,11 @@ export function createMatch(opts: { beaufort?: number; seed?: number; startLive?
     return best;
   }
 
-  function nearestFreeNode(x: number, z: number, maxR: number) {
+  function nearestFreeNode(x: number, z: number, maxR: number, kind?: Node["kind"]) {
     let best: Node | null = null;
     let bestD = maxR * maxR;
     for (const n of nodes) {
+      if (kind && n.kind !== kind) continue;
       if (n.taken >= 0 && ents.find((e) => e.id === n.taken && e.alive)) continue;
       const d = (n.x - x) ** 2 + (n.z - z) ** 2;
       if (d <= bestD) {
@@ -223,7 +303,7 @@ export function createMatch(opts: { beaufort?: number; seed?: number; startLive?
   function canPlace(kind: BuildingId, x: number, z: number) {
     const d = DEFS[kind];
     if (kind === "extractor") {
-      const node = nearestFreeNode(x, z, 18);
+      const node = nearestFreeNode(x, z, 18, "mass");
       return !!node;
     }
     if (overlaps(x, z, d.radius)) return false;
@@ -232,9 +312,13 @@ export function createMatch(opts: { beaufort?: number; seed?: number; startLive?
 
   function placePoint(kind: BuildingId, x: number, z: number) {
     if (kind === "extractor") {
-      const node = nearestFreeNode(x, z, 18);
+      const node = nearestFreeNode(x, z, 18, "mass");
       if (!node) return null;
       return { x: node.x, z: node.z };
+    }
+    if (kind === "reactor") {
+      const node = nearestFreeNode(x, z, 22, "energy");
+      if (node) return { x: node.x, z: node.z };
     }
     return { x, z };
   }
@@ -346,8 +430,9 @@ export function createMatch(opts: { beaufort?: number; seed?: number; startLive?
       vx: Math.sin(ang) * spd,
       vz: Math.cos(ang) * spd,
       dmg: e.dmg,
-      ttl: 1.6,
+      ttl: e.sub && e.dived ? 2.4 : 1.6,
       alive: true,
+      kind: e.sub && e.dived ? "torp" : "shell",
     });
     e.cool = e.reload;
     e.yaw = ang;
@@ -378,6 +463,12 @@ export function createMatch(opts: { beaufort?: number; seed?: number; startLive?
         const d = DEFS[e.kind];
         mi += d.mi;
         ei += d.ei;
+        if (e.kind === "reactor") {
+          for (const n of nodes) {
+            if (n.kind !== "energy") continue;
+            if ((n.x - e.x) ** 2 + (n.z - e.z) ** 2 < 26 * 26) ei += 16;
+          }
+        }
         mcap += d.mcap;
         ecap += d.ecap;
       }
@@ -438,6 +529,7 @@ export function createMatch(opts: { beaufort?: number; seed?: number; startLive?
 
   function stepCombat(e: Ent, dt: number) {
     if (e.dmg <= 0 || e.buildLeft > 0) return;
+    if (e.sub && e.dived && subProfile(e.faction).surfaceFire) return;
     e.cool = Math.max(0, e.cool - dt);
     let target: Ent | undefined;
     if (e.order.type === "attack") {
@@ -460,30 +552,174 @@ export function createMatch(opts: { beaufort?: number; seed?: number; startLive?
       s.ttl -= dt;
       if (s.ttl <= 0) {
         s.alive = false;
+        boom(s.x, s.z, s.kind === "torp" ? 0.42 : 0.22, s.kind);
         continue;
       }
       for (const e of ents) {
         if (!e.alive || e.team === s.team) continue;
+        if (e.dived && e.sub && s.kind !== "torp" && e.detected <= 0) continue;
         if ((e.x - s.x) ** 2 + (e.z - s.z) ** 2 <= (e.radius + 2.2) ** 2) {
           e.hp -= s.dmg;
           s.alive = false;
+          boom(s.x, s.z, clamp(s.dmg / 90, 0.2, 0.72), s.kind === "torp" ? "torp" : "shell");
           if (e.kind === "core" && e.team === PLAYER) notice("CORE UNDER FIRE");
-          if (e.hp <= 0) {
-            e.alive = false;
-            e.hp = 0;
-            if (e.kind === "extractor") {
-              const n = nodes.find((nd) => nd.taken === e.id);
-              if (n) n.taken = -1;
-            }
-            if (e.kind === "core") {
-              phase = e.team === BROOD ? "victory" : "defeat";
-              notice(e.team === BROOD ? "BROOD CORE DESTROYED" : "COMMAND CORE LOST");
-            }
-          }
+          if (e.hp <= 0) killEnt(e);
           break;
         }
       }
     }
+  }
+
+  function boom(x: number, z: number, power: number, kind: OceanBlast["kind"] = "shell") {
+    blasts.push({ x, z, power, kind });
+  }
+
+  function killEnt(e: Ent) {
+    if (!e.alive) return;
+    e.alive = false;
+    e.hp = 0;
+    const power =
+      e.kind === "core" ? 1.28 : e.kind === "reactor" ? 1.08 : e.kind === "silo" ? 0.92 : e.building ? 0.58 : 0.4;
+    boom(e.x, e.z, power, power >= 0.85 ? "super" : e.sub ? "torp" : "shell");
+    if (e.kind === "extractor") {
+      const n = nodes.find((nd) => nd.taken === e.id);
+      if (n) n.taken = -1;
+    }
+    if (e.kind === "core") {
+      phase = e.team === BROOD ? "victory" : "defeat";
+      notice(e.team === BROOD ? "BROOD CORE DESTROYED" : "COMMAND CORE LOST");
+    }
+  }
+
+  function applyWaveHits(hits: WaveHit[]) {
+    let maxLoad = 0;
+    let maxForm = 0;
+    for (const h of hits) {
+      if (h.load > maxLoad) maxLoad = h.load;
+      if (h.form > maxForm) maxForm = h.form;
+      const e = ents.find((x) => x.id === h.id && x.alive);
+      if (!e || e.hover) continue;
+      if (!e.building) {
+        const px = h.pushX || 0;
+        const pz = h.pushZ || 0;
+        const cap = h.form > 8 ? 8.5 : 1.6;
+        e.x += clamp(px * 0.04, -cap, cap);
+        e.z += clamp(pz * 0.04, -cap, cap);
+      }
+      if (h.form < 0.85) continue;
+      e.hp -= h.form * 0.55;
+      if (h.form > 10 && e.team === PLAYER) {
+        notice(h.tag === "COLLAPSE" ? "CAVITY COLLAPSE — HULL STRESS" : "WAVE FORM HIT");
+      }
+      if (e.hp <= 0) killEnt(e);
+    }
+    waveLoad = maxLoad;
+    waveForm = maxForm;
+  }
+
+  function nukeSweep(wx: {
+    x: number;
+    z: number;
+    power: number;
+    fireR: number;
+    machR: number;
+    machR0: number;
+    tsunamiR: number;
+    tsunamiR0: number;
+    suction: number;
+  }) {
+    const p = Math.max(0.8, wx.power);
+    const x = wx.x;
+    const z = wx.z;
+    for (const e of ents) {
+      if (!e.alive) continue;
+      const d = Math.hypot(e.x - x, e.z - z);
+      const inv = d > 0.4 ? 1 / d : 1;
+      const ox = (e.x - x) * inv;
+      const oz = (e.z - z) * inv;
+
+      if (d < wx.fireR && !nukeHit.has(`f${e.id}`)) {
+        nukeHit.add(`f${e.id}`);
+        e.hp = 0;
+        if (e.team === PLAYER) notice(e.building ? "VAPORIZED" : "ASHED");
+        killEnt(e);
+        continue;
+      }
+
+      if (wx.suction > 0.05 && d < wx.machR * 0.92 && d > 8) {
+        const pull = wx.suction * (e.building ? 0.4 : 3.8);
+        e.x -= ox * pull;
+        e.z -= oz * pull;
+      }
+
+      if (d <= wx.machR && d > wx.machR0 - 4 && !nukeHit.has(`s${e.id}`)) {
+        nukeHit.add(`s${e.id}`);
+        const fall = clamp(1 - d / Math.max(80, wx.machR), 0, 1);
+        const dmg = (e.building ? 28 : 55) * p * fall * fall;
+        e.hp -= dmg;
+        if (!e.building) {
+          e.x += ox * (10 + p * 4) * fall;
+          e.z += oz * (10 + p * 4) * fall;
+          if (e.sub) e.targetKeelM = Math.min(e.crushM, e.keelM + 24 * fall);
+        }
+        if (e.team === PLAYER && dmg > 10) notice("SOUND BARRIER — OVERPRESSURE");
+        if (e.hp <= 0) {
+          if (e.team === PLAYER) notice("HULL GONE");
+          killEnt(e);
+          continue;
+        }
+      }
+
+      if (wx.tsunamiR > 6 && d <= wx.tsunamiR && d > wx.tsunamiR0 - 6 && !nukeHit.has(`t${e.id}`)) {
+        nukeHit.add(`t${e.id}`);
+        const fall = clamp(1 - d / Math.max(120, wx.tsunamiR * 1.2), 0, 1);
+        const dmg = (e.building ? 40 : 90) * p * fall;
+        e.hp -= dmg;
+        if (!e.building) {
+          e.x += ox * (14 + p * 6) * fall;
+          e.z += oz * (14 + p * 6) * fall;
+        }
+        if (fall > 0.45) {
+          e.hp = 0;
+          if (e.team === PLAYER) notice("TSUNAMI — ASHED");
+        } else if (e.team === PLAYER) notice("BASE SURGE");
+        if (e.hp <= 0) killEnt(e);
+      }
+    }
+    for (const s of shots) {
+      if (!s.alive) continue;
+      if (Math.hypot(s.x - x, s.z - z) < Math.max(wx.fireR, wx.machR * 0.2)) s.alive = false;
+    }
+  }
+
+  function stepBallast(e: Ent, dt: number) {
+    if (!e.sub) return;
+    const cap = Math.max(8, Math.min(e.crushM, e.bedM - CLEARANCE_M));
+    e.targetKeelM = clamp(e.targetKeelM, 0, cap);
+    const diff = e.targetKeelM - e.keelM;
+    if (Math.abs(diff) < 0.08) {
+      e.keelM = e.targetKeelM;
+      e.mode = e.keelM < 4 ? "SURFACE" : "DIVE";
+    } else {
+      const flooding = diff > 0;
+      e.mode = flooding ? "FLOODING" : "BLOWING";
+      const rate = flooding ? 9.5 : 14;
+      e.keelM += Math.sign(diff) * Math.min(Math.abs(diff), rate * dt);
+    }
+    if (e.keelM > e.crushM) {
+      e.hp -= (e.keelM - e.crushM) * 0.8 * dt;
+      if (e.hp <= 0) killEnt(e);
+    }
+    e.dived = e.keelM > 6;
+    if (e.detected > 0) e.detected = Math.max(0, e.detected - dt);
+    e.cloaked = !!(e.dived && e.detected <= 0);
+    if (e.alive && subProfile(e.faction).regen && e.dived) {
+      e.hp = Math.min(e.hpMax, e.hp + 2.4 * dt);
+    }
+  }
+
+  function playerSub() {
+    return ents.find((e) => e.alive && e.team === PLAYER && e.sub);
   }
 
   function stepProduction(e: Ent, dt: number) {
@@ -525,13 +761,19 @@ export function createMatch(opts: { beaufort?: number; seed?: number; startLive?
     const hq = ents.find((e) => e.alive && e.team === team && e.kind === "core");
     if (!hq) return;
 
-    if (extractors.length < 3) {
+    if (extractors.length < 4) {
       const node = nodes.find(
-        (n) => n.taken < 0 || !ents.find((e) => e.id === n.taken && e.alive),
+        (n) =>
+          n.kind !== "energy" &&
+          (n.taken < 0 || !ents.find((e) => e.id === n.taken && e.alive)),
       );
       if (node) tryPlace(team, "extractor", node.x, node.z);
     } else if (reactors.length < 2) {
-      tryPlace(team, "reactor", hq.x - 28, hq.z + 24);
+      const seep = nodes.find(
+        (n) => n.kind === "energy" && (n.taken < 0 || !ents.find((e) => e.id === n.taken && e.alive)),
+      );
+      if (seep) tryPlace(team, "reactor", seep.x, seep.z);
+      else tryPlace(team, "reactor", hq.x - 28, hq.z + 24);
     } else if (!harbors.length) {
       tryPlace(team, "harbor", hq.x + 36, hq.z - 10);
     } else if (guns.length < 2) {
@@ -576,14 +818,16 @@ export function createMatch(opts: { beaufort?: number; seed?: number; startLive?
     spawn(PLAYER, "commander", HQ[PLAYER].x + 22, HQ[PLAYER].z + 8, true);
     spawn(PLAYER, "constructor", HQ[PLAYER].x + 8, HQ[PLAYER].z - 22, true);
     spawn(PLAYER, "corvette", HQ[PLAYER].x + 36, HQ[PLAYER].z - 8, true);
+    spawn(PLAYER, "submarine", HQ[PLAYER].x + 18, HQ[PLAYER].z + 28, true);
     spawn(BROOD, "core", HQ[BROOD].x, HQ[BROOD].z, true);
     spawn(BROOD, "harbor", HQ[BROOD].x - 44, HQ[BROOD].z - 14, true);
     spawn(BROOD, "commander", HQ[BROOD].x - 20, HQ[BROOD].z - 6, true);
     spawn(BROOD, "constructor", HQ[BROOD].x - 10, HQ[BROOD].z + 24, true);
     spawn(BROOD, "corvette", HQ[BROOD].x - 34, HQ[BROOD].z + 4, true);
-    const n0 = nearestFreeNode(HQ[PLAYER].x + 40, HQ[PLAYER].z - 20, 400);
+    spawn(BROOD, "submarine", HQ[BROOD].x - 16, HQ[BROOD].z - 26, true);
+    const n0 = nearestFreeNode(HQ[PLAYER].x + 40, HQ[PLAYER].z - 20, 400, "mass");
     if (n0) spawn(PLAYER, "extractor", n0.x, n0.z, true);
-    const n1 = nearestFreeNode(HQ[BROOD].x - 40, HQ[BROOD].z + 20, 400);
+    const n1 = nearestFreeNode(HQ[BROOD].x - 40, HQ[BROOD].z + 20, 400, "mass");
     if (n1) spawn(BROOD, "extractor", n1.x, n1.z, true);
   }
 
@@ -603,6 +847,7 @@ export function createMatch(opts: { beaufort?: number; seed?: number; startLive?
         stepMove(e, TICK);
         stepCombat(e, TICK);
         stepProduction(e, TICK);
+        stepBallast(e, TICK);
       }
       stepShots(TICK);
       for (const n of notices) n.age += TICK;
@@ -719,8 +964,25 @@ export function createMatch(opts: { beaufort?: number; seed?: number; startLive?
           selected: sel.has(e.id),
           alive: e.alive,
           hover: e.hover,
+          faction: e.faction,
+          sub: e.sub,
+          keelM: e.keelM,
+          targetKeelM: e.targetKeelM,
+          crushM: e.crushM,
+          bedM: e.bedM,
+          mode: e.mode,
+          dived: e.dived,
+          cloaked: e.cloaked,
+          detected: e.detected,
         })),
-      shots: shots.filter((s) => s.alive).map((s) => ({ id: s.id, team: s.team, x: s.x, z: s.z, alive: true })),
+      shots: shots.filter((s) => s.alive).map((s) => ({
+        id: s.id,
+        team: s.team,
+        x: s.x,
+        z: s.z,
+        alive: true,
+        kind: s.kind,
+      })),
       nodes: nodes.map((n) => ({ ...n })),
     };
   }
@@ -728,6 +990,17 @@ export function createMatch(opts: { beaufort?: number; seed?: number; startLive?
   return {
     step,
     snapshot,
+    applyWaveHits,
+    consumeBlasts() {
+      const out = blasts.slice();
+      blasts.length = 0;
+      return out;
+    },
+    detonate(x: number, z: number, power = 1, kind: OceanBlast["kind"] = "super") {
+      boom(x, z, power, kind);
+      if (kind === "nuke") nukeHit.clear();
+    },
+    nukeSweep,
     pointerDown,
     pointerMove,
     pointerUp,
@@ -757,6 +1030,74 @@ export function createMatch(opts: { beaufort?: number; seed?: number; startLive?
       return phase;
     },
     hq: HQ,
+    setSubDepth(m: number) {
+      const s = playerSub();
+      if (!s) return false;
+      s.targetKeelM = clamp(m, 0, Math.min(s.crushM, s.bedM - CLEARANCE_M));
+      return true;
+    },
+    floodBallast() {
+      const s = playerSub();
+      if (!s) return false;
+      const cap = Math.min(s.crushM, s.bedM - CLEARANCE_M);
+      s.targetKeelM = nextDiveStation(s.keelM, cap);
+      return true;
+    },
+    blowBallast() {
+      const s = playerSub();
+      if (!s) return false;
+      s.targetKeelM = prevDiveStation(s.keelM);
+      return true;
+    },
+    surfaceSub() {
+      const s = playerSub();
+      if (!s) return false;
+      s.targetKeelM = 0;
+      return true;
+    },
+    crashDive() {
+      const s = playerSub();
+      if (!s) return false;
+      const cap = Math.min(s.crushM, s.bedM - CLEARANCE_M);
+      s.targetKeelM = Math.min(cap, Math.max(PATROL_M, s.keelM + 40));
+      return true;
+    },
+    nudgeBallast(dir: number, dt: number) {
+      const s = playerSub();
+      if (!s) return false;
+      const cap = Math.min(s.crushM, s.bedM - CLEARANCE_M);
+      s.targetKeelM = clamp(s.targetKeelM + dir * 28 * dt, 0, cap);
+      return true;
+    },
+    toggleDive() {
+      const s = playerSub();
+      if (!s) return;
+      if (s.keelM < 6 && s.targetKeelM < 6) s.targetKeelM = PATROL_M;
+      else s.targetKeelM = 0;
+    },
+    setPlayerFaction(id: FactionId) {
+      playerFac = id;
+      enemyFac = enemyFactionOf(id);
+      for (const e of ents) {
+        if (e.team === PLAYER) e.faction = playerFac;
+        else e.faction = enemyFac;
+        if (e.sub) {
+          e.crushM = crushOf(e.faction);
+          const p = subProfile(e.faction);
+          const ratio = e.hp / Math.max(1, e.hpMax);
+          e.hpMax = DEFS.submarine.hp * p.hp;
+          e.hp = e.hpMax * ratio;
+          e.speed = DEFS.submarine.speed * p.spd;
+          e.dmg = DEFS.submarine.dmg * p.dmg;
+        }
+      }
+    },
+    reveal(ids: number[], seconds = 1.8) {
+      const set = new Set(ids);
+      for (const e of ents) {
+        if (set.has(e.id)) e.detected = Math.max(e.detected, seconds);
+      }
+    },
   };
 }
 

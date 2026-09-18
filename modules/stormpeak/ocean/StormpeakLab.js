@@ -21,13 +21,29 @@ import { evaluate as evaluateSonar } from "./acoustics/sonarField.js";
 import { playPing, playReturn } from "./acoustics/pingAudio.js";
 import { DEPTH_VIS } from "./acoustics/rays.js";
 import { createWetKit } from "./physics/wetMaterial.js";
+import { createSeabed } from "./objects/seabed.js";
+import { createOceanLife } from "./physics/oceanLife.js";
+import { createWaveField } from "./physics/waveField.js";
+import { createAtmosphere } from "./objects/atmosphere.js";
+import { createNukeFx } from "./physics/nuke.js";
+import { createIslands, probeSurface } from "./objects/islands.js";
+import { LIGHTS } from "./world/lightSim.js";
+import {
+  CLEARANCE_M,
+  diveFromMetres,
+  diveRateMs,
+  metresFromDive,
+  seabedMetres,
+  underPalette,
+} from "./world/abyss.js";
 
 export const CAMERA_PRESETS = {
   command: { pitch: 0.55, yaw: 0.95, dist: 420, dive: 0, label: "Command" },
   tactical: { pitch: 0.34, yaw: 0.95, dist: 190, dive: 0, label: "Tactical" },
   close: { pitch: 0.30, yaw: 1.12, dist: 96, dive: 0, label: "Close" },
-  hydro: { pitch: 0.02, yaw: 1.12, dist: 72, dive: 42, label: "Hydrophone" },
-  horizon: { pitch: 0.20, yaw: 0.7, dist: 1100, dive: 0, label: "Horizon" },
+  hydro: { pitch: 0.18, yaw: 1.08, dist: 32, dive: 0, label: "Hydrophone" },
+  seabed: { pitch: 0.52, yaw: 0.98, dist: 26, dive: 0, label: "Seabed" },
+  horizon: { pitch: 0.20, yaw: 0.7, dist: 1400, dive: 0, label: "Horizon" },
 };
 
 export function detectGpuLabel(renderer) {
@@ -149,28 +165,41 @@ export function bootStormpeakLab(canvas, opts = {}) {
       uSkyBottom: { value: skyAdapter.bottomColor },
       uSunDirection: { value: sun },
       uSunColor: { value: skyAdapter.sunColor },
+      uFlash: { value: 0 },
+      uTime: { value: 0 },
+      uWindDir: { value: new THREE.Vector2(-0.96, -0.28) },
+      uCloudCover: { value: 0.72 },
+      uNukeOrigin: { value: new THREE.Vector3() },
+      uNukeCloud: { value: 0 },
+      uNukeAge: { value: 0 },
     },
     vertexShader: `
-      varying vec3 vDir;
+      varying vec3 vWorld;
       void main() {
-        vDir = position;
+        vec4 w = modelMatrix * vec4(position, 1.0);
+        vWorld = w.xyz;
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
       }`,
     fragmentShader: `
       ${skyGLSL}
-      varying vec3 vDir;
+      varying vec3 vWorld;
       void main() {
-        gl_FragColor = vec4(skyColor(normalize(vDir)), 1.0);
+        vec3 rd = normalize(vWorld - cameraPosition);
+        gl_FragColor = vec4(skyColor(rd), 1.0);
       }`,
   });
-  const dome = new THREE.Mesh(new THREE.SphereGeometry(4200, 24, 16), domeMat);
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(4200, 48, 28), domeMat);
   dome.frustumCulled = false;
   dome.renderOrder = -1000;
   domeMat.depthTest = false;
   domeMat.depthWrite = false;
   scene.add(dome);
+  const atmo = createAtmosphere(scene);
 
   const keyLight = new THREE.DirectionalLight(0xd0c8b8, 1.22);
+  const ambLight = new THREE.AmbientLight(0x6a7c8c, 0.35);
+  scene.add(keyLight);
+  scene.add(ambLight);
   setSun(preset.force >= 9 ? 19 : 22, 208);
   keyLight.castShadow = requested === "high";
   if (keyLight.castShadow) {
@@ -181,8 +210,31 @@ export function bootStormpeakLab(canvas, opts = {}) {
     keyLight.shadow.camera.bottom = -220;
     keyLight.shadow.camera.far = 1400;
   }
-  scene.add(keyLight);
-  scene.add(new THREE.AmbientLight(0x6a7c8c, 0.35));
+
+  let lightId = "storm";
+  let lightCover = 0.86;
+  let lightExposure = 0.74;
+  function setLight(id) {
+    const L = LIGHTS[id] || LIGHTS.storm;
+    lightId = L.label ? id : "storm";
+    if (!LIGHTS[id]) lightId = "storm";
+    const look = LIGHTS[lightId];
+    setSun(look.elev, look.az);
+    keyLight.color.setHex(look.sun);
+    keyLight.intensity = look.sunI;
+    ambLight.color.setHex(look.amb);
+    ambLight.intensity = look.ambI;
+    skyAdapter.topColor.setRGB(look.skyTop[0], look.skyTop[1], look.skyTop[2]);
+    skyAdapter.bottomColor.setRGB(look.skyBot[0], look.skyBot[1], look.skyBot[2]);
+    skyAdapter.sunColor.setRGB(look.sunCol[0], look.sunCol[1], look.sunCol[2]);
+    fogCol0.setRGB(look.fog[0], look.fog[1], look.fog[2]);
+    lightCover = look.cover;
+    lightExposure = look.exposure;
+    scene.fog.color.copy(fogCol0);
+    renderer.setClearColor(fogCol0, 1);
+    renderer.toneMappingExposure = lightExposure;
+  }
+  setLight("storm");
 
   const sim = new OceanSim(renderer);
   const nearGrid = config.mesh.nearGrid || 0;
@@ -259,6 +311,17 @@ export function bootStormpeakLab(canvas, opts = {}) {
 
   const wetKit = createWetKit();
   const sea = createSeaSampler();
+  const waves = createWaveField(scene);
+  const islands = createIslands(scene);
+  const nukeFx = createNukeFx(scene);
+  nukeFx.warm();
+  try {
+    renderer.compile(scene, camera);
+  } catch (e) {
+    /* compile is best-effort; first detonate still works */
+  }
+  nukeFx.rest();
+  sea.attachField(waves);
   sea.setState({ t: 0, hs: preset.Hs, windDeg: config.spectrum.windDirection });
   wetKit.update({
     t: 0,
@@ -276,10 +339,14 @@ export function bootStormpeakLab(canvas, opts = {}) {
   const splashes = createSplashPool(scene);
   const sonarView = createSonarView(scene);
   const underFx = createUnderwaterFx(scene, camera);
+  const seabed = createSeabed(scene);
+  const life = createOceanLife(scene, camera);
+  let targetDive = controls.dive;
 
   let sonarEnabled = true;
   let sonarFreq = 3.5;
   let pingT = -99;
+  let rogueAcc = 0;
   const heard = new Set();
 
   function sonarOrigin(snap) {
@@ -308,6 +375,12 @@ export function bootStormpeakLab(canvas, opts = {}) {
   const match = createMatch({ beaufort: opts.initialBeaufort ?? 9.5, startLive: true });
   const rtsView = createRtsView(scene, camera, { wetKit });
   if (opts.onMatch) opts.onMatch(match.snapshot());
+  let lastSnap = match.snapshot();
+
+  controls.onDiveIntent = (d) => {
+    match.setSubDepth(metresFromDive(d));
+    ensureHydro();
+  };
 
   const ndc = new THREE.Vector2();
   const raycaster = new THREE.Raycaster();
@@ -369,13 +442,30 @@ export function bootStormpeakLab(canvas, opts = {}) {
       if (match.phase === "live") match.pause();
       else match.resume();
     }
-    if (e.code === "KeyP") {
+    if (e.code === "KeyB") {
       e.preventDefault();
-      ping();
+      match.detonate(controls.focal.x, controls.focal.z, 1.2, "super");
+    }
+    if (e.code === "KeyN") {
+      e.preventDefault();
+      match.detonate(controls.focal.x, controls.focal.z, 4.4, "nuke");
     }
     if (e.code === "Digit1") match.produce("constructor");
     if (e.code === "Digit2") match.produce("corvette");
     if (e.code === "Digit3") match.produce("destroyer");
+    if (e.code === "Digit4") match.produce("submarine");
+    if (e.code === "KeyC") {
+      e.preventDefault();
+      match.crashDive();
+      ensureHydro();
+    }
+    if (e.code === "KeyX") {
+      e.preventDefault();
+      match.surfaceSub();
+    }
+    if (e.code === "KeyQ" || e.code === "PageDown" || e.code === "KeyE" || e.code === "PageUp") {
+      e.preventDefault();
+    }
   };
   window.addEventListener("keydown", onKey);
 
@@ -427,10 +517,6 @@ export function bootStormpeakLab(canvas, opts = {}) {
         Math.sin((config.spectrum.windDirection / 180) * Math.PI),
       );
     });
-    renderer.toneMappingExposure = force >= 9 ? 0.74 : force >= 6 ? 0.78 : 0.84;
-    setSun(force >= 9 ? 19 : force >= 6 ? 22 : 26, 208);
-    skyAdapter.topColor.set(...config.colors.darkCloud);
-    skyAdapter.bottomColor.set(...config.colors.skyHorizon);
     match.setBeaufort(force);
   }
 
@@ -442,19 +528,30 @@ export function bootStormpeakLab(canvas, opts = {}) {
     controls.yaw = p.yaw;
     controls.dist = p.dist;
     controls.dive = p.dive || 0;
-    controls.allowPrimaryOrbit = id === "hydro" || controls.dive > 3;
-    if (id === "hydro") {
+    targetDive = controls.dive;
+    controls.allowPrimaryOrbit = id === "hydro" || id === "seabed" || controls.dive > 3;
+    if (id === "hydro" || id === "seabed") {
       const o = sonarOrigin(match.snapshot());
       controls.focal.x = o.x;
       controls.focal.z = o.z;
     }
   }
 
+  function ensureHydro() {
+    if (camMode === "hydro" || camMode === "seabed") return;
+    setCameraPreset("hydro");
+  }
+
+  function floorDive(x, z) {
+    const bed = seabedMetres(x, z);
+    return diveFromMetres(Math.max(0, bed - CLEARANCE_M));
+  }
+
   function setDive(metres) {
-    const maxM = 900;
+    const maxM = metresFromDive(floorDive(controls.focal.x, controls.focal.z));
     const m = Math.max(0, Math.min(maxM, Number(metres) || 0));
-    controls.dive = m / DEPTH_VIS;
-    controls.allowPrimaryOrbit = camMode === "hydro" || controls.dive > 3;
+    targetDive = diveFromMetres(m);
+    controls.allowPrimaryOrbit = camMode === "hydro" || camMode === "seabed" || targetDive > 3;
   }
 
   function panCamera(dt) {
@@ -488,14 +585,15 @@ export function bootStormpeakLab(canvas, opts = {}) {
       controls.focal.x += (dx / len) * speed;
       controls.focal.z += (dz / len) * speed;
     }
-    const diveSpeed = (keys.has("ShiftLeft") || keys.has("ShiftRight") ? 90 : 42) * dt;
-    if (keys.has("KeyQ") || keys.has("PageDown")) {
-      controls.dive = Math.min(controls.maxDive, controls.dive + diveSpeed);
+    const flood = keys.has("KeyQ") || keys.has("PageDown");
+    const blow = keys.has("KeyE") || keys.has("PageUp");
+    if (flood || blow) {
+      match.nudgeBallast(flood ? 1 : -1, dt);
+      if (flood) ensureHydro();
       controls.allowPrimaryOrbit = true;
     }
-    if (keys.has("KeyE") || keys.has("PageUp")) {
-      controls.dive = Math.max(0, controls.dive - diveSpeed);
-      if (controls.dive <= 3) controls.allowPrimaryOrbit = camMode === "hydro";
+    if (targetDive <= 3 && !flood) {
+      if (controls.dive <= 3) controls.allowPrimaryOrbit = camMode === "hydro" || camMode === "seabed";
     }
   }
 
@@ -527,39 +625,104 @@ export function bootStormpeakLab(canvas, opts = {}) {
     });
 
     panCamera(dt);
+    const boat =
+      lastSnap.ents.find((e) => e.selected && e.sub) ||
+      lastSnap.ents.find((e) => e.team === 0 && e.sub);
+    if (boat) {
+      const track =
+        camMode === "close" ||
+        camMode === "tactical" ||
+        camMode === "hydro" ||
+        camMode === "seabed" ||
+        boat.keelM > 6;
+      if (track) {
+        controls.focal.x += (boat.x - controls.focal.x) * Math.min(1, dt * 3.2);
+        controls.focal.z += (boat.z - controls.focal.z) * Math.min(1, dt * 3.2);
+      }
+      if (camMode === "hydro" || camMode === "seabed" || boat.keelM > 8) {
+        const hull = diveFromMetres(boat.keelM || 0);
+        const lift = Math.max(0, controls.dist * Math.sin(Math.max(0, controls.pitch)));
+        const mud = diveFromMetres(seabedMetres(boat.x, boat.z));
+        let look = hull + lift * 0.82;
+        if (camMode === "seabed") look = Math.max(look, mud - 6);
+        targetDive = Math.max(0, Math.min(mud - 0.5, look));
+      } else if (camMode !== "hydro" && camMode !== "seabed") {
+        targetDive = 0;
+      }
+    }
+    const mudCap = diveFromMetres(seabedMetres(controls.focal.x, controls.focal.z)) - 0.4;
+    targetDive = Math.max(0, Math.min(mudCap, targetDive));
+    {
+      const metresNow = metresFromDive(controls.dive);
+      const flooding = targetDive > controls.dive + 0.02;
+      const rate = diveRateMs(metresNow, flooding) / DEPTH_VIS;
+      const step = rate * dt;
+      if (controls.dive < targetDive) controls.dive = Math.min(targetDive, controls.dive + step);
+      else if (controls.dive > targetDive) controls.dive = Math.max(targetDive, controls.dive - step);
+    }
     const focalSea = sea.sample(controls.focal.x, controls.focal.z);
+    islands.update(focalSea.h, t, sun, camera.position, scene.fog.color, scene.fog.far);
     controls.update(dt, focalSea.h + 2);
     const under = camera.position.y < focalSea.h - 1.5;
+    const metres = Math.max(0, (focalSea.h - camera.position.y) * DEPTH_VIS);
+    const pal = underPalette(metres);
     oceanMats.forEach((mat) => {
       if (mat.uniforms.uUnderwater) mat.uniforms.uUnderwater.value = under ? 1 : 0;
     });
     underFx.setEnabled(under);
     wetKit.update({ under });
     if (under) {
-      scene.fog.near = 18;
-      scene.fog.far = 160;
-      scene.fog.color.setRGB(0.03, 0.16, 0.18);
-      renderer.setClearColor(0x072830, 1);
-      renderer.toneMappingExposure = 0.88;
+      if (controls.dist > 96) controls.dist += (96 - controls.dist) * Math.min(1, dt * 3.2);
+      scene.fog.near = pal.fogNear;
+      scene.fog.far = Math.min(pal.fogFar, 180);
+      scene.fog.color.setRGB(pal.rgb[0], pal.rgb[1], pal.rgb[2]);
+      renderer.setClearColor(scene.fog.color, 1);
+      renderer.toneMappingExposure = pal.exposure * (lightId === "night" ? 0.7 : 1);
       dome.visible = false;
       camera.near = 0.35;
-      underFx.update({ t, dt, seaY: focalSea.h, sun, dive: controls.dive });
+      camera.far = 220;
+      farWater.visible = false;
+      if (ultraWater) ultraWater.visible = false;
+      const bedM = seabedMetres(camera.position.x, camera.position.z);
+      const alt = Math.max(0, bedM - metres);
+      if (alt < 48) {
+        scene.fog.far = Math.max(scene.fog.far, 55 + (48 - alt) * 1.8);
+        scene.fog.near = Math.min(scene.fog.near, 8);
+      }
+      underFx.update({ t, dt, seaY: focalSea.h, sun, dive: controls.dive, metres });
+      seabed.update({
+        t,
+        seaY: focalSea.h,
+        cam: camera.position,
+        metres,
+        under,
+        fogNear: scene.fog.near,
+        fogFar: scene.fog.far,
+        fogCol: scene.fog.color,
+        sun,
+      });
     } else {
+      farWater.visible = true;
+      if (ultraWater) ultraWater.visible = true;
       scene.fog.near = fogNear0;
       scene.fog.far = fogFar0;
       scene.fog.color.copy(fogCol0);
       renderer.setClearColor(fogCol0, 1);
-      renderer.toneMappingExposure = beaufortForce >= 9 ? 0.74 : beaufortForce >= 6 ? 0.78 : 0.84;
+      renderer.toneMappingExposure = lightExposure;
       dome.visible = true;
       camera.near = 0.8;
+      camera.far = 8000;
+      seabed.update({ t, seaY: focalSea.h, cam: camera.position, metres: 0, under: false, sun });
     }
-    if (camera.near !== camera._lastNear) {
+    if (camera.near !== camera._lastNear || camera.far !== camera._lastFar) {
       camera._lastNear = camera.near;
+      camera._lastFar = camera.far;
       camera.updateProjectionMatrix();
     }
 
     match.step(dt);
     const snap = match.snapshot();
+    lastSnap = snap;
     rtsView.sync(snap, t, { sea });
     buoyancy.syncTheatre(theatre.ships, theatre.scale || config.propScale || 1);
     buoyancy.syncEnts(snap.ents, (id) => rtsView.get(id));
@@ -573,11 +736,136 @@ export function bootStormpeakLab(canvas, opts = {}) {
       for (let i = 0; i < im.length; i++) frameImpacts.push(im[i]);
       physAcc -= PHYS_STEP;
     }
-    if (frameImpacts.length) splashes.emit(frameImpacts);
-    const splashWake = splashes.step(dt, sea);
+    if (frameImpacts.length) {
+      splashes.emit(frameImpacts);
+      for (let i = 0; i < frameImpacts.length; i++) {
+        if (frameImpacts[i].strength > 0.55) life.addTrauma(0.08 * frameImpacts[i].strength);
+      }
+    }
+    const splashWake = splashes.step(dt, sea, camera.position.y - focalSea.h);
     for (const e of snap.ents) {
       if (!e.building) rtsView.markRidden(e.id);
     }
+
+    const blasts = match.consumeBlasts();
+    for (let i = 0; i < blasts.length; i++) {
+      const b = blasts[i];
+      const surface = probeSurface(b.x, b.z, snap.ents);
+      waves.detonate(b.x, b.z, b.power, b.kind, surface);
+      const y = sea.height(b.x, b.z);
+      if (b.kind !== "nuke") splashes.emitCrown(b.x, y, b.z, b.power);
+      if (b.kind === "nuke") {
+        nukeFx.ignite(b.x, b.z, b.power, surface);
+        life.addTrauma(0.4);
+      } else if (b.power > 0.5) life.addTrauma(0.1 + b.power * 0.32);
+    }
+    if (!under && beaufortForce >= 8) {
+      rogueAcc += dt;
+      if (rogueAcc > 5.5) {
+        rogueAcc = 0;
+        const a = Math.random() * Math.PI * 2;
+        const r = 90 + Math.random() * 160;
+        waves.detonate(
+          controls.focal.x + Math.cos(a) * r,
+          controls.focal.z + Math.sin(a) * r,
+          0.55 + Math.random() * 0.35,
+          "rogue",
+        );
+      }
+    }
+    const waveTick = waves.update(t, focalSea.h);
+    const pack = waveTick.pack;
+    for (let i = 0; i < waveTick.jets.length; i++) {
+      const j = waveTick.jets[i];
+      if (j.kind === "nuke") continue;
+      splashes.emitJet(j.x, sea.height(j.x, j.z), j.z, j.power);
+      if (j.power > 0.55) life.addTrauma(0.18 + j.power * 0.22);
+    }
+    oceanMats.forEach((mat) => {
+      if (!mat.uniforms.uBlastCount) return;
+      mat.uniforms.uBlastCount.value = pack.count;
+      for (let k = 0; k < 8; k++) {
+        mat.uniforms.uBlastPos.value[k].copy(pack.pos[k]);
+        mat.uniforms.uBlastData.value[k].copy(pack.data[k]);
+        if (mat.uniforms.uBlastAux) mat.uniforms.uBlastAux.value[k].copy(pack.aux[k]);
+      }
+    });
+    const hits = buoyancy.readSensors().map((s) => {
+      const e = snap.ents.find((x) => x.id === s.id);
+      if (!e) return s;
+      const extra = waves.sensorAt(s.id, e.x, e.z, e.keelM || 0);
+      return {
+        id: s.id,
+        load: s.load + extra.load,
+        form: s.form + extra.form,
+        slam: s.slam,
+        tag: extra.tag || s.tag,
+        pushX: extra.pushX,
+        pushZ: extra.pushZ,
+      };
+    });
+    match.applyWaveHits(hits);
+
+    life.emitFromSnap(snap, focalSea.h);
+    const weather = life.update({
+      t,
+      dt,
+      seaY: focalSea.h,
+      under,
+      metres,
+      beaufort: beaufortForce,
+      cam: camera.position,
+    });
+    const flashAmt = weather?.flash || 0;
+    const nukeWx = nukeFx.update(t, focalSea.h, camera.position);
+    if (nukeWx.live) {
+      match.nukeSweep(nukeWx);
+      if (nukeWx.sonicBoom) life.addTrauma(0.5);
+      if (nukeWx.age < 3 && Math.floor(nukeWx.age * 2) !== Math.floor((nukeWx.age - dt) * 2)) {
+        const a = Math.random() * Math.PI * 2;
+        const rr = nukeWx.tsunamiR > 8 ? nukeWx.tsunamiR : Math.min(nukeWx.machR * 0.3, 60);
+        splashes.emitCrown(nukeWx.x + Math.cos(a) * rr, focalSea.h, nukeWx.z + Math.sin(a) * rr, 0.55);
+      }
+    }
+    oceanMats.forEach((mat) => {
+      if (mat.uniforms.uNuke) {
+        mat.uniforms.uNuke.value.set(
+          nukeWx.x || 0,
+          nukeWx.z || 0,
+          nukeWx.live ? nukeWx.light : 0,
+          nukeWx.glowR || 80,
+        );
+      }
+      if (mat.uniforms.uNukeOrigin) {
+        mat.uniforms.uNukeOrigin.value.set(nukeWx.x || 0, focalSea.h + (nukeWx.stemH || 80), nukeWx.z || 0);
+        mat.uniforms.uNukeCloud.value = nukeWx.live ? nukeWx.cloud : 0;
+        mat.uniforms.uNukeAge.value = nukeWx.age || 0;
+      }
+    });
+    const flashAll = Math.max(flashAmt, nukeWx.flash || 0);
+    if (nukeWx.trauma) life.addTrauma(nukeWx.trauma * 0.08);
+    const cover = Math.max(0.12, Math.min(0.96, lightCover * 0.82 + (beaufortForce / 12) * 0.22));
+    domeMat.uniforms.uFlash.value = under ? 0 : flashAll;
+    domeMat.uniforms.uTime.value = t;
+    domeMat.uniforms.uCloudCover.value = Math.min(0.96, cover + (nukeWx.live ? nukeWx.cloud * 0.35 : 0));
+    domeMat.uniforms.uWindDir.value.set(sea.wind.x, sea.wind.z);
+    if (domeMat.uniforms.uNukeOrigin) {
+      domeMat.uniforms.uNukeOrigin.value.set(nukeWx.x || 0, focalSea.h + (nukeWx.stemH || 80), nukeWx.z || 0);
+      domeMat.uniforms.uNukeCloud.value = nukeWx.live ? nukeWx.cloud : 0;
+      domeMat.uniforms.uNukeAge.value = nukeWx.age || 0;
+    }
+    atmo.group.visible = false;
+    oceanMats.forEach((mat) => {
+      if (mat.uniforms.uFlash) mat.uniforms.uFlash.value = under ? 0 : flashAll;
+      if (mat.uniforms.uCloudCover) mat.uniforms.uCloudCover.value = cover;
+    });
+    if (!under && (flashAll > 0.15 || (nukeWx.live && nukeWx.light > 0.02))) {
+      renderer.toneMappingExposure = Math.min(
+        3.6,
+        lightExposure + flashAll * 1.6 + (nukeWx.exposure || 0) * 1.3,
+      );
+    }
+    life.applyShake();
 
     if (frame % simEvery === 0) sim.update(t);
     snapMesh(farWater, controls.focal.x, controls.focal.z, farExtent, farGrid);
@@ -594,7 +882,12 @@ export function bootStormpeakLab(canvas, opts = {}) {
       mat.uniforms.uGerstnerAmp.value = sea.swell;
     });
 
-    const points = rtsView.wakePoints(snap);
+    const points = [];
+    for (let i = 0; i < waveTick.wakePts.length && points.length < 8; i++) {
+      points.push(waveTick.wakePts[i]);
+    }
+    const extraWake = rtsView.wakePoints(snap);
+    for (let i = 0; i < extraWake.length && points.length < 8; i++) points.push(extraWake[i]);
     for (let i = 0; i < splashWake.length && points.length < 8; i++) {
       points.push(splashWake[i]);
     }
@@ -641,13 +934,18 @@ export function bootStormpeakLab(canvas, opts = {}) {
         wind: currentPreset.windSpeed,
         hs: currentPreset.Hs,
         chop: config.sim.lambda[0],
+        waveLoad: snap.waveLoad || 0,
+        waveForm: snap.waveForm || 0,
+        vacancies: waves.live(),
+        surface: probeSurface(controls.focal.x, controls.focal.z, snap.ents),
+        light: lightId,
       });
     }
     if (opts.onMatch && frame % 4 === 0) opts.onMatch(snap);
 
     const origin = sonarOrigin(snap);
     const pingAge = pingT < 0 ? 99 : t - pingT;
-    const pingActive = pingT >= 0 && pingAge < 4;
+    const pingActive = pingT >= 0 && pingAge < 2.2;
     const extra = theatre.ships.map((s, i) => ({
       id: -200 - i,
       team: s.x > 0 ? 1 : 0,
@@ -666,12 +964,19 @@ export function bootStormpeakLab(canvas, opts = {}) {
       pingActive,
     });
     if (pingActive) {
+      const ids = [];
+      let returns = 0;
       for (const c of field.contacts) {
+        if (c.detected) ids.push(c.id);
         if (c.detected && c.mode === "active" && !heard.has(c.id)) {
           heard.add(c.id);
-          playReturn(Math.max(0.2, Math.min(1, 0.35 + c.se * 0.04)));
+          if (returns < 2) {
+            returns += 1;
+            playReturn(Math.max(0.12, Math.min(0.35, 0.16 + c.se * 0.02)));
+          }
         }
       }
+      match.reveal(ids, 1.8);
     }
     const seaY = focalSea.h;
     sonarView.update({
@@ -698,7 +1003,7 @@ export function bootStormpeakLab(canvas, opts = {}) {
         pingAge,
         pingActive,
         hydroDepth: field.hydroDepth,
-        cameraDepth: controls.dive * DEPTH_VIS,
+        cameraDepth: (boat?.keelM ?? metresFromDive(controls.dive)),
         ssp: field.ssp,
         contacts: field.contacts,
       });
@@ -706,6 +1011,34 @@ export function bootStormpeakLab(canvas, opts = {}) {
   }
 
   renderer.setAnimationLoop(tick);
+
+  if (typeof window !== "undefined") {
+    window.__ballastTest = {
+      flood: () => match.floodBallast(),
+      blow: () => match.blowBallast(),
+      crash: () => match.crashDive(),
+      surface: () => match.surfaceSub(),
+      getKeel: () => {
+        const s = match.snapshot();
+        const e = s.ents.find((x) => x.sub && x.team === 0);
+        return e ? e.keelM : 0;
+      },
+      getTarget: () => {
+        const s = match.snapshot();
+        const e = s.ents.find((x) => x.sub && x.team === 0);
+        return e ? e.targetKeelM : 0;
+      },
+      getDived: () => {
+        const s = match.snapshot();
+        const e = s.ents.find((x) => x.sub && x.team === 0);
+        return !!(e && e.dived);
+      },
+      detonate: (x, z, p) => match.detonate(x, z, p, "super"),
+      nuke: () => match.detonate(controls.focal.x, controls.focal.z, 4.4, "nuke"),
+      live: () => waves.live(),
+    };
+    window.__waveTest = window.__ballastTest;
+  }
 
   return {
     setBeaufort,
@@ -718,14 +1051,50 @@ export function bootStormpeakLab(canvas, opts = {}) {
     ping,
     setSonarFreq,
     setSonarEnabled,
-    setDive,
+    setDive: (metres) => match.setSubDepth(metres),
+    floodBallast: () => {
+      const ok = match.floodBallast();
+      if (ok) {
+        ensureHydro();
+        life.addTrauma(0.18);
+      }
+      return ok;
+    },
+    blowBallast: () => match.blowBallast(),
+    surfaceSub: () => match.surfaceSub(),
+    crashDive: () => {
+      const ok = match.crashDive();
+      if (ok) {
+        ensureHydro();
+        life.addTrauma(0.62);
+      }
+      return ok;
+    },
+    nudgeBallast: (dir, dt) => match.nudgeBallast(dir, dt),
+    toggleDive: () => {
+      match.toggleDive();
+      ensureHydro();
+    },
+    setFaction: (id) => {
+      match.setPlayerFaction(id);
+      rtsView.clear();
+    },
     getBeaufort: () => beaufortForce,
+    setLight,
+    detonate: (x, z, p) => match.detonate(x, z, p ?? 1.15, "super"),
+    nuke: () => match.detonate(controls.focal.x, controls.focal.z, 4.4, "nuke"),
     dispose() {
       running = false;
       renderer.setAnimationLoop(null);
       ro.disconnect();
       window.removeEventListener("resize", applySize);
       window.removeEventListener("keydown", onKey);
+      try {
+        if (window.__ballastTest) delete window.__ballastTest;
+        if (window.__waveTest) delete window.__waveTest;
+      } catch {
+        /* ignore */
+      }
       farGeo.dispose();
       if (nearWater) nearWater.geometry.dispose();
       if (ultraWater) ultraWater.geometry.dispose();
@@ -733,8 +1102,14 @@ export function bootStormpeakLab(canvas, opts = {}) {
       foamTex.dispose();
       wakeTrail.dispose();
       splashes.dispose();
+      life.dispose();
+      atmo.dispose();
+      nukeFx.dispose();
+      islands.dispose();
+      waves.dispose();
       sonarView.dispose();
       underFx.dispose();
+      seabed.dispose();
       renderer.dispose();
     },
   };

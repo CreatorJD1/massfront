@@ -4,26 +4,29 @@ import type { OceanStats, LabHandle, MatchSnapshot, SonarSnap } from "./ocean-ty
 type Props = {
   beaufort: number;
   cameraId: string;
+  lightId: string;
   onStats: (s: OceanStats) => void;
   onMatch: (s: MatchSnapshot) => void;
   onSonar: (s: SonarSnap) => void;
   onReady: (lab: LabHandle) => void;
 };
 
-const SIM_REV = 26;
+const SIM_REV = 65;
 
-export function OceanViewport({ beaufort, cameraId, onStats, onMatch, onSonar, onReady }: Props) {
+export function OceanViewport({ beaufort, cameraId, lightId, onStats, onMatch, onSonar, onReady }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const labRef = useRef<LabHandle | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [booting, setBooting] = useState(true);
   const beaufortRef = useRef(beaufort);
   const cameraRef = useRef(cameraId);
+  const lightRef = useRef(lightId);
   const onStatsRef = useRef(onStats);
   const onMatchRef = useRef(onMatch);
   const onSonarRef = useRef(onSonar);
   beaufortRef.current = beaufort;
   cameraRef.current = cameraId;
+  lightRef.current = lightId;
   onStatsRef.current = onStats;
   onMatchRef.current = onMatch;
   onSonarRef.current = onSonar;
@@ -71,6 +74,10 @@ export function OceanViewport({ beaufort, cameraId, onStats, onMatch, onSonar, o
   useEffect(() => {
     labRef.current?.setCameraPreset(cameraId);
   }, [cameraId]);
+
+  useEffect(() => {
+    labRef.current?.setLight(lightId);
+  }, [lightId]);
 
   return (
     <div className="absolute inset-0 bg-bg">

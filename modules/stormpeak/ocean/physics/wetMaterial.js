@@ -18,7 +18,7 @@ export function createWetKit() {
     uCamUnder: { value: 0 },
   };
 
-  const CACHE_KEY = "wet-caustic-v3";
+  const CACHE_KEY = "wet-caustic-v4";
 
   const WET_PARS = /* glsl */ `
     uniform float uTime;
@@ -75,8 +75,11 @@ export function createWetKit() {
         outgoingLight *= mix(vec3(1.0), vec3(0.16, 0.32, 0.36), under * mix(0.55, 0.92, deep));
         outgoingLight += cauCol * under * (0.35 + 0.65 * facing) * (1.0 - deep * 0.7);
         outgoingLight = mix(outgoingLight, outgoingLight * vec3(0.55, 0.7, 0.72) + vec3(0.18, 0.24, 0.26), wl * 0.55);
+        outgoingLight += vec3(0.16, 0.26, 0.28) * wl * cau * 0.45;
         float aboveWet = (1.0 - under) * smoothstep(4.5, 0.15, -depth);
         outgoingLight += cauCol * 0.18 * aboveWet * facing;
+        float drip = pow(abs(sin(vWetWorld.y * 16.0 + uTime * 3.2 + vWetWorld.x * 2.1)), 10.0) * aboveWet;
+        outgoingLight += vec3(0.22, 0.32, 0.34) * drip * 0.4;
         if (uCamUnder > 0.5) {
           outgoingLight *= vec3(0.42, 0.78, 0.74);
           outgoingLight += cauCol * (0.85 + 0.9 * facing) * (0.45 + 0.55 * under);
