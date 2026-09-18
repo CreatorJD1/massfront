@@ -2046,7 +2046,7 @@ function render(dtDraw){
        not enough to read a silhouette; every RTS oversizes units for
        legibility and keeps the sim honest underneath. */
     const sc=T.size/15*M.s*1.5*(T.vscale||1);
-    const a=umode[i]===4?110:255;
+    const a=(typeof ukeel!=='undefined'&&ukeel[i]>3.2)||umode[i]===4?110:255;
     // wildlife pulses and lurches; machines don't
     let ss=sc, wide=sc, doctrine=null;
     if(uteam[i]===2) ss*=1+Math.sin(t*6.2+i*2.399)*0.07;

@@ -33,6 +33,11 @@ const sub = await readFile(new URL('../src/submarines.js', import.meta.url), 'ut
 assert.match(sub, /surfaceFire:1/);
 assert.match(sub, /function mfSubCanFire/);
 assert.match(sub, /function mfSubOnFire/);
+assert.match(sub, /function mfSubFlood/);
+assert.match(sub, /function mfSubBlow/);
+assert.match(sub, /function mfSubCrash/);
+assert.match(sub, /ukeel/);
+assert.match(sub, /utkeel/);
 assert.match(sub, /umode\[i\]=4/);
 
 console.log(`faction submarines: PASS (${roster.length} chassis, ${roster[33]} at 33)`);
