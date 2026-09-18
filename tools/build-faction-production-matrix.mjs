@@ -88,7 +88,7 @@ for(const [fid,F] of Object.entries(factions)){
 const production={
   'Factory Mk1':[0,1,9,10,19,24,32],
   'Factory Mk2':[0,1,9,18,10,2,3,6,7,11,16,19,20,21,22,23,24,27,32],
-  Airfield:[5,17,25],Harbor:[14,15],'Titan Gate':[8,26],
+  Airfield:[5,17,25],Harbor:[14,15,33],'Titan Gate':[8,26],
 };
 const hud=fs.readFileSync(path.join(root,'src/ui/hud.js'),'utf8').replace(/\s+/g,'');
 for(const ids of Object.values(production)){

@@ -113,7 +113,8 @@ const MF_CDX_UNIT=[
 /* 29 Broker Lys Renn   Coalition hero       */ {nova:'hero',       legion:'commander',        syndicate:'boss',          horde:'brood_lord'},
 /* 30 Brood Sovereign   Brood hero           */ {nova:'hero',       legion:'commander',        syndicate:'boss',          horde:'brood_lord'},
 /* 31 Brood Tidecaster  grown caster         */ {                                                                        horde:'psionic'},
-/* 32 Prospector   mobile mass miner         */ {nova:'drone',      legion:'recon_vehicle',    syndicate:'economy',       horde:'biomass'}
+/* 32 Prospector   mobile mass miner         */ {nova:'drone',      legion:'recon_vehicle',    syndicate:'economy',       horde:'biomass'},
+/* 33 Submarine    silent-running hull       */ {}    // no pack ships a naval glyph
 ];
 
 /* ---------------------------------------------------------------------------

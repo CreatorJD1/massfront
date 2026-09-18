@@ -501,7 +501,7 @@ let cellIdx=0;
 // sprites that get the "material pass": directional key light + AO for a rendered-3D feel
 const SHADE=new Set(['bot','tankH','tankT','heavyH','heavyT','artyH','artyT','cdr','gun','longbow',
   'hornet','titan','fac','pgen','mex','turB','turT','sgen','tgate','pyro','vulture','bulwark','rav','nest',
-  'corv','dread','harbor',
+  'corv','dread','sub','harbor',
   // every hand-authored structure gets the full material treatment too
   'hellB','arcB','novaB','fabB','silo','wall','carrier','relicT','relicD','relicI','relicK','tankF','crate',
   'dep','depR','geyser','rock','crystal','rockIce','rockSlag']);
@@ -1684,6 +1684,19 @@ function buildAtlas(){
     c.fillStyle='#20262b'; c.fillRect(-5,-92,10,44);
     c.fillStyle='#fff'; c.beginPath(); c.arc(0,-46,7,0,TAU); c.fill();
     c.fillStyle='rgba(255,255,255,.9)'; c.fillRect(-16,68,32,8);
+  });
+  defSprite('sub', c=>{
+    c.fillStyle='rgba(0,8,18,.5)'; c.beginPath(); c.ellipse(4,8,44,78,0,0,TAU); c.fill();
+    const g=lg(c,-28,0,28,0,[[0,'#2a3238'],[.5,'#6d7a84'],[1,'#2a3238']]);
+    c.fillStyle=g; c.beginPath();
+    c.moveTo(0,-96); c.quadraticCurveTo(30,-40,28,18); c.quadraticCurveTo(22,70,8,88);
+    c.lineTo(-8,88); c.quadraticCurveTo(-22,70,-28,18); c.quadraticCurveTo(-30,-40,0,-96);
+    c.closePath(); c.fill();
+    c.strokeStyle='#0c1216'; c.lineWidth=5; c.stroke();
+    c.fillStyle='#2c343c'; c.beginPath(); c.roundRect(-10,-8,20,36,5); c.fill();
+    c.fillStyle='#8fd7ff'; c.fillRect(-4,2,8,6);
+    c.fillStyle='#1a2026'; c.fillRect(-3,-48,6,28);
+    c.fillStyle='rgba(80,220,255,.55)'; c.beginPath(); c.arc(0,-18,5,0,TAU); c.fill();
   });
   // --- DREADNOUGHT artillery ship ---
   defSprite('dread', c=>{

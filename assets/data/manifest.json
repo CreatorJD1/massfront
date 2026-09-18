@@ -101,6 +101,7 @@
     "src/glrecover.js",
     "src/main.js",
     "src/intel.js",
+    "src/submarines.js",
     "src/repairbay.js",
     "src/galaxyui.js",
     "src/departure.js",

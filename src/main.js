@@ -1120,7 +1120,7 @@ function newDemo(){
     /* One mirrored duel per armed chassis. A dense army turns every munition
        into the same white explosion; separated lanes let the player actually
        read the launch, flight and impact language of each weapon family. */
-    const roster=[0,1,2,3,4,6,7,8,9,10,14,15,16,17,18,20,21,22,23,25,26,27,28,29];
+    const roster=[0,1,2,3,4,6,7,8,9,10,14,15,16,17,18,20,21,22,23,25,26,27,28,29,33];
     const cx=MAP/2, cy=MAP/2;
     for(let k=0;k<roster.length;k++){
       const col=k%6, row=(k/6)|0, mx=cx+(col-2.5)*175, my=cy+(row-1.5)*175;

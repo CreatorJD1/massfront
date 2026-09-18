@@ -41,6 +41,14 @@ second repository.
   `src/sea.js` on `main` (Claude / Codex). The Tessendorf theatre is branch
   `stormpeak/ocean` → `modules/stormpeak/` ([PR #6](https://github.com/CreatorJD1/massfront/pull/6)).
   Do not reimplement Stormpeak on `main`. Do not register it in `boot.js`.
+- **Faction submarines.** Harbor chassis 33 on `feature/faction-submarines`
+  ([PR #8](https://github.com/CreatorJD1/massfront/pull/8)). One TYPES row, four
+  doctrines (Nautilus / Leviathan / Blackwake / Abyssal). Silent running is
+  GHOST. ASW is `fogDetect`. Firing stays dived (`mfSubOnFire`) except Legion
+  must surface. **Ballast is analogue:** `ukeel`/`utkeel` in metres, flood is
+  slow, DIVE/SURFACE mode orders the tanks (not a boolean Y snap). Crash /
+  flood / blow live on `mfSubCrash` / `mfSubFlood` / `mfSubBlow`. Do not add a
+  fourth movement grid. Do not concatenate Stormpeak FFT.
 - Stage 10 model repair remains Cursor-owned and in progress. Do not rewrite,
   archive, or reinterpret its active ledgers.
 - Stage 15 has verified local backend and compatibility-foundation work, but is

@@ -92,7 +92,7 @@ try {
   const inv = await page.evaluate(() => {
     const t2 = [0,1,9,18,10,2,3,6,7,11,16,19,20,21,22,23,24,27,32];
     const t1 = [0,1,9,10,19,24,32];
-    const air = [5,17,25], naval = [14,15], exp = [8,26];
+    const air = [5,17,25], naval = [14,15,33], exp = [8,26];
     const buildable = TYPES.map((T, i) => ({ i, name: T.name, cm: T.cm, cat: T.cat, hero: T.hero || null, brood: !!T.brood, air: !!T.air, naval: !!T.naval }))
       .filter(r => r.cm > 0);
     const packs = (kit, T) => {
