@@ -1,0 +1,15 @@
+{
+  "name": "MASSFRONT",
+  "user": "ubuntu",
+  "install": "npm install && python3 -m pip install --break-system-packages -q openpyxl && node tools/bundle.mjs && node tools/pack-www.mjs",
+  "terminals": [
+    {
+      "name": "dev-server",
+      "command": "node tools/bundle.mjs; node tools/pack-www.mjs && node serve.mjs www 8901",
+      "description": "Runs the syntax gate (tools/bundle.mjs — parses the whole concatenated source and fails on global collisions), stages www/ fresh from the checked-out source (tools/pack-www.mjs — also verifies nothing 404s), then serves the game at http://127.0.0.1:8901. After editing anything under src/, re-run `node tools/bundle.mjs && node tools/pack-www.mjs` and reload. NOTE: the WebGL2 battle renderer requires a hardware GPU; on a GPU-less VM the menu loads but the game shows 'WEBGL2 REQUIRED'."
+    }
+  ],
+  "ports": [
+    { "name": "dev server", "port": 8901 }
+  ]
+}
