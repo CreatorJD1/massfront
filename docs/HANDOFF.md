@@ -30,6 +30,8 @@ Read in this order:
    stage records.
 6. [`FIVE_CHANNEL_UPDATE.md`](FIVE_CHANNEL_UPDATE.md) — mandatory release
    synchronization procedure.
+7. [`GAME_AUDIT.md`](GAME_AUDIT.md) — current player-facing game / UX /
+   progression audit of `main` (does not override stage status).
 
 The canonical local checkout is `C:\Users\Jason\Documents\Codex\MASSFRONT-main-source`.
 It resolves to the one physical Git checkout under `2026-08-01`; it is not a
