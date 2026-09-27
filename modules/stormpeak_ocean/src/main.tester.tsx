@@ -75,6 +75,9 @@ function Home() {
   const onNuke = useCallback(() => {
     labRef.current?.nuke();
   }, []);
+  const onNukeAim = useCallback((on: boolean) => {
+    labRef.current?.setNukeAim?.(on);
+  }, []);
 
   return (
     <main className="relative h-dvh w-full overflow-hidden bg-bg text-fg">
@@ -113,6 +116,7 @@ function Home() {
         onFaction={onFaction}
         onLight={onLight}
         onNuke={onNuke}
+        onNukeAim={onNukeAim}
       />
     </main>
   );

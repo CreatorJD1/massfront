@@ -319,6 +319,8 @@ export type Snapshot = {
   seaDrag: number;
   seaAcc: number;
   outcome: string | null;
+  /** Running nuke (sim-clock age) or null. The HUD uses it to lock the detonate controls. */
+  nuke: { age: number; durationS: number } | null;
   ents: Array<{
     id: number;
     team: number;
@@ -1287,6 +1289,7 @@ export function createMatch(
       seaDrag: drag,
       seaAcc: accuracyMul(beaufort),
       outcome: phase === "victory" || phase === "defeat" ? phase : null,
+      nuke: nuke ? { age: nuke.ticks * TICK, durationS: NUKE_TUNING.durationS } : null,
       ents: ents
         .filter((e) => e.alive)
         .map((e) => ({

@@ -18,6 +18,9 @@ import {
 } from "lucide-react";
 import { DEFS, PLACE_ORDER, PRODUCE_ORDER, unitLabel, type BuildingId, type FactionId, type UnitId } from "@/lib/massfront/catalog";
 import { FACTION_META, FACTION_ORDER, stationName } from "@/lib/massfront/submarines";
+
+/** Window for the second tap that confirms a nuke. */
+const NUKE_CONFIRM_MS = 3000;
 import { LIGHT_ORDER, LIGHTS } from "@/lib/ocean/world/lightSim.js";
 import type { MatchSnapshot, OceanStats, SonarSnap } from "./ocean-types";
 import { returnToMassfront } from "../host-return";
@@ -66,6 +69,8 @@ type Props = {
   onToggleDive: () => void;
   onFaction: (id: FactionId) => void;
   onNuke: () => void;
+  /** Called with the arm state so the scene can draw the aim ring. */
+  onNukeAim?: (on: boolean) => void;
   lightId: string;
   onLight: (id: string) => void;
 };
@@ -234,6 +239,7 @@ export function CommandHud({
   onNudge,
   onFaction,
   onNuke,
+  onNukeAim,
   lightId,
   onLight,
 }: Props) {
@@ -251,6 +257,37 @@ export function CommandHud({
   const selectedSub = selected.find((e) => e.sub);
   const playerSub = selectedSub || snap?.ents.find((e) => e.sub && e.team === 0 && e.alive);
   const toggle = (id: Sheet) => setSheet((s) => (s === id ? null : id));
+
+  /* Nuke controls. The sim rejects a detonation that is not allowed, but the
+     player needs to see why: the button only arms while the match is really
+     live (the brief no longer counts) and no warhead is running, and it takes
+     a second tap within NUKE_CONFIRM_MS so a stray tap cannot fire it. */
+  const nukeBlast = snap?.nuke ?? null;
+  const nukeReady = snap?.phase === "live" && !nukeBlast;
+  const [nukeArmed, setNukeArmed] = useState(false);
+  useEffect(() => {
+    if (!nukeArmed) return;
+    const t = setTimeout(() => setNukeArmed(false), NUKE_CONFIRM_MS);
+    return () => clearTimeout(t);
+  }, [nukeArmed]);
+  useEffect(() => {
+    if (!nukeReady) setNukeArmed(false);
+  }, [nukeReady]);
+  useEffect(() => {
+    onNukeAim?.(nukeArmed);
+  }, [nukeArmed, onNukeAim]);
+  const pressNuke = () => {
+    if (!nukeReady) return;
+    if (!nukeArmed) {
+      setNukeArmed(true);
+      return;
+    }
+    setNukeArmed(false);
+    onNuke();
+  };
+  const nukeLeft = nukeBlast ? Math.max(0, Math.ceil(nukeBlast.durationS - nukeBlast.age)) : 0;
+  const nukeShort = nukeBlast ? `100 kt · ${nukeLeft}s` : nukeArmed ? "Confirm" : "100 kt";
+  const nukeClass = nukeArmed ? "bg-danger text-bg" : nukeReady ? "bg-accent text-bg" : "bg-surface/85 text-subtle";
 
   return (
     <div className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-between">
@@ -273,10 +310,12 @@ export function CommandHud({
         {phase === "live" ? (
           <button
             type="button"
-            onClick={onNuke}
-            className="hud-press inline-flex min-h-11 items-center rounded-md bg-accent px-3 text-xs font-medium text-bg"
+            onClick={pressNuke}
+            disabled={!nukeReady}
+            aria-label={nukeArmed ? "Confirm 100 kt detonation" : "Arm 100 kt detonation"}
+            className={"hud-press inline-flex min-h-11 items-center rounded-md px-3 text-xs font-medium tabular-nums " + nukeClass}
           >
-            100 kt
+            {nukeShort}
           </button>
         ) : null}
         {phase === "live" ? (
@@ -365,10 +404,17 @@ export function CommandHud({
               <>
                 <button
                   type="button"
-                  onClick={onNuke}
-                  className="hud-press mb-3 min-h-12 w-full rounded-md bg-accent text-sm font-medium text-bg"
+                  onClick={pressNuke}
+                  disabled={!nukeReady}
+                  className={"hud-press mb-3 min-h-12 w-full rounded-md text-sm font-medium tabular-nums " + nukeClass}
                 >
-                  Detonate 100 kt · {stats?.surface === "land" ? "land" : "water"}
+                  {nukeBlast
+                    ? `Warhead active · ${nukeLeft}s`
+                    : !nukeReady
+                      ? "Detonate unavailable while paused"
+                      : nukeArmed
+                        ? "Tap again to detonate"
+                        : `Detonate 100 kt · ${stats?.surface === "land" ? "land" : "water"}`}
                 </button>
                 <p className="mb-1.5 text-[11px] tracking-[0.16em] text-subtle uppercase">Sky</p>
                 <div className="mb-3 flex flex-wrap gap-1.5">

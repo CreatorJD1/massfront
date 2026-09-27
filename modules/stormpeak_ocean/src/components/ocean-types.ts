@@ -73,6 +73,8 @@ export type LabHandle = {
   setLight: (id: string) => void;
   detonate: (x: number, z: number, power?: number) => void;
   nuke: () => void;
+  /** Show the ground-zero aim ring while the HUD nuke button is armed (VFX branch). */
+  setNukeAim?: (on: boolean) => void;
   getBeaufort: () => number;
   dispose: () => void;
 };

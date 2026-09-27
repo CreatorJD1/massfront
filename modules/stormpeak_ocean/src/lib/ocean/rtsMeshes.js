@@ -2,6 +2,53 @@
 /** @ts-nocheck */
 import * as THREE from "three";
 import { deckHeight } from "./physics/buoyancy.js";
+import { islandHeight } from "./world/land.js";
+
+/* Surface the HUD marks sit on: the live wave height (swell plus blast
+   displacement) or the island top, whichever is higher. */
+function surfaceY(sea, x, z) {
+  const w = sea ? sea.height(x, z) : 0;
+  const l = islandHeight(x, z);
+  return l > w ? l : w;
+}
+
+/* A flat ring or disc in the XZ plane whose vertices are re-draped onto the
+   surface every frame, so it follows swells and terrain instead of floating
+   over them like a sticker or sinking into a crest. Depth-tested (with a
+   polygon offset against z-fighting), so hills and wave faces in front of it
+   hide it the same way they hide the hull. */
+function drapeGeometry(inner, outer, segs, rings) {
+  const geo = new THREE.RingGeometry(inner, outer, segs, rings);
+  geo.rotateX(-Math.PI / 2);
+  const pos = geo.attributes.position;
+  geo.userData.base = Float32Array.from(pos.array);
+  pos.setUsage(THREE.DynamicDrawUsage);
+  return geo;
+}
+function drapeMaterial(color, opacity) {
+  return new THREE.MeshBasicMaterial({
+    color, side: THREE.DoubleSide, transparent: true, opacity,
+    depthTest: true, depthWrite: false,
+    polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4,
+  });
+}
+/* Re-drape geo around world (cx, cz). scale and yaw map the base vertices to
+   world XZ; oy is the world Y of the mesh origin, so the written local Y lands
+   each vertex at surface + lift. */
+function drape(geo, sea, cx, cz, scale, yaw, oy, lift) {
+  const base = geo.userData.base;
+  const pos = geo.attributes.position;
+  const a = pos.array;
+  const c = Math.cos(yaw), sn = Math.sin(yaw);
+  for (let i = 0; i < a.length; i += 3) {
+    const lx = base[i] * scale, lz = base[i + 2] * scale;
+    const wx = cx + lx * c + lz * sn;
+    const wz = cz - lx * sn + lz * c;
+    a[i + 1] = (surfaceY(sea, wx, wz) + lift - oy) / scale;
+  }
+  pos.needsUpdate = true;
+  geo.computeBoundingSphere();
+}
 
 const FAC = {
   nova: { hull: 0x2a3540, trim: 0x5a6570, glow: 0x33e8ff, pad: 0x3a4650, stripe: 0x5db6ff },
@@ -40,12 +87,17 @@ function hpBar() {
   const g = new THREE.Group();
   const bg = new THREE.Mesh(
     new THREE.PlaneGeometry(1, 0.08),
-    new THREE.MeshBasicMaterial({ color: 0x0a1014, depthTest: false }),
+    new THREE.MeshBasicMaterial({ color: 0x0a1014, depthTest: false, depthWrite: false, transparent: true }),
   );
   const fg = new THREE.Mesh(
     new THREE.PlaneGeometry(1, 0.08),
-    new THREE.MeshBasicMaterial({ color: 0x3ad6e8, depthTest: false }),
+    new THREE.MeshBasicMaterial({ color: 0x3ad6e8, depthTest: false, depthWrite: false, transparent: true }),
   );
+  /* HP bars stay readable over everything (RTS convention), but they are drawn
+     last in a fixed order in the transparent pass and write no depth, so spray,
+     smoke and wave crests can't cut holes in them from frame to frame. */
+  bg.renderOrder = 30;
+  fg.renderOrder = 31;
   bg.position.z = -0.01;
   fg.position.z = 0;
   g.add(bg);
@@ -56,15 +108,10 @@ function hpBar() {
 }
 
 function ring() {
-  const m = new THREE.Mesh(
-    new THREE.RingGeometry(1.05, 1.22, 48),
-    new THREE.MeshBasicMaterial({
-      color: 0x3ad6e8, side: THREE.DoubleSide, transparent: true, opacity: 0.85, depthTest: false,
-    }),
-  );
-  m.rotation.x = -Math.PI / 2;
+  const m = new THREE.Mesh(drapeGeometry(1.05, 1.22, 48, 1), drapeMaterial(0x3ad6e8, 0.85));
   m.position.y = 0.4;
   m.renderOrder = 7;
+  m.frustumCulled = false;
   return m;
 }
 
@@ -606,10 +653,10 @@ export function createRtsView(scene, camera, { wetKit } = {}) {
   const shotMat1 = new THREE.MeshBasicMaterial({ color: 0x8ef09a });
   const torpMat = new THREE.MeshBasicMaterial({ color: 0xd4b46a });
   const shotPool = [];
-  const ghost = new THREE.Mesh(
-    new THREE.CylinderGeometry(8, 8, 0.6, 20),
-    new THREE.MeshBasicMaterial({ color: 0x3ad6e8, transparent: true, opacity: 0.28, depthWrite: false }),
-  );
+  /* Placement ghost: a draped disc (radial rings so the fill bends over a
+     crest) instead of a flat 0.6-tall cylinder that waves sliced through. */
+  const ghost = new THREE.Mesh(drapeGeometry(0.01, 8, 32, 5), drapeMaterial(0x3ad6e8, 0.28));
+  ghost.frustumCulled = false;
   ghost.visible = false;
   root.add(ghost);
 
@@ -693,9 +740,27 @@ export function createRtsView(scene, camera, { wetKit } = {}) {
         frac < 0.35 ? 0xd9776b : e.team === 0 ? 0x3ad6e8 : 0x6ee07a,
       );
       hp.quaternion.copy(camera.quaternion);
-      g.userData.sel.visible = e.selected && !e.cloaked;
-      g.userData.sel.scale.setScalar(e.radius);
-      g.userData.sel.position.y = e.building ? dy + 0.4 : 0.45;
+      const sel = g.userData.sel;
+      sel.visible = e.selected && !e.cloaked;
+      sel.scale.setScalar(e.radius);
+      if (e.building) {
+        sel.position.y = dy + 0.4;
+        if (sel.userData.draped) {
+          /* Buildings sit on a flat deck: restore the flat ring once. */
+          sel.geometry.attributes.position.array.set(sel.geometry.userData.base);
+          sel.geometry.attributes.position.needsUpdate = true;
+          sel.userData.draped = false;
+        }
+      } else if (sel.visible) {
+        /* Hulls ride the swell; the ring is draped on the water around them
+           (a dived sub's ring stays on the surface above it). */
+        sel.position.y = 0;
+        /* Read the group's own transform (a ridden hull is posed elsewhere),
+           and fold in the build-progress scale applied just below. */
+        const gs = e.buildLeft > 0 ? 0.55 + 0.45 * (1 - e.buildLeft / Math.max(0.1, e.buildMax)) : 1;
+        drape(sel.geometry, sea, g.position.x, g.position.z, e.radius * gs, g.rotation.y, g.position.y, 0.35);
+        sel.userData.draped = true;
+      }
       if (e.buildLeft > 0) g.scale.setScalar(0.55 + 0.45 * (1 - e.buildLeft / Math.max(0.1, e.buildMax)));
       else g.scale.setScalar(1);
       const body = g.userData.body;
@@ -734,8 +799,8 @@ export function createRtsView(scene, camera, { wetKit } = {}) {
 
     if (snap.ghost) {
       ghost.visible = true;
-      const h = sea ? sea.height(snap.ghost.x, snap.ghost.z) : 0;
-      ghost.position.set(snap.ghost.x, h + 0.5, snap.ghost.z);
+      ghost.position.set(snap.ghost.x, 0, snap.ghost.z);
+      drape(ghost.geometry, sea, snap.ghost.x, snap.ghost.z, 1, 0, 0, 0.5);
       ghost.material.color.setHex(snap.ghost.valid ? 0x3ad6e8 : 0xd9776b);
     } else ghost.visible = false;
   }
