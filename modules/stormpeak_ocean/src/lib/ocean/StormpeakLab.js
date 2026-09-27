@@ -18,7 +18,7 @@ import { addStormpeakScene } from "./objects/StormpeakScene.js";
 import { OrbitFollowControls } from "./camera/OrbitFollowControls.js";
 import { skyGLSL } from "./glsl/sky.glsl.js";
 import { applyBeaufort, lerpPreset } from "./beaufort.js";
-import { createMatch } from "../massfront/sim";
+import { createMatch, nukeRadii, NUKE_TUNING } from "../massfront/sim";
 import { createRtsView } from "./rtsMeshes.js";
 import { HQ } from "../massfront/catalog";
 import { createSeaSampler } from "./physics/seaSample.js";
@@ -393,6 +393,13 @@ export function bootStormpeakLab(canvas, opts = {}) {
     return match.detonate(x, z, 4.4, "nuke", probeSurface(x, z, lastSnap.ents));
   };
   let lastNukeAge = -1;
+  /* Aim ring radius = the largest instant-kill radius the fireball reaches,
+     read from the sim's own curve so the preview can never disagree with it. */
+  let NUKE_KILL_R = 0;
+  for (let a = 0; a < NUKE_TUNING.fireballLethalS; a += 0.05) {
+    NUKE_KILL_R = Math.max(NUKE_KILL_R, nukeRadii(a).groundZeroR);
+  }
+  let hudNukeArmed = false;
 
   controls.onDiveIntent = (d) => {
     match.setSubDepth(metresFromDive(d));
@@ -857,7 +864,17 @@ export function bootStormpeakLab(canvas, opts = {}) {
     });
     const flashAmt = weather?.flash || 0;
     /* Visual only: blast damage runs inside match.step() on the sim clock. */
-    const nukeWx = nukeFx.update(match.nukeState(), focalSea.h, camera.position);
+    const nukeState = match.nukeState();
+    const nukeWx = nukeFx.update(nukeState, focalSea.h, camera.position);
+    const nukeAimOn =
+      match.phase === "live" &&
+      !nukeState &&
+      (hudNukeArmed || performance.now() - nukeKeyArmedAt < 3000);
+    nukeFx.setAim(
+      nukeAimOn ? { x: controls.focal.x, z: controls.focal.z, y: focalSea.h, r: NUKE_KILL_R } : null,
+      t,
+      camera.position,
+    );
     const prevNukeAge = lastNukeAge;
     lastNukeAge = nukeWx.live ? nukeWx.age : -1;
     if (nukeWx.live) {
@@ -1128,6 +1145,10 @@ export function bootStormpeakLab(canvas, opts = {}) {
     setLight,
     detonate: (x, z, p) => match.detonate(x, z, p ?? 1.15, "super"),
     nuke: () => fireNuke(),
+    /** HUD arm state: shows the ground-zero ring at the camera focus. */
+    setNukeAim: (on) => {
+      hudNukeArmed = !!on;
+    },
     dispose() {
       running = false;
       renderer.setAnimationLoop(null);

@@ -248,6 +248,72 @@ const shockFrag = /* glsl */ `
     gl_FragColor = vec4(vec3(0.85, 0.9, 1.0), rim * uAmt);
   }`;
 
+/* Ground-zero hazard decal. Round in the shader (not the mesh), so it stays
+   smooth at any radius. White-hot while the fireball is lethal, then an
+   orange pulsing burn with a bright edge for as long as ground zero deals
+   damage over time. */
+const hazardFrag = /* glsl */ `
+  precision mediump float;
+  uniform float uAmt, uLethal, uTime;
+  varying vec2 vUv;
+  void main() {
+    vec2 p = vUv * 2.0 - 1.0;
+    float r = length(p);
+    if (r > 1.0) discard;
+    float rim = smoothstep(0.84, 0.95, r) * (1.0 - smoothstep(0.95, 1.0, r));
+    float fill = 1.0 - smoothstep(0.1, 1.0, r);
+    float pulse = 0.7 + 0.3 * sin(uTime * 5.0);
+    vec3 col = mix(vec3(1.0, 0.36, 0.07), vec3(1.0, 0.95, 0.82), uLethal);
+    float a = (fill * mix(0.28, 0.55, uLethal) + rim * mix(0.95 * pulse, 0.75, uLethal)) * uAmt;
+    if (a < 0.01) discard;
+    gl_FragColor = vec4(col * (0.7 + 0.6 * rim), a);
+  }`;
+
+/* Thin ring decal: the tsunami damage front, and the aim ring. uWidth is in
+   UV units (world width / radius) so the line keeps a constant world width. */
+const ringFrag = /* glsl */ `
+  precision mediump float;
+  uniform float uAmt, uWidth, uDash, uTime;
+  uniform vec3 uColor;
+  varying vec2 vUv;
+  void main() {
+    vec2 p = vUv * 2.0 - 1.0;
+    float r = length(p);
+    float band = 1.0 - smoothstep(0.0, uWidth, abs(r - (1.0 - uWidth)));
+    if (uDash > 0.5) {
+      float ang = atan(p.y, p.x) / 6.2831853;
+      band *= step(0.45, fract(ang * uDash + uTime * 0.25));
+    }
+    float a = band * uAmt;
+    if (a < 0.01) discard;
+    gl_FragColor = vec4(uColor, a);
+  }`;
+
+function decalMat(frag, uniforms) {
+  /* depthTest off: the nuke's own crests are ~20 units tall near ground zero
+     and would swallow a surface decal exactly where it matters most. */
+  return new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    depthTest: false,
+    fog: false,
+    toneMapped: false,
+    blending: THREE.AdditiveBlending,
+    side: THREE.DoubleSide,
+    uniforms,
+    vertexShader: discVert,
+    fragmentShader: frag,
+  });
+}
+
+function decalMesh(mat, order) {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat);
+  m.rotation.x = -Math.PI / 2;
+  m.frustumCulled = false;
+  m.renderOrder = order;
+  return m;
+}
+
 function volMat(frag) {
   return new THREE.ShaderMaterial({
     transparent: true,
@@ -367,6 +433,32 @@ export function createNukeFx(scene) {
   fireball.renderOrder = 16;
   root.add(fireball);
 
+  /* Gameplay-readable layer, sized from the sim's radii so what the player
+     sees is exactly where damage lands. */
+  const hazardMat = decalMat(hazardFrag, {
+    uAmt: { value: 0 }, uLethal: { value: 1 }, uTime: { value: 0 },
+  });
+  const hazard = decalMesh(hazardMat, 17);
+  hazard.visible = false;
+  root.add(hazard);
+
+  const frontMat = decalMat(ringFrag, {
+    uAmt: { value: 0 }, uWidth: { value: 0.02 }, uDash: { value: 0 }, uTime: { value: 0 },
+    uColor: { value: new THREE.Color(1.0, 0.55, 0.3) },
+  });
+  const front = decalMesh(frontMat, 17);
+  front.visible = false;
+  root.add(front);
+
+  /* Aim ring: lives outside root so it shows before any blast exists. */
+  const aimMat = decalMat(ringFrag, {
+    uAmt: { value: 0.9 }, uWidth: { value: 0.04 }, uDash: { value: 24 }, uTime: { value: 0 },
+    uColor: { value: new THREE.Color(1.0, 0.2, 0.12) },
+  });
+  const aim = decalMesh(aimMat, 18);
+  aim.visible = false;
+  scene.add(aim);
+
   const dummy = new THREE.Object3D();
   const camLoc = new THREE.Vector3();
 
@@ -394,6 +486,8 @@ export function createNukeFx(scene) {
     disc.visible = false;
     fireball.visible = false;
     shock.visible = false;
+    hazard.visible = false;
+    front.visible = false;
   }
 
   function setLand(v) {
@@ -427,7 +521,7 @@ export function createNukeFx(scene) {
 
   /**
    * @param blast match.nukeState(): { id, x, z, surface, power, age, fireR,
-   *   machR, tsunamiR, suction, fireballOn } or null when no blast is running.
+   *   machR, tsunamiR, suction, fireballOn, groundZeroR, durationS } or null when no blast is running.
    */
   function update(blast, seaY, cam) {
     if (!blast) {
@@ -488,7 +582,9 @@ export function createNukeFx(scene) {
     discMat.uniforms.uTime.value = age;
 
     shock.visible = age < 6.5;
-    shock.scale.setScalar(Math.max(4, blast.machR * 0.55));
+    /* The shell sits on the sim's actual shock front (it used to be drawn at
+       0.55x, so the damage front ran well ahead of what players saw). */
+    shock.scale.setScalar(Math.max(4, blast.machR));
     shock.position.y = 8;
     shockMat.uniforms.uAmt.value = 0.45 * Math.exp(-age / 2.8);
 
@@ -507,6 +603,28 @@ export function createNukeFx(scene) {
       puffs.setMatrixAt(i, dummy.matrix);
     }
     puffs.instanceMatrix.needsUpdate = true;
+
+    /* Ground zero: visible for exactly as long as the sim hurts there. */
+    const gzR = blast.groundZeroR || 0;
+    const gzLeft = (blast.durationS || 24) - age;
+    /* Decals skip the depth test so crests can't hide them; from under the
+       surface that would paint them through the sea, so hide them there. */
+    const above = !cam || cam.y > seaY + 0.5;
+    hazard.visible = above && gzR > 0 && gzLeft > 0;
+    hazard.scale.setScalar(Math.max(1, gzR));
+    hazard.position.y = 0.8;
+    hazardMat.uniforms.uLethal.value = blast.fireballOn ? 1 : 0;
+    hazardMat.uniforms.uTime.value = age;
+    hazardMat.uniforms.uAmt.value = blast.fireballOn ? 1 : Math.min(1, gzLeft / 1.5);
+
+    /* Tsunami damage front, at the sim's tsunamiR (the tall visible wave
+       crest in waveField travels ~2.5x faster and is not the damage ring). */
+    const tsR = blast.tsunamiR || 0;
+    front.visible = above && tsR > 6;
+    front.scale.setScalar(Math.max(1, tsR));
+    front.position.y = 1.0;
+    frontMat.uniforms.uWidth.value = Math.min(0.3, Math.max(0.004, 5 / Math.max(1, tsR)));
+    frontMat.uniforms.uAmt.value = 0.85 * Math.exp(-Math.max(0, age - 1.8) / 9);
 
     embers.visible = age < 7;
     emberMat.uniforms.uAmt.value = 0.9 * Math.exp(-age / 3.2);
@@ -547,8 +665,32 @@ export function createNukeFx(scene) {
     };
   }
 
+  /**
+   * Ground-zero preview while a detonation is armed. Pass { x, z, y, r } in
+   * world units (r = the sim's instant-kill radius), or null to hide.
+   */
+  function setAim(a, now = 0, cam = null) {
+    if (!a || (cam && cam.y < (a.y || 0) + 0.5)) {
+      aim.visible = false;
+      return;
+    }
+    aim.visible = true;
+    aim.position.set(a.x, (a.y || 0) + 1.2, a.z);
+    const r = Math.max(4, a.r);
+    aim.scale.setScalar(r);
+    aimMat.uniforms.uWidth.value = Math.min(0.3, Math.max(0.01, 2.5 / r));
+    aimMat.uniforms.uTime.value = now;
+  }
+
   function dispose() {
     scene.remove(root);
+    scene.remove(aim);
+    hazard.geometry.dispose();
+    hazardMat.dispose();
+    front.geometry.dispose();
+    frontMat.dispose();
+    aim.geometry.dispose();
+    aimMat.dispose();
     column.geometry.dispose();
     columnMat.dispose();
     anvil.geometry.dispose();
@@ -567,5 +709,5 @@ export function createNukeFx(scene) {
     fireMat.dispose();
   }
 
-  return { ignite, update, dispose, warm, rest, get live() { return live; } };
+  return { ignite, update, setAim, dispose, warm, rest, get live() { return live; } };
 }
