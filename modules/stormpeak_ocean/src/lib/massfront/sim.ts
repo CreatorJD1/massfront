@@ -146,6 +146,35 @@ export const NUKE_TUNING = {
   suctionMinD: 8,
 } as const;
 
+/**
+ * Water-wave hit tuning (waveField crests / cavity collapses / jets from every
+ * explosion kind). The render loop only samples the wave field and queues the
+ * sample (match.queueWaveHits); the sim applies it inside step() on sim ticks,
+ * so nothing lands while paused / brief / ended and totals do not depend on fps.
+ *
+ * Two different kinds of input:
+ *  - form is a ONE-SHOT hit: waveField.sensorAt reports each crest / collapse /
+ *    jet once per unit per blast (it dedupes internally). Damage is therefore
+ *    per hit, not per second; dt-scaling it would make it fps-dependent.
+ *  - push is a CONTINUOUS force sampled every frame. It used to be applied per
+ *    frame (0.04 * push, capped 1.6/frame); it is now a per-second rate that
+ *    equals the old 60 fps behaviour.
+ */
+export const WAVE_TUNING = {
+  /** HP removed per point of form on a single hit (unchanged from the old per-hit rate). */
+  formDamage: 0.55,
+  /** Hits with less form than this do no damage (unchanged). */
+  formMin: 0.85,
+  /** Continuous shove speed per unit of sampled push, per second (0.04/frame * 60). */
+  pushGainPerSec: 2.4,
+  /** Max continuous shove speed, units per second (1.6/frame * 60). */
+  pushCapPerSec: 96,
+  /** A single hit with form above this also delivers a one-shot slam shove. */
+  slamFormThreshold: 8,
+  /** Max total shove (units) on the slam frame, as before (the old 8.5/frame cap). */
+  slamPushCap: 8.5,
+} as const;
+
 export type NukeRadii = {
   fireR: number;
   machR: number;
@@ -313,6 +342,11 @@ export function createMatch(
   let simTick = 0;
   let waveLoad = 0;
   let waveForm = 0;
+  /** One-shot wave hits (form, slam shove) waiting for the next live sim tick. */
+  type WavePending = { form: number; tag?: string; slamX: number; slamZ: number };
+  const wavePending = new Map<number, WavePending>();
+  /** Latest continuous wave push per ent (world units of force), replaced every sample. */
+  let wavePush: Array<{ id: number; x: number; z: number }> = [];
   const selected: number[] = [];
   let buildKind: BuildingId | null = null;
   let ghost: Snapshot["ghost"] = null;
@@ -722,30 +756,78 @@ export function createMatch(
     }
   }
 
-  function applyWaveHits(hits: WaveHit[]) {
+  /**
+   * Render loop -> sim hand-off. Only records the sample; stepWaveHits() applies
+   * it on sim ticks. Ignored unless the match is live.
+   */
+  function queueWaveHits(hits: WaveHit[]) {
+    if (phase !== "live") {
+      wavePush = [];
+      return;
+    }
+    const W = WAVE_TUNING;
     let maxLoad = 0;
     let maxForm = 0;
+    const push: typeof wavePush = [];
     for (const h of hits) {
       if (h.load > maxLoad) maxLoad = h.load;
       if (h.form > maxForm) maxForm = h.form;
-      const e = ents.find((x) => x.id === h.id && x.alive);
+      const px = h.pushX || 0;
+      const pz = h.pushZ || 0;
+      if (px || pz) push.push({ id: h.id, x: px, z: pz });
+      const slam = h.form > W.slamFormThreshold;
+      if (h.form < W.formMin && !slam) continue;
+      const p = wavePending.get(h.id) || { form: 0, slamX: 0, slamZ: 0 };
+      if (h.form >= W.formMin) {
+        p.form += h.form;
+        if (h.form > 10) p.tag = h.tag || p.tag || "";
+      }
+      if (slam) {
+        /* Old slam frame: shove capped at slamPushCap instead of the normal
+           per-frame cap. The continuous rate already covers the normal share. */
+        const normalCap = W.pushCapPerSec / 60;
+        const g = W.pushGainPerSec / 60;
+        const slamShove = (f: number) =>
+          clamp(f * g, -W.slamPushCap, W.slamPushCap) - clamp(f * g, -normalCap, normalCap);
+        p.slamX += slamShove(px);
+        p.slamZ += slamShove(pz);
+      }
+      wavePending.set(h.id, p);
+    }
+    wavePush = push;
+    waveLoad = maxLoad;
+    waveForm = maxForm;
+  }
+
+  /** Apply queued wave hits for one sim tick. Called only from step() while live. */
+  function stepWaveHits(dt: number) {
+    const W = WAVE_TUNING;
+    if (wavePush.length) {
+      const cap = W.pushCapPerSec * dt;
+      for (const w of wavePush) {
+        const e = ents.find((x) => x.id === w.id && x.alive);
+        if (!e || e.hover || e.building) continue;
+        e.x += clamp(w.x * W.pushGainPerSec * dt, -cap, cap);
+        e.z += clamp(w.z * W.pushGainPerSec * dt, -cap, cap);
+      }
+    }
+    if (!wavePending.size) return;
+    for (const [id, h] of wavePending) {
+      if (phase !== "live") break;
+      const e = ents.find((x) => x.id === id && x.alive);
       if (!e || e.hover) continue;
       if (!e.building) {
-        const px = h.pushX || 0;
-        const pz = h.pushZ || 0;
-        const cap = h.form > 8 ? 8.5 : 1.6;
-        e.x += clamp(px * 0.04, -cap, cap);
-        e.z += clamp(pz * 0.04, -cap, cap);
+        e.x += h.slamX;
+        e.z += h.slamZ;
       }
-      if (h.form < 0.85) continue;
-      e.hp -= h.form * 0.55;
-      if (h.form > 10 && e.team === PLAYER) {
+      if (h.form <= 0) continue;
+      e.hp -= h.form * W.formDamage;
+      if (h.tag != null && e.team === PLAYER) {
         notice(h.tag === "COLLAPSE" ? "CAVITY COLLAPSE — HULL STRESS" : "WAVE FORM HIT");
       }
       if (e.hp <= 0) killEnt(e);
     }
-    waveLoad = maxLoad;
-    waveForm = maxForm;
+    wavePending.clear();
   }
 
   /**
@@ -1066,6 +1148,7 @@ export function createMatch(
         stepBallast(e, TICK);
       }
       stepShots(TICK);
+      stepWaveHits(TICK);
       stepNuke(TICK);
       for (const n of notices) n.age += TICK;
       simTick++;
@@ -1208,7 +1291,8 @@ export function createMatch(
   return {
     step,
     snapshot,
-    applyWaveHits,
+    /** Render loop hands over the latest wave-field sample; applied in step(). */
+    queueWaveHits,
     consumeBlasts() {
       const out = blasts.slice();
       blasts.length = 0;

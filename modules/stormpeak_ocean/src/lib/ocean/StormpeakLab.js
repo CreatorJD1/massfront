@@ -833,7 +833,9 @@ export function bootStormpeakLab(canvas, opts = {}) {
         pushZ: extra.pushZ,
       };
     });
-    match.applyWaveHits(hits);
+    /* Sample only: the sim applies wave damage / push inside match.step(), on
+       sim ticks, and only while the match is live. */
+    match.queueWaveHits(hits);
 
     life.emitFromSnap(snap, focalSea.h);
     const weather = life.update({

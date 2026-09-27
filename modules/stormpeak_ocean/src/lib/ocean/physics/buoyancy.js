@@ -343,20 +343,22 @@ export function createBuoyancyWorld(sea) {
 
   /* THE SECOND SEAM StormpeakLab EXPECTS. It calls buoyancy.readSensors(),
      adds waves.sensorAt() on top of each row, and hands the result to
-     match.applyWaveHits(). The stormpeak/ocean branch shipped those calls
+     match.queueWaveHits(); the sim applies it inside step() (WAVE_TUNING in
+     massfront/sim.ts). The stormpeak/ocean branch shipped those calls
      without ever committing this function.
 
      The scales here are not free choices, they are set by the consumer:
 
        load  feeds waveLoad, a HUD gauge only. Bounded 0..1.
-       form  is DAMAGE — sim.applyWaveHits does `e.hp -= h.form * 0.55` for
-             anything at or above 0.85. So ordinary swell must read ZERO here.
+       form  is DAMAGE — the sim does `e.hp -= form * WAVE_TUNING.formDamage`
+             (0.55) once per hit for anything at or above 0.85. So ordinary
+             swell must read ZERO here.
              Before this update there was no readSensors at all and no hull ever
              took damage from sea state; inventing a number would silently start
              sinking the player's fleet in heavy weather, which is a balance
              decision nobody asked for. Detonations still do form damage through
              waves.sensorAt(), which is where that belongs.
-       slam  is informational; applyWaveHits does not read it.
+       slam  is informational; the sim does not read it.
        tag   stays empty so the consumer's `extra.tag || s.tag` keeps the
              blast's own CREST / COLLAPSE / JET label. */
   function readSensors() {
