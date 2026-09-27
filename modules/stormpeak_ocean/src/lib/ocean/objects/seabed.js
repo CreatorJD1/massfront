@@ -11,7 +11,7 @@ import {
   seabedMetres,
   seabedHeightGLSL,
 } from "../world/abyss.js";
-import { createSurfaceMarkUniforms, surfaceMarksGLSL } from "../physics/surfaceMarks.js";
+import { createSurfaceMarkUniforms, surfaceMarksGLSL, craterGLSL } from "../physics/surfaceMarks.js";
 
 const VERT = /* glsl */ `
   varying vec3 vWorld;
@@ -19,15 +19,22 @@ const VERT = /* glsl */ `
   varying vec3 vN;
   uniform float uSeaY;
   ${seabedHeightGLSL}
+  ${craterGLSL}
+  /* Dry land takes the nuke crater; it is clamped so land never floods. */
+  float bedM(vec2 xz) {
+    float m = seabedM(xz);
+    if (uMarkCrater.w > 0.001 && m < -0.9) m = min(-1.0, m + nukeCraterM(xz));
+    return m;
+  }
   void main() {
     vec3 wp = (modelMatrix * vec4(position, 1.0)).xyz;
-    float m = seabedM(wp.xz);
+    float m = bedM(wp.xz);
     wp.y = uSeaY - m / ${DEPTH_VIS.toFixed(2)};
     float e = 2.4;
-    float hl = seabedM(wp.xz + vec2(-e, 0.0));
-    float hr = seabedM(wp.xz + vec2(e, 0.0));
-    float hd = seabedM(wp.xz + vec2(0.0, -e));
-    float hu = seabedM(wp.xz + vec2(0.0, e));
+    float hl = bedM(wp.xz + vec2(-e, 0.0));
+    float hr = bedM(wp.xz + vec2(e, 0.0));
+    float hd = bedM(wp.xz + vec2(0.0, -e));
+    float hu = bedM(wp.xz + vec2(0.0, e));
     vec3 n = normalize(vec3((hl - hr) / ${DEPTH_VIS.toFixed(2)}, 2.0 * e, (hd - hu) / ${DEPTH_VIS.toFixed(2)}));
     vN = n;
     vWorld = wp;
