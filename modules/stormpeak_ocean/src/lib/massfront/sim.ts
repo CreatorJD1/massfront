@@ -100,35 +100,52 @@ export type NukeSurface = "water" | "land";
 export const NUKE_TUNING = {
   /** Damage scale for shock / tsunami (the old hard-coded nukeFx power). */
   power: 4.4,
-  /** Whole blast lifetime (s). A new detonation is rejected until it ends. */
-  durationS: 24,
+  /** Whole blast lifetime (s), as in the nuke lab. New detonations are rejected until it ends. */
+  durationS: 22,
 
-  /** Instant-kill window = the fireball's visible lifetime in nuke.js (s). */
-  fireballLethalS: 3.6,
+  /** Instant-kill window: the fireball's lethal / visible lifetime (s). */
+  fireballLethalS: 3.0,
   /** Minimum instant-kill radius while the fireball is up. */
   fireballKillMinR: 18,
-  /** Fireball radius: base + grow * (1 - e^(-age/growTauS)) * e^(-max(0, age - holdS)/fadeTauS). */
-  fireBaseR: 8,
-  fireGrowR: 42,
-  fireGrowTauS: 0.55,
-  fireHoldS: 2.4,
-  fireFadeTauS: 2.2,
+  /**
+   * Fireball radius (nuke-lab fireRadius, stormpeak/ocean 9620b61):
+   * fireBaseR + fireGrowR * (1 - e^(-age/fireGrowTauS)) * e^(-max(0, age - fireHoldS)/fireFadeTauS)
+   */
+  fireBaseR: 12,
+  fireGrowR: 30,
+  fireGrowTauS: 0.7,
+  fireHoldS: 3.0,
+  fireFadeTauS: 4.0,
 
   /** After the fireball: ground zero burns (hp per second, all ents) instead of killing outright. */
   groundZeroDps: 80,
   /** Minimum ground-zero burn radius (the fire curve still sets it when larger). */
-  groundZeroMinR: 18,
+  groundZeroMinR: 40,
 
-  /** Shockwave (mach front): base + burst * age * e^(-age/burstTauS) + speed * age. */
-  machBaseR: 22,
-  machBurstR: 70,
-  machBurstTauS: 2.8,
-  machSpeed: 32,
+  /**
+   * Shockwave (nuke-lab machRadius), t = max(0, age):
+   * min(machCapR, machBaseR + machFastR * (1 - e^(-t/machFastTauS))
+   *                          + machSlowR * (1 - e^(-t/machSlowTauS)))
+   */
+  machBaseR: 30,
+  machFastR: 136,
+  machFastTauS: 1,
+  machSlowR: 94,
+  machSlowTauS: 14,
+  machCapR: 260,
 
-  /** Tsunami ring: 0 before startS, then base + speed * (age - startS). Land blasts scale by landMul. */
-  tsunamiStartS: 1.8,
-  tsunamiBaseR: 24,
-  tsunamiSpeed: 30,
+  /**
+   * Tsunami ring (nuke-lab tsunamiRadius), starts at detonation, t = max(0, age):
+   * min(tsunamiCapR, tsunamiBaseR + tsunamiFastR * (1 - e^(-t/tsunamiFastTauS))
+   *                                + tsunamiSlowR * (1 - e^(-t/tsunamiSlowTauS)))
+   * Land blasts scale it by tsunamiLandMul (the lab does the same).
+   */
+  tsunamiBaseR: 18,
+  tsunamiFastR: 132,
+  tsunamiFastTauS: 1.2,
+  tsunamiSlowR: 130,
+  tsunamiSlowTauS: 16,
+  tsunamiCapR: 280,
   tsunamiLandMul: 0.35,
 
   /** Suction window (s); water blasts only. Profile is sin(pi * phase) over the window. */
@@ -136,14 +153,13 @@ export const NUKE_TUNING = {
   suctionEndS: 6.5,
   /**
    * TOTAL inward pull (world units) on a unit that stays in range for the whole
-   * suction window. Frame-rate independent. 740 matches the old 60 fps feel
-   * (3.8 units/frame * 60 fps * integral of the sin profile).
+   * suction window. Frame-rate independent.
    */
-  suctionTotalPull: 740,
+  suctionTotalPull: 150,
   /** Suction reaches out to machR * suctionReach. */
   suctionReach: 0.92,
   /** Suction stops pulling inside this distance from ground zero. */
-  suctionMinD: 8,
+  suctionMinD: 45,
 } as const;
 
 /**
@@ -191,13 +207,25 @@ export type NukeRadii = {
 export function nukeRadii(age: number, surface: NukeSurface = "water"): NukeRadii {
   const T = NUKE_TUNING;
   const land = surface === "land";
+  /* fireRadius / machRadius / tsunamiRadius are ported verbatim from the nuke
+     lab (stormpeak/ocean 9620b61, nuke-lab/nuke.js); keep the term order so
+     results stay bit-identical to the lab. */
   const grow = 1 - Math.exp(-age / T.fireGrowTauS);
   const hold = Math.exp(-Math.max(0, age - T.fireHoldS) / T.fireFadeTauS);
   const fireR = T.fireBaseR + T.fireGrowR * grow * hold;
-  const machR =
-    T.machBaseR + T.machBurstR * age * Math.exp(-age / T.machBurstTauS) + T.machSpeed * age;
-  const tsunamiRaw =
-    age < T.tsunamiStartS ? 0 : T.tsunamiBaseR + (age - T.tsunamiStartS) * T.tsunamiSpeed;
+  const t = Math.max(0, age);
+  const machR = Math.min(
+    T.machCapR,
+    T.machBaseR +
+      T.machFastR * (1 - Math.exp(-t / T.machFastTauS)) +
+      T.machSlowR * (1 - Math.exp(-t / T.machSlowTauS)),
+  );
+  const tsunamiRaw = Math.min(
+    T.tsunamiCapR,
+    T.tsunamiBaseR +
+      T.tsunamiFastR * (1 - Math.exp(-t / T.tsunamiFastTauS)) +
+      T.tsunamiSlowR * (1 - Math.exp(-t / T.tsunamiSlowTauS)),
+  );
   const tsunamiR = land ? tsunamiRaw * T.tsunamiLandMul : tsunamiRaw;
   const span = T.suctionEndS - T.suctionStartS;
   const suction =
@@ -214,9 +242,12 @@ export function nukeRadii(age: number, surface: NukeSurface = "water"): NukeRadi
 /** Read-only view of the live blast for visuals / HUD. */
 export type NukeView = NukeRadii & {
   id: number;
+  /** Ground zero on the sim's ground plane (world x / z; y is up, same axes as Ent.x / Ent.z). */
   x: number;
   z: number;
   surface: NukeSurface;
+  /** True while the blast is active AND the match phase is "live" (false when paused / ended). */
+  live: boolean;
   power: number;
   /** Render age: sim age plus the unconsumed step accumulator (frozen when not live). */
   age: number;
@@ -954,6 +985,7 @@ export function createMatch(
       x: nuke.x,
       z: nuke.z,
       surface: nuke.surface,
+      live: phase === "live",
       power: NUKE_TUNING.power,
       age,
       simAge,
