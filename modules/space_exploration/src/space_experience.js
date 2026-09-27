@@ -19,6 +19,7 @@ import {
 } from './ui/story_transmission_controller.js?v=20260829-entryintro2';
 import { createUgaCommand } from './ui/uga_command.js?v=20260908-uga81r1';
 import { createUgaDeploymentArena } from './ui/uga_scene.js?v=20260906-hangar2';
+import { deriveGroundControl, derivePlanetControl, isGroundAreaUnlocked } from './domain/ground_control.js';
 import { PlanetarySurvey } from './systems/planetary_survey.js?v=20260907-wideorbit1';
 import { SHOWCASE_LAYOUT, SHOWCASE_SYSTEMS } from './systems/showcase_systems.js';
 import {
@@ -38,6 +39,8 @@ import {
   MODULE_CATALOG,
   OPERATION_MOD_CATALOG,
   RESEARCH_CATALOG,
+  SALVAGE_CATALOG,
+  WRECK_BOARDING_CATALOG,
   SITE_CATALOG,
   SPECIALIST_CATALOG,
   SUPPORT_CATALOG,
@@ -53,6 +56,7 @@ import {
   calculateAdjacencySynergies,
   calculatePowerGridStatus,
   calculateShipExplorationRating,
+  chooseGalaxyOperationId,
   commitResearch,
   createGroundOperation,
   createGroundResult,
@@ -61,13 +65,25 @@ import {
   deployProbe,
   getMissionEligibility,
   getConstructionQuote,
+  getCoreCommissionRescueQuote,
   getConstructionStatus,
+  getDutyWatchQuote,
+  getProbeResupplyQuote,
+  getRefuelQuote,
   getSurveyEligibility,
+  getContactSalvage,
+  getWreckBoarding,
+  getUgaGroundAreaOptions,
   grantFactionResidency,
+  holdDutyWatch,
   recoverPlanetFind,
+  recoverContactSalvage,
   enqueueConstruction,
   installDistrictModule,
   plotCourse,
+  refuelShip,
+  resupplyProbes,
+  requisitionCoreCommissioning,
   reorderConstruction,
   setDomainRoute,
   simulateClassicModeLaunch,
@@ -119,9 +135,12 @@ function gpuFailureCopy(error) {
 function setRenderVeil(frame, mode, title, status, retry = false) {
   const veil = frame.querySelector('#renderVeil');
   if (!veil) return;
+  const entering = mode !== 'ready' && (veil.classList.contains('ready') || veil.classList.contains('failed'));
+  if (entering) resetLoadingProgress(frame, { percent: 2, stage: 'COMMAND LINK', detail: status || 'PREPARING RUNTIME' });
   veil.classList.remove('ready', 'recovering', 'failed');
   if (mode) veil.classList.add(mode);
-  const heading = veil.querySelector('b');
+  veil.setAttribute('aria-busy', mode === 'ready' ? 'false' : 'true');
+  const heading = veil.querySelector('#renderLoadTitle');
   const detail = veil.querySelector('#loadStatus');
   if (heading && title) heading.textContent = title;
   if (detail && status) detail.textContent = status;
@@ -132,7 +151,7 @@ function setRenderVeil(frame, mode, title, status, retry = false) {
     button.dataset.renderRetry = 'true';
     button.textContent = 'RETRY GPU INITIALIZATION';
     button.addEventListener('click', () => window.location.reload());
-    veil.appendChild(button);
+    (veil.querySelector('.render-failure-actions') || veil.querySelector('.render-status') || veil).appendChild(button);
   }
   if (button) button.hidden = !retry;
 }
@@ -151,6 +170,14 @@ function setLoadingProgress(frame, progress) {
   if (percent) percent.textContent = `${Math.round(value)}%`;
   if (phase && progress?.stage) phase.textContent = progress.stage;
   if (detail && progress?.detail) detail.textContent = progress.detail;
+}
+
+function resetLoadingProgress(frame, progress = {}) {
+  if (typeof window.__MASSFRONT_RESET_LOAD_PROGRESS__ === 'function') {
+    window.__MASSFRONT_RESET_LOAD_PROGRESS__(progress);
+    return;
+  }
+  setLoadingProgress(frame, progress);
 }
 
 function showStartupFailure(frame, error) {
@@ -227,6 +254,7 @@ export function createSpaceExperience(container, options = {}) {
   let selectedTarget = null;
   let selectedGalaxyId = state.route.systemId;
   let selectedGalaxyMissionId = null;
+  let selectedGalaxyPreferredAreaId = null;
   let galaxyMap = null;
   let paused = false;
   let disposed = false;
@@ -251,11 +279,11 @@ export function createSpaceExperience(container, options = {}) {
   const removers = [];
   const pointer = { active: false, id: null, x: 0, y: 0, lastX: 0, lastY: 0, moved: false };
   const navPointers = new Map();
-  /* Opening at 1.55 framed the ship and little else, so arriving in orbit read
-     as "a model on a black background" rather than a place with a system around
-     it. Starting further out shows the orbital rings and neighbouring contacts
-     in the first frame, which is what makes the view legible as space. */
-  const navCameraDefault = Object.freeze({ yaw: 0.55, pitch: 0.42, dist: 2.4 });
+  /* Navigation is an RTS map view: mostly overhead, north-up, pannable.
+     The old default (pitch 0.42) framed the hull against black — legible as a
+     model, not as a place. High pitch reads the system as a chart; dist still
+     reaches down to hull inspection. */
+  const navCameraDefault = Object.freeze({ yaw: 0, pitch: 1.08, dist: 2.4, panX: 0, panZ: 0 });
   /* The old 2.5 ceiling was barely above the old default - there was almost
      nothing to pull back to. 4.5 lets a player actually survey the system
      instead of only inspecting the hull. */
@@ -405,7 +433,7 @@ export function createSpaceExperience(container, options = {}) {
   }
 
   function missionView(mission) {
-    const eligibility = getMissionEligibility(state, mission.id);
+    const eligibility = missionPlanningEligibility(mission);
     const system = SYSTEM_CATALOG[mission.systemId];
     const site = SITE_CATALOG[mission.siteId];
     return {
@@ -430,6 +458,7 @@ export function createSpaceExperience(container, options = {}) {
       COMMANDER_CATALOG, SPECIALIST_CATALOG, DOCTRINE_CATALOG, SUPPORT_CATALOG,
       DEPLOYMENT_UNIT_CATALOG, DEPLOYMENT_STRUCTURE_CATALOG, OPERATION_MOD_CATALOG,
       MISSION_CATALOG: missions,
+      SURVEY_CATALOG,
       districts: DISTRICT_CATALOG,
       modules: MODULE_CATALOG,
       facilities: CONSTRUCTION_FACILITY_CATALOG,
@@ -442,7 +471,8 @@ export function createSpaceExperience(container, options = {}) {
       deploymentUnits: DEPLOYMENT_UNIT_CATALOG,
       deploymentStructures: DEPLOYMENT_STRUCTURE_CATALOG,
       operationMods: OPERATION_MOD_CATALOG,
-      missions
+      missions,
+      surveys: SURVEY_CATALOG
     };
   }
 
@@ -651,11 +681,24 @@ export function createSpaceExperience(container, options = {}) {
       body: 'Upgrade the Survey Lab, study the photon ring, and recover the distress echo hidden in Veyra’s derelict field.',
       steps: [['Reach Survey Lab II', state.ship.districts.survey.level >= 2], ['Archive photon ring', state.surveys.veyra_photon_ring.depleted], ['Resolve Karak vector', state.surveys.veyra_derelict_echo.depleted]]
     };
-    if (current === 'karak' && !state.world.systems.karak.infestation.active) return {
-      title: 'Dead Air',
-      body: 'The colony traffic grid is silent. Triangulate its dark beacons before authorizing any surface operation.',
-      steps: [['Enter Karak', true], ['Triangulate beacons', false], ['Identify the silence', false]]
-    };
+    if (current === 'karak' && !state.world.systems.karak.infestation.active) {
+      const meridian = derivePlanetControl(state).karak_meridian;
+      if (meridian?.controlled) return {
+        title: 'Karak Reclamation',
+        body: 'All Meridian K-4 regions are secure. The planetary infestation has been cleared.',
+        steps: [['Secure Meridian K-4 regions', true], ['Clear the infestation', true]]
+      };
+      if (state.operations.history.some(entry => entry?.result?.missionId === 'uga_hive_heart' && entry.result.outcome === 'victory')) return {
+        title: 'Karak Cleanup',
+        body: 'The Hive Heart was struck, but uncleared colony maps still hold Brood nests. Finish the remaining surface operations.',
+        steps: [['Strike the Hive Heart', true], [`Secure regions ${meridian?.controlledAreas || 0} / ${meridian?.totalAreas || 3}`, false]]
+      };
+      return {
+        title: 'Dead Air',
+        body: 'The colony traffic grid is silent. Triangulate its dark beacons before authorizing any surface operation.',
+        steps: [['Enter Karak', true], ['Triangulate beacons', false], ['Identify the silence', false]]
+      };
+    }
     if (current === 'karak' && !state.world.systems.karak.infestation.hiveTargetsConfirmed) return {
       title: 'Something Beneath',
       body: 'The infestation is confirmed. Raise the Survey Lab to tier III and map viable hive targets for a UGA purge package.',
@@ -675,7 +718,10 @@ export function createSpaceExperience(container, options = {}) {
 
   function refreshHeaderAndStory() {
     const runtime = SHOWCASE_SYSTEMS[state.route.systemId] || SHOWCASE_SYSTEMS.aelos;
-    const catalog = SYSTEM_CATALOG[state.route.systemId] || SYSTEM_CATALOG.sombrero_i;
+    // A broken route falls back to the home anchor. It used to name sombrero_i,
+    // which did not exist in the catalog until the War Table systems arrived —
+    // an invalid route must land on Aelos, not on a capital star.
+    const catalog = SYSTEM_CATALOG[state.route.systemId] || SYSTEM_CATALOG.aelos;
     if (!runtime) return;
     $('crumbCluster').textContent = String(runtime.cluster || '').toUpperCase();
     $('crumbSystem').textContent = String(runtime.name || '').toUpperCase();
@@ -716,6 +762,12 @@ export function createSpaceExperience(container, options = {}) {
     else if (target.interaction === 'logistics') setButtonLabel(interact, 'OPEN LOGISTICS');
     else if (target.jumpTo) setButtonLabel(interact, 'PLOT SYSTEM COURSE');
     else if (target.id && SHOWCASE_SYSTEMS[state.route.systemId].planets.some(planet => planet.id === target.id)) setButtonLabel(interact, 'OPEN ORBITAL SURVEY');
+    else if (target.id && SALVAGE_CATALOG[target.id]) {
+      const boarding = getWreckBoarding(target.id);
+      if (boarding && !state.discoveries.extractedDepositIds.includes(target.id)) setButtonLabel(interact, 'BOARD THE WRECK');
+      else if (boarding) setButtonLabel(interact, 'REVIEW BOARDING AREA');
+      else setButtonLabel(interact, state.discoveries.extractedDepositIds.includes(target.id) ? 'WRECK STRIPPED' : 'SALVAGE THE WRECK');
+    }
     else setButtonLabel(interact, 'INSPECT CONTACT');
   }
 
@@ -767,12 +819,12 @@ export function createSpaceExperience(container, options = {}) {
     }
     frame.dataset.ugaVisualState = 'streaming';
     if (!ugaLoadPromise) {
-      showToast('UGA CONTROLS ONLINE · STREAMING OPTIONAL SHIP VIEW');
+      showToast('INSIDE NEXUS-VII · OPENING SHIP INTERIOR');
       ugaLoadPromise = commandScene.ready().then(() => {
         if (disposed) return false;
         frame.dataset.ugaVisualState = 'ready';
         applyCommandSceneState();
-        showToast('UGA SHIP VIEW READY');
+        showToast('NEXUS-VII INTERIOR READY');
         return true;
       }).catch(error => {
         ugaLoadPromise = null;
@@ -796,9 +848,40 @@ export function createSpaceExperience(container, options = {}) {
     getShipExplorationRating: s => calculateShipExplorationRating(s),
     getAdjacencySynergies: s => calculateAdjacencySynergies(s),
     getConstructionStatus: s => getConstructionStatus(s),
-    getConstructionQuote: (s, districtId, facilityId) => getConstructionQuote(s, districtId, facilityId),
+    // The UI projection replaces discoveries with display rows; quotes must
+    // validate the authoritative domain state, not that presentation shape.
+    getConstructionQuote: (_s, districtId, facilityId) => getConstructionQuote(state, districtId, facilityId),
+    getCoreCommissionRescueQuote: () => getCoreCommissionRescueQuote(state),
+    getProbeResupplyQuote: () => getProbeResupplyQuote(state),
+    getRefuelQuote: () => getRefuelQuote(state),
+    getDutyWatchQuote: () => getDutyWatchQuote(state),
+    getResearchQuote: (researchId, amount) => commitResearch(state, researchId, amount),
     getMissionEligibility: (missionId, request = {}) => getMissionEligibility(state, missionId, request),
+    onRefuel: () => transact(current => refuelShip(current), 'refuel:stores'),
+    onProbeResupply: () => transact(current => resupplyProbes(current), 'probes:stores'),
+    /* The strategic clock finally has a player-facing dial. The breach list
+       rides the toast because the front panel itself re-renders from committed
+       state; the toast is the only channel that survives that re-render. */
+    onDutyWatch: () => {
+      try {
+        const watch = holdDutyWatch(state);
+        if (!watch.advanced) { refreshAll(); return true; }
+        const breach = Array.isArray(watch.breach) && watch.breach.length
+          ? ` · FRONT BREACHED: ${watch.breach.map(id => String(id).toUpperCase()).join(', ')}` : '';
+        commit(watch.state, 'watch:front');
+        showToast(`DUTY WATCH · +2 EXPEDITION CYCLES${breach}`);
+        return true;
+      } catch (error) {
+        showToast(issueText(error), true);
+        return false;
+      }
+    },
     onConstructionStart: (districtId, facilityId) => transact(current => enqueueConstruction(current, districtId, facilityId), `construction:${districtId}:${facilityId || 'commission'}`),
+    onCoreCommissionRescue: () => {
+      const accepted = transact(current => requisitionCoreCommissioning(current), 'construction:core-rescue');
+      if (accepted) showToast('REQUIRED CORE WORK REQUISITIONED · OPEN CONSTRUCTION QUEUE');
+      return accepted;
+    },
     onConstructionCancel: jobId => transact(current => cancelConstruction(current, jobId), `construction-cancel:${jobId}`),
     onConstructionReorder: (jobId, direction) => transact(current => reorderConstruction(current, jobId, direction), `construction-order:${jobId}`),
     onDistrictFocus: id => {
@@ -817,7 +900,8 @@ export function createSpaceExperience(container, options = {}) {
       showToast(person?.injury ? 'Commander is in medical recovery.' : `${COMMANDER_CATALOG[commanderId]?.name || 'Commander'} is ready for assignment.`, Boolean(person?.injury));
     },
     onMissionSelect: missionId => {
-      const eligibility = getMissionEligibility(state, missionId);
+      const mission = MISSION_CATALOG[missionId];
+      const eligibility = mission ? missionPlanningEligibility(mission) : getMissionEligibility(state, missionId);
       showToast(eligibility.eligible ? 'Operation package unlocked.' : eligibility.locks[0]?.message || 'Operation is locked.', !eligibility.eligible);
     },
     onDeploymentPreview: draft => {
@@ -839,9 +923,18 @@ export function createSpaceExperience(container, options = {}) {
           showToast(`${destination} SELECTED · OPENING BASE COMMAND`);
           await waitForInterfacePaint();
           try {
+            /* A secured menu route carries its UGA ORIGIN and nothing else.
+               Sending the current selection as targetId made every one of
+               these tabs fail whenever the player had something selected that
+               the host's location contract does not list: the host rejects an
+               unrecognised target outright (it refuses to let a menu choice
+               become a hidden RTS map choice), so openBaseRoute returned
+               false and rejectMenuRoute dropped the player on startScreen.
+               The Armory does not depend on which world is selected, so the
+               system alone is the origin these routes are allowed to carry. */
             return await host.openBaseRoute(routeId, {
               systemId: state.route.systemId,
-              targetId: selectedTarget?.id || state.route.targetId || null
+              targetId: null
             });
           } finally {
             hostRoutePending = false;
@@ -907,25 +1000,29 @@ export function createSpaceExperience(container, options = {}) {
   }
 
   async function openSystem() {
-    if (!systemLoadStarted || !engine.currentSystem) {
+    const systemId = state.route.systemId;
+    const needsLoad = !systemLoadStarted || engine.currentSystem?.id !== systemId;
+    if (needsLoad) {
       setRenderVeil(
         frame,
         '',
-        `STREAMING ${SHOWCASE_SYSTEMS[state.route.systemId]?.name?.toUpperCase() || 'EXPEDITION SYSTEM'}`,
+        `STREAMING ${SHOWCASE_SYSTEMS[systemId]?.name?.toUpperCase() || 'EXPEDITION SYSTEM'}`,
         'DECODING AUTHORED PLANET PBR MAPS AND ORBITAL SCENE ASSETS'
       );
-      try {
-        await loadSystem(state.route.systemId);
-      } catch (error) {
-        setRenderVeil(
-          frame,
-          'failed',
-          'AUTHORED SYSTEM ASSET FAILED',
-          `THE ORBITAL SCENE COULD NOT LOAD · ${error.message}`.toUpperCase(),
-          true
-        );
-        return false;
-      }
+    }
+    try {
+      // loadSystemBodies publishes currentSystem before its authored PBR assets
+      // resolve. A matching ID alone cannot prove a failed load is usable.
+      const loaded = needsLoad ? await loadSystem(systemId) : await engine.systemReady;
+      if (disposed) return false;
+      if (!loaded || engine.currentSystem?.id !== systemId) throw new Error('Orbital scene did not finish loading.');
+    } catch (error) {
+      if (disposed) return false;
+      console.warn('[MASSFRONT ORBITAL SCENE]', error);
+      destroyGalaxyMap();
+      await openCampaignHub();
+      showToast('ORBITAL SCENE UNAVAILABLE · RETURNED TO UGA COMMAND · RETRY FROM GALAXY', true);
+      return false;
     }
     if (galaxyMap) destroyGalaxyMap();
     selectTarget(arkTarget(), { persist: false });
@@ -1153,10 +1250,11 @@ export function createSpaceExperience(container, options = {}) {
   function showSurveyResult(title, rewards, nextAction) {
     const result = $('surveyResult');
     if (!result) return;
+    const localSignalsRemain = surveyEntries().some(entry => !state.surveys[entry.id]?.depleted);
     surveyResultAction = nextAction || {
       kind: 'UgaScanNextActionV1',
-      action: 'continue-survey',
-      label: 'CONTINUE ORBITAL SURVEY',
+      action: localSignalsRemain ? 'continue-survey' : 'review-frontier',
+      label: localSignalsRemain ? 'CONTINUE ORBITAL SURVEY' : 'REVIEW FRONTIER STATUS',
       systemId: state.route.systemId,
       planetId: activeSurveyPlanet?.id || '',
       primaryAreaId: null,
@@ -1169,7 +1267,8 @@ export function createSpaceExperience(container, options = {}) {
     $('surveyResultTitle').textContent = String(title || 'DISCOVERY CONFIRMED').toUpperCase();
     $('surveyResultReward').textContent = resourceSummary(rewards) || 'INTELLIGENCE ARCHIVED';
     setButtonLabel($('surveyNextAction'), String(surveyResultAction.label || 'CONTINUE').toUpperCase());
-    $('surveyContinueScan').hidden = surveyResultAction.action === 'continue-survey';
+    $('surveyContinueScan').hidden = surveyResultAction.action === 'continue-survey'
+      || surveyResultAction.action === 'prepare-survey-lab';
     $('surveyDiscoveryList').hidden = true;
     $('btnSurveyLaunchProbe').hidden = true;
     result.hidden = false;
@@ -1179,29 +1278,33 @@ export function createSpaceExperience(container, options = {}) {
     const next = surveyResultAction;
     if (!next) return;
     if (next.action === 'inspect-ground-area') {
-      const missionId = (next.missionIds || []).find(id => MISSION_CATALOG[id]);
-      if (!missionId) {
-        showToast('DISCOVERY ARCHIVED · NO GROUND OBJECTIVE AVAILABLE', true);
-        clearSurveyResult();
-        return;
-      }
       clearSurveyResult();
-      await openUga('mission_ops', { loadVisual: false });
-      if (!disposed) ugaUi.openMission(missionId);
+      openGalaxy({ systemId: next.systemId, preferredAreaId: next.primaryAreaId });
+      showToast('CHOOSE A PLANETARY AREA · THEN SELECT A MAP AND LOADOUT');
+      return;
+    }
+    if (next.action === 'prepare-survey-lab') {
+      clearSurveyResult();
+      await openUga('survey');
+      showToast('UPGRADE SURVEY LAB · RETURN TO MERIDIAN FOR THE HIVE SCAN');
       return;
     }
     if (next.action === 'plot-system-course') {
       const targetSystemId = next.targetSystemId;
       clearSurveyResult();
+      openGalaxy({ systemId: targetSystemId });
+      return;
+    }
+    if (next.action === 'review-frontier') {
+      clearSurveyResult();
       openGalaxy();
-      if (SHOWCASE_SYSTEMS[targetSystemId]) {
-        selectedGalaxyId = targetSystemId;
-        selectSystemInGalaxy(targetSystemId);
-      }
+      showToast('ALL SIGNALS ON THIS PLANET ARE ARCHIVED · REVIEW THE FRONTIER');
       return;
     }
     clearSurveyResult();
-    showToast('SCANNER READY · CONTINUE SURFACE SWEEP');
+    showToast(next.targetSurveyId === 'karak_hive_scan'
+      ? 'HIVE SIGNAL READY · SWEEP FOR CONFIRMED TARGETS'
+      : 'SCANNER READY · CONTINUE SURFACE SWEEP');
   }
 
   function selectSurveyPlanet(event) {
@@ -1296,7 +1399,14 @@ export function createSpaceExperience(container, options = {}) {
     $('survSitesVal').textContent = `${complete} / ${entries.length}`;
     $('surveyDiscoveryList').innerHTML = entries.map(entry => {
       const found = state.surveys[entry.id].depleted;
-      const check = found ? 'ARCHIVED' : getSurveyEligibility(state, entry.id, { planetId: planet.id }).ok ? 'READY' : `LAB ${entry.requiredSurveyLevel}`;
+      const eligibility = getSurveyEligibility(state, entry.id, { planetId: planet.id });
+      const blocked = eligibility.issues?.[0]?.code;
+      const check = found ? 'ARCHIVED' : eligibility.ok ? eligibility.emergency ? 'EMERGENCY' : 'READY'
+        : blocked === 'PROBE_SHORTAGE' ? 'NO PROBES'
+          : blocked === 'SURVEY_NOT_COMMISSIONED' ? 'LAB OFFLINE'
+            : blocked === 'SURVEY_CHAIN_REQUIRED' ? 'ROUTE LOCKED'
+              : blocked === 'PLANET_LADDER_REQUIRED' ? 'WORLD LOCKED'
+                : blocked === 'SURVEY_LEVEL_REQUIRED' ? `LAB ${entry.requiredSurveyLevel}` : 'LOCKED';
       return `<div class="discovery-item${found ? ' found' : ''}"><i><svg><use href="#i-${found ? 'check' : 'probe'}"/></svg></i><div><b>${entry.name}</b><small>${found ? DISCOVERY_CATALOG[entry.discoveryId].name : 'Unresolved authored signal'}</small></div><em>${check}</em></div>`;
     }).join('');
     refreshSurveyAim();
@@ -1317,11 +1427,6 @@ export function createSpaceExperience(container, options = {}) {
     const threshold = Math.round(aim ? aim.threshold : 76);
     const sigEl = $('survSigVal');
     if (sigEl) sigEl.textContent = `${signal}%`;
-    if (!probes) {
-      button.disabled = true;
-      setButtonLabel(button, 'NO PROBES REMAINING');
-      return;
-    }
     if (!aim || !aim.hit) {
       button.disabled = true;
       setButtonLabel(button, `SWEEP FOR A PEAK · ${signal}% / ${threshold}%`);
@@ -1334,11 +1439,17 @@ export function createSpaceExperience(container, options = {}) {
         setButtonLabel(button, String(eligibility.issues?.[0]?.message || 'SURVEY BLOCKED').toUpperCase());
         return;
       }
+      button.disabled = false;
+      setButtonLabel(button, `${eligibility.emergency ? 'EMERGENCY SIGNAL SCAN' : 'RESOLVE SIGNAL'} · ${String(aim.name || 'ANOMALY').toUpperCase()}`);
+      return;
+    }
+    if (!probes) {
+      button.disabled = true;
+      setButtonLabel(button, 'NO PROBES · DEPOSITS REQUIRE RESUPPLY');
+      return;
     }
     button.disabled = false;
-    setButtonLabel(button, aim.kind === 'anomaly'
-      ? `RESOLVE SIGNAL · ${String(aim.name || 'ANOMALY').toUpperCase()}`
-      : `EXTRACT DEPOSIT · SIGNAL ${signal}%`);
+    setButtonLabel(button, `EXTRACT DEPOSIT · SIGNAL ${signal}%`);
   }
 
   function flashSurveyReticle() {
@@ -1355,10 +1466,6 @@ export function createSpaceExperience(container, options = {}) {
      a synthetic/programmatic click cannot spend a probe on empty coordinates. */
   function launchProbe() {
     if (!planetarySurvey || !planetarySurvey.active) return;
-    if ((state.resources.probes || 0) < 1) {
-      showToast('NO PROBES REMAINING', true);
-      return;
-    }
     const aim = planetarySurvey.evaluateAim();
     if (!aim.hit) {
       refreshSurveyAim();
@@ -1387,6 +1494,10 @@ export function createSpaceExperience(container, options = {}) {
       return;
     }
 
+    if ((state.resources.probes || 0) < 1) {
+      showToast('DEPOSIT EXTRACTION REQUIRES A PROBE · RESUPPLY IN STORES', true);
+      return;
+    }
     const find = { id: aim.deposit?.id, type: aim.deposit?.type, amount: aim.deposit?.amount };
     try {
       commit(recoverPlanetFind(state, find), `survey:deposit:${aim.deposit?.id || 'unnamed'}`);
@@ -1411,30 +1522,63 @@ export function createSpaceExperience(container, options = {}) {
     return catalogArray(MISSION_CATALOG).filter(mission => mission.systemId === systemId);
   }
 
+  function missionPlanningEligibility(mission) {
+    // Galaxy and contract availability ask whether a loadout CAN be prepared,
+    // not whether the first proxy and first support happen to be launchable.
+    // The deployment draft still goes through exact request validation.
+    const residentIds = Object.entries(state.factions || {})
+      .filter(([id, faction]) => faction?.resident && FACTION_CATALOG[id]?.hireable)
+      .map(([id]) => id)
+      .sort((a, b) => Number(b === state.commissioning?.factionId) - Number(a === state.commissioning?.factionId));
+    const proxyIds = mission.access?.type === 'faction_exclusive'
+      ? [mission.access.factionId]
+      : residentIds.length ? residentIds : [null];
+    const supportIds = mission.supportIds?.length ? mission.supportIds : [null];
+    let closest = null;
+    for (const proxyFactionId of proxyIds) {
+      for (const supportId of supportIds) {
+        const request = { ...(proxyFactionId ? { proxyFactionId } : {}), ...(supportId ? { supportId } : {}) };
+        const eligibility = getMissionEligibility(state, mission.id, request);
+        if (eligibility.eligible) return eligibility;
+        if (!closest || eligibility.locks.length < closest.locks.length) closest = eligibility;
+      }
+    }
+    return closest;
+  }
+
   function frontStatusForSystem(systemId) {
     const discovered = Boolean(state.world.systems[systemId]?.discovered);
-    const missions = missionsInSystem(systemId);
-    const completions = missions.reduce((sum, mission) => sum + (state.missions[mission.id]?.completions || 0), 0);
     const liveFront = state.world.systems[systemId]?.soloFront;
     const pressure = Math.max(0, Math.min(100, Number(liveFront?.pressure) || 0));
     const control = 100 - pressure;
     if (!discovered) return {
       state: 'unknown', shortLabel: 'UNCHARTED', badge: 'INTELLIGENCE VOID', directive: 'ROUTE NOT CONFIRMED', control: 0, pressure
     };
-    const resolved = completions >= missions.length && missions.length > 0;
-    const hiveBroken = (state.missions.uga_hive_heart?.completions || 0) > 0;
-    if (resolved || (systemId === 'karak' && hiveBroken)) return {
+    // A replay can raise a mission's completion count without clearing a new
+    // map. Only the settled ground ledger can prove every planet is held.
+    const planets = Object.values(derivePlanetControl(state)).filter(planet => planet.systemId === systemId);
+    // This function is extracted and evaluated standalone by the
+    // front-status regression test, so it must only touch imports and its
+    // arguments — never sibling closures like missionsInSystem().
+    const regionsOpen = !Object.values(MISSION_CATALOG).some(mission => mission.systemId === systemId
+      && mission.groundAreaId && !isGroundAreaUnlocked(state, mission.groundAreaId));
+    const resolved = planets.length > 0 && planets.every(planet => planet.controlled) && regionsOpen;
+    if (resolved) return {
       state: 'protected', shortLabel: systemId === 'karak' ? 'LIBERATED' : 'SECURED',
       badge: systemId === 'karak' ? 'LIBERATED' : 'SECURED',
       directive: systemId === 'veyra' ? 'ALLIED RESEARCH CORRIDOR' : systemId === 'karak' ? 'UGA CONTAINMENT HOLDING' : 'ALLIED ANCHORAGE',
       control, pressure
     };
     const frontState = control >= 70 ? 'protected' : control >= 40 ? 'contested' : 'enemy';
-    const directive = systemId === 'aelos'
+    const directive = systemId === 'aelos' || systemId === 'sombrero_i'
       ? frontState === 'protected' ? 'ALLIED ANCHORAGE' : 'ANCHORAGE DEFENSE REQUIRED'
       : systemId === 'veyra'
         ? 'FRONTIER DEFENSE ACTIVE'
-        : frontState === 'enemy' ? 'BROOD OCCUPATION' : 'CONTAINMENT OFFENSIVE';
+        : systemId === 'andromeda_iv'
+          ? 'DOMINION FOUNDRY WATCH'
+          : systemId === 'orion_arc'
+            ? 'GRID WATCH ACTIVE'
+            : frontState === 'enemy' ? 'BROOD OCCUPATION' : 'CONTAINMENT OFFENSIVE';
     const label = frontState === 'protected' ? 'PROTECTED' : frontState === 'contested' ? 'UNDER ATTACK' : 'ENEMY CONTROL';
     return {
       state: frontState, shortLabel: label, badge: label === 'UNDER ATTACK' ? 'CONTESTED' : label, directive, control, pressure
@@ -1454,7 +1598,15 @@ export function createSpaceExperience(container, options = {}) {
   }
 
   function unresolvedSurveysInSystem(systemId) {
+    // Ladder tiers 1-2 — surveys that are chain- or planet-gated still count as
+    // unresolved so the front card keeps pointing at the live rung.
     return catalogArray(SURVEY_CATALOG).filter(entry => entry.systemId === systemId && !state.surveys[entry.id]?.depleted);
+  }
+
+  function missionRegionLocked(mission) {
+    // Tier 3 — a region-gated contract reads as still-open work on the front
+    // card; the galaxy operation board shows the chain reason from locks[0].
+    return Boolean(mission?.groundAreaId) && !isGroundAreaUnlocked(state, mission.groundAreaId);
   }
 
   function refreshGalaxyFrontLabels() {
@@ -1467,36 +1619,43 @@ export function createSpaceExperience(container, options = {}) {
 
   function refreshGalaxyOperations(systemId, current) {
     const missions = missionsInSystem(systemId);
+    const eligibilityById = new Map(missions.map(mission => [mission.id, missionPlanningEligibility(mission)]));
+    const eligibleMissionIds = missions.filter(mission => eligibilityById.get(mission.id)?.eligible).map(mission => mission.id);
     const missionStillVisible = missions.some(mission => mission.id === selectedGalaxyMissionId);
     if (!missionStillVisible) {
-      selectedGalaxyMissionId = missions.find(mission => getMissionEligibility(state, mission.id).eligible)?.id || missions[0]?.id || null;
+      const controlledAreaIds = Object.values(deriveGroundControl(state).areas)
+        .filter(area => area.controlled).map(area => area.areaId);
+      selectedGalaxyMissionId = chooseGalaxyOperationId(missions, eligibleMissionIds, controlledAreaIds, selectedGalaxyPreferredAreaId);
     }
+    selectedGalaxyPreferredAreaId = null;
     const board = $('galaxyOperations');
-    const readyCount = missions.filter(mission => getMissionEligibility(state, mission.id).eligible).length;
+    const readyCount = eligibleMissionIds.length;
     $('galaxyOperationAvailability').textContent = `${readyCount} READY · ${missions.length} KNOWN`;
     board.innerHTML = missions.map(mission => {
-      const eligibility = getMissionEligibility(state, mission.id);
+      const eligibility = eligibilityById.get(mission.id);
       const site = SITE_CATALOG[mission.siteId];
+      const area = getUgaGroundAreaOptions(mission.id);
       const selected = mission.id === selectedGalaxyMissionId;
       const outcome = state.missions[mission.id]?.completions ? `${state.missions[mission.id].completions} COMPLETED` : eligibility.eligible ? 'READY FOR LOADOUT' : eligibility.locks[0]?.message || 'LOCKED';
-      return `<button type="button" class="galaxy-operation-card${selected ? ' is-selected' : ''}${eligibility.eligible ? ' is-ready' : ' is-locked'}" data-galaxy-mission="${encodeUiText(mission.id)}" aria-pressed="${selected}">
-        <span><em>THREAT ${Number(mission.difficulty) || 1}</em><b>${operationVerb(mission)}</b></span><strong>${encodeUiText(mission.title)}</strong><small>${encodeUiText(site?.name || mission.siteId)} // ${encodeUiText(String(mission.objective?.type || 'operation').replaceAll('_', ' '))}</small><i>${encodeUiText(outcome)}</i>
+      return `<button type="button" class="galaxy-operation-card${selected ? ' is-selected' : ''}${eligibility.eligible ? ' is-ready' : ' is-locked'}" data-galaxy-mission="${encodeUiText(mission.id)}" data-planet-id="${encodeUiText(area?.planetId || '')}" data-area-id="${encodeUiText(area?.areaId || '')}" aria-label="${encodeUiText(`${area?.planetName || 'Planet'}, ${area?.areaName || site?.name || 'area'}: ${mission.title}. ${outcome}`)}" aria-pressed="${selected}">
+        <span><em>THREAT ${Number(mission.difficulty) || 1}</em><b>${operationVerb(mission)}</b></span><strong>${encodeUiText(mission.title)}</strong><small>${encodeUiText(String(mission.objective?.type || 'operation').replaceAll('_', ' '))}</small><i>${encodeUiText(`${area?.planetName || 'Planet'} · ${area?.areaName || site?.name || mission.siteId}`)}<br>${encodeUiText(outcome)}</i>
       </button>`;
     }).join('');
 
     const mission = MISSION_CATALOG[selectedGalaxyMissionId];
-    const eligibility = mission ? getMissionEligibility(state, mission.id) : null;
+    const eligibility = mission ? eligibilityById.get(mission.id) : null;
     const site = mission ? SITE_CATALOG[mission.siteId] : null;
+    const area = mission ? getUgaGroundAreaOptions(mission.id) : null;
     const brief = $('galaxyMissionBrief');
     brief.textContent = mission
       ? eligibility.eligible
-        ? `${mission.title} is ready at ${site?.name || mission.siteId}. Choose a landing zone, commander, starting force, structures, and orbital support before deployment.`
-        : `${mission.title} is pending: ${eligibility.locks[0]?.message || 'complete reconnaissance and command preparation.'}`
+        ? `${area?.planetName || 'Planet'} · ${area?.areaName || site?.name || mission.siteId}: ${mission.title} is ready. Choose its map and loadout before deployment.`
+        : `${area?.planetName || 'Planet'} · ${area?.areaName || site?.name || mission.siteId}: ${mission.title} is pending: ${eligibility.locks[0]?.message || 'complete reconnaissance and command preparation.'}`
       : 'No authored ground operations are registered in this system.';
 
     const loadout = $('galaxyLoadoutBtn');
     loadout.disabled = !current || !mission || eligibility?.eligible !== true;
-    setButtonLabel(loadout, !current ? 'ENTER SYSTEM TO PREPARE' : eligibility?.eligible ? 'OPEN DROP LOADOUT' : 'OPERATION LOCKED');
+    setButtonLabel(loadout, !current ? 'ENTER SYSTEM TO PREPARE' : eligibility?.eligible ? 'CHOOSE MAP & LOADOUT' : 'OPERATION LOCKED');
   }
 
   function refreshGalaxyWarfront(systemId, current) {
@@ -1554,7 +1713,7 @@ export function createSpaceExperience(container, options = {}) {
       showToast('ENTER THE OPERATION SYSTEM BEFORE PREPARING A DROP', true);
       return;
     }
-    const eligibility = getMissionEligibility(state, mission.id);
+    const eligibility = missionPlanningEligibility(mission);
     if (!eligibility.eligible) {
       showToast(eligibility.locks[0]?.message || 'OPERATION LOCKED', true);
       return;
@@ -1614,10 +1773,12 @@ export function createSpaceExperience(container, options = {}) {
     $('galaxyLabelsLayer').innerHTML = '';
   }
 
-  function openGalaxy({ persist = true } = {}) {
+  function openGalaxy({ persist = true, systemId = null, preferredAreaId = null } = {}) {
     setScene('galaxy', { persist });
     createGalaxyMap();
-    selectedGalaxyId = state.route.systemId;
+    selectedGalaxyId = SHOWCASE_SYSTEMS[systemId] ? systemId : state.route.systemId;
+    selectedGalaxyMissionId = null;
+    selectedGalaxyPreferredAreaId = preferredAreaId;
     selectSystemInGalaxy(selectedGalaxyId);
   }
 
@@ -1670,10 +1831,10 @@ export function createSpaceExperience(container, options = {}) {
       return;
     }
     try {
-      const next = plotCourse(state, systemId);
-      commit(next, `course:${systemId}`);
+      const originSystemId = state.route.systemId;
+      plotCourse(state, systemId); // Validate fuel and route without saving either yet.
       if (galaxyMap) galaxyMap.flyToSystem(systemId);
-      showToast(`AUTOPILOT COMMITTED · ${SHOWCASE_SYSTEMS[systemId].name.toUpperCase()}`);
+      showToast(`AUTOPILOT ALIGNING · ${SHOWCASE_SYSTEMS[systemId].name.toUpperCase()}`);
       setRenderVeil(
         frame,
         '',
@@ -1683,19 +1844,27 @@ export function createSpaceExperience(container, options = {}) {
       transitTimer = setTimeout(async () => {
         transitTimer = -1;
         try {
-          await loadSystem(systemId);
+          const loaded = await loadSystem(systemId, { refresh: false });
+          if (disposed) return;
+          if (!loaded || engine.currentSystem?.id !== systemId || contextRecovering || engine.contextLost) {
+            throw new Error('Destination visuals did not finish loading.');
+          }
+          if (state.route.systemId !== originSystemId) throw new Error('Departure route changed during asset loading.');
+          // Revalidate against current state in case resources changed during
+          // streaming. The course, fuel and recovery cycles settle atomically.
+          commit(plotCourse(state, systemId), `course:${systemId}`);
           destroyGalaxyMap();
           setScene('system', { persist: false });
           if (!contextRecovering) setRenderVeil(frame, 'ready');
+          showToast(`TRANSIT COMPLETE · ${SHOWCASE_SYSTEMS[systemId].name.toUpperCase()}`);
         } catch (error) {
-          pause();
-          setRenderVeil(
-            frame,
-            'failed',
-            'AUTHORED SYSTEM ASSET FAILED',
-            `THE ${SHOWCASE_SYSTEMS[systemId].name.toUpperCase()} PBR PACKAGE COULD NOT LOAD · ${error.message}`.toUpperCase(),
-            true
-          );
+          if (disposed) return;
+          console.warn('[MASSFRONT TRANSIT]', error);
+          destroyGalaxyMap();
+          await openCampaignHub();
+          showToast(state.route.systemId === originSystemId
+            ? `TRANSIT ABORTED · ${SHOWCASE_SYSTEMS[systemId].name.toUpperCase()} UNAVAILABLE · NO TRANSIT FUEL SPENT`
+            : 'TRANSIT SETTLED · RETURNED TO UGA COMMAND', true);
         } finally {
           transitTimer = 0;
         }
@@ -1705,14 +1874,17 @@ export function createSpaceExperience(container, options = {}) {
     }
   }
 
-  function loadSystem(systemId) {
+  function loadSystem(systemId, { refresh = true } = {}) {
     systemLoadStarted = true;
     physics.stop();
+    if (typeof engine.resetLoadProgress === 'function') engine.resetLoadProgress(0);
     Object.assign(physics.ship, { x: 0, y: 0, z: 120, yaw: 0.3, pitch: 0, roll: 0 });
     const systemReady = engine.loadSystemBodies(SHOWCASE_SYSTEMS[systemId]);
     if (galaxyMap) galaxyMap.setCurrentSystem(systemId);
     selectTarget(arkTarget(), { persist: false });
-    refreshAll();
+    // Staged transit must not re-save the origin snapshot while destination
+    // assets stream; the eventual course commit notifies and refreshes once.
+    if (refresh) refreshAll();
     return systemReady;
   }
 
@@ -1862,6 +2034,15 @@ export function createSpaceExperience(container, options = {}) {
     if (result?.outcome) modal.dataset.outcome = result.outcome;
     else delete modal.dataset.outcome;
     modal.dataset.exactlyOnce = mode === 'debrief' ? 'true' : 'false';
+    const retry = $('btnRetryGroundOperation');
+    if (retry) {
+      /* A settled UGA report is immutable. Retry opens a new planner after
+         debrief, where eligibility and cost are checked for a fresh ticket. */
+      retry.hidden = !(mode === 'debrief' && result?.outcome === 'setback');
+      retry.disabled = retry.hidden;
+      if (retry.hidden) delete retry.dataset.missionId;
+      else retry.dataset.missionId = result.missionId;
+    }
   }
 
   function showOperation(operation, prepared = null, optionsArg = {}) {
@@ -1990,13 +2171,14 @@ export function createSpaceExperience(container, options = {}) {
       ['Front pressure', world.soloFrontPressure ? `${world.soloFrontPressure > 0 ? '+' : ''}${world.soloFrontPressure}` : 'NO CHANGE'],
       ['Infestation severity', world.infestationSeverity ? `${world.infestationSeverity > 0 ? '+' : ''}${world.infestationSeverity}` : 'NO CHANGE'],
       ['Hive targets purged', `${(world.hiveTargetsPurged || []).length}`],
-      ['Infestation cleared', world.infestationCleared ? 'YES' : 'NO']
+      ['Infestation cleared', operation?.missionType === 'uga_brood_purge'
+        ? (state.world.systems.karak.infestation.active ? 'NO' : 'YES') : 'N/A']
     ]);
     payload.appendChild(grid);
     $('btnSimVictory').hidden = true;
     $('btnSimSetback').hidden = true;
     $('btnCancelOperation').disabled = false;
-    setButtonLabel($('btnCancelOperation'), 'RETURN TO SHIP · UPGRADES & EQUIPMENT');
+    setButtonLabel($('btnCancelOperation'), 'RETURN TO SHIP · REVIEW EXPEDITION STORES');
   }
 
   function launchClassicSimulation(modeId, setup = {}) {
@@ -2074,6 +2256,23 @@ export function createSpaceExperience(container, options = {}) {
   async function openMissionOperations() {
     await openUga();
     ugaUi.openView('contracts');
+  }
+
+  async function retryDebriefMission() {
+    const retry = $('btnRetryGroundOperation');
+    const missionId = retry?.dataset.missionId;
+    if (operationKind !== 'debrief' || retry?.hidden || retry?.disabled || !MISSION_CATALOG[missionId]) return false;
+    retry.disabled = true;
+    try {
+      await openUga('command');
+      closeOperationModal();
+      ugaUi.openMission(missionId);
+      return true;
+    } catch (error) {
+      retry.disabled = false;
+      showToast(issueText(error), true);
+      return false;
+    }
   }
 
   async function abandonIntegratedOperation() {
@@ -2210,6 +2409,36 @@ export function createSpaceExperience(container, options = {}) {
       else if (selectedTarget.interaction === 'logistics') openUga('logistics');
       else if (selectedTarget.jumpTo) beginTransit(selectedTarget.jumpTo);
       else if ((SHOWCASE_SYSTEMS[state.route.systemId] || SHOWCASE_SYSTEMS.aelos).planets?.some(planet => planet.id === selectedTarget.id)) openSurvey();
+      else if (getContactSalvage(selectedTarget.id)) {
+        const salvageId = selectedTarget.id;
+        const boarding = getWreckBoarding(salvageId);
+        if (boarding && !state.discoveries.extractedDepositIds.includes(salvageId)) {
+          /* Interior X-S is a reserved theatre: the boarding area is authored
+             and the wreck interior can be reviewed, but the small-unit battle
+             runtime does not exist yet. The hull still pays its one-time
+             salvage, so the approach is never a dead end. */
+          showToast(`BOARDING AREA AUTHORED · ${boarding.name.toUpperCase()} · ${boarding.templateId.replaceAll('_', ' ').toUpperCase()} · INTERIOR BATTLE RUNTIME PENDING`);
+          const result = recoverContactSalvage(state, salvageId);
+          commit(result.state, `salvage:${salvageId}`);
+          showToast(`SALVAGE RECOVERED: ${result.salvage.name.toUpperCase()} · ${resourceSummary(result.rewards)}`);
+          refreshAll();
+          return;
+        }
+        if (state.discoveries.extractedDepositIds.includes(salvageId)) {
+          showToast(boarding
+            ? `BOARDING AREA: ${boarding.name.toUpperCase()} · ${boarding.sizeClass} ${boarding.envelope.replaceAll('_', ' ').toUpperCase()} · AWAITING INTERIOR BATTLE RUNTIME`
+            : 'THIS WRECK HAS ALREADY BEEN STRIPPED');
+          return;
+        }
+        try {
+          const result = recoverContactSalvage(state, salvageId);
+          commit(result.state, `salvage:${salvageId}`);
+          showToast(`SALVAGE RECOVERED: ${result.salvage.name.toUpperCase()} · ${resourceSummary(result.rewards)}`);
+          refreshAll();
+        } catch (error) {
+          showToast(issueText(error), true);
+        }
+      }
       else showToast('CONTACT INTELLIGENCE ARCHIVED');
     });
     listen($('btnToggleFullscreen'), 'click', () => {
@@ -2228,6 +2457,7 @@ export function createSpaceExperience(container, options = {}) {
     });
     listen($('btnSimVictory'), 'click', () => resolvePending('victory'));
     listen($('btnSimSetback'), 'click', () => resolvePending('setback'));
+    listen($('btnRetryGroundOperation'), 'click', () => retryDebriefMission());
     listen($('btnCancelOperation'), 'click', () => handleOperationModalAction());
 
     const canvas = engine.renderer.domElement;
@@ -2264,8 +2494,17 @@ export function createSpaceExperience(container, options = {}) {
       const dy = event.clientY - pointer.lastY;
       if (Math.hypot(event.clientX - pointer.x, event.clientY - pointer.y) > 5) pointer.moved = true;
       if (pointer.moved) {
-        camState.yaw += dx / 210;
-        camState.pitch = Math.max(-0.5, Math.min(1, camState.pitch + dy / 210));
+        /* Top-down RTS convention: dragging moves the map under the finger
+           (pan), it does not orbit the camera. Spinning a north-up chart
+           scrambles the mental compass that is the whole point of the view.
+           Drag down = look further down-chart, like every mobile RTS map.
+           Speed tracks the camera's altitude over the chart — the zoom rig
+           sits at 90 + dist*170 world units, and a 40° FOV puts roughly
+           (0.16 + dist*0.18) world units under one CSS pixel — so the map
+           moves 1:1 with the finger at every zoom level. */
+        const panScale = 0.16 + camState.dist * 0.18;
+        camState.panX -= (dx * Math.cos(camState.yaw) - dy * Math.sin(camState.yaw)) * panScale;
+        camState.panZ += (dx * Math.sin(camState.yaw) + dy * Math.cos(camState.yaw)) * panScale;
       }
       pointer.lastX = event.clientX;
       pointer.lastY = event.clientY;
@@ -2314,6 +2553,16 @@ export function createSpaceExperience(container, options = {}) {
   function bindAutopilotDock() {
     listen(window, 'keydown', event => {
       if (event.key === 'Escape' && sceneMode === 'system') physics.stop();
+      /* Chart panning without touching the canvas: arrows/WASD slide the
+         look-at target while the compass stays north-up. */
+      const panStep = {
+        ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1],
+        KeyA: [-1, 0], KeyD: [1, 0], KeyW: [0, -1], KeyS: [0, 1]
+      }[event.code];
+      if (panStep && sceneMode === 'system') {
+        camState.panX += panStep[0] * 26;
+        camState.panZ += panStep[1] * 26;
+      }
     });
     pollKeyboard = () => physics.setJoystick(false, 0, 0);
   }

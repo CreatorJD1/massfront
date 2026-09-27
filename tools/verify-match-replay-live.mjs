@@ -59,7 +59,8 @@ const evidence={run,base,production:!loopback,startedAt:new Date().toISOString()
   expectedInputWindow,negotiatedWindows:[],checks,requests,wire,
   scope:'Real Worker/auth/D1/WebSocket transport, current client submission and actual command consumer. Fixture banks/buildings, deterministic spawn/terrain/flowfield sinks; actual production branch at 30 Hz in scenario all. No renderer/full world, device or terrain navigation acceptance.',
   limitations:['Worker attaches authenticated seats but has no simulation ownership state. A valid-shape foreign-building command is rejected by each consumer, not by the Worker, and can stop client advancement. This verifier does not fix that availability limitation.']};
-const frame=(type,extra={})=>({protocol:'massfront-match',v:1,type,...extra});
+const frame=(type,extra={})=>({protocol:'massfront-match',v:2,type,...extra});
+const startReadyFrame=setupHash=>frame('startReady',{tick:0,setupHash});
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const check=(name,condition,details={})=>{checks.push({name,pass:!!condition,...details});assert(condition,name);console.log('PASS '+name);};
 async function call(method,path,{account,body}={}){
@@ -86,6 +87,27 @@ async function provision(label){
   const identity=await call('GET','/me',{account});
   assert(identity.user.email===account.email&&identity.user.username===account.username,'QA identity mismatch');
   return account;
+}
+async function launchQaMatch(A,B){
+  const made=await call('POST','/multiplayer/lobbies',{account:A,body:{rules:{mode:'skirmish',slots:2,map:'auto'}}}),lobby=made.lobby,
+    joined=await call('POST','/multiplayer/lobbies/join',{account:B,body:{code:lobby.code}}),
+    readyA=await call('POST',`/multiplayer/lobbies/${lobby.id}/ready`,{account:A,body:{revision:joined.lobby.revision,ready:true}}),
+    readyB=await call('POST',`/multiplayer/lobbies/${lobby.id}/ready`,{account:B,body:{revision:readyA.lobby.revision,ready:true}}),
+    revision=readyB.lobby.revision,compatibility={revision,buildVersion:runtimeTuple.buildVersion,
+      manifestHash:runtimeTuple.manifestHash,balanceHash:runtimeTuple.balanceHash,rulesHash:hash(JSON.stringify(lobby.rules))};
+  await call('POST',`/multiplayer/lobbies/${lobby.id}/compatibility`,{account:A,body:compatibility});
+  await call('POST',`/multiplayer/lobbies/${lobby.id}/compatibility`,{account:B,body:compatibility});
+  const launched=await call('POST',`/multiplayer/lobbies/${lobby.id}/launch`,{account:A,body:{revision}}),match=launched.match,
+    ta=await call('POST',`/multiplayer/matches/${match.id}/token`,{account:A}),
+    tb=await call('POST',`/multiplayer/matches/${match.id}/token`,{account:B});
+  return {match,ta,tb,url:`${wsBase}/multiplayer/matches/${match.id}/socket`};
+}
+function assertPrepare(value,match){
+  const setup={schema:1,mode:'skirmish',slots:2,map:'aelos_north_medium',seed:`network:${match.id}:${match.rulesHash}`,
+    preset:'compact',difficulty:1,playerFaction:'nova',commander:'nova_kai',enemyFaction:'horde',goal:'annihilate',
+    timeLimit:600,resPace:1,crateRate:1,infestationOn:false,defenseFocus:0,deploymentPackage:'prepared',wildcards:0};
+  assert.equal(value.tick,0);assert.deepEqual(value.seats,[1,2]);assert.deepEqual(value.setup,setup);
+  assert.equal(value.setupHash,hash(JSON.stringify(setup)));
 }
 function consumerFixture(seat){
   const banks=new Map([['0:-1',{m:10000,e:20000}],['1:0',{m:10000,e:20000}]]),
@@ -153,7 +175,7 @@ class Peer{
     this.label=label;this.fixture=fixture;this.messages=[];this.waiters=[];this.lastReceived=fixture.api.lastAppliedTick();
     this.rawTicks=new Map();this.withheld=[];this.holdFrom=Infinity;this.failed=null;this.chain=Promise.resolve();this.seq=0;
     this.commandTimers=new Set();this.inputWindow=null;this.sentCommands=new Map();this.rejectedTick=null;
-    this.lastTickArrival=null;this.pacedTicks=0;
+    this.lastTickArrival=null;this.pacedTicks=0;this.hashEnabled=false;
     this.ws=new WebSocket(url,protocols);sockets.push(this);
     this.opened=new Promise((resolve,reject)=>{
       const timer=setTimeout(()=>reject(new Error(label+' socket open timeout')),6000);
@@ -200,6 +222,8 @@ class Peer{
       }else if(value.tick>=this.holdFrom)this.withheld.push(value.tick);
       else{
         await F.commit({tick:value.tick,commands:value.commands});
+        if(this.hashEnabled&&value.tick%30===0&&F.api.lastAppliedTick()===value.tick)
+          this.send(frame('stateHash',{tick:value.tick,hash:F.digests.get(value.tick)}));
       }
       // Synthetic input must not fire inside the first old frame of a server
       // catch-up burst. Wait for two paced live arrivals; keep the real client's
@@ -218,7 +242,8 @@ class Peer{
       }
     }
     if(value.type==='ack'||value.type==='reject')F.C.pending.delete(value.seq);
-    if(value.type==='resumeReadyAck')F.status.state=F.C.state='running';
+    if(value.type==='start')this.hashEnabled=true;
+    if(value.type==='resumeReadyAck'){F.status.state=F.C.state='running';this.hashEnabled=true;}
     for(let i=0;i<this.waiters.length;i++)if(this.waiters[i].match(value)){
       const waiter=this.waiters.splice(i,1)[0];clearTimeout(waiter.timer);waiter.resolve(value);return;
     }
@@ -386,7 +411,7 @@ async function factoryScenario(left,right,{url,seatA,seatB}){
   check('Accepted repeat/cancel/rally work remains unapplied and pending across transport loss',
     cursor<dropped[0][0].targetTick&&FA.api.repeatIntent(4).pending&&FA.C.blds[8].queue.length===1&&FA.C.refunded.length===0,
     {cursor,head,withheld:left.withheld});
-  const again=new Peer(url,['massfront.v1',`mf-resume.${seatA}.${left.welcome.resumeToken}.${cursor}`],FA,'A-factory-resumed');
+  const again=new Peer(url,['massfront.v2',`mf-resume.${seatA}.${left.welcome.resumeToken}.${cursor}`],FA,'A-factory-resumed');
   await again.opened;const welcome=await again.wait('welcome'),replayEnd=await again.wait('replayEnd');
   check('Factory reconnect preserves the highest accepted sequence and complete replay range',
     welcome.lastSeq===dropped[0].at(-1).seq&&welcome.resumeFromTick===cursor&&welcome.replayThroughTick===head&&replayEnd.tick===head);
@@ -440,6 +465,9 @@ async function factoryScenario(left,right,{url,seatA,seatB}){
 }
 
 async function selfTestHarness(){
+  assert.equal(frame('bootstrapReady',{tick:0,setupHash:'a'.repeat(64),hash:'b'.repeat(64)}).v,2);
+  assert.deepEqual(startReadyFrame('a'.repeat(64)),{protocol:'massfront-match',v:2,type:'startReady',
+    tick:0,setupHash:'a'.repeat(64)},'Start readiness must use the strict v2 five-field frame');
   assert.equal(pacedLiveTicks(null,1000,1000,0),0);
   assert.equal(pacedLiveTicks(1000,2000,2000,5),0,'A stalled stream resets input pacing');
   assert.equal(pacedLiveTicks(2000,2001,2001,0),0,'Catch-up frames cannot trigger input');
@@ -486,22 +514,36 @@ try{
   const A=await provision('a'),B=await provision('b'),caps=await call('GET','/social/capabilities',{account:A});
   evidence.capabilities=caps.capabilities;
   check('real service advertises realtime and match launch',caps.capabilities?.realtimeMatch===true&&caps.capabilities?.matchLaunch===true);
-  const made=await call('POST','/multiplayer/lobbies',{account:A,body:{rules:{mode:'skirmish',slots:2,map:'auto'}}}),lobby=made.lobby,
-    joined=await call('POST','/multiplayer/lobbies/join',{account:B,body:{code:lobby.code}}),
-    readyA=await call('POST',`/multiplayer/lobbies/${lobby.id}/ready`,{account:A,body:{revision:joined.lobby.revision,ready:true}}),
-    readyB=await call('POST',`/multiplayer/lobbies/${lobby.id}/ready`,{account:B,body:{revision:readyA.lobby.revision,ready:true}}),
-    revision=readyB.lobby.revision,compatibility={revision,buildVersion:runtimeTuple.buildVersion,
-      manifestHash:runtimeTuple.manifestHash,balanceHash:runtimeTuple.balanceHash,rulesHash:hash(JSON.stringify(lobby.rules))};
-  await call('POST',`/multiplayer/lobbies/${lobby.id}/compatibility`,{account:A,body:compatibility});
-  await call('POST',`/multiplayer/lobbies/${lobby.id}/compatibility`,{account:B,body:compatibility});
-  const launched=await call('POST',`/multiplayer/lobbies/${lobby.id}/launch`,{account:A,body:{revision}}),match=launched.match,
-    ta=await call('POST',`/multiplayer/matches/${match.id}/token`,{account:A}),
-    tb=await call('POST',`/multiplayer/matches/${match.id}/token`,{account:B}),url=`${wsBase}/multiplayer/matches/${match.id}/socket`,
+  const {match,ta,tb,url}=await launchQaMatch(A,B),
     FA=consumerFixture(ta.credential.seat),FB=consumerFixture(tb.credential.seat);
-  a=new Peer(url,['massfront.v1',`mf-seat.${ta.credential.seat}.${ta.credential.token}`],FA,'A');await a.opened;
+  a=new Peer(url,['massfront.v2',`mf-seat.${ta.credential.seat}.${ta.credential.token}`],FA,'A');await a.opened;
   const welcomeA=await a.wait('welcome');
-  b=new Peer(url,['massfront.v1',`mf-seat.${tb.credential.seat}.${tb.credential.token}`],FB,'B');await b.opened;
-  await b.wait('welcome');await a.wait('start');await b.wait('start');await a.wait('tick');
+  b=new Peer(url,['massfront.v2',`mf-seat.${tb.credential.seat}.${tb.credential.token}`],FB,'B');await b.opened;
+  await b.wait('welcome');
+  const [prepareA,prepareB]=await Promise.all([a.wait('prepare'),b.wait('prepare')]);
+  assertPrepare(prepareA,match);assertPrepare(prepareB,match);
+  check('both seats received identical canonical tick-zero setup and independently verified setupHash',
+    JSON.stringify(prepareA)===JSON.stringify(prepareB));
+  const bootstrapHash='a'.repeat(64);
+  a.send(frame('bootstrapReady',{tick:0,setupHash:prepareA.setupHash,hash:bootstrapHash}));
+  await wait(150);
+  check('Worker emits no tick or start while only one seat has bootstrap-ready state',
+    a.lastReceived===0&&b.lastReceived===0&&!wire.some(row=>row.direction==='in'&&['tick','start'].includes(row.type)));
+  b.send(frame('bootstrapReady',{tick:0,setupHash:prepareB.setupHash,hash:bootstrapHash}));
+  await a.wait('start');await b.wait('start');
+  await wait(150);
+  check('Worker emits no tick after start until both seats acknowledge start readiness',
+    a.lastReceived===0&&b.lastReceived===0&&!wire.some(row=>row.direction==='in'&&row.type==='tick'));
+  a.send(startReadyFrame(prepareA.setupHash));
+  await wait(150);
+  check('Worker emits no tick while only one seat has acknowledged start readiness',
+    a.lastReceived===0&&b.lastReceived===0&&!wire.some(row=>row.direction==='in'&&row.type==='tick'));
+  b.send(startReadyFrame(prepareB.setupHash));
+  await a.wait('tick');
+  const [agreementA,agreementB]=await Promise.all([a.wait('hashAgreement',v=>v.tick===30,5000),
+    b.wait('hashAgreement',v=>v.tick===30,5000)]);
+  check('first live 30 Hz checkpoint agrees after both real consumers apply tick 30',
+    agreementA.hash===agreementB.hash&&agreementA.hash===FA.digests.get(30)&&agreementB.hash===FB.digests.get(30));
   check('actual packaged compatibility was accepted',welcomeA.compatibility.manifestHash===runtimeTuple.manifestHash);
   // Each fixture submits immediately on its own fresh received tick. Waiting
   // for A alone can leave B at tick zero and manufacture a stale-target reject.
@@ -530,7 +572,7 @@ try{
     FA.C.paid.filter(charge=>charge.team===0&&charge.slot===-1).length===0);
   const beforeWait=b.lastReceived;await wait(150);
   check('room emits no authority while a seat is absent',b.lastReceived===beforeWait);
-  resumed=new Peer(url,['massfront.v1',`mf-resume.${ta.credential.seat}.${welcomeA.resumeToken}.${cursor}`],FA,'A-resumed');
+  resumed=new Peer(url,['massfront.v2',`mf-resume.${ta.credential.seat}.${welcomeA.resumeToken}.${cursor}`],FA,'A-resumed');
   await resumed.opened;const welcome=await resumed.wait('welcome'),replayEnd=await resumed.wait('replayEnd');
   check('resume reports accepted sequence and exact replay interval',welcome.lastSeq===orderA.seq&&welcome.resumeFromTick===cursor&&
     welcome.replayThroughTick===head&&replayEnd.tick===head);
@@ -550,6 +592,20 @@ try{
   resumed.close();FA.status.state='reconnecting';await b.wait('disconnected',value=>value.seat===ta.credential.seat);
   const forfeit=await b.wait('forfeit',value=>value.seat===ta.credential.seat,13000),end=await b.wait('matchEnd',()=>true,3000);
   check('unresumed QA seat expires and room terminates',forfeit.reason==='reconnect_timeout'&&end.reason==='forfeit'&&end.winnerSeat===tb.credential.seat);
+  const mismatch=await launchQaMatch(A,B),MA=consumerFixture(mismatch.ta.credential.seat),MB=consumerFixture(mismatch.tb.credential.seat);
+  const na=new Peer(mismatch.url,['massfront.v2',`mf-seat.${mismatch.ta.credential.seat}.${mismatch.ta.credential.token}`],MA,'A-mismatch');
+  await na.opened;await na.wait('welcome');
+  const nb=new Peer(mismatch.url,['massfront.v2',`mf-seat.${mismatch.tb.credential.seat}.${mismatch.tb.credential.token}`],MB,'B-mismatch');
+  await nb.opened;await nb.wait('welcome');
+  const [pa,pb]=await Promise.all([na.wait('prepare'),nb.wait('prepare')]);
+  assertPrepare(pa,mismatch.match);assertPrepare(pb,mismatch.match);
+  na.send(frame('bootstrapReady',{tick:0,setupHash:pa.setupHash,hash:'a'.repeat(64)}));
+  nb.send(frame('bootstrapReady',{tick:0,setupHash:pb.setupHash,hash:'b'.repeat(64)}));
+  const [endA,endB]=await Promise.all([na.wait('matchEnd'),nb.wait('matchEnd')]);
+  await wait(150);
+  check('tick-zero state mismatch ends for both seats without starting or awarding a winner',
+    [endA,endB].every(v=>v.tick===0&&v.reason==='bootstrap_state_mismatch'&&v.winnerSeat===null)&&
+    [na,nb].every(peer=>peer.lastReceived===0&&!peer.messages.some(v=>v.type==='start')));
   passed=true;
 }catch(error){evidence.failure=String(error?.message||'verification_failed');console.error('FAIL '+evidence.failure);}
 finally{

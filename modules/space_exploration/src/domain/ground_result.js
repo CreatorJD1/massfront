@@ -1,4 +1,4 @@
-import { DOCTRINE_CATALOG, MISSION_CATALOG, RESOURCE_KEYS, SUPPORT_CATALOG } from './catalog.js';
+import { COMMANDER_CATALOG, DOCTRINE_CATALOG, MISSION_CATALOG, RESOURCE_KEYS, SPECIALIST_CATALOG, SUPPORT_CATALOG } from './catalog.js';
 import { clamp, deepClone, deepFreeze, deterministicUnit, hash32, stableStringify } from './deterministic.js';
 import { DomainValidationError, issue } from './errors.js';
 import {
@@ -8,7 +8,9 @@ import {
 } from './ground_operation.js';
 import { DOMAIN_COMMANDER_ROSTER_FINGERPRINT, assertDomainState } from './state_store.js';
 import { advanceExpeditionCycles } from './construction.js';
+import { derivePlanetControl } from './ground_control.js';
 import { advanceSoloFrontPressure, applySoloFrontPressureDelta } from './progression.js';
+export { advanceRecoveryCycles } from './recovery.js';
 
 export const LEGACY_GROUND_RESULT_SCHEMA_VERSION = 2;
 export const GROUND_RESULT_SCHEMA_VERSION = 3;
@@ -73,6 +75,7 @@ function buildRewards(operation, report) {
     rewards.components = Math.floor(rewards.components * (100 + effects.materialRewardPct) / 100);
   }
   if (effects.bioRewardPct) rewards.bioSamples = Math.floor(rewards.bioSamples * (100 + effects.bioRewardPct) / 100);
+  if (effects.creditsRewardPct) rewards.credits = Math.floor(rewards.credits * (100 + effects.creditsRewardPct) / 100);
   if (report.outcome === 'victory') {
     rewards.probes += effects.victoryProbeRestore || 0;
     rewards.fuel += effects.victoryFuelRestore || 0;
@@ -89,13 +92,21 @@ function effectiveInjuryBand(operation, report, personnelId = null) {
   return INJURY_BAND_ORDER[index];
 }
 
+function personFactionId(personnelId) {
+  // The injured person's own faction decides which medic perk applies: "-50%
+  // recovery for Nova personnel" is about the patient, not the operating ship.
+  return SPECIALIST_CATALOG[personnelId]?.factionId || COMMANDER_CATALOG[personnelId]?.factionId || null;
+}
+
 function injuryCycles(operation, report, personnelId = null) {
   const band = effectiveInjuryBand(operation, report, personnelId);
   const base = { none: 0, light: 1, moderate: 2, severe: 3 }[band];
   const effects = operation.configuration?.facilityEffects || {};
   const supportReduction = operation.supportId === 'medevac' ? 1 : 0;
   const recoveryReduction = Math.abs(Math.min(0, effects.personnelRecoveryCycles || 0));
-  return Math.max(0, base - supportReduction - recoveryReduction);
+  const factionId = personFactionId(personnelId);
+  const medicReduction = factionId ? Math.abs(Math.min(0, effects[`${factionId}PersonnelRecoveryCycles`] || 0)) : 0;
+  return Math.max(0, base - supportReduction - recoveryReduction - medicReduction);
 }
 
 function buildFactionDelta(operation, report) {
@@ -105,8 +116,12 @@ function buildFactionDelta(operation, report) {
   const recoveryCycles = report.injuredPersonnelIds.length ? Math.max(0, longestInjury + Math.min(0, effects.factionRecoveryCycles || 0)) : 0;
   const reputation = Math.round((operation.rewardPlan.reputation || 0) * multiplier);
   const loyalty = report.outcome === 'victory' ? 3 : report.outcome === 'partial' ? 1 : -2;
+  // Faction doctrine research is scoped to the faction that hired the
+  // operation (proxy): the global percentage and the proxy's own doctrine
+  // stack, so a doctrine purchase deepens the alliance it belongs to.
+  const reputationPct = (effects.factionReputationPct || 0) + (effects[`${operation.proxyFactionId}ReputationPct`] || 0);
   return {
-    reputation: Math.floor(reputation * (100 + (effects.factionReputationPct || 0)) / 100),
+    reputation: Math.floor(reputation * (100 + reputationPct) / 100),
     loyalty: loyalty > 0 ? Math.floor(loyalty * (100 + (effects.factionLoyaltyPct || 0)) / 100) : loyalty,
     readiness: report.injuryBand === 'none' ? -7 : report.injuryBand === 'light' ? -13 : report.injuryBand === 'moderate' ? -22 : -32,
     recoveryCycles
@@ -321,21 +336,31 @@ export function applyGroundResult(state, result) {
   if (operation.missionType === 'uga_brood_purge') {
     const infestation = next.world.systems[operation.systemId].infestation;
     infestation.severity = clamp(infestation.severity + result.worldDelta.infestationSeverity, 0, 100);
-    if (result.worldDelta.infestationCleared) {
+  }
+
+  next.operations.appliedResultIds.push(result.resultId);
+  next.operations.history.push({ operation: deepClone(operation), result: deepClone(result) });
+  // Hive Heart is one authored region of Meridian K-4, not the whole planet.
+  // Closing the infestation on its first map once stranded the other eight.
+  if (operation.missionType === 'uga_brood_purge' && result.outcome === 'victory') {
+    const infestation = next.world.systems.karak.infestation;
+    if (derivePlanetControl(next).karak_meridian?.controlled) {
       infestation.active = false;
       infestation.severity = 0;
       next.world.systems.karak.populationState = 'recovering';
       next.story.currentStep = 'karak_reclamation';
       if (!next.story.completedStepIds.includes('karak_reclamation')) next.story.completedStepIds.push('karak_reclamation');
+    } else if (infestation.active) {
+      infestation.severity = Math.max(1, infestation.severity);
     }
   }
-
-  next.operations.appliedResultIds.push(result.resultId);
-  next.operations.history.push({ operation: deepClone(operation), result: deepClone(result) });
   next.operations.pending = null;
   next.route = deepClone(operation.returnRoute);
   next.revision += 1;
-  const advanced = advanceExpeditionCycles(next, 2, `operation:${result.resultId}`, 'operation');
+  const advanced = advanceExpeditionCycles(next, 2, `operation:${result.resultId}`, 'operation', {
+    factionIds: [result.proxyFactionId],
+    personnelIds: [operation.commanderId, ...operation.specialistIds]
+  });
   const pressured = advanceSoloFrontPressure(advanced.state, 2, `operation:${result.resultId}`);
   // Legacy GroundResultV2 bytes never carried front pressure. Keeping that
   // omission preserves its deterministic result ID and lets old pending
@@ -344,42 +369,4 @@ export function applyGroundResult(state, result) {
     ? applySoloFrontPressureDelta(pressured, operation.systemId, result.worldDelta.soloFrontPressure, `mission:${result.missionId}:${result.outcome}`)
     : pressured;
   return { state: resolved, applied: true, reason: 'applied', construction: advanced.completedJobs };
-}
-
-function recoverPerson(person, cycles) {
-  if (!person.injury) {
-    if (person.status !== 'locked' && person.status !== 'deployed') person.status = 'ready';
-    person.readiness = clamp(person.readiness + cycles * 4, 0, 100);
-    return false;
-  }
-  person.injury.recoveryCycles = Math.max(0, person.injury.recoveryCycles - cycles);
-  person.readiness = clamp(person.readiness + cycles * 8, 0, 100);
-  if (person.injury.recoveryCycles === 0) {
-    person.injury = null;
-    person.status = 'ready';
-  }
-  return true;
-}
-
-export function advanceRecoveryCycles(state, cycles = 1) {
-  assertDomainState(state);
-  if (!Number.isInteger(cycles) || cycles < 1) throw new DomainValidationError('Recovery cycles must be a positive integer.', [issue('RECOVERY_CYCLES_INVALID', 'Expected one or more recovery cycles.', 'cycles')]);
-  if (state.operations.pending) throw new DomainValidationError('Recovery cannot advance while a ground operation is pending.', [issue('OPERATION_PENDING', 'Resolve the pending operation first.', 'operations.pending')]);
-  const next = deepClone(state);
-  let changed = false;
-  for (const person of Object.values(next.personnel.commanders)) changed = recoverPerson(person, cycles) || changed;
-  for (const person of Object.values(next.personnel.specialists)) changed = recoverPerson(person, cycles) || changed;
-  for (const faction of Object.values(next.factions)) {
-    if (!faction.resident) continue;
-    if (faction.recoveryCycles > 0) {
-      faction.recoveryCycles = Math.max(0, faction.recoveryCycles - cycles);
-      changed = true;
-    }
-    faction.readiness = clamp(faction.readiness + cycles * 7, 0, 100);
-    faction.status = faction.recoveryCycles > 0 ? 'recovering' : 'ready';
-  }
-  if (!changed) return state;
-  next.revision += 1;
-  assertDomainState(next);
-  return next;
 }

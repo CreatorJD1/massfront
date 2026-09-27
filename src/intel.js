@@ -222,15 +222,16 @@ function intelContactRefreshSensors(){
   const now=intelContactNow();
   intelContactTick(now);
   if(!active) return;
+  const viewTeam=typeof mfFogViewTeam==='function'?mfFogViewTeam():0;
   for(let i=0;i<unitHigh;i++){
     if(!ualive[i]||(typeof uCrash!=='undefined'&&uCrash[i])) continue;
     const cell=intelCell(ux[i],uy[i]);
     for(let observer=0;observer<=1;observer++){
       if(uteam[i]===observer) continue;
       const bit=intelSensorBit(observer);
-      /* fogCov is deliberately player-only. Team one still receives its real
-         uplink/techlab radar contacts; no imaginary AI visual grid is added. */
-      const visual=observer===0&&!!fogCov[cell]&&
+      /* fogCov belongs to this client's local view. The other team's radar
+         sensors remain team-specific, but cannot borrow this visual grid. */
+      const visual=observer===viewTeam&&!!fogCov[cell]&&
         (umode[i]!==4||intelDetectedAt(ux[i],uy[i],observer));
       const radar=!!(fogRadar[cell]&bit)&&umode[i]!==4;
       if(visual) intelContactUpdate(observer,i,'visual',undefined,undefined,
@@ -281,7 +282,8 @@ function intelDetectedAt(wx,wy,team){
 }
 function intelRadarContact(wx,wy){
   if(typeof fogGameplayActive==='function'&&!fogGameplayActive()) return false;
-  return !!(fogRadar[intelCell(wx,wy)]&1);
+  const viewTeam=typeof mfFogViewTeam==='function'?mfFogViewTeam():0;
+  return !!(fogRadar[intelCell(wx,wy)]&intelSensorBit(viewTeam));
 }
 function intelGhostRefresh(){
   const t=(typeof stats!=='undefined'&&stats)?stats.t:-2;
@@ -296,13 +298,14 @@ function intelGhostRefresh(){
   }
 }
 function intelGhostCloaked(team,wx,wy){
-  if(team===0||!intelHasGhost[team]) return false;
+  const viewTeam=typeof mfFogViewTeam==='function'?mfFogViewTeam():0;
+  if(team===viewTeam||!intelHasGhost[team]) return false;
   intelGhostRefresh();
   for(let n=0;n<intelGhostIdx.length;n++){
     const j=intelGhostIdx[n];
     if(!ualive[j]||uteam[j]!==team||umode[j]!==4) continue;
     if(ux[j]!==wx||uy[j]!==wy) continue;
-    return !intelDetectedAt(wx,wy,0);
+    return !intelDetectedAt(wx,wy,viewTeam);
   }
   return false;
 }

@@ -2927,7 +2927,7 @@ function baseAlarm(B){
 }
 function damageBld(b,dmg,attTeam){
   const B=blds[b]; if(!B||!B.alive) return;
-  if(B.team===0&&attTeam!==0&&META.settings.godMode){B.hp=B.hpm;return;}
+  if(B.team===0&&attTeam!==0&&META.settings.godMode&&!window.__MF_NETWORK_SETUP__){B.hp=B.hpm;return;}
   if(B.team===0 && attTeam!==0) baseAlarm(B);
   if(typeof aiOnBldHit==='function'&&B.team===1&&attTeam===0) aiOnBldHit(B,dmg,attTeam);
   B.dmgT=6;
@@ -6519,7 +6519,9 @@ function projectileFireFX(i,x,y,dx,dy){
   }else if(ty===4||ty===7||ty===8){
     addParticle(0,x+dx*4,y+dy*4,0,0,.12,16,255,140,41); addParticle(4,x+rx*3,y+ry*3,rx*12,ry*12,.28,3.8,255,79,13); addParticle(1,x+rx*4,y+ry*4,rx*5,ry*5,1.05,5,64,59,51);
   }else{
-    addParticle(0,x+dx*3,y+dy*3,0,0,.10,12,184,230,255); spark(1,8,184,230,255);
+    /* The short rifle core used to expire between low-FPS presentations;
+       keep this single primary muzzle cue alive long enough to be shown. */
+    addParticle(0,x+dx*3,y+dy*3,0,0,.20,14,184,230,255); spark(1,8,184,230,255);
   }
   /* Signature accents are sampled for ordinary rifles but guaranteed for
      heavy/energy/biological fire. At a 1,000-unit cap this keeps the identity
@@ -6799,7 +6801,7 @@ let dmgAccum=[0,0,0];
    multiplier uses it to scale a blast against a crowd. */
 function dealDamage(j,dmg,attTeam,attacker,mu,wk){
   if(!ualive[j]||uCrash[j]) return;
-  if(uteam[j]===0&&attTeam!==0&&META.settings.godMode){uhp[j]=uhpm[j];return;}
+  if(uteam[j]===0&&attTeam!==0&&META.settings.godMode&&!window.__MF_NETWORK_SETUP__){uhp[j]=uhpm[j];return;}
   const shielded=ushielded[j]>0 && !(wk&&WK_PIERCE[wk]);
   if(shielded){
     dmg*=SHIELD_REDUCE;

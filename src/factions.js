@@ -384,8 +384,28 @@ function commanderById(id){
   for(const f in COMMANDER_ROSTERS){const C=COMMANDER_ROSTERS[f].find(c=>c.id===id);if(C)return C;}
   return null;
 }
+const COMMANDER_TALK_ART=Object.freeze({
+  nova_kai:'./assets/factions/commanders/nova_kai-speaking.webp',
+  syndicate_renn:'./assets/factions/commanders/syndicate_renn-speaking.webp'
+});
 function commanderPortraitSrc(C){
   return C&&!C.aiOnly?(C.portrait||'./assets/factions/commanders/'+C.id+'.jpg'):'';
+}
+/* Roster tiles share one square profile language. Full-body turnarounds are
+   authoring references, never runtime card art; mixing the two made the new
+   commanders look like placeholders beside the seven established profiles. */
+function commanderFullBodySrc(C){return commanderPortraitSrc(C);}
+function commanderTalkingSrc(C){return C&&!C.aiOnly?(COMMANDER_TALK_ART[C.id]||''):'';}
+function commanderBaselineGlyph(C){
+  return ['✹','✚','ϟ','⌖','⚡'][C&&C.ability]||'◈';
+}
+function commanderAbilityFloatHTML(C){
+  if(!C||C.aiOnly)return '';
+  const P=C.primary||{},A=C.active||{};
+  return '<span class="commanderAbilityFloats" aria-label="'+C.nm+' weapon and abilities">'
+    +'<span class="commanderAbilityFloat weapon" title="WEAPON · '+(P.nm||'Commander weapon')+'"><i>'+((P.em)||'•')+'</i><b>WEAPON</b></span>'
+    +'<span class="commanderAbilityFloat baseline" title="BASELINE · '+(C.abilityNm||'Commander power')+'"><i>'+commanderBaselineGlyph(C)+'</i><b>BASE</b></span>'
+    +'<span class="commanderAbilityFloat signature" title="SIGNATURE · '+(A.nm||'Commander signature')+'"><i>'+((A.em)||'◆')+'</i><b>SIGNATURE</b></span></span>';
 }
 function playerCommanderDef(){
   const fac=commanderFactionKey((typeof playerFaction!=='undefined'&&playerFaction)||'nova');
@@ -446,10 +466,8 @@ function renderCommanderRow(){
   row.innerHTML=roster.map(C=>'<button type="button" class="commanderCard'+(C.id===current.id?' on':'')+'" data-commander="'+C.id+'" style="--cmd:'+((A&&A.col)||'#5db6ff')+'" title="'+
     (C.active?C.active.nm+' — '+(C.active.mass?C.active.mass+' mass + ':'')+(C.active.energy||0)+' energy, '+C.active.cool+'s. '+C.active.ds:'Baseline commander')+
     (C.primary?' FIRE · '+C.primary.nm+' / '+C.secondary.nm:'')+'">'
-    +'<img src="'+commanderPortraitSrc(C)+'" data-fallback="'+fallback+'" alt="'+C.nm+'" onerror="this.onerror=null;this.src=this.dataset.fallback">'
-    +'<i>'+C.role+'</i><b>'+C.nm+'</b><small>'+C.passive+'<br>FIRE · '+(C.primary?C.primary.nm+' / '+C.secondary.nm:'—')+
-    '<br>BASE · '+C.abilityNm+
-    (C.active?'<br>SIGNATURE · '+C.active.em+' '+C.active.nm:'')+'</small></button>').join('');
+    +'<span class="commanderPortraitFrame"><img src="'+commanderFullBodySrc(C)+'" data-fallback="'+fallback+'" alt="'+C.nm+'" onerror="this.onerror=null;this.src=this.dataset.fallback">'+commanderAbilityFloatHTML(C)+'</span>'
+    +'<i>'+C.role+'</i><b>'+C.nm+'</b><small>'+C.passive+'</small></button>').join('');
   row.querySelectorAll('.commanderCard').forEach(b=>{
     const select=ev=>{ev.stopPropagation();playerCommanderId=b.dataset.commander;if(typeof persistCommanderPick==='function')persistCommanderPick();renderCommanderRow();
       const C=playerCommanderDef();if(typeof sfx==='function')sfx('confirm');if(typeof toast==='function')toast(C.nm+' · '+(C.primary?C.primary.nm+' / '+C.secondary.nm+' · ':'')+C.passive);};

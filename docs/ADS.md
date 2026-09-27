@@ -3,10 +3,11 @@
 Ads are **diegetic props**, not a UI overlay: a handful of billboards and
 jumbotron screens stand in the battlefield itself — beside the highway, on the
 rim of derelict city districts — playing looping video like anything else the
-war left running. There is no ad network wired up yet. There does not need to
-be one for this to be finished: every call a real network would need already
-exists behind an adapter, and turning one on later is meant to be a one-line
-config change, not a rewrite.
+war left running. The current creatives are bundled fictional placeholders.
+There is no live ad network, paid inventory, trusted viewability measurement,
+or payout accounting wired up. This is a local presentation prototype, not a
+revenue-producing ad system. `NetworkAdProvider` intentionally throws; changing
+`AD_CONFIG.provider` to `network` does not enable monetization.
 
 Everything lives in `src/adboards.js` (~700 lines, no build step, no
 dependencies) plus placeholder creatives in `assets/ads/`. It attaches itself
@@ -246,9 +247,9 @@ function shaped like `adScanRoadSpots`/`adScanCitySpots` (takes the shared
 
 ## Going live with a real ad network
 
-`AD_CONFIG.provider` is the entire integration surface. Every board asks the
-`AdProvider` interface for a creative and never touches a `<video>` element,
-a manifest file, or a network SDK directly:
+`AD_CONFIG.provider` selects the provider seam. Every board asks the
+`AdProvider` interface for a creative, while the local presentation path
+handles textures and visibility:
 
 ```js
 class AdProvider {
@@ -266,9 +267,10 @@ constructed, wired into `AD_CONFIG`, but its `_doInit()`/`loadCreative()`
 throw on purpose, because a real integration needs a signed agreement and
 real IDs this codebase has no way to invent. To make it real:
 
-1. **`AD_CONFIG.provider = 'network'`** — the entire call-site change; every
-   board starts asking `NetworkAdProvider` for fill instead of
-   `LocalAdProvider` with no other code touched.
+1. **Choose and implement a production provider contract.** Leave
+   `AD_CONFIG.provider = 'local'` until the provider has been implemented and
+   independently tested. Setting it to `network` today invokes a throwing
+   stub and produces no paid ads.
 2. **`_doInit()`** — load the network SDK (Google Mobile Ads / AdMob for
    native wrappers, or a raw VAST/IMA tag for a pure web build), initialise
    it with real app/ad-unit IDs, and gate the whole thing on the consent
@@ -287,9 +289,11 @@ real IDs this codebase has no way to invent. To make it real:
    exists, and keep the local dwell counter only as a sanity check / offline
    fallback if useful.
 
-Everything above that seam — geometry, placement, the throttled texture
-upload, on-screen culling, the perf-tier cutoff, the settings toggle — is
-provider-agnostic and needs **no changes** to go live.
+Geometry, placement, throttled texture upload, on-screen culling, the
+performance-tier cutoff, and the settings toggle are local foundations. They
+do not establish that a provider will accept this in-world format, count a
+view as billable, or pay for it. Verify those terms with the selected provider
+before treating the integration as ready to go live.
 
 ### Store-policy items (do before enabling `NetworkAdProvider`)
 

@@ -443,7 +443,7 @@ export function analyzeAuthoredCommand({ loader = '', commandScene = '', glb = n
   const missingPlots = expectedPlots.filter(name => plots.filter(node => node.name === name).length !== 1);
   const exactRooms = coverage.district.length === 11 && coverage.focus.length === 11 && !coverage.missingDistrict.length && !coverage.missingFocus.length;
   const loaderBound = /const\s+COMMAND_URL\s*=\s*new URL\(['"]\.\.\/\.\.\/assets\/runtime\/models\/(?:uga-authored-sections\.glb|uga-sections\/scene\.gltf)(?:\?[^'"]*)?['"]/.test(loader)
-    && /export function loadUgaCommandCutaway\(\)[\s\S]*?return loadGlb\(COMMAND_URL\);/.test(loader)
+    && /export function loadUgaCommandCutaway\(\)[\s\S]*?return loadGlb\(COMMAND_URL\)(?:\.then\(|;)/.test(loader)
     && /loadUgaCommandCutaway\(\)\.then\(root\s*=>/.test(commandScene);
   return { checks: [
     check('districts:authored-loader-contract', loaderBound ? STATUS.PASS : STATUS.FAIL,
@@ -605,6 +605,7 @@ export function expectedAllowlistPaths(moduleRecords, options = {}) {
     'lib/ktx2/basis/basis_transcoder.js',
     'lib/ktx2/basis/basis_transcoder.wasm',
     'assets/runtime/models/nexus-vii-civilization-ship.glb',
+    'assets/runtime/models/nexus-vii-cutaway-hull-overlay.glb',
     'assets/runtime/content/assetpack-runtime.js',
     ...(ugaSharedPaths || ['assets/runtime/models/uga-authored-sections.glb']),
     'assets/runtime/models/massfront-showcase-contacts.glb'
@@ -616,6 +617,10 @@ export function expectedAllowlistPaths(moduleRecords, options = {}) {
     if (/^assets\/runtime\/planets\/[^/]+-(?:basecolor|normal|orm|height|emissive|clouds)\.webp$/.test(path)) explicit.add(path);
     if (/^assets\/runtime\/personnel\/[^/]+\.webp$/.test(path)) explicit.add(path);
     if (/^assets\/runtime\/ui\/gui-material-v1\/(?:1x|2x)\/(?:menu\/(?:primary_frame|tab_frame|entry_frame|submenu_frame)|controls\/action_frame|hud\/(?:portrait_frame|commander_resource_joined_frame|resource_rail_frame|context_frame|production_card_frame|feed_row_frame|feed_container_frame))\.png$/.test(path)) explicit.add(path);
+    /* These plates are direct CSS dependencies of the separately mounted UGA
+       document. Keep them inside its signed content closure so an OTA-updated
+       older Android package does not depend on root files it never shipped. */
+    if (/^assets\/runtime\/ui\/menu-art-v1\/[a-z0-9-]+\.webp$/.test(path)) explicit.add(path);
     if (/^assets\/runtime\/world-models\/(?:world-model-catalog-v1\.json|[^/]+\/[^/]+\.glb)$/.test(path)) explicit.add(path);
   }
   return [...explicit].filter((path) => !isDisallowedRuntimePath(path, rules, keptPaths)).sort();

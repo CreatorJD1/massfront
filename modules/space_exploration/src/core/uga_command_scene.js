@@ -30,7 +30,7 @@ const MANAGEMENT_ROOM_FOG_DENSITY = 0.009;
 // phone OLEDs even though the same material was healthy in landscape.
 const MANAGEMENT_PROFILE_FOG_DENSITY = 0.001;
 
-const CARRIER_CONTEXT_NAME = /^(?:NexusVII_(?:Keel|MidDeck|CeilingSpine|FarHullPanel|WindowRibbon|AftDriveTunnel|InteriorDrive(?:Throat|Glow))|TransitPod_)/;
+const CARRIER_CONTEXT_NAME = /^(?:NexusVII_|TransitPod_)/;
 
 function boundsCorners(bounds) {
   const { min, max } = bounds;
@@ -96,8 +96,8 @@ export class UgaCommandScene {
     this.raycaster = new THREE.Raycaster();
     this.pointer = new THREE.Vector2();
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x01040a);
-    this.scene.fog = new THREE.FogExp2(0x020713, MANAGEMENT_ROOM_FOG_DENSITY);
+    this.scene.background = new THREE.Color(0x07131d);
+    this.scene.fog = new THREE.FogExp2(0x07131d, MANAGEMENT_ROOM_FOG_DENSITY);
     this.camera = new THREE.PerspectiveCamera(42, 1, 0.1, 300);
     this.camera.up.copy(OVERVIEW_UP);
     this.camera.position.copy(OVERVIEW_CAMERA);
@@ -143,7 +143,67 @@ export class UgaCommandScene {
     this.profileRim.visible = false;
     this.scene.add(this.profileRim);
 
+    this.inspectionBay = this._buildInspectionBay();
+    this.scene.add(this.inspectionBay);
+
     this._loadPromise = null;
+  }
+
+  _buildInspectionBay() {
+    /* The cutaway is open toward the camera so players can inspect rooms, but
+       the command UI represents a ship interior, never a vessel floating in
+       space. A lightweight procedural service bay closes the background with
+       real 3D floor, pressure walls, ceiling ribs and guide lights. */
+    const bay = new THREE.Group();
+    bay.name = 'NEXUS_VII_INTERIOR_INSPECTION_BAY';
+    const shellMaterial = new THREE.MeshStandardMaterial({
+      color: 0x111d28,
+      roughness: 0.78,
+      metalness: 0.42
+    });
+    const insetMaterial = new THREE.MeshStandardMaterial({
+      color: 0x09131d,
+      roughness: 0.84,
+      metalness: 0.3
+    });
+    const cyanMaterial = new THREE.MeshStandardMaterial({
+      color: 0x55dfff,
+      emissive: 0x1689ad,
+      emissiveIntensity: 1.15,
+      roughness: 0.34,
+      metalness: 0.2
+    });
+    const amberMaterial = new THREE.MeshStandardMaterial({
+      color: 0xffb04c,
+      emissive: 0x8b430c,
+      emissiveIntensity: 1.0,
+      roughness: 0.4,
+      metalness: 0.2
+    });
+    const addBox = (name, size, position, material) => {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(...size), material);
+      mesh.name = name;
+      mesh.position.set(...position);
+      mesh.receiveShadow = false;
+      bay.add(mesh);
+      return mesh;
+    };
+    addBox('InspectionBay_BackPressureWall', [90, 1.2, 30], [0, 12, 6], shellMaterial);
+    addBox('InspectionBay_Floor', [90, 34, .65], [0, -1, -4.1], shellMaterial);
+    addBox('InspectionBay_Ceiling', [90, 34, .65], [0, -1, 18.1], insetMaterial);
+    addBox('InspectionBay_PortWall', [.75, 34, 30], [-44.5, -1, 6], insetMaterial);
+    addBox('InspectionBay_StarboardWall', [.75, 34, 30], [44.5, -1, 6], insetMaterial);
+    for (let x = -39; x <= 39; x += 13) {
+      addBox(`InspectionBay_BackRib_${x}`, [.36, .72, 29], [x, 11.28, 6], insetMaterial);
+      addBox(`InspectionBay_CeilingRib_${x}`, [.34, 32, .18], [x, -1, 17.72], x % 26 ? cyanMaterial : amberMaterial);
+    }
+    [-10, 0, 10].forEach((y, index) => {
+      addBox(`InspectionBay_FloorGuide_${index}`, [86, .14, .08], [0, y, -3.72], index === 1 ? amberMaterial : cyanMaterial);
+    });
+    [-30, -15, 0, 15, 30].forEach((x, index) => {
+      addBox(`InspectionBay_BackLight_${index}`, [5.8, .18, .22], [x, 11.2, 14.7], index % 2 ? amberMaterial : cyanMaterial);
+    });
+    return bay;
   }
 
   _ensureLoaded() {
@@ -185,6 +245,10 @@ export class UgaCommandScene {
       this.districtDecorations = new Map();
       this.droneSwarm = null;
       this._buildRadialDeckTopology(root);
+      // The old room-sized inspection hangar was a 90-metre grey box around
+      // the entire ship. The authored carrier and cutaway hull now seal the
+      // rooms themselves; keep that fallback bay only for procedural mode.
+      this.inspectionBay.visible = this.deckTopologyRoot?.name !== 'NEXUS_VII_LONGITUDINAL_CUTAWAY';
       this._enhanceCutawayVisuals(root);
       if (this.deckTopologyRoot?.name === 'NEXUS_VII_LONGITUDINAL_CUTAWAY') {
         this.scene.children.filter(object => object.isLight).forEach(light => { light.intensity *= 0.55; });
@@ -1417,19 +1481,52 @@ export class UgaCommandScene {
   }
 
   _showOverviewCarrierContext() {
-    this.authoredCarrierContext?.forEach(({object, visible}) => { object.visible = visible; });
+    this.authoredCarrierContext?.forEach(({object, visible}) => {
+      // The deck-sized rear shells replace full-height panels only in lower
+      // room focus. Showing both in the profile would double the same surface.
+      object.visible = visible && !/^NexusVII_FarHullPanel_Lower_/.test(object.name || '');
+    });
     if (this.deckTopologyRoot?.name === 'UGA_RUNTIME_INTEGRATED_CUTAWAY') this.deckTopologyRoot.visible = true;
     this.deckTopologyRoot?.traverse(object => {
-      if (CARRIER_CONTEXT_NAME.test(object.name)) object.visible = true;
+      if (CARRIER_CONTEXT_NAME.test(object.name)) object.visible = !/^NexusVII_FarHullPanel_Lower_/.test(object.name);
     });
     this.gravityRings.forEach(ring => { ring.visible = true; });
   }
 
   _showFocusedCarrierContext(bounds) {
     if (this.authoredCarrierContext) {
-      // Keep every selected compartment mesh, but not exterior drive rings and
-      // shared hull skins that appeared as floating slices behind the room.
-      this.authoredCarrierContext.forEach(({object}) => { object.visible = false; });
+      // Keep only the nearby authored back panels, bow and narrow side frames.
+      // The near-side sills complete the whole-ship silhouette but project as
+      // heavy foreground bars over room equipment at phone focus distances.
+      const roomCentreZ = (bounds.min.z + bounds.max.z) * 0.5;
+      this.authoredCarrierContext.forEach(({object, visible}) => {
+        const name = object.name || '';
+        if (!visible || !/^NexusVII_(?:FarHullPanel_|WindowRibbon_|BowCap(?:_|$)|HullFrame_)/.test(name)) {
+          object.visible = false;
+          return;
+        }
+        // A sill on the other deck can graze the room's bounding box by a few
+        // centimetres yet project as a dark bar across its ceiling or tabs.
+        if ((/_Lower$/.test(name) && roomCentreZ > 5) || (/_Upper$/.test(name) && roomCentreZ < 5)) {
+          object.visible = false;
+          return;
+        }
+        if ((roomCentreZ < 5 && /^NexusVII_FarHullPanel_[1-6]$/.test(name))
+          || (roomCentreZ >= 5 && /^NexusVII_FarHullPanel_Lower_/.test(name))) {
+          object.visible = false;
+          return;
+        }
+        object.updateWorldMatrix(true, false);
+        const panel = new THREE.Box3().setFromObject(object);
+        const overlapX = Math.min(panel.max.x, bounds.max.x) - Math.max(panel.min.x, bounds.min.x);
+        const overlapZ = Math.min(panel.max.z, bounds.max.z) - Math.max(panel.min.z, bounds.min.z);
+        // The prow terminates just ahead of the Command floor. Keep this one
+        // deliberate joint, but reject adjacent bays that only touch the
+        // selected room via the old 0.8-metre padding.
+        const bowJoint = /^NexusVII_BowCap(?:_|$)/.test(name) && this.selectedDistrictId === 'command'
+          && Math.abs(panel.max.x - bounds.min.x) <= 0.8;
+        object.visible = !panel.isEmpty() && (overlapX > 0.65 || bowJoint) && overlapZ > 0.12;
+      });
       this.gravityRings.forEach(ring => { ring.visible = false; });
       return;
     }
@@ -1657,7 +1754,14 @@ export class UgaCommandScene {
       const commissioned = districtState.commissioned !== false;
       if (!plotId && obj !== root && obj.name?.startsWith(`${id}_`)) {
         const structural = /_(Deck|RearPressureWall|PortBulkhead|StarboardBulkhead|CeilingServiceBeam|TransitThreshold|FacilityBlock_|FacilityCrown_|FacilityWindow_)/.test(obj.name);
-        if (!structural) obj.visible = commissioned;
+        // The Strike Bay keeps its authored compartment in a presentation
+        // wrapper. Hiding that wrapper also hides the explicitly retained deck,
+        // bulkheads and empty facility shells below it, leaving only the shared
+        // inspection-bay wall. Preserve the container while the operational
+        // deployment arena and non-structural contents remain locked.
+        const structuralContainer = obj.name === `${id}_AuthoredDeploymentPresentation`;
+        if (structuralContainer) obj.visible = true;
+        else if (!structural) obj.visible = commissioned;
       }
       if (!plotId) return;
       const tier = Number(String(plotId).replace('tier', '')) || 1;
@@ -1838,6 +1942,10 @@ export class UgaCommandScene {
     if (this.root) {
       disposeRoot(this.root);
       this.scene.remove(this.root);
+    }
+    if (this.inspectionBay) {
+      disposeRoot(this.inspectionBay);
+      this.scene.remove(this.inspectionBay);
     }
     this.districtRoots.clear();
     this.focusAnchors.clear();

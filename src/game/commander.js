@@ -1442,6 +1442,19 @@ function playerCommanderIdentity(){
   }
   return id?commanderIdentity(id):null;
 }
+function commanderPresentingIdentity(){
+  /* Each multiplayer client simulates the same team-0 Commander, but its
+     command-link is local presentation. Reusing playerCommanderId on seat 2
+     made a Horde player receive Kai's Nova portrait and voice. An AI-only
+     Brood leader has no playable identity yet, so no commander cue is more
+     truthful than impersonating Nova; the objective toast still appears. */
+  if(typeof window!=='undefined'&&window.__MF_NETWORK_SETUP__){
+    const local=typeof mfLocalCommander==='function'?mfLocalCommander():-1;
+    const id=local>=0&&typeof commanderIdForUnit==='function'?commanderIdForUnit(local):null;
+    return id?commanderIdentity(id):null;
+  }
+  return playerCommanderIdentity();
+}
 
 /* ============================================================================
    COMMANDER DIALOGUE — the EVENT half of the commander voice system
@@ -1651,7 +1664,7 @@ function commanderCue(category,kind,opts){
   if(!S.enabled){ S.stats.rejectedDisabled++; return {ok:false,reason:'disabled',cue:null}; }
   if(!commanderDialogueValid(category,kind)){ S.stats.rejectedUnknown++; return {ok:false,reason:'unknown-event',cue:null}; }
   if(!commanderDialogueTrainingAllows(category)){ S.stats.rejectedDisabled++; return {ok:false,reason:'training',cue:null}; }
-  const identity=o.commanderId?commanderIdentity(o.commanderId):playerCommanderIdentity();
+  const identity=o.commanderId?commanderIdentity(o.commanderId):commanderPresentingIdentity();
   if(!identity){ S.stats.rejectedUnknown++; return {ok:false,reason:'no-commander',cue:null}; }
   const key=category+'.'+kind;
   const dedupeKey=identity.id+'|'+key+'|'+(o.subject==null?'':String(o.subject));

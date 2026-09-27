@@ -489,6 +489,58 @@ export const SYSTEM_CATALOG = deepFreeze({
     danger: 5,
     visualProfile: 'silent_colony_brood_horror',
     siteIds: ['karak_meridian', 'karak_spine', 'karak_hive']
+  },
+  /* The four War Table stellar systems are charted space from day one — every
+     faction's capital star is public knowledge even when the frontier beyond it
+     is not. Ids match the War Table star keys so the two views of the galaxy
+     never disagree about where a homeworld lives. */
+  sombrero_i: {
+    id: 'sombrero_i',
+    name: 'Sombrero-I',
+    sequence: 4,
+    classification: 'Frontline Capital System',
+    description: "Star system of FRONTLINE PRIME, where Nova's homeworld of Aelos anchors the UGA anchorage, fleet yards, and the regulated core lanes.",
+    mapPosition: [-0.86, 0.52],
+    travelFuel: 10,
+    danger: 1,
+    visualProfile: 'frontline_prime_capital_bastion',
+    siteIds: ['sombrero_command_circumference']
+  },
+  andromeda_iv: {
+    id: 'andromeda_iv',
+    name: 'Andromeda-IV',
+    sequence: 5,
+    classification: 'Dominion Forge System',
+    description: 'Star system of the DOMINION FURNACE, whose forge world of Pyraeth feeds the Promethean mega-grid and the Dominion war foundries.',
+    mapPosition: [0.36, 0.82],
+    travelFuel: 16,
+    danger: 3,
+    visualProfile: 'dominion_furnace_forge_world',
+    siteIds: ['pyraeth_court_of_iron']
+  },
+  orion_arc: {
+    id: 'orion_arc',
+    name: 'Orion Arc',
+    sequence: 6,
+    classification: 'Grid Sun Trade System',
+    description: 'Star system of the GRID SUN, where the Syndicate citadel world of Nordhall runs the skyshield arrays and the league trade grid.',
+    mapPosition: [0.82, -0.58],
+    travelFuel: 20,
+    danger: 4,
+    visualProfile: 'grid_sun_trade_league_arc',
+    siteIds: ['nordhall_citadel_pinnacle']
+  },
+  helios_core: {
+    id: 'helios_core',
+    name: 'Helios Core',
+    sequence: 7,
+    classification: 'Brood Hive System',
+    description: 'Star system of the HIVE STAR, where the Brood homeworld of Vespera breeds under the Great Hive Spire and broadcasts its swarm directives.',
+    mapPosition: [-0.32, -0.84],
+    travelFuel: 26,
+    danger: 5,
+    visualProfile: 'hive_star_brood_homeworld',
+    siteIds: ['vespera_great_hive_spire']
   }
 });
 
@@ -501,7 +553,11 @@ export const SITE_CATALOG = deepFreeze({
   veyra_ossuary: { id: 'veyra_ossuary', systemId: 'veyra', name: 'Ossuary Vault', biome: 'ancient_subsurface', hazards: ['unknown_automation'], hiveTargetIds: [] },
   karak_meridian: { id: 'karak_meridian', systemId: 'karak', name: 'Meridian Colony', biome: 'abandoned_colony', hazards: ['spore_fog', 'civilian_remains'], hiveTargetIds: ['meridian_breeder_nest'] },
   karak_spine: { id: 'karak_spine', systemId: 'karak', name: 'Colony Transit Spine', biome: 'subterranean_transit', hazards: ['organic_occlusion', 'power_failure'], hiveTargetIds: ['spine_gestation_cluster', 'spine_feeder_root'] },
-  karak_hive: { id: 'karak_hive', systemId: 'karak', name: 'Karak Primary Hive', biome: 'brood_hive_depths', hazards: ['acidic_atmosphere', 'neural_spores', 'living_terrain'], hiveTargetIds: ['karak_hive_heart'] }
+  karak_hive: { id: 'karak_hive', systemId: 'karak', name: 'Karak Primary Hive', biome: 'brood_hive_depths', hazards: ['acidic_atmosphere', 'neural_spores', 'living_terrain'], hiveTargetIds: ['karak_hive_heart'] },
+  sombrero_command_circumference: { id: 'sombrero_command_circumference', systemId: 'sombrero_i', name: 'Command Circumference', biome: 'orbital_arcology', hazards: ['civilian_density'], hiveTargetIds: [] },
+  pyraeth_court_of_iron: { id: 'pyraeth_court_of_iron', systemId: 'andromeda_iv', name: 'Court of Iron', biome: 'volcanic_forge_megacity', hazards: ['lava_floodplain', 'industrial_overload'], hiveTargetIds: [] },
+  nordhall_citadel_pinnacle: { id: 'nordhall_citadel_pinnacle', systemId: 'orion_arc', name: 'Citadel Command Pinnacle', biome: 'tundra_citadel', hazards: ['arctic_storm', 'skyshield_grid'], hiveTargetIds: [] },
+  vespera_great_hive_spire: { id: 'vespera_great_hive_spire', systemId: 'helios_core', name: 'Great Hive Spire', biome: 'brood_hive_depths', hazards: ['neural_spores', 'living_terrain'], hiveTargetIds: ['vespera_hive_heart'] }
 });
 
 export const DISCOVERY_CATALOG = deepFreeze({
@@ -510,7 +566,10 @@ export const DISCOVERY_CATALOG = deepFreeze({
   veyra_photon_archive: { id: 'veyra_photon_archive', systemId: 'veyra', name: 'Photon-Ring Archive', category: 'research' },
   karak_distress_vector: { id: 'karak_distress_vector', systemId: 'veyra', name: 'Karak Distress Vector', category: 'navigation' },
   karak_silence_pattern: { id: 'karak_silence_pattern', systemId: 'karak', name: 'Karak Silence Pattern', category: 'story' },
-  karak_hive_geometry: { id: 'karak_hive_geometry', systemId: 'karak', name: 'Confirmed Hive Geometry', category: 'brood_intelligence' }
+  karak_hive_geometry: { id: 'karak_hive_geometry', systemId: 'karak', name: 'Confirmed Hive Geometry', category: 'brood_intelligence' },
+  sombrero_route_solution: { id: 'sombrero_route_solution', systemId: 'aelos', name: 'Sombrero-I Capitol Route', category: 'navigation' },
+  andromeda_route_solution: { id: 'andromeda_route_solution', systemId: 'veyra', name: 'Andromeda-IV Furnace Route', category: 'navigation' },
+  orion_route_solution: { id: 'orion_route_solution', systemId: 'karak', name: 'Orion Arc Grid Route', category: 'navigation' }
 });
 
 export const SURVEY_CATALOG = deepFreeze({
@@ -520,6 +579,7 @@ export const SURVEY_CATALOG = deepFreeze({
   },
   aelos_phase_trace: {
     id: 'aelos_phase_trace', systemId: 'aelos', planetId: 'aelos_caldris', name: 'Outer Relay Phase Trace', probeCost: 1, requiredSurveyLevel: 1,
+    requiredSurveyIds: ['aelos_capitol_vector'],
     discoveryId: 'veyra_route_solution', rewards: { researchPoints: 100, fuel: 8 }, intelligence: 1, unlockSystemId: 'veyra', storyStep: 'veyra_route_open'
   },
   veyra_photon_ring: {
@@ -528,28 +588,79 @@ export const SURVEY_CATALOG = deepFreeze({
   },
   veyra_derelict_echo: {
     id: 'veyra_derelict_echo', systemId: 'veyra', planetId: 'veyra_orison', name: 'Derelict Distress Echo', probeCost: 1, requiredSurveyLevel: 2,
+    requiredSurveyIds: ['veyra_cinder_reach_fix'],
     discoveryId: 'karak_distress_vector', rewards: { researchPoints: 140, fuel: 10 }, intelligence: 1, unlockSystemId: 'karak', storyStep: 'karak_route_open'
   },
   karak_silent_beacons: {
     id: 'karak_silent_beacons', systemId: 'karak', planetId: 'karak_meridian', name: 'Silent Beacon Triangulation', probeCost: 1, requiredSurveyLevel: 2,
+    requiredSurveyIds: ['veyra_derelict_echo'],
     discoveryId: 'karak_silence_pattern', rewards: { researchPoints: 180, bioSamples: 8 }, intelligence: 2, revealsInfestation: true, storyStep: 'karak_infestation_confirmed'
   },
   karak_hive_scan: {
     id: 'karak_hive_scan', systemId: 'karak', planetId: 'karak_meridian', name: 'Subsurface Hive Tomography', probeCost: 1, requiredSurveyLevel: 3,
-    discoveryId: 'karak_hive_geometry', rewards: { researchPoints: 260, bioSamples: 15 }, intelligence: 2, confirmsHiveTargets: true, storyStep: 'karak_hive_mapped'
+    requiredSurveyIds: ['karak_grid_triangulation'],
+    discoveryId: 'karak_hive_geometry', rewards: { researchPoints: 260, bioSamples: 15 }, intelligence: 2, confirmsHiveTargets: true,
+    // Hive geometry doubles as the Brood origin vector: Helios Core charts only
+    // once the swarm's directive source is confirmed.
+    unlockSystemId: 'helios_core', storyStep: 'karak_hive_mapped'
+  },
+  /* Route surveys — the linear system rung. Each one charts the next War Table
+     star system and, with requiredSurveyIds, refuses to run before the
+     previous rung is complete. */
+  aelos_capitol_vector: {
+    id: 'aelos_capitol_vector', systemId: 'aelos', planetId: 'aelos_caldris', name: 'Capitol Vector Fix', probeCost: 1, requiredSurveyLevel: 1,
+    discoveryId: 'sombrero_route_solution', rewards: { researchPoints: 90, components: 15 }, intelligence: 1,
+    unlockSystemId: 'sombrero_i', storyStep: 'sombrero_route_open'
+  },
+  veyra_cinder_reach_fix: {
+    id: 'veyra_cinder_reach_fix', systemId: 'veyra', planetId: 'veyra_orison', name: 'Cinder Reach Ephemeris', probeCost: 1, requiredSurveyLevel: 2,
+    requiredSurveyIds: ['aelos_phase_trace'],
+    discoveryId: 'andromeda_route_solution', rewards: { researchPoints: 160, components: 25 }, intelligence: 1,
+    unlockSystemId: 'andromeda_iv', storyStep: 'andromeda_route_open'
+  },
+  karak_grid_triangulation: {
+    id: 'karak_grid_triangulation', systemId: 'karak', planetId: 'karak_meridian', name: 'League Grid Triangulation', probeCost: 1, requiredSurveyLevel: 2,
+    requiredSurveyIds: ['karak_silent_beacons'],
+    discoveryId: 'orion_route_solution', rewards: { researchPoints: 200, components: 30 }, intelligence: 1,
+    unlockSystemId: 'orion_arc', storyStep: 'orion_route_open'
   }
 });
 
+/* Frontier ladder, tier 1 — recompute chain availability in place. A chained
+   survey in an already-discovered system must open the moment its last
+   prerequisite depletes, but unlockSystemSurveys only runs at system unlock,
+   so a same-system rung (karak_grid_triangulation behind
+   karak_silent_beacons) stayed 'locked' forever: Orion Arc and Helios Core
+   were unreachable from any save that had already charted Karak. Survey
+   eligibility independently enforces the chain (SURVEY_CHAIN_REQUIRED); this
+   only repairs the availability bit. Upgrades locked→available only, so it is
+   idempotent and safe to run after every deployment and on save normalize. */
+export function refreshChainedSurveyAvailability(state) {
+  for (const survey of Object.values(SURVEY_CATALOG)) {
+    const surveyState = state.surveys?.[survey.id];
+    if (!surveyState || surveyState.depleted || surveyState.status === 'completed') continue;
+    if (!state.world?.systems?.[survey.systemId]?.discovered) continue;
+    if (surveyState.status !== 'locked') continue;
+    const chained = (survey.requiredSurveyIds || []).some(id => state.surveys[id]?.depleted !== true && state.surveys[id]?.status !== 'completed');
+    if (!chained) surveyState.status = 'available';
+  }
+}
+
+/* L4: every research node now carries `capabilities` — the numbers its effect
+   label promises. The first two nodes remain pure authorization gates (their
+   effect IS the unlock); everything else lands in
+   calculateFacilityCapabilities once completed, so a purchase changes the
+   same thirty-odd consumers facilities and modules already feed. */
 export const RESEARCH_CATALOG = deepFreeze({
   uga_resident_charter: { id: 'uga_resident_charter', name: 'Resident Faction Charter', branch: 'uga', cost: 100, prerequisites: [], effects: ['residency_protocols'] },
   uga_brood_containment: { id: 'uga_brood_containment', name: 'Brood Containment Protocols', branch: 'uga', cost: 180, prerequisites: [], effects: ['brood_purge_authorization'] },
-  uga_trauma_recovery: { id: 'uga_trauma_recovery', name: 'Expedition Trauma Recovery', branch: 'uga', cost: 220, bioSampleCost: 32, advancedContainment: true, prerequisites: ['uga_brood_containment'], effects: ['injury_recovery'] },
-  universal_spectral_cartography: { id: 'universal_spectral_cartography', name: 'Spectral Cartography', branch: 'universal', cost: 120, prerequisites: [], effects: ['veyra_precision_scans'] },
-  universal_fold_harmonics: { id: 'universal_fold_harmonics', name: 'Fold Harmonics', branch: 'universal', cost: 200, prerequisites: ['universal_spectral_cartography'], effects: ['travel_efficiency'] },
-  universal_probe_autonomy: { id: 'universal_probe_autonomy', name: 'Autonomous Probes', branch: 'universal', cost: 160, prerequisites: [], effects: ['probe_efficiency'] },
-  nova_pathfinder_doctrine: { id: 'nova_pathfinder_doctrine', name: 'Nova Pathfinder Doctrine', branch: 'nova', cost: 140, prerequisites: [], effects: ['nova_methodical_bonus'] },
-  dominion_breach_doctrine: { id: 'dominion_breach_doctrine', name: 'Dominion Breach Doctrine', branch: 'dominion', cost: 140, prerequisites: [], effects: ['dominion_fortified_bonus'] },
-  syndicate_veil_doctrine: { id: 'syndicate_veil_doctrine', name: 'Syndicate Veil Doctrine', branch: 'syndicate', cost: 140, prerequisites: [], effects: ['syndicate_covert_bonus'] }
+  uga_trauma_recovery: { id: 'uga_trauma_recovery', name: 'Expedition Trauma Recovery', branch: 'uga', cost: 220, bioSampleCost: 32, advancedContainment: true, prerequisites: ['uga_brood_containment'], effects: ['injury_recovery'], capabilities: { personnelRecoveryCycles: -1, factionRecoveryCycles: -1 } },
+  universal_spectral_cartography: { id: 'universal_spectral_cartography', name: 'Spectral Cartography', branch: 'universal', cost: 120, prerequisites: [], effects: ['veyra_precision_scans'], capabilities: { surveyResearchRewardPct: 10, surveyIntelligenceBonus: 1 } },
+  universal_fold_harmonics: { id: 'universal_fold_harmonics', name: 'Fold Harmonics', branch: 'universal', cost: 200, prerequisites: ['universal_spectral_cartography'], effects: ['travel_efficiency'], capabilities: { transitFuelPct: -15 } },
+  universal_probe_autonomy: { id: 'universal_probe_autonomy', name: 'Autonomous Probes', branch: 'universal', cost: 160, prerequisites: [], effects: ['probe_efficiency'], capabilities: { surveyProbeRefundInterval: 3 } },
+  nova_pathfinder_doctrine: { id: 'nova_pathfinder_doctrine', name: 'Nova Pathfinder Doctrine', branch: 'nova', cost: 140, prerequisites: [], effects: ['nova_methodical_bonus'], capabilities: { novaReputationPct: 12, operationResearchRewardPct: 10 } },
+  dominion_breach_doctrine: { id: 'dominion_breach_doctrine', name: 'Dominion Breach Doctrine', branch: 'dominion', cost: 140, prerequisites: [], effects: ['dominion_fortified_bonus'], capabilities: { dominionReputationPct: 12, injurySeverityBands: -1 } },
+  syndicate_veil_doctrine: { id: 'syndicate_veil_doctrine', name: 'Syndicate Veil Doctrine', branch: 'syndicate', cost: 140, prerequisites: [], effects: ['syndicate_covert_bonus'], capabilities: { syndicateReputationPct: 12, victoryFuelRestore: 2 } }
 });
 
 // Synchronous domain consumers must share the production roster. Legacy names
@@ -557,18 +668,23 @@ export const RESEARCH_CATALOG = deepFreeze({
 export const COMMANDER_CATALOG = CANONICAL_COMMANDER_CATALOG_V1;
 
 export const SPECIALIST_CATALOG = deepFreeze({
-  nova_scout_ilan: { id: 'nova_scout_ilan', factionId: 'nova', name: 'Ilan Reeve', role: 'recon', rating: 2, specialty: 'Pathfinder Telemetry', perk: '+30% Probe scan range & signal discovery rate', preferredDistrictIds: ['survey', 'hangar'] },
-  nova_tech_sumi: { id: 'nova_tech_sumi', factionId: 'nova', name: 'Sumi Kade', role: 'technical', rating: 2, specialty: 'Harmonic Synthesis', perk: '-15% Component cost for ship modules & research', preferredDistrictIds: ['fabricator', 'research'] },
-  nova_medic_orr: { id: 'nova_medic_orr', factionId: 'nova', name: 'Orr Sato', role: 'medical', rating: 2, specialty: 'Field Bio-Stasis', perk: '-50% Injury recovery time for Nova personnel', preferredDistrictIds: ['habitat'] },
-  nova_support_vik: { id: 'nova_support_vik', factionId: 'nova', name: 'Vik Arden', role: 'support', rating: 2, specialty: 'Expedition Logistics', perk: '+20% Fuel storage efficiency & transit endurance', preferredDistrictIds: ['logistics', 'command'] },
-  dominion_scout_brann: { id: 'dominion_scout_brann', factionId: 'dominion', name: 'Brann Holt', role: 'recon', rating: 2, specialty: 'Heavy Reconnaissance', perk: '+25% Discovery rewards in high-gravity systems', preferredDistrictIds: ['survey', 'hangar'] },
+  /* L5: specialist perks carry the same `capabilities` vocabulary. A perk only
+     contributes while the specialist is staffed in one of their preferred
+     districts — placement is the decision the perk rewards. Vesk (+25 MW) and
+     Aya (Deck B draw) keep their bespoke power paths in powerState and are
+     deliberately absent here so nothing double-counts. */
+  nova_scout_ilan: { id: 'nova_scout_ilan', factionId: 'nova', name: 'Ilan Reeve', role: 'recon', rating: 2, specialty: 'Pathfinder Telemetry', perk: '+30% Probe scan range & signal discovery rate', preferredDistrictIds: ['survey', 'hangar'], capabilities: { surveyIntelligenceBonus: 1 } },
+  nova_tech_sumi: { id: 'nova_tech_sumi', factionId: 'nova', name: 'Sumi Kade', role: 'technical', rating: 2, specialty: 'Harmonic Synthesis', perk: '-15% Component cost for ship modules & research', preferredDistrictIds: ['fabricator', 'research'], capabilities: { researchProgressPct: 15, bioResearchCostPct: -15, moduleCostPct: -15 } },
+  nova_medic_orr: { id: 'nova_medic_orr', factionId: 'nova', name: 'Orr Sato', role: 'medical', rating: 2, specialty: 'Field Bio-Stasis', perk: '-50% Injury recovery time for Nova personnel', preferredDistrictIds: ['habitat'], capabilities: { novaPersonnelRecoveryCycles: -1 } },
+  nova_support_vik: { id: 'nova_support_vik', factionId: 'nova', name: 'Vik Arden', role: 'support', rating: 2, specialty: 'Expedition Logistics', perk: '+20% Fuel storage efficiency & transit endurance', preferredDistrictIds: ['logistics', 'command'], capabilities: { transitFuelPct: -10 } },
+  dominion_scout_brann: { id: 'dominion_scout_brann', factionId: 'dominion', name: 'Brann Holt', role: 'recon', rating: 2, specialty: 'Heavy Reconnaissance', perk: '+25% Discovery rewards in high-gravity systems', preferredDistrictIds: ['survey', 'hangar'], capabilities: { surveyResearchRewardPct: 20, bioRewardPct: 10 } },
   dominion_tech_vesk: { id: 'dominion_tech_vesk', factionId: 'dominion', name: 'Vesk Orra', role: 'technical', rating: 2, specialty: 'Reactor Lattice Tuning', perk: '+25 MW Power Grid output from Engineering', preferredDistrictIds: ['engineering', 'fabricator'] },
-  dominion_medic_tala: { id: 'dominion_medic_tala', factionId: 'dominion', name: 'Tala Rune', role: 'medical', rating: 2, specialty: 'Armored Trauma Surgery', perk: '-50% Injury recovery time for Dominion personnel', preferredDistrictIds: ['habitat'] },
-  dominion_support_kray: { id: 'dominion_support_kray', factionId: 'dominion', name: 'Kray Damar', role: 'support', rating: 2, specialty: 'Siege Logistics', perk: '+20% Alloy refinement yield in Fabricator', preferredDistrictIds: ['fabricator', 'logistics'] },
-  syndicate_scout_nix: { id: 'syndicate_scout_nix', factionId: 'syndicate', name: 'Nix Ravel', role: 'recon', rating: 2, specialty: 'Deep Infiltration', perk: 'Reveals hidden anomaly signatures without spending extra probes', preferredDistrictIds: ['survey', 'command'] },
+  dominion_medic_tala: { id: 'dominion_medic_tala', factionId: 'dominion', name: 'Tala Rune', role: 'medical', rating: 2, specialty: 'Armored Trauma Surgery', perk: '-50% Injury recovery time for Dominion personnel', preferredDistrictIds: ['habitat'], capabilities: { dominionPersonnelRecoveryCycles: -1 } },
+  dominion_support_kray: { id: 'dominion_support_kray', factionId: 'dominion', name: 'Kray Damar', role: 'support', rating: 2, specialty: 'Siege Logistics', perk: '+20% Alloy refinement yield in Fabricator', preferredDistrictIds: ['fabricator', 'logistics'], capabilities: { materialRewardPct: 20 } },
+  syndicate_scout_nix: { id: 'syndicate_scout_nix', factionId: 'syndicate', name: 'Nix Ravel', role: 'recon', rating: 2, specialty: 'Deep Infiltration', perk: 'Reveals hidden anomaly signatures without spending extra probes', preferredDistrictIds: ['survey', 'command'], capabilities: { surveyProbeRefundInterval: 2 } },
   syndicate_tech_aya: { id: 'syndicate_tech_aya', factionId: 'syndicate', name: 'Aya Senn', role: 'technical', rating: 2, specialty: 'Sub-Grid Optimization', perk: '-20% Power consumption across all Deck B facilities', preferredDistrictIds: ['engineering', 'fabricator'] },
-  syndicate_medic_lev: { id: 'syndicate_medic_lev', factionId: 'syndicate', name: 'Lev Iora', role: 'medical', rating: 2, specialty: 'Neural Regeneration', perk: '-50% Injury recovery time for Syndicate personnel', preferredDistrictIds: ['habitat'] },
-  syndicate_support_kest: { id: 'syndicate_support_kest', factionId: 'syndicate', name: 'Kest Morrow', role: 'support', rating: 2, specialty: 'Black-Market Throughput', perk: '+25% Cargo capacity and credit salvage multiplier', preferredDistrictIds: ['logistics', 'factions'] }
+  syndicate_medic_lev: { id: 'syndicate_medic_lev', factionId: 'syndicate', name: 'Lev Iora', role: 'medical', rating: 2, specialty: 'Neural Regeneration', perk: '-50% Injury recovery time for Syndicate personnel', preferredDistrictIds: ['habitat'], capabilities: { syndicatePersonnelRecoveryCycles: -1 } },
+  syndicate_support_kest: { id: 'syndicate_support_kest', factionId: 'syndicate', name: 'Kest Morrow', role: 'support', rating: 2, specialty: 'Black-Market Throughput', perk: '+25% Cargo capacity and credit salvage multiplier', preferredDistrictIds: ['logistics', 'factions'], capabilities: { creditsRewardPct: 20 } }
 });
 
 export const DOCTRINE_CATALOG = deepFreeze({
@@ -787,6 +903,209 @@ export function getUgaGroundAreaForMission(missionId) {
   const areaId = MISSION_CATALOG[missionId]?.groundAreaId;
   return areaId ? UGA_GROUND_AREA_CATALOG[areaId] || null : null;
 }
+
+/* Frontier ladder — the galaxy opens as one directed campaign instead of a
+   sandbox: systems chart in sequence (route surveys), a system's planets chart
+   in sequence (the prior body's primary survey), a planet's regions open in
+   sequence (the prior region's contract), and a region's battlefields open in
+   sequence (the prior map cleared). Each list below is the authored order of
+   one rung; the stateful unlock tests live in ground_control.js and the
+   enforcement lives in the eligibility locks. War Table homeworlds are
+   single-body systems, so their planet rung is trivially open. */
+export const UGA_PLANET_LADDER = deepFreeze({
+  aelos: [
+    { id: 'aelos_caldris', name: 'Caldris' },
+    { id: 'aelos_ithara', name: 'Ithara' },
+    { id: 'aelos_zephyros', name: 'Zephyros' }
+  ],
+  veyra: [
+    { id: 'veyra_orison', name: 'Orison' },
+    { id: 'veyra_nacre', name: 'Nacre' }
+  ],
+  karak: [
+    { id: 'karak_meridian', name: 'Meridian K-4' },
+    { id: 'karak_tethys', name: 'Tethys Foundry' }
+  ],
+  sombrero_i: [{ id: 'sombrero_aelos', name: 'Aelos' }],
+  andromeda_iv: [{ id: 'andromeda_pyraeth', name: 'Pyraeth' }],
+  orion_arc: [{ id: 'orion_nordhall', name: 'Nordhall' }],
+  helios_core: [{ id: 'helios_vespera', name: 'Vespera' }]
+});
+
+export const UGA_GROUND_AREA_LADDER = deepFreeze({
+  aelos_caldris: ['aelos_heliograph', 'aelos_caldris_customs'],
+  aelos_ithara: ['aelos_morrow_freeport'],
+  veyra_orison: ['veyra_orison_derelict'],
+  veyra_nacre: ['veyra_lensing_observatory', 'veyra_ossuary_vault'],
+  karak_meridian: ['karak_meridian_quarantine', 'karak_transit_spine', 'karak_primary_hive']
+});
+
+export function getPlanetLadderEntry(systemId, planetId) {
+  const ladder = UGA_PLANET_LADDER[systemId] || [];
+  const index = ladder.findIndex(entry => entry.id === planetId);
+  return index < 0 ? null : { index, entry: ladder[index], prior: index > 0 ? ladder[index - 1] : null };
+}
+
+/* A planet's primary survey is the first authored survey on it — the scan that
+   charts the body and opens the next rung. */
+export function getPlanetPrimarySurveyId(planetId) {
+  for (const survey of Object.values(SURVEY_CATALOG)) {
+    if (survey.planetId === planetId) return survey.id;
+  }
+  return null;
+}
+
+export function getPriorGroundArea(areaId) {
+  for (const ladder of Object.values(UGA_GROUND_AREA_LADDER)) {
+    const index = ladder.indexOf(areaId);
+    if (index > 0) return UGA_GROUND_AREA_CATALOG[ladder[index - 1]] || null;
+  }
+  return null;
+}
+
+export function getPriorGroundMap(areaId, mapId) {
+  const area = UGA_GROUND_AREA_CATALOG[areaId];
+  if (!area) return null;
+  const index = area.maps.findIndex(map => map.id === mapId);
+  return index > 0 ? area.maps[index - 1] : null;
+}
+
+/* Frontier salvage — the derelict contacts that carry no cataloged siteId are
+   one-time salvage mysteries. Rewards live domain-side (never in the chart)
+   so edited session data cannot mint resources: recoverContactSalvage reads
+   this table, not the runtime contact record. Ledger: the extracted-deposit
+   list keeps them one-time with zero save migration. */
+export const SALVAGE_CATALOG = deepFreeze({
+  sombrero_tithe_wreck: {
+    id: 'sombrero_tithe_wreck', systemId: 'sombrero_i', contactId: 'sombrero_tithe_wreck',
+    name: 'Tithe Convoy Strongbox', rewards: { alloys: 260, components: 120 }
+  },
+  andromeda_quench_wreck: {
+    id: 'andromeda_quench_wreck', systemId: 'andromeda_iv', contactId: 'andromeda_quench_wreck',
+    name: 'Quench Barge Slag Core', rewards: { alloys: 380 }
+  },
+  orion_condemned_lasher: {
+    id: 'orion_condemned_lasher', systemId: 'orion_arc', contactId: 'orion_condemned_lasher',
+    name: 'Lasher Toll Ledger', rewards: { credits: 900, components: 90 }
+  },
+  helios_relic_spiral: {
+    id: 'helios_relic_spiral', systemId: 'helios_core', contactId: 'helios_relic_spiral',
+    name: 'Desiccated Hive Shell Cache', rewards: { bioSamples: 240, researchPoints: 180 }
+  },
+  veyra_cinder_barge: {
+    id: 'veyra_cinder_barge', systemId: 'veyra', contactId: 'veyra_cinder_barge',
+    name: 'Lens-Shear Salvage', rewards: { components: 210, fuel: 12 }
+  }
+});
+
+export function getContactSalvage(contactId) {
+  return SALVAGE_CATALOG[contactId] || null;
+}
+
+/* Wreck boarding — the interior X-S slice of the salvage mysteries. Each
+   boarded wreck maps to one XS interior template from the stage-10 contract
+   (assets/data/theatreprofiles-stage10.js) and the small-unit-only envelope;
+   boarding runs on the station-keeping hull, so no planet runtime region is
+   claimed and the reserved interior_xs theatre stays honestly reserved: the
+   battle runtime does not exist yet, so the areas are authored, visible, and
+   explicitly undeployable until it ships. */
+export const WRECK_BOARDING_CATALOG = deepFreeze({
+  sombrero_tithe_wreck: {
+    id: 'sombrero_tithe_wreck', systemId: 'sombrero_i', contactId: 'sombrero_tithe_wreck',
+    name: 'Tithe Convoy Command Hull', templateId: 'interior_xs_breach_40x40',
+    envelope: 'infantry_only', sizeClass: 'XS', shipped: false
+  },
+  andromeda_quench_wreck: {
+    id: 'andromeda_quench_wreck', systemId: 'andromeda_iv', contactId: 'andromeda_quench_wreck',
+    name: 'Quench Barge Foundry Deck', templateId: 'interior_xs_linear_48x32',
+    envelope: 'small_unit_combined', sizeClass: 'XS', shipped: false
+  },
+  orion_condemned_lasher: {
+    id: 'orion_condemned_lasher', systemId: 'orion_arc', contactId: 'orion_condemned_lasher',
+    name: 'Condemned Lasher Cutters', templateId: 'interior_xs_breach_40x40',
+    envelope: 'small_unit_combined', sizeClass: 'XS', shipped: false
+  },
+  helios_relic_spiral: {
+    id: 'helios_relic_spiral', systemId: 'helios_core', contactId: 'helios_relic_spiral',
+    name: 'Relic Spiral Docked Hulks', templateId: 'interior_xs_linear_48x32',
+    envelope: 'infantry_only', sizeClass: 'XS', shipped: false
+  },
+  veyra_cinder_barge: {
+    id: 'veyra_cinder_barge', systemId: 'veyra', contactId: 'veyra_cinder_barge',
+    name: 'Cinder Barge Salvage Deck', templateId: 'interior_xs_breach_40x40',
+    envelope: 'infantry_only', sizeClass: 'XS', shipped: false
+  }
+});
+
+export function getWreckBoarding(contactId) {
+  return WRECK_BOARDING_CATALOG[contactId] || null;
+}
+
+/* Surface theatres — what KIND of battlefield a planet's maps are. The Ocean
+   Theatre Tester (modules/stormpeak_ocean) proved naval play end to end, so
+   'ocean' is a shipping theatre on the already-wet runtime kits (aelos_coast,
+   nordhall_isles, nordhall_cliff/peaks — see the `wet` table in MAPDEFS).
+   'gas_air' is the NEXT exclusive theatre: gas-giant drops fought entirely in
+   the air (no seabed, no ground capture — platforms and skimmers only).
+   'interior_xs' is the close-quarters X-S frame inside hulks and hive spires;
+   'moon' is low-gravity regolith. Reserved theatres carry authored names and
+   roster placement but NO runtimeTemplateMapId — the receiver refuses any
+   template that does not exist, so a reserved theatre cannot silently drop on
+   a land kit. */
+export const SURFACE_THEATER_CATALOG = deepFreeze({
+  land: { id: 'land', name: 'Surface Assault', naval: false, shipped: true },
+  ocean: { id: 'ocean', name: 'Ocean Theatre', naval: true, shipped: true },
+  gas_air: { id: 'gas_air', name: 'Gas-Giant Air Ops', naval: false, shipped: false, airOnly: true },
+  interior_xs: { id: 'interior_xs', name: 'Interior X-S', naval: false, shipped: false, airOnly: true },
+  moon: { id: 'moon', name: 'Moon Regolith', naval: false, shipped: false, lowGravity: true }
+});
+
+/* One theatre per planet. Ocean planets are the coasts and the drowned
+   colony; Zephyros is the authored Aelos fuel giant reserved for air-only
+   ops; moons and hulks follow. */
+export const PLANET_SURFACE_THEATER = deepFreeze({
+  aelos_caldris: 'ocean',
+  aelos_ithara: 'land',
+  /* Zephyros is the authored gas_air host (stage-10 canon slot 7). The
+     theatre stays reserved — air-only ops are not in the engine yet — but the
+     planet itself now exists, so the theatre no longer waits on an authored
+     world, only on the battle layer. */
+  aelos_zephyros: 'gas_air',
+  veyra_orison: 'land',
+  veyra_nacre: 'land',
+  karak_meridian: 'land',
+  karak_tethys: 'moon',
+  sombrero_aelos: 'land',
+  andromeda_pyraeth: 'land',
+  orion_nordhall: 'ocean',
+  helios_vespera: 'land'
+});
+
+export function getPlanetSurfaceTheater(planetId) {
+  return SURFACE_THEATER_CATALOG[PLANET_SURFACE_THEATER[planetId]] || SURFACE_THEATER_CATALOG.land;
+}
+
+/* A planet's ground areas must deploy on its theatre. Ocean-planet areas map
+   onto the proven wet runtime kits; reserved theatres have no template yet
+   and are filtered out of deployment until the engine ships them. */
+export const PLANET_RUNTIME_REGION = deepFreeze({
+  aelos_caldris: 'aelos_coast',
+  aelos_ithara: 'aelos_north',
+  /* Zephyros claims no template: gas_air is reserved and the receiver
+     refuses unknown template ids, so null keeps the giant undeployable
+     rather than silently dropping it on a land kit. */
+  aelos_zephyros: null,
+  veyra_orison: 'nordhall_isles',
+  veyra_nacre: 'nordhall_peaks',
+  karak_meridian: 'vespera_plateau',
+  /* Tethys Foundry is the reserved MOON world: low-gravity regolith ops
+     await the engine theatre, so it claims no land template. */
+  karak_tethys: null,
+  sombrero_aelos: 'aelos_north',
+  andromeda_pyraeth: 'pyraeth_caldera',
+  orion_nordhall: 'nordhall_isles',
+  helios_vespera: 'vespera_spire'
+});
 
 export function getUgaGroundMapForMission(missionId, mapId) {
   const area = getUgaGroundAreaForMission(missionId);

@@ -14,7 +14,7 @@ const assetRoot='modules/space_exploration/assets/runtime/models/uga-sections/';
 const manifestPath=assetRoot+'delivery-manifest.json';
 const manifest=JSON.parse(await readFile(manifestPath));
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
-const files=['modules/space_exploration/index.html','modules/space_exploration/lib/three.min.js','modules/space_exploration/lib/GLTFLoader.js','modules/space_exploration/src/core/gltf_runtime_loader.js','modules/space_exploration/src/core/uga_command_scene.js','modules/space_exploration/src/ship/uga_blender_assets.js','modules/space_exploration/src/ui/uga_scene.js','modules/space_exploration/src/ui/uga_command.css','modules/space_exploration/src/ui/uga_command.js',manifestPath];
+const files=['modules/space_exploration/index.html','modules/space_exploration/lib/three.min.js','modules/space_exploration/lib/GLTFLoader.js','modules/space_exploration/src/core/gltf_runtime_loader.js','modules/space_exploration/src/core/uga_command_scene.js','modules/space_exploration/src/ship/uga_blender_assets.js','modules/space_exploration/src/ui/uga_scene.js','modules/space_exploration/src/ui/uga_command.css','modules/space_exploration/src/ui/uga_command.js','modules/space_exploration/assets/runtime/models/nexus-vii-cutaway-hull-overlay.glb',manifestPath];
 for(const resource of manifest.resources){
   if(!/^[a-zA-Z0-9.-]+$/.test(resource.uri))throw Error('Unsafe resource filename');
   const path=assetRoot+resource.uri,bytes=await readFile(path);
@@ -30,7 +30,7 @@ if(packaged)for(const path of [...files]){
 const rooms = {command:'A',navigation:'A',survey:'A',mission_ops:'A',research:'B',fabricator:'B',engineering:'B',habitat:'C',factions:'C',hangar:'C',logistics:'C'};
 await mkdir(output,{recursive:true});
 const failures=[], errors=[], reports=[];
-const guard=await acquireVerificationFreeze({root:fileURLToPath(new URL('../',import.meta.url)),label:'UGA authored shared-resource 33-room acceptance',allowedPaths:[fileURLToPath(new URL('../tmp/',import.meta.url)),fileURLToPath(new URL('../audit/',import.meta.url))]});
+const guard=await acquireVerificationFreeze({root:fileURLToPath(new URL('../',import.meta.url)),label:'UGA authored shared-resource 44-room acceptance',allowedPaths:[fileURLToPath(new URL('../tmp/',import.meta.url)),fileURLToPath(new URL('../audit/',import.meta.url))]});
 let page,browser;
 try {
   browser=await launchPwBrowser();
@@ -48,7 +48,7 @@ try {
      click waits forever. Enter a room the way a player does, then wait. */
   await page.click('.uga-command-nav [data-nav="ship"]');
   await page.waitForFunction(()=>window.__MASSFRONT_SPACE__?.commandScene?.loaded, null, {polling:250});
-  for (const [viewport,size] of Object.entries({landscape:{width:1440,height:900},portrait:{width:412,height:900},phoneLandscape:{width:900,height:412}})) {
+  for (const [viewport,size] of Object.entries({landscape:{width:1440,height:900},portrait:{width:412,height:900},compactPortrait:{width:320,height:700},phoneLandscape:{width:900,height:412}})) {
     await page.setViewportSize(size);
     await page.click('[data-action="overview"]');
     await page.waitForTimeout(1200);
@@ -61,12 +61,21 @@ try {
         const s=window.__MASSFRONT_SPACE__.commandScene,r=s.districtRoots.get(id),plots=new Set();
         r.traverse(o=>{if(o.userData?.build_plot_id)plots.add(o.userData.build_plot_id);});
         const bounds=s._districtBounds(r),center=bounds?bounds.getCenter(new THREE.Vector3()).project(s.camera):new THREE.Vector3(9,9,9);
+        const visibleCarrier=(s.authoredCarrierContext||[]).filter(entry=>entry.object.visible).map(entry=>entry.object.name);
+        const localHull=visibleCarrier.filter(name=>/^NexusVII_(?:FarHullPanel_|WindowRibbon_|NearHullSill_|BowCap(?:_|$)|HullFrame_)/.test(name));
+        const distantHull=visibleCarrier.filter(name=>!localHull.includes(name));
         const gl=s.renderer.getContext();
-        return {id,selected:s.selectedDistrictId,rootVisible:r.visible,children:r.children.map(o=>({name:o.name,visible:o.visible})),carrier:s.deckTopologyRoot.name,districts:s.districtRoots.size,plots:[...plots],visibleMeshes:(()=>{let n=0;r.traverseVisible(o=>{if(o.isMesh)n++;});return n;})(),camera:s.camera.position.toArray(),target:s.cameraTarget.toArray(),up:s.camera.up.toArray(),center:center.toArray(),glError:gl.getError(),lost:gl.isContextLost()};
+        return {id,selected:s.selectedDistrictId,rootVisible:r.visible,children:r.children.map(o=>({name:o.name,visible:o.visible})),carrier:s.deckTopologyRoot.name,districts:s.districtRoots.size,hullOverlayLoaded:Boolean(s.root?.userData?.hullOverlayLoaded),plots:[...plots],visibleMeshes:(()=>{let n=0;r.traverseVisible(o=>{if(o.isMesh)n++;});return n;})(),localHull,distantHull,visibleRings:s.gravityRings.filter(ring=>ring.visible).length,inspectionBayVisible:Boolean(s.inspectionBay?.visible),camera:s.camera.position.toArray(),target:s.cameraTarget.toArray(),up:s.camera.up.toArray(),center:center.toArray(),glError:gl.getError(),lost:gl.isContextLost()};
       },id);
       reports.push({viewport,...report});
       // Command is fixed; the ten upgradeable authored districts own30 plots.
-      if(report.selected!==id||report.carrier!=='NEXUS_VII_LONGITUDINAL_CUTAWAY'||report.districts!==11||report.plots.length!==(id==='command'?0:3)||report.visibleMeshes<5||report.glError||report.lost)failures.push(`${viewport}/${id}: authored room contract`);
+      if(report.selected!==id||report.carrier!=='NEXUS_VII_LONGITUDINAL_CUTAWAY'||report.districts!==11||!report.hullOverlayLoaded||report.inspectionBayVisible||report.plots.length!==(id==='command'?0:3)||report.visibleMeshes<5||report.glError||report.lost)failures.push(`${viewport}/${id}: authored room contract`);
+      // Every focused room, including the prow-most Command Core, must retain
+      // only its local cutaway framing and not the full-length ship plates.
+      if(!report.localHull.length||report.localHull.some(name=>/^NexusVII_NearHullSill_/.test(name))||report.distantHull.length||report.visibleRings)failures.push(`${viewport}/${id}: focused local hull context`);
+      const lowerRoom=['command','mission_ops','habitat','factions','hangar','logistics'].includes(id);
+      if(lowerRoom&&id!=='command'&&!report.localHull.some(name=>/^NexusVII_FarHullPanel_Lower_/.test(name)))failures.push(`${viewport}/${id}: lower-room rear hull missing`);
+      if(lowerRoom&&report.localHull.some(name=>/^NexusVII_FarHullPanel_[1-6]$/.test(name)))failures.push(`${viewport}/${id}: full-height rear hull leaks into lower room`);
       if(Math.abs(report.center[0])>1||Math.abs(report.center[1])>1)failures.push(`${viewport}/${id}: room center outside viewport`);
       await page.screenshot({path:new URL(`${id}-${viewport}.png`,output).pathname.replace(/^\/(?:([A-Za-z]):)/,'$1:')});
       const tap=await page.evaluate(id=>{
@@ -81,8 +90,12 @@ try {
           const element=document.elementFromPoint(x,y);
           if(element!==stage&&!element?.matches('canvas'))return;
           const ray=new THREE.Raycaster();ray.setFromCamera(new THREE.Vector2(p.x,p.y),s.camera);
-          const hit=ray.intersectObject(s.root,true).find(h=>{for(let n=h.object;n;n=n.parent)if(!n.visible)return false;return true;});
-          for(let n=hit?.object;n;n=n.parent)if(n.userData?.district_id===id){target={x,y};break;}
+          const hit=ray.intersectObject(s.root,true).find(h=>{
+            let districtId=null;
+            for(let n=h.object;n;n=n.parent){if(!n.visible)return false;districtId ||= n.userData?.district_id;}
+            return districtId===id;
+          });
+          if(hit)target={x,y};
         });
         return target;
       },id);

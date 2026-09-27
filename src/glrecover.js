@@ -130,16 +130,13 @@ function glrCard(title,body,action){
   let o=document.getElementById('glrCard');
   if(!o){
     o=document.createElement('div'); o.id='glrCard';
+    o.className='mfNormalRecovery mfNormalLoader';o.dataset.loaderArchetype='normal';
+    o.setAttribute('role','status');o.setAttribute('aria-live','polite');o.setAttribute('aria-busy','true');
     o.style.cssText='position:fixed;inset:0;z-index:2147483000;display:flex;flex-direction:column;'
-      +'align-items:center;justify-content:center;gap:14px;background:rgba(2,6,12,.94);color:#cfe6ff;'
-      +'text-align:center;padding:26px;font-family:var(--fT,system-ui,sans-serif)';
+      +'align-items:center;justify-content:center;color:#cfe6ff;text-align:center;padding:26px;font-family:var(--fT,system-ui,sans-serif)';
     (document.body||document.documentElement).appendChild(o);
   }
-  o.innerHTML='<div style="font:900 14px/1.4 var(--fT,sans-serif);letter-spacing:.1em;color:#8fd0ff">'+title+'</div>'
-    +'<div id="glrBody" style="font-size:12px;max-width:300px;line-height:1.55;color:#9fb8cc">'+body+'</div>'
-    +(action?'<button id="glrAct" type="button" style="margin-top:6px;padding:13px 30px;border-radius:12px;'
-      +'border:1px solid #48cfff;background:linear-gradient(180deg,#2a6f96,#0d2a42);color:#eaf7ff;'
-      +'font:900 12px var(--fT,sans-serif);letter-spacing:.12em">'+action.label+'</button>':'');
+  o.innerHTML=mfGLNormalRecoveryMarkup(title,body,action?'glrAct':'',action?action.label:'','glrBody');
   if(action){
     const b=document.getElementById('glrAct');
     if(b){ if(typeof mfBindTap==='function') mfBindTap(b,action.fn); else b.addEventListener('click',action.fn); }

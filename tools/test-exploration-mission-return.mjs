@@ -13,7 +13,9 @@ const missionId=process.env.MF_MISSION_ID||'uga_pale_bloom';
 assert.ok(/^[a-z0-9_]{1,96}$/.test(missionId),'MF_MISSION_ID must be a stable mission ID');
 const mission=MISSION_CATALOG[missionId];
 assert.ok(mission,'MF_MISSION_ID must name an authored mission');
-const groundArea=getUgaGroundAreaForMission(missionId),groundMap=groundArea?.maps.find(map=>map.id===groundArea.recommendedMapId);
+// A new career must clear Compact before the authored Standard recommendation
+// becomes playable. Keep this first-clear verifier on the actual open rung.
+const groundArea=getUgaGroundAreaForMission(missionId),groundMap=groundArea?.maps.find(map=>map.size==='compact');
 assert.ok(groundArea&&groundMap,'MF_MISSION_ID must have an authored player-facing battlefield');
 const root=process.cwd(),packed=process.env.MF_MISSION_PACKED==='1',mobile=process.env.MF_MISSION_MOBILE==='1',serveRoot=packed?resolve(root,'www'):root,out=`tmp/mission-return${packed?'-packed':''}${mobile?'-mobile':''}${process.env.MF_MISSION_MISSING_PORTRAIT==='1'?'-missing-portrait':''}${process.env.MF_MISSION_R2==='1'?'-r2':''}${missionTag?'-'+missionTag:''}`;let server,guard,browser,page;
 // A named acceptance run owns a fresh directory. Reusing its label fails
@@ -35,7 +37,28 @@ mission: try{
   if(packed){report.packageBefore=await hashes(serveRoot);assert.deepEqual(report.packageBefore,report.before,'source matches tested www files');report.testedEntrySha256=createHash('sha256').update(await readFile(resolve(serveRoot,'index.html'))).digest('hex');}
   page=await browser.newPage({viewport:report.viewport,hasTouch:true,serviceWorkers:process.env.MF_MISSION_MISSING_PORTRAIT==='1'?'block':'allow'});page.on('pageerror',e=>report.errors.push(e.message));
   page.on('response',response=>{const responseUrl=response.url();if(response.ok()&&/\.(?:js|css|html)(?:\?|$)/.test(responseUrl))servedHashJobs.push((async()=>{try{const body=await response.body();report.servedRuntime[responseUrl]={sha256:createHash('sha256').update(body).digest('hex'),bytes:body.length};}catch(e){report.servedRuntime[responseUrl]={error:String(e)};}})());});
-  async function visualCheck(name,selector){await page.locator('#renderVeil').waitFor({state:'hidden',timeout:60000});const control=page.locator(selector).first();await control.scrollIntoViewIfNeeded();const evidence=await control.evaluate(e=>{const r=e.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2,hit=document.elementFromPoint(x,y);return {viewport:{width:innerWidth,height:innerHeight},documentWidth:document.documentElement.scrollWidth,button:{x:r.x,y:r.y,width:r.width,height:r.height},hit:e===hit||e.contains(hit),disabled:!!e.disabled};});(report.visualChecks??={})[name]=evidence;assert.ok(evidence.documentWidth<=evidence.viewport.width+1,`${name}: no page horizontal overflow`);assert.ok(evidence.hit&&!evidence.disabled,`${name}: action reachable and unobscured`);assert.ok(evidence.button.width>=44&&evidence.button.height>=40,`${name}: touch target`);await page.screenshot({path:`${out}/${name}.png`});}
+  async function visualCheck(name,selector){
+    await page.locator('#renderVeil').waitFor({state:'hidden',timeout:60000});
+    let evidence;
+    for(let attempt=0;attempt<4;attempt++){
+      try{
+        const control=page.locator(selector).first();
+        await control.scrollIntoViewIfNeeded();
+        evidence=await control.evaluate(e=>{const r=e.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2,hit=document.elementFromPoint(x,y);return {viewport:{width:innerWidth,height:innerHeight},documentWidth:document.documentElement.scrollWidth,button:{x:r.x,y:r.y,width:r.width,height:r.height},hit:e===hit||e.contains(hit),disabled:!!e.disabled};});
+        break;
+      }catch(error){
+        // UGA replaces its planner DOM when asynchronous room state settles.
+        // Retry only that transient detach; do not soften real visibility gates.
+        if(!/Element is not attached to the DOM/.test(String(error))||attempt===3)throw error;
+        await page.waitForTimeout(150);
+      }
+    }
+    (report.visualChecks??={})[name]=evidence;
+    assert.ok(evidence.documentWidth<=evidence.viewport.width+1,`${name}: no page horizontal overflow`);
+    assert.ok(evidence.hit&&!evidence.disabled,`${name}: action reachable and unobscured`);
+    assert.ok(evidence.button.width>=44&&evidence.button.height>=40,`${name}: touch target`);
+    await page.screenshot({path:`${out}/${name}.png`,timeout:60000});
+  }
   async function touch(locator){const box=await locator.boundingBox();assert.ok(box&&box.width>=44&&box.height>=44,'touch target missing or below 44px');await page.touchscreen.tap(box.x+box.width*.5,box.y+box.height*.5);}
   page.on('framenavigated',f=>{if(f===page.mainFrame()&&/groundResult=/.test(f.url()))report.resultReturnUrl=f.url();});
   await page.route('**/*',r=>['127.0.0.1','localhost'].includes(new URL(r.request().url()).hostname)||/^(blob|data):/.test(r.request().url())?r.continue():r.abort());
@@ -43,9 +66,17 @@ mission: try{
   if(process.env.MF_MISSION_MISSING_PORTRAIT==='1')await page.route('**/assets/factions/commanders/nova_kai.jpg',r=>{report.blockedPortraitRequests++;return r.abort();});
   await page.goto(url,{waitUntil:'domcontentloaded'});report.gpu=await assertHardwareGpu(page);
   await page.waitForFunction(()=>typeof mfLauncherSnapshot==='function'&&!document.getElementById('mfBootCover'),null,{timeout:60000});
-  await page.waitForFunction(()=>{const p=document.getElementById('mfLaunchPlay'),o=document.getElementById('mfLaunchOffline');return p&&!p.disabled||o&&!o.disabled&&getComputedStyle(o).display!=='none';});
-  if(await page.locator('#mfLaunchPlay').isEnabled()&&/CONTINUE TO INTRO/.test(await page.locator('#mfLaunchPlay').innerText()))await page.locator('#mfLaunchPlay').click();else await page.locator('#mfLaunchOffline').click();
-  await page.locator('#mfIntroStart').click();await page.locator('#apOfflineBtn').click();
+  // This packed localhost capture intentionally blocks production requests.
+  // Wait for the explicit offline escape instead of entering an update check
+  // that can fail and return us to the launcher before the account gate opens.
+  await page.waitForFunction(()=>{const o=document.getElementById('mfLaunchOffline');return o&&!o.disabled&&getComputedStyle(o).display!=='none';},null,{timeout:60000});
+  await page.locator('#mfLaunchOffline').click();
+  const introStart=page.locator('#mfIntroStart'),offlineGate=page.locator('#apOfflineBtn');
+  if(await introStart.isVisible()){
+    try{await introStart.click({timeout:5000});}
+    catch(error){if(!(await offlineGate.isVisible()))throw error;}
+  }
+  await offlineGate.click();
   await page.waitForURL('**/modules/space_exploration/index.html*');
   async function ready(){await page.waitForFunction(()=>window.__MASSFRONT_SPACE__,null,{timeout:60000});await page.evaluate(()=>window.__MASSFRONT_SPACE__.ready);}
   async function openGalacticContracts(prefix,{requireCampaignHub=false}={}){
@@ -62,11 +93,59 @@ mission: try{
     await page.locator('.uga-command-shell[data-view="progress"]').waitFor({state:'visible',timeout:10000});
     await visualCheck(`${prefix}-progress-expedition`,'[data-hub-route="galactic-operations"]');
     await touch(page.locator('[data-hub-route="galactic-operations"]'));
-    await page.locator('.uga-command-shell[data-view="contracts"]').waitFor({state:'visible',timeout:10000});
+    // The current hub route focuses Mission Operations inside the ship
+    // inspector; older builds opened a standalone contracts view. Accept the
+    // player-visible Contracts panel in either layout, then test its cards.
+    await page.waitForFunction(()=>document.querySelector('.uga-command-shell[data-view="contracts"]')
+      || [...document.querySelectorAll('.uga-context-scroll h2')].some(heading=>heading.textContent?.trim()==='Contracts'),
+    null,{timeout:10000});
     (report.entryRoutes??=[]).push(entry);
   }
-  await ready();await openGalacticContracts('00a',{requireCampaignHub:true});await page.locator('[data-host-route="new-career-faction"]').click();
-  await page.waitForURL(/galacticRoute=/);const novaCard=page.locator('#mfCareerFactionGate .mfcfgCard').filter({hasText:/COMMISSION NOVA/i}).first();const novaCommission=novaCard.locator('.mfcfgChoose');await novaCommission.evaluate(e=>e.scrollIntoView({block:'center'}));await page.waitForTimeout(300);await touch(novaCommission);
+  await ready();
+  if(process.env.MF_MISSION_HOME_VISUAL_ONLY==='1'){
+    report.homeVisual=[];
+    for(const width of [320,360,412]){
+      await page.setViewportSize({width,height:900});
+      await page.locator('.uga-campaign-hub .uga-objective-hero').waitFor({state:'visible',timeout:30000});
+      await page.locator('#renderVeil').waitFor({state:'hidden',timeout:60000});
+      const evidence=await page.locator('.uga-campaign-hub .uga-objective').evaluate(card=>{
+        const hero=card.querySelector('.uga-objective-hero'),title=card.querySelector('#ugaObjectiveTitle'),action=card.querySelector('[data-host-route="new-career-faction"]'),brief=card.querySelector('.uga-objective-brief');
+        const rect=action.getBoundingClientRect(),hit=document.elementFromPoint(rect.left+rect.width/2,rect.top+rect.height/2);
+        const front=document.querySelector('.uga-command-front'),status=front?.querySelector(':scope > div'),frontActions=[...front?.querySelectorAll('.uga-front-actions button')||[]];
+        const statusName=status?.querySelector('strong'),nameRect=statusName?.getBoundingClientRect(),nameHit=nameRect&&document.elementFromPoint(nameRect.left+nameRect.width/2,nameRect.top+nameRect.height/2);
+        return {viewportWidth:innerWidth,documentWidth:document.documentElement.scrollWidth,
+          objective:card.dataset.objective,art:getComputedStyle(hero.querySelector('.uga-objective-art')).backgroundImage,
+          heroWidth:hero.clientWidth,heroScrollWidth:hero.scrollWidth,titleWidth:title.clientWidth,titleScrollWidth:title.scrollWidth,
+          actionWidth:rect.width,actionHeight:rect.height,actionHit:hit===action||action.contains(hit),briefClosed:!brief.open,
+          frontStatusWidth:status?.clientWidth,frontStatusScrollWidth:status?.scrollWidth,
+          frontStatusVisible:statusName===nameHit||statusName?.contains(nameHit),
+          frontActions:frontActions.map(button=>({width:button.getBoundingClientRect().width,height:button.getBoundingClientRect().height,
+            background:getComputedStyle(button).backgroundColor,color:getComputedStyle(button).color}))};
+      });
+      assert.equal(evidence.objective,'commission');
+      assert.ok(evidence.art.includes('uga-coalition-embassy-v1.webp'),'commissioning action shows contextual coalition art');
+      assert.ok(evidence.documentWidth<=width+1&&evidence.heroScrollWidth<=evidence.heroWidth+1&&evidence.titleScrollWidth<=evidence.titleWidth+1,'home artwork and title fit phone width');
+      assert.ok(evidence.actionWidth>=44&&evidence.actionHeight>=44&&evidence.actionHit,'hire commander remains a visible touch action');
+      assert.ok(evidence.frontStatusScrollWidth<=evidence.frontStatusWidth+1,'current-system status fits phone width');
+      assert.ok(evidence.frontStatusVisible,'current-system status is not covered by front actions');
+      assert.ok(evidence.frontActions.length===2&&evidence.frontActions.every(button=>button.width>=44&&button.height>=44),'front actions meet mobile touch floor');
+      assert.ok(evidence.frontActions.every(button=>!['rgb(239, 239, 239)','rgb(221, 221, 221)'].includes(button.background)),'front actions do not inherit native grey button paint');
+      assert.ok(evidence.briefClosed,'longer mission explanation starts folded');
+      report.homeVisual.push(evidence);
+      await page.screenshot({path:`${out}/home-commission-${width}.png`});
+    }
+    await page.locator('.uga-objective-brief > summary').click();
+    assert.ok(await page.locator('.uga-objective-brief').evaluate(node=>node.open),'mission brief opens on tap');
+    assert.deepEqual(report.errors,[]);
+    report.steps.push('packed visual home 320/360/412 and optional brief');
+    report.pass=true;
+    break mission;
+  }
+  await openGalacticContracts('00a',{requireCampaignHub:true});await page.locator('[data-host-route="new-career-faction"]').click();
+  await page.waitForURL(/galacticRoute=/);
+  const novaCard=page.locator('#mfCareerFactionGate .mfcfgCard[data-faction="nova"]');
+  await novaCard.waitFor({state:'visible',timeout:120000});
+  await novaCard.scrollIntoViewIfNeeded();await page.waitForTimeout(300);await touch(novaCard);
   await page.waitForURL('**/modules/space_exploration/index.html*');await ready();report.steps.push('real-nova-commissioning');
   report.fixtureState=await page.evaluate(async()=>{const host=window.__MASSFRONT_SPACE_HOST__,m=await import('./src/domain/state_store.js');const state=m.createShowcaseReadyDomainState(host.commanderCatalogContext);state.profileId=window.__MASSFRONT_SPACE__.getState().profileId;await host.saveCampaignSnapshot(state);return state;});
   report.fixtureSha256=createHash('sha256').update(JSON.stringify(report.fixtureState)).digest('hex');
@@ -89,12 +168,66 @@ mission: try{
   report.battlefieldSelection=await planner.evaluate(node=>({areaId:node.dataset.selectedAreaId,mapId:node.dataset.selectedMapId,mapSize:node.dataset.selectedMapSize,rootAreaId:document.querySelector('.uga-command-shell')?.dataset.selectedAreaId,rootMapId:document.querySelector('.uga-command-shell')?.dataset.selectedMapId,rootMapSize:document.querySelector('.uga-command-shell')?.dataset.selectedMapSize}));
   assert.deepEqual(report.battlefieldSelection,{areaId:groundArea.id,mapId:groundMap.id,mapSize:groundMap.size,rootAreaId:groundArea.id,rootMapId:groundMap.id,rootMapSize:groundMap.size},'player-facing battlefield identity is explicit on planner and root contracts');
   report.beforeDeployment=await page.evaluate(()=>window.__MASSFRONT_SPACE__.getState());report.commanderUi=await page.locator('[data-deploy="commanderId"]').evaluate(e=>({value:e.value,choices:e.options.length,placeholder:!!e.parentElement.querySelector('.uga-portrait-unavailable')}));report.missingPortraitInjected=process.env.MF_MISSION_MISSING_PORTRAIT==='1';await page.screenshot({path:out+'/01-deployment.png'});
+  if(!report.missingPortraitInjected){
+    await page.locator('#renderVeil').waitFor({state:'hidden',timeout:60000});
+    await page.waitForFunction(()=>{const space=window.__MASSFRONT_SPACE__;return space?.commandScene?.selectedDistrictId==='hangar'&&space?.deploymentArena?.root?.visible;},null,{timeout:60000});
+    report.factionBayVariants=[];
+    for(const variant of [
+      {faction:'nova',commander:'nova_kai',ship:'nova_orbital_carrier',builder:'mdlDropship',light:0x42ddff},
+      {faction:'dominion',commander:'legion_vex',ship:'dominion_assault_lander',builder:'mdlLegionDropship',light:0xff684d},
+      {faction:'syndicate',commander:'syndicate_renn',ship:'syndicate_phase_manta',builder:'mdlSyndicateDropship',light:0xb778ff},
+      {faction:'nova',commander:'nova_kai',ship:'nova_orbital_carrier',builder:'mdlDropship',light:0x42ddff}
+    ]){
+      await page.locator('[data-deploy="factionId"]').selectOption(variant.faction);
+      await page.locator('[data-deploy="commanderId"]').selectOption(variant.commander);
+      await page.waitForFunction(expected=>{
+        const arena=window.__MASSFRONT_SPACE__?.deploymentArena;
+        return arena?.root?.userData?.deploymentDraft?.bayStyleId===expected.faction
+          && arena?.root?.userData?.deploymentDraft?.commanderId===expected.commander;
+      },variant);
+      const actual=await page.evaluate(()=>{
+        const planner=document.querySelector('.uga-deployment-planner');
+        const arena=window.__MASSFRONT_SPACE__.deploymentArena;
+        const ships=[];arena.root.traverse(object=>{if(object.userData?.ship_id&&object.visible)ships.push(object.userData);});
+        return {faction:planner.dataset.factionId,commander:planner.querySelector('[data-deploy="commanderId"]')?.value,
+          shipName:planner.querySelector('.uga-deployment-summary strong')?.textContent,
+          shipStation:planner.querySelector('[data-deployment-station="base_deployer"] small')?.textContent,
+          ship:ships[0]?.ship_id,builder:ships[0]?.source_model_builder,shipCount:ships.length,
+          light:arena.root.getObjectByName('hangar_DeploymentArenaOperationalLight')?.color.getHex(),
+          rail:arena.root.getObjectByName('hangar_MainServiceLanePort')?.material.emissive.getHex(),
+          berthRail:arena.root.getObjectByName('hangar_FactionBerthPort')?.material.emissive.getHex(),
+          bayStyleId:arena.root.userData.deploymentDraft?.bayStyleId};
+      });
+      assert.equal(actual.faction,variant.faction);assert.equal(actual.commander,variant.commander);
+      assert.equal(actual.ship,variant.ship);assert.equal(actual.builder,variant.builder);assert.equal(actual.shipCount,1);
+      assert.equal(actual.light,variant.light);assert.equal(actual.rail,variant.light);assert.equal(actual.berthRail,variant.light);assert.equal(actual.bayStyleId,variant.faction);
+      assert.ok(actual.shipName&&actual.shipStation?.includes(actual.shipName),'ship labels follow faction selection');
+      report.factionBayVariants.push(actual);
+      await loadoutToggle.click();
+      await page.waitForFunction(()=>!document.querySelector('#toastBanner')?.classList.contains('show'));
+      await page.waitForTimeout(450);
+      await page.screenshot({path:`${out}/01-bay-${variant.faction}-${report.factionBayVariants.length}.png`});
+      await loadoutToggle.click();
+    }
+  }
   if(report.missingPortraitInjected){assert.ok(report.blockedPortraitRequests>0,'portrait failure reached network');assert.equal(report.commanderUi.placeholder,true,'honest cosmetic-unavailable fallback');assert.equal(report.commanderUi.value,'nova_kai');}
   await visualCheck('01-deployment','[data-action="deploy"]');
   /* Loadout was expanded above, before the battlefield wait. Kept guarded rather
      than removed so a future planner that re-collapses between those points
      still reaches the specialists. */
   if(await loadoutToggle.count()&&await loadoutToggle.getAttribute('aria-expanded')==='false')await touch(loadoutToggle);
+  const modCard=page.locator('.uga-mod-control').first();
+  await modCard.scrollIntoViewIfNeeded();
+  report.modControl=await modCard.evaluate(card=>{
+    const rect=card.getBoundingClientRect(),checkbox=card.querySelector('input')?.getBoundingClientRect();
+    const hit=document.elementFromPoint(rect.left+rect.width/2,rect.top+rect.height/2);
+    return {width:rect.width,height:rect.height,checkboxWidth:checkbox?.width||0,checkboxHeight:checkbox?.height||0,
+      centerHitsCard:hit===card||card.contains(hit)};
+  });
+  assert.ok(report.modControl.width>=44&&report.modControl.height>=44&&report.modControl.centerHitsCard,
+    'operation mod card is a reachable 44px touch target');
+  assert.ok(report.modControl.checkboxWidth>=20&&report.modControl.checkboxHeight>=20,'operation mod checkbox stays legible');
+  await page.screenshot({path:out+'/01f-mobile-mod-controls.png'});
   const specialistValues=await page.locator('[data-specialist]').evaluateAll(selects=>selects.map(select=>select.value));
   assert.equal(new Set(specialistValues).size,3,'default deployment starts with three unique specialists');
   await page.locator('[data-specialist]').nth(1).selectOption(specialistValues[0]);
@@ -207,12 +340,22 @@ mission: try{
   const history=report.afterResult.operations.history.at(-1);assert.equal(report.afterResult.operations.appliedResultIds.filter(id=>id===history.result.resultId).length,1);
   for(const [key,value] of Object.entries(report.beforeDeployment.resources))assert.equal(report.afterResult.resources[key],value-(history.operation.deploymentCost[key]||0)+(history.result.rewards[key]||0),`exactly one net ${key} reward`);
   await page.locator('#operationModal[data-operation-state="debrief"]').waitFor({state:'visible'});assert.equal(await page.locator('#btnSimVictory').isVisible(),false);assert.equal(await page.locator('#btnSimSetback').isVisible(),false);await visualCheck('02-debrief','#btnCancelOperation');
-  await page.locator('#btnCancelOperation').click();await page.waitForFunction(()=>window.__MASSFRONT_SPACE__.commandScene.selectedDistrictId==='command');await visualCheck('03-return-services','[data-return-services] [data-district="engineering"]');
+  await page.locator('#btnCancelOperation').click();
+  await page.locator('.uga-command-shell[data-view="return-services"] [data-return-services]').waitFor({state:'visible'});
+  await page.waitForFunction(()=>window.__MASSFRONT_SPACE__.commandScene.selectedDistrictId==='command');
+  await visualCheck('03-return-services','[data-return-services] [data-district="engineering"]');
   await page.waitForFunction(()=>!window.__MASSFRONT_SPACE__.commandScene.tween,null,{timeout:10000});
-  report.returnRoomBounds=await page.evaluate(()=>{const s=window.__MASSFRONT_SPACE__.commandScene,room=s.districtRoots.get('command'),bounds=s._districtBounds(room),canvas=s.renderer.domElement.getBoundingClientRect(),panel=document.querySelector('.uga-context-panel').getBoundingClientRect();if(!bounds)return {missing:true};s.camera.updateMatrixWorld(true);const points=[];for(const x of [bounds.min.x,bounds.max.x])for(const y of [bounds.min.y,bounds.max.y])for(const z of [bounds.min.z,bounds.max.z]){const p=bounds.min.clone().set(x,y,z).project(s.camera);points.push({x:canvas.left+(p.x+1)*canvas.width/2,y:canvas.top+(1-p.y)*canvas.height/2,z:p.z});}return {selected:s.selectedDistrictId,authoredRoot:s.deckTopologyRoot?.name,room:room.name,points,projected:{left:Math.min(...points.map(p=>p.x)),right:Math.max(...points.map(p=>p.x)),top:Math.min(...points.map(p=>p.y)),bottom:Math.max(...points.map(p=>p.y))},canvas:{left:canvas.left,right:canvas.right,top:canvas.top,bottom:canvas.bottom},panel:{left:panel.left,right:panel.right,top:panel.top,bottom:panel.bottom}};});
-  assert.equal(report.returnRoomBounds.selected,'command');assert.equal(report.returnRoomBounds.authoredRoot,'NEXUS_VII_LONGITUDINAL_CUTAWAY');assert.ok(report.returnRoomBounds.points.every(p=>p.z>=-1&&p.z<=1),'authored room inside camera depth');
-  const projected=report.returnRoomBounds.projected,inspector=report.returnRoomBounds.panel;assert.ok(projected.left>=-1&&projected.right<=report.viewport.width+1,'authored room within canvas width');if(mobile)assert.ok(projected.bottom<=inspector.top+1,'authored Command room fully above expanded inspector');else assert.ok(projected.right<=inspector.left+1,'authored Command room left of inspector');await page.screenshot({path:out+'/03-return-services.png'});
-  report.returnSurface=await page.locator('.uga-context-panel').innerText();assert.match(report.returnSurface,/UPGRADES|Upgrade/i);report.steps.push('result-debrief-original-command-services');
+  report.returnRoomBounds=await page.evaluate(()=>{const s=window.__MASSFRONT_SPACE__.commandScene,room=s.districtRoots.get('command'),bounds=room&&s._districtBounds(room),canvas=s.renderer.domElement.getBoundingClientRect();if(!bounds)return {missing:true};s.camera.updateMatrixWorld(true);const points=[];for(const x of [bounds.min.x,bounds.max.x])for(const y of [bounds.min.y,bounds.max.y])for(const z of [bounds.min.z,bounds.max.z]){const p=bounds.min.clone().set(x,y,z).project(s.camera);points.push({x:canvas.left+(p.x+1)*canvas.width/2,y:canvas.top+(1-p.y)*canvas.height/2,z:p.z});}return {selected:s.selectedDistrictId,authoredRoot:s.deckTopologyRoot?.name,room:room.name,points,projected:{left:Math.min(...points.map(p=>p.x)),right:Math.max(...points.map(p=>p.x)),top:Math.min(...points.map(p=>p.y)),bottom:Math.max(...points.map(p=>p.y))},canvas:{left:canvas.left,right:canvas.right,top:canvas.top,bottom:canvas.bottom}};});
+  assert.equal(report.returnRoomBounds.selected,'command');assert.equal(report.returnRoomBounds.authoredRoot,'NEXUS_VII_LONGITUDINAL_CUTAWAY');assert.equal(report.returnRoomBounds.room,'DISTRICT_command');assert.ok(report.returnRoomBounds.points.length===8&&report.returnRoomBounds.points.every(p=>p.z>=-1&&p.z<=1),'authored room inside camera depth');
+  // Return services is a full-stage panel over the ship, not a split inspector.
+  // The scene remains valid, but its room does not need to clear that panel.
+  report.returnSurface=await page.locator('[data-return-services]').innerText();assert.match(report.returnSurface,/Your next command/i);assert.match(report.returnSurface,/UPGRADE SHIP/i);
+  report.returnState=await page.evaluate(()=>{const s=window.__MASSFRONT_SPACE__.getState();return {resources:s.resources,historyLength:s.operations.history.length,pending:s.operations.pending};});
+  assert.deepEqual(report.returnState.resources,report.afterResult.resources);assert.equal(report.returnState.historyLength,report.afterResult.operations.history.length);assert.equal(report.returnState.pending,null);
+  await visualCheck('03-return-services-next-objective','[data-return-services] [data-nav="missions"]');
+  await touch(page.locator('[data-return-services] [data-nav="missions"]'));
+  await page.locator('.uga-command-shell[data-view="progress"]').waitFor({state:'visible',timeout:10000});
+  report.steps.push('result-debrief-next-objective-reachable');
   await page.reload();await ready();report.afterReload=await page.evaluate(()=>window.__MASSFRONT_SPACE__.getState());assert.deepEqual(report.afterReload.resources,report.afterResult.resources);assert.equal(report.afterReload.operations.history.length,report.afterResult.operations.history.length);report.steps.push('reload-does-not-pay-again');
   assert.ok(report.resultReturnUrl,'captured real tactical return URL');await page.goto(report.resultReturnUrl);await ready();await page.waitForTimeout(1500);report.afterReplay=await page.evaluate(()=>({state:window.__MASSFRONT_SPACE__.getState(),error:String(window.__MASSFRONT_SPACE_ERROR__||'')}));assert.deepEqual(report.afterReplay.state.resources,report.afterResult.resources);assert.equal(report.afterReplay.state.operations.history.length,report.afterResult.operations.history.length);report.steps.push('actual-return-url-replay-does-not-pay-again');
   assert.deepEqual(report.errors,[]);report.pass=true;

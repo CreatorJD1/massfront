@@ -9,7 +9,7 @@ const root=resolve(fileURLToPath(new URL('..',import.meta.url)));
 const supplied=process.argv.find(a=>/^https?:\/\//.test(a));
 const url=supplied||'http://127.0.0.1:8137/';
 const out=join(root,'releases','prealpha'),png=join(out,'prealpha-logo-reveal-mobile.png');
-const titleAsset='assets/brand/massfront-title-command-conquer-overwhelm-v1.png';
+const titleAssetPrefix='data:image/webp;base64,';
 const chrome='C:/Program Files/Google/Chrome/Application/chrome.exe';
 const assert=(ok,msg)=>{if(!ok)throw new Error(msg);};let server=null;
 await mkdir(out,{recursive:true});
@@ -24,18 +24,18 @@ try{
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto(url+'?intro=1',{waitUntil:'domcontentloaded',timeout:60000});
   await page.waitForFunction(()=>window.__mfIntroDebug&&__mfIntroDebug().open&&
-    document.querySelector('img[src*="massfront-title-command-conquer-overwhelm-v1.png"]'),null,{timeout:45000});
+    document.querySelector('#mfTitleWordmark[src^="data:image/webp;base64,"]'),null,{timeout:45000});
   await page.waitForTimeout(250);
   const opening=await page.evaluate(()=>{
     const root=document.getElementById('mfPreAlphaIntro'),skip=mfIntroSkip.getBoundingClientRect(),start=mfIntroStart.getBoundingClientRect();
-    const title=root.querySelector('img[src*="massfront-title-command-conquer-overwhelm-v1.png"]'),titleBox=title&&title.getBoundingClientRect();
+    const title=root.querySelector('#mfTitleWordmark'),titleBox=title&&title.getBoundingClientRect();
     return {text:root.textContent.replace(/\s+/g,' ').trim(),build:root.querySelector('.mfTitleBuild')?.textContent.replace(/\s+/g,' ').trim(),debug:__mfIntroDebug(),factionImages:root.querySelectorAll('img[src*="/factions/"]').length,
       skip:{w:skip.width,h:skip.height,l:skip.left,r:skip.right,t:skip.top,b:skip.bottom},
       start:{w:start.width,h:start.height,l:start.left,r:start.right,t:start.top,b:start.bottom},
       title:{asset:title?.getAttribute('src')||'',loaded:!!(title&&title.complete&&title.naturalWidth>0),w:titleBox?.width||0,h:titleBox?.height||0,l:titleBox?.left||0,r:titleBox?.right||0},viewport:{w:innerWidth,h:innerHeight}};
   });
   assert(opening.build==='v1.32.2 \u00b7 PRE-ALPHA','build/version is not one compact v1.32.2 token: '+opening.build);
-  assert(opening.title.asset.endsWith(titleAsset)&&opening.title.loaded&&opening.title.w>0&&opening.title.h>0,'supplied title art is missing: '+JSON.stringify(opening.title));
+  assert(opening.title.asset.startsWith(titleAssetPrefix)&&opening.title.loaded&&opening.title.w>0&&opening.title.h>0,'supplied title art is missing: '+JSON.stringify(opening.title));
   assert(opening.title.l>=10&&opening.title.r<=opening.viewport.w-10,'supplied title art is clipped: '+JSON.stringify(opening.title));
   /* Retired text-wordmark assertions. The supplied title-art checks above
      are authoritative for the v1.32.2 launch presentation.

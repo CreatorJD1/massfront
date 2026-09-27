@@ -18,7 +18,13 @@
  * for that reason, not for effort.
  */
 
-import { UGA_GROUND_AREA_CATALOG } from './catalog.js';
+import {
+  UGA_GROUND_AREA_CATALOG,
+  getPlanetLadderEntry,
+  getPlanetPrimarySurveyId,
+  getPriorGroundArea,
+  getPriorGroundMap
+} from './catalog.js';
 
 export const GROUND_CONTROL_SCHEMA_VERSION = 1;
 
@@ -115,4 +121,57 @@ export function groundControlSummary(state) {
     planetsControlled: planets.filter(planet => planet.controlled).length,
     planetsTotal: planets.length
   };
+}
+
+/* --------------------------------------------------------------------------
+   Frontier ladder gates — the stateful half of the linear unlock progression
+   authored in catalog.js (UGA_PLANET_LADDER / UGA_GROUND_AREA_LADDER). The
+   store keeps every rung present for rendering; these predicates decide which
+   rungs are playable. Enforcement lives in the eligibility locks
+   (ground_operation.js) and the survey gate (progression.js), so a gate can
+   never disagree with the lock that names it.
+   -------------------------------------------------------------------------- */
+
+/* Tier 2 — planets: body N is playable once body N-1's primary authored survey
+   has been completed (a completed scan is also status 'completed', but a
+   recovery-era save may only have depleted, so the ledger is the authority). */
+export function isPlanetUnlocked(state, systemId, planetId) {
+  const rung = getPlanetLadderEntry(systemId, planetId);
+  if (!rung) return true; // War Table homeworlds and unknown bodies stay open.
+  if (!rung.prior) return true;
+  const primarySurveyId = getPlanetPrimarySurveyId(rung.prior.id);
+  /* A rung with no authored primary survey cannot gate anything (Tethys-style
+     final bodies) — and neither can a save that predates the survey store. */
+  if (!primarySurveyId) return true;
+  return state.surveys?.[primarySurveyId]?.depleted === true;
+}
+
+/* Tier 3 — regions: area N is deployable once area N-1's mission has at least
+   one victory in the settled operations ledger. Regions whose mission has no
+   authored victory requirement beyond this chain still need the chain met —
+   that is the point of the ladder. */
+export function isGroundAreaUnlocked(state, areaId) {
+  const prior = getPriorGroundArea(areaId);
+  if (!prior) return true;
+  const priorMissionId = UGA_GROUND_AREA_CATALOG[prior.id]?.missionId || prior.missionId;
+  if (!priorMissionId) return true;
+  return (state.missions?.[priorMissionId]?.completions || 0) >= 1;
+}
+
+/* Tier 4 — maps: a region's compact battlefield is always open; each larger
+   map unlocks when the previous size has been cleared there. */
+export function isGroundMapUnlocked(state, areaId, mapId) {
+  const priorMap = getPriorGroundMap(areaId, mapId);
+  if (!priorMap) return true;
+  const record = state ? deriveGroundControl(state).areas[areaId] : null;
+  return Boolean(record?.clearedMapIds?.includes(priorMap.id));
+}
+
+/* The first locked map of an area — what "next directive" on the front card
+   and the planner's reason line point at. */
+export function nextLockedGroundMap(areaId, control) {
+  const area = UGA_GROUND_AREA_CATALOG[areaId];
+  if (!area) return null;
+  const cleared = control?.clearedMapIds || [];
+  return area.maps.find(map => !cleared.includes(map.id)) || null;
 }

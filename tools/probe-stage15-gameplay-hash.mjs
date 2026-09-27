@@ -30,7 +30,9 @@ const encoding=vm.runInContext(`(()=>{
     const chunks=[],refs=new WeakMap();let size=0,nextRef=1;const push=a=>{chunks.push(a);size+=a.byteLength;};
     return {u8(v){const a=new Uint8Array(1);a[0]=v&255;push(a);},u32(v){const a=new Uint8Array(4);new DataView(a.buffer).setUint32(0,v>>>0,true);push(a);},
       f64(v){if(!Number.isFinite(v))throw MF_SH_error('gameplay_state_nonfinite');const a=new Uint8Array(8);new DataView(a.buffer).setFloat64(0,Object.is(v,-0)?0:v,true);push(a);},
-      str(v){const a=new TextEncoder().encode(String(v));this.u32(a.length);push(a);},ref(v){if(refs.has(v))return [true,refs.get(v)];const id=nextRef++;refs.set(v,id);return [false,id];},finish(){const out=new Uint8Array(size);let n=0;for(const a of chunks){out.set(a,n);n+=a.length;}return out;}};
+      num(v){this.u8(3);this.f64(v);},str(v){const a=new TextEncoder().encode(String(v));this.u32(a.length);push(a);},
+      typed(v){this.u8(5);this.str(v.constructor.name);this.u32(v.length);for(let i=0;i<v.length;i++)this.f64(v[i]);},
+      ref(v){if(refs.has(v))return [true,refs.get(v)];const id=nextRef++;refs.set(v,id);return [false,id];},finish(){const out=new Uint8Array(size);let n=0;for(const a of chunks){out.set(a,n);n+=a.length;}return out;}};
   }
   const shared={name:'same-ref',value:-0},pass=new Uint8Array(147456);
   for(let i=0;i<pass.length;i++)pass[i]=(i*17+i>>>4)&3;
@@ -54,6 +56,12 @@ s.HAZ.t+=1;const hHazard=await hash(ctx);check('hazard clock mutation changes th
 s.deformQ[0].d-=1;const hDeform=await hash(ctx);check('queued deformation mutation changes the digest',hDeform!==h0);s.deformQ[0].d+=1;
 s.PASS[2]=1;const hPass=await hash(ctx);check('authoritative passability mutation changes the digest',hPass!==h0);s.PASS[2]=0;
 s.cam.x=999;s.particles.push({x:500});s.audioState.track='menu';s.perfState.fps=4;const hCosmetic=await hash(ctx);check('camera, particles, audio and performance state are excluded',hCosmetic===h0);
+const linked={type:'pgen',team:0,x:15,y:16,hp:300,hpm:300,alive:true,conduit:[s.blds[0]],anim:1,deployT:2};
+s.blds[0].conduit=[linked];s.blds.push(linked);
+const hLinked=await hash(ctx);linked.anim=9;linked.deployT=9999;
+const hLinkedCosmetic=await hash(ctx);check('linked building visual and wall-clock fields stay outside the digest',hLinkedCosmetic===hLinked);
+linked.hp-=1;const hLinkedHp=await hash(ctx);check('linked building authority remains hashed',hLinkedHp!==hLinked);linked.hp+=1;
+linked.conduit=[];const hLinkTopology=await hash(ctx);check('conduit adjacency is hashed as stable building indices',hLinkTopology!==hLinked);
 s.uhp[0]=NaN;let malformed='';try{await hash(ctx);}catch(e){malformed=e.code;}check('malformed authoritative state fails closed',malformed==='gameplay_state_nonfinite');
 const unavailable=makeContext(false);let missing='';try{await hash(unavailable);}catch(e){missing=e.code;}check('unavailable gameplay state fails closed',missing==='gameplay_state_unavailable');
 const manifest=JSON.parse(readFileSync(resolve(root,'assets','data','manifest.json'),'utf8')).order,boot=readFileSync(resolve(root,'boot.js'),'utf8');

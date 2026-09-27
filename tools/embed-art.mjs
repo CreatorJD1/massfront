@@ -10,7 +10,7 @@ const version=process.argv[2];
 const out=join(root,'releases',`MASSFRONT-v${version}-update.js`);
 let payload=readFileSync(out,'utf8');
 const assets=[
-  'assets/brand/massfront-title-command-conquer-overwhelm-v1.png',
+  'assets/brand/massfront-title-command-conquer-overwhelm-v1.webp',
   'assets/modifiers/modifier-art-atlas-v1.png',
   'assets/factions/cinematic/terran-frontline-command-v1.png',
   'assets/factions/cinematic/crimson-dominion-v1.png',
@@ -19,7 +19,8 @@ const assets=[
 ];
 const report=[];
 for(const rel of assets){
-  const uri='data:image/png;base64,'+readFileSync(join(root,rel)).toString('base64');
+  const mime=rel.endsWith('.webp')?'image/webp':'image/png';
+  const uri='data:'+mime+';base64,'+readFileSync(join(root,rel)).toString('base64');
   let n=0;
   for(const ref of ['./'+rel,'../../'+rel]){
     while(payload.includes(ref)){ payload=payload.split(ref).join(uri); n++; break; }

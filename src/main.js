@@ -773,12 +773,19 @@ function mfRescueHiddenSetupCards(){
 }
 
 function newSkirmish(){
+  const networkSetup=window.__MF_NETWORK_SETUP__&&window.__MF_NETWORK_SETUP__.schema===1;
+  const recovering=typeof sessPending!=='undefined'&&!!sessPending;
+  if(typeof invAbandonReadied==='function')invAbandonReadied();
+  _mfMatchCons=[];_mfMatchGear=[];
   /* Game speed is a per-match control, not a profile setting. It was never
      reset here, so one tap to 1.5x or 2x silently carried into every later
      match in the session - and since it multiplies the whole simulation
      accumulator, everything simply ran fast with no indication why. */
   gameSpeed=1; try{ const _b=document.getElementById('spdBtn'); if(_b) _b.textContent='1×'; }catch(e){}
-  consumeMatchSetup();
+  if(!networkSetup)consumeMatchSetup();
+  if(!networkSetup&&typeof sessBindMatchProfile==='function')
+    sessBindMatchProfile(recovering?sessPending.profileId:
+      typeof PROFILES!=='undefined'&&PROFILES&&PROFILES.active);
   /* Pull the player faction's radio bank now, while the loading screen is up,
      so the first order of the match speaks instead of falling back to whatever
      the OS narrator happens to be. */
@@ -787,19 +794,27 @@ function newSkirmish(){
   normalizeAiSlotsForBattlefield(); // final contract gate before any ally can spawn
   resetWorld();
   demoMode=false;
-  fogOn=META.settings.fog!==false;
-  pickWildcards(wcChoice);                    // danger modifiers (chosen count, random draw)
-  applyMetaPerks();                           // permanent Armory perks
-  if(typeof applyModules==='function') applyModules();   // crafted modules, on top
-  /* Capture the readied loadout BEFORE invApplyLoadout consumes it. The
-     ready[] array is cleared at apply-time, but the pre-match modifier splash
-     and consumable HUD need to show what was brought. */
-  if(typeof invApplyLoadout==='function'){
+  fogOn=networkSetup||META.settings.fog!==false;
+  if(networkSetup){
+    /* Online peers share a neutral match profile. Armory, modules and ready
+       consumables belong to local accounts and cannot alter a common world or
+       spend items in an unverified match. The account state is left untouched. */
+    WC={};wcActive=[];crateRate=crateRateBase;
+    if(typeof AB_CD!=='undefined'&&typeof AB_BASE!=='undefined')for(let i=0;i<AB_CD.length;i++)AB_CD[i]=AB_BASE[i];
+    if(typeof bldSpeedMult!=='undefined')bldSpeedMult=1;
+  }else{
+    pickWildcards(wcChoice);                    // danger modifiers (chosen count, random draw)
+    applyMetaPerks();                           // permanent Armory perks
+    if(typeof applyModules==='function') applyModules();   // crafted modules, on top
+  }
+  /* Preview the loadout now, but commit its one-use charges only when the
+     carrier actually deploys. Recovery restores captured modifiers and never
+     consumes a second charge from the account bag. */
+  if(!networkSetup&&!recovering&&typeof invApplyLoadout==='function'){
     const _b=invBag();
-    _mfMatchCons=_b.ready.map(id=>INV_CONSUMABLES.find(c=>c.id===id)).filter(Boolean);
     _mfMatchGear=[];
     for(const s of ['weapon','armor','utility']){ const g=INV_GEAR.find(x=>x.id===_b.equipped[s]); if(g) _mfMatchGear.push(g); }
-    invApplyLoadout();
+    _mfMatchCons=invApplyLoadout();
   }
   if(typeof applyCommanderChoice==='function')applyCommanderChoice();
   if(typeof applyFactionDoctrineChoice==='function')applyFactionDoctrineChoice();
@@ -954,6 +969,11 @@ function deployCarrier(){
   if(typeof matchLive!=='undefined'&&matchLive) return;
   if(!carrierCanDeploy()){
     toast('⛔ Cannot deploy here — need solid, flat ground clear of active structures');
+    sfx('alarm'); return;
+  }
+  if(!window.__MF_NETWORK_SETUP__&&!(typeof sessPending!=='undefined'&&sessPending)&&
+     typeof invCommitReadied==='function'&&!invCommitReadied()){
+    toast('Supply save failed — deployment paused. Retry when account storage is available');
     sfx('alarm'); return;
   }
   /* Snap the landing point to the build grid. The HQ anchors every later
@@ -1162,31 +1182,38 @@ function newDemo(){
   toast('💥 COMMANDER CANNON QA — live damage and effects');
 }
 
+function mfResolveBattlefieldOutcome(win,reason){
+  const C=typeof window!=='undefined'&&window.MFMatchCommandConsumer;
+  /* The relay does not yet verify ordinary victories. Do not pass a local win
+     to downstream victory wrappers, which could offer the next paid map. */
+  const online=!!(C&&typeof C.sessionActive==='function'&&C.sessionActive());
+  endGame(online?false:win,online?'Local battlefield stopped; the relay has not confirmed the outcome.':reason);
+}
 function checkVictory(){
   if(gameEnded||!running||(!matchLive&&!demoMode)) return;
   if(demoMode){
     if(teamCount[0]===0||teamCount[1]===0){
-      endGame(teamCount[1]===0,'Simulation complete');
+      mfResolveBattlefieldOutcome(teamCount[1]===0,'Simulation complete');
     }
     return;
   }
   // losing your Commander always ends the run
-  if(heroIdx<0){ endGame(false,'Your Commander was destroyed'); return; }
+  if(heroIdx<0){ mfResolveBattlefieldOutcome(false,'Your Commander was destroyed'); return; }
   const g=goalDef();
   if(g.id==='annihilate'){
-    if(livingEnemyCommanders().length===0){ endGame(true,'Enemy commanders destroyed'); return; }
+    if(livingEnemyCommanders().length===0){ mfResolveBattlefieldOutcome(true,'Enemy commanders destroyed'); return; }
   } else if(g.id==='purge'){
-    if(liveNests().length===0){ endGame(true,'Every hive purged from the surface'); return; }
-    if(livingEnemyCommanders().length===0&&liveNests().length===0){ endGame(true,'Planet cleansed'); return; }
+    if(liveNests().length===0){ mfResolveBattlefieldOutcome(true,'Every hive purged from the surface'); return; }
+    if(livingEnemyCommanders().length===0&&liveNests().length===0){ mfResolveBattlefieldOutcome(true,'Planet cleansed'); return; }
   } else if(g.id==='survival'){
     /* Last Stand at UNLIMITED had a defeat condition and no victory condition
        at all: the kill-the-commander win is excluded for survival, and the
        timed resolver below is gated on timeLimit>0. A player could wipe the
        enemy off the map and the match would simply keep running. Breaking the
        siege outright is a win by any honest reading. */
-    if(timeLimit<=0&&livingEnemyCommanders().length===0){ endGame(true,'The siege was broken'); return; }
+    if(timeLimit<=0&&livingEnemyCommanders().length===0){ mfResolveBattlefieldOutcome(true,'The siege was broken'); return; }
   } else {
-    if(livingEnemyCommanders().length===0){ endGame(true,'Enemy commanders destroyed'); return; }
+    if(livingEnemyCommanders().length===0){ mfResolveBattlefieldOutcome(true,'Enemy commanders destroyed'); return; }
   }
   /* NOTHING ON A PHONE MAY RUN FOREVER. "Unlimited" means no SCHEDULED end, not
      no end — and against an AI commander parked inside a fortified base, an
@@ -1195,62 +1222,89 @@ function checkVictory(){
      honest match and short of a dead battery. */
   if(timeLimit<=0&&stats.t>=MATCH_HARD_CAP){
     const a=territoryScore(0), b=territoryScore(1);
-    endGame(a>=b,'Stalemate — decided on territory'); return;
+    mfResolveBattlefieldOutcome(a>=b,'Stalemate — decided on territory'); return;
   }
   // timed goals resolve on the clock
   if(timeLimit>0&&matchClock<=0){
     if(g.id==='domination'){
       const a=territoryScore(0), b=territoryScore(1);
-      endGame(a>=b, a>=b?'Time — you held the most territory':'Time — the enemy held more territory');
-    } else if(g.id==='survival') endGame(true,'Time — you survived the siege');
-    else if(g.id==='purge') endGame(false,'Time — hives still stand');
-    else endGame(territoryScore(0)>=territoryScore(1),'Time — decided on territory');
+      mfResolveBattlefieldOutcome(a>=b, a>=b?'Time — you held the most territory':'Time — the enemy held more territory');
+    } else if(g.id==='survival') mfResolveBattlefieldOutcome(true,'Time — you survived the siege');
+    else if(g.id==='purge') mfResolveBattlefieldOutcome(false,'Time — hives still stand');
+    else mfResolveBattlefieldOutcome(territoryScore(0)>=territoryScore(1),'Time — decided on territory');
   }
 }
+let mfResultPresentationEpoch=0,mfLastResultCanRestart=false;
 function endGame(win,reason){
+  const C=typeof window!=='undefined'&&window.MFMatchCommandConsumer,
+    online=!!(C&&typeof C.sessionActive==='function'&&C.sessionActive()),
+    networkStatus=online&&window.MFMatchRuntime&&typeof MFMatchRuntime.status==='function'?MFMatchRuntime.status():null,
+    localSeat=networkStatus&&networkStatus.seat||0,
+    localAuthority=online&&C&&typeof C.seatAuthority==='function'?C.seatAuthority(localSeat):null,
+    localTeam=localAuthority&&localAuthority.team===1?1:0,hostileTeam=localTeam===0?1:0;
+  if(online&&gameEnded)return;
+  /* Weekly and authored missions give their borrowed plan back while scoring
+     the result. Capture retry eligibility before that cleanup changes mode
+     flags; a defeated UGA ticket or online seat must never be replayed here. */
+  const bridge=typeof window!=='undefined'&&window.__MF_GALACTIC_BRIDGE;
+  mfLastResultCanRestart=!win&&!online&&!demoMode&&activeWarMode==='standard'
+    &&!(typeof weeklyMode!=='undefined'&&weeklyMode)
+    &&!(typeof storyCampaignActiveId!=='undefined'&&storyCampaignActiveId)
+    &&!(typeof trainingMissionActive==='function'&&trainingMissionActive())
+    &&!window.__MF_NETWORK_SETUP__
+    &&!(bridge&&(bridge.active||bridge.isolation&&bridge.isolation.active));
+  const presentationEpoch=++mfResultPresentationEpoch;
   /* Emit the terminal commander line before gameEnded hides the battlefield
      rail. Audio may be absent, but the deterministic event still reaches the
      transcript and any active presentation listener exactly once. */
-  if(!gameEnded&&typeof commanderCue==='function'){
+  if(!online&&!gameEnded&&typeof commanderCue==='function'){
     const cueNow=Math.max(0,(Number(stats.t)||0)*1000);
     commanderCue('outcome',win?'victory':'defeat',{subject:String(reason||'match'),now:cueNow,force:true});
     if(typeof commanderDialogueDrain==='function') commanderDialogueDrain(cueNow);
   }
   gameEnded=true;
+  if(online){
+    /* This is a local or relay terminal, not a verified payable outcome. Stop
+       immediately and release the socket so the room cannot tick forever. The
+       consumer keeps match ownership latched until explicit menu cleanup. */
+    running=false;paused=false;
+    if(window.MFMatchRuntime&&typeof MFMatchRuntime.close==='function')MFMatchRuntime.close();
+  }
   // report match result to a hosting shell (Base44 app) if embedded
-  try{
+  try{if(!online){
     if(window.parent!==window) window.parent.postMessage({
       type:'massfront-result', win:!!win, demo:!!demoMode,
       difficulty, theme:curTheme, duration:stats.t|0,
       kills:stats.kills[0]|0, losses:stats.kills[1]|0,
       heroLevel:heroLvl|0, built:stats.built[0]|0
     },'*');
-  }catch(e){}
-  const rw=demoMode?null:metaGrant(win);      // cross-game rewards (persisted immediately)
+  }}catch(e){}
+  const rw=demoMode||online?null:metaGrant(win);      // cross-game rewards (persisted immediately)
   /* The endgame layer scores the run, advances the threat ladder, ticks the
      mastery grid and records a weekly best — all from what actually happened. */
-  const dv=demoMode?null:(typeof developRecord==='function'?developRecord({
+  const dv=demoMode||online?null:(typeof developRecord==='function'?developRecord({
     win:!!win, kills:stats.kills[0]|0, built:(stats.built[0])|0, nests:stats.nests|0,
     fieldMass:Math.max(0,Math.floor(resM[0]||0)),fieldEnergy:Math.max(0,Math.floor(resE[0]||0)),
     reclaimed:Math.max(0,Math.round(stats.reclaimed||0))}):null);
-  const eg=demoMode?null:(typeof endgameRecord==='function'?endgameRecord({
+  const eg=demoMode||online?null:(typeof endgameRecord==='function'?endgameRecord({
     win:!!win, kills:stats.kills[0]|0, built:(stats.built[0])|0,
     seconds:stats.t|0, difficulty:difficulty|0}):null);
   /* The dispatch waits for the results screen to be dismissed — a story beat
      landing on top of a victory screen reads as an interruption. */
   setTimeout(()=>{
+    if(presentationEpoch!==mfResultPresentationEpoch)return;
     running=false;
-    $('goTitle').textContent=win?'MISSION COMPLETE':'MISSION FAILED';
-    $('goTitle').style.color=win?'#9fffc4':'#ff8d7a';
+    $('goTitle').textContent=online?'ONLINE RESULT UNVERIFIED':win?'MISSION COMPLETE':'MISSION FAILED';
+    $('goTitle').style.color=online?'#f4cf86':win?'#9fffc4':'#ff8d7a';
     const mins=(stats.t/60)|0, secs=(stats.t%60)|0;
     const outcome=$('goOutcome');
-    if(outcome) outcome.textContent=goalDef().nm.toUpperCase()+' · '+reason;
+    if(outcome) outcome.textContent=(online?'NO PROGRESSION REWARD · ':'')+goalDef().nm.toUpperCase()+' · '+reason;
     $('goStats').innerHTML='<div class="goStatGrid">'
       +'<div><b>'+mins+'m '+secs+'s</b><span>MISSION TIME</span></div>'
-      +'<div><b>'+stats.kills[0]+'</b><span>HOSTILES DESTROYED</span></div>'
-      +'<div><b>'+stats.kills[1]+'</b><span>UNITS LOST</span></div>'
-      +'<div><b>LV '+heroLvl+'</b><span>COMMANDER</span></div>'
-      +'<div><b>'+stats.built[0]+'</b><span>STRUCTURES BUILT</span></div>'
+      +'<div><b>'+stats.kills[localTeam]+'</b><span>HOSTILES DESTROYED</span></div>'
+      +'<div><b>'+stats.kills[hostileTeam]+'</b><span>UNITS LOST</span></div>'
+      +'<div><b>'+(online?'SEAT '+localSeat:'LV '+heroLvl)+'</b><span>'+(online?'LOCAL SEAT':'COMMANDER')+'</span></div>'
+      +'<div><b>'+stats.built[localTeam]+'</b><span>STRUCTURES BUILT</span></div>'
       +'<div><b>'+(eg&&eg.score?eg.score.toLocaleString():'—')+'</b><span>OPERATION SCORE</span></div></div>';
     if(rw){
       const fld=rw.field||{mass:0,energy:0,reclaimed:0};
@@ -1286,13 +1340,35 @@ function endGame(win,reason){
         +(rw.rankUp?'<div class="goNotice good">◈ PROMOTED — '+rw.rankUp.em+' '+rw.rankUp.nm.toUpperCase()+'</div>':'')
         +(eg&&eg.msgs.length?'<div class="goNotice">'+eg.msgs.join('<br>')+'</div>':'')
         +(dv&&dv.broke.length?'<div class="goNotice bad">✖ BROKEN — '+dv.broke.map(b=>b.em+' '+b.nm).join(', ')+'</div>':'');
-    } else $('goRewards').innerHTML='';
-    drawMatchChart();
-    if(typeof adShowPostMatchAd==='function') adShowPostMatchAd(win);
+    } else $('goRewards').innerHTML=online?'<div class="goNotice">The relay has not verified this battlefield result. No XP, Cores, loot, or campaign progress was awarded.</div>':'';
+    /* The previous result may have exposed CONTINUE. Hide and disarm it before
+       the mode-specific painter runs, or a rapid defeat tap can activate the
+       stale victory action for a few frames. */
+    const cont=$('goContinueBtn');
+    if(cont){cont.style.display='none';cont.disabled=true;cont.dataset.action='';}
+    if(online){
+      if(typeof mfDepart!=='undefined')mfDepart.fromVictory=false;
+    }
+    if(online){const chart=$('goChart');if(chart)chart.style.display='none';}
+    else drawMatchChart();
+    if(!online&&typeof adShowPostMatchAd==='function') adShowPostMatchAd(win);
     $('gameOver').style.display='flex';
-    sfx(win?'level':'alarm');
+    if(!online)sfx(win?'level':'alarm');
   },1400);
 }
+window.addEventListener('massfront-match:matchEnd',event=>{
+  const C=window.MFMatchCommandConsumer;if(!C||typeof C.sessionActive!=='function'||!C.sessionActive()||gameEnded)return;
+  const detail=event&&event.detail||{},seat=Number(detail.winnerSeat),winner=Number.isInteger(seat)&&seat>0?' · winning seat '+seat:'';
+  endGame(false,'Relay ended the match: '+String(detail.reason||'unknown')+winner);
+});
+window.addEventListener('massfront-match:protocolError',event=>{
+  const C=window.MFMatchCommandConsumer;if(!C||typeof C.sessionActive!=='function'||!C.sessionActive())return;
+  const code=String(event&&event.detail&&event.detail.code||'unknown');
+  /* A failed bootstrap can occur before newSkirmish clears the previous
+     operation's gameEnded flag. It still needs a visible no-reward result. */
+  if(gameEnded){if(!/^bootstrap_/.test(code))return;gameEnded=false;}
+  endGame(false,'Match connection failed: '+code);
+});
 
 // ---------- main loop ----------
 let acc=0, lastT=0, fpsN=0, fpsT=0, fpsShow=60;
@@ -1632,7 +1708,7 @@ function frame(ts){
       camAuthTick(simDt);
       /* God Mode is deliberately obvious and deterministic: the gold badge
          stays visible while the solo-test economy refills every sim step. */
-      if(!demoMode&&matchLive&&META.settings.godMode){
+      if(!demoMode&&matchLive&&META.settings.godMode&&!window.__MF_NETWORK_SETUP__){
         econFillBanks(0);
         for(let k=0;k<abCool.length;k++) abCool[k]=0;
       }
@@ -2155,7 +2231,11 @@ function renderMapRow(){
       +(CQ?'<div class="mConquest"><span>FRONT '+CQ.tier+' / 48</span><b>'+(conquestWon?'SECURED':conquestOpen?['EASY','NORMAL','HARD'][CQ.mi]+' THREAT':'LOCKED')+'</b></div>':'')
       +(firstClear?'<div class="mReward"><span>FIRST CLEAR · +'+rewardXp+' XP · +'+firstClear.cores+' CORES</span><b>'+(rewardItem?rewardItem.em+' '+rewardItem.nm+' · ONE MATCH':'')+'</b></div>':'')
       +(hz?'<div class="mHz"><b>'+hz.em+' '+hz.nm+'</b>'+hz.ds+'</div>':''));
-    card.addEventListener('pointerdown',()=>{if(!conquestOpen){toast('🔒 SECURE THE PREVIOUS BATTLEFIELD FIRST');sfx('deny');return;}window._mfTheatrePick=def.size;syncBattlefieldFromMap(key); if(typeof sfx==='function') sfx('ui'); renderMapRow(); renderSpawnPlanner(); });
+    card.addEventListener('pointerdown',()=>{if(!conquestOpen){toast('🔒 SECURE THE PREVIOUS BATTLEFIELD FIRST');sfx('deny');return;}window._mfTheatrePick=def.size;syncBattlefieldFromMap(key); if(typeof sfx==='function') sfx('ui'); renderMapRow(); renderSpawnPlanner();
+      /* The region's threat/weather dossier is map-specific. Keep it in sync
+         when a site changes without recursively rebuilding the card row. */
+      if($('setupScr')?.classList.contains('galaxyStage-region')&&typeof mfGalaxyRenderRegion==='function')mfGalaxyRenderRegion(false);
+    });
     row.appendChild(card);
   }
   if(typeof drawSpawnPlanner==='function') drawSpawnPlanner();
@@ -2304,7 +2384,12 @@ function mfOpenPause(){
   const net=typeof window!=='undefined'&&window.MFMatchRuntime&&typeof MFMatchRuntime.status==='function'?MFMatchRuntime.status():null;
   /* A local overlay may not stop a server-authoritative room. Online play
      keeps consuming 30 Hz ticks while the menu is open. */
-  paused=!(net&&net.state==='running');$('pauseOverlay').style.display='flex';
+  const live=!!(net&&net.state==='running');
+  paused=!live;
+  $('pauseTitle').textContent=live?'MATCH LIVE':'PAUSED';
+  $('pauseStatus').hidden=!live;
+  $('resumeBtn').textContent=live?'▶  RETURN TO MATCH':'▶  RESUME';
+  $('pauseOverlay').style.display='flex';
   mfPauseSetModal(true);
   const target=$('resumeBtn');requestAnimationFrame(()=>{if(mfFrontElementVisible($('pauseOverlay'))&&target)target.focus({preventScroll:true});});
 }
@@ -2358,6 +2443,12 @@ function showFrontScreen(id){
   const from=document.body.dataset.frontScreen||'';
   hideFrontScreens(id);
   el.style.display='flex';
+  /* The menu artwork should arrive like a live console, but the route itself
+     remains synchronous and focus-safe. Toggling one scoped class restarts the
+     short compositor-only reveal without moving controls beneath a held touch. */
+  el.classList.remove('mfFrontEntering');
+  void el.offsetWidth;
+  el.classList.add('mfFrontEntering');
   document.body.dataset.frontScreen=id;
   delete document.body.dataset.frontPopup;
   attractVisible=(id==='startScreen');
@@ -2368,6 +2459,15 @@ function showFrontScreen(id){
   if(typeof audMusicEnterScreen==='function') audMusicEnterScreen(id);
   mfFrontFocusRoute(from,id,el);
   return true;
+}
+/* The battlefield already owns a shared-context 3D preview renderer. Reuse it
+   in menu rooms instead of inventing screenshots of units: one context serves
+   every hidden/visible card and the pump pauses work for hidden destinations. */
+function mfEnsureMenu3D(hostId,kind,id,tag){
+  const host=$(hostId);
+  if(!host||host.dataset.ready||typeof mfIntelPreviewWindow!=='function')return;
+  host.replaceChildren(mfIntelPreviewWindow(kind,id,tag,typeof playerKitKey==='function'?playerKitKey():'nova'));
+  host.dataset.ready='1';
 }
 /* Match overlays are not front screens: opening one must keep match music and
    closing it must reveal the battlefield rather than route to the menu. They
@@ -2384,6 +2484,11 @@ function closeMatchPopup(id){
   const el=frontRouteTarget(id);if(!el)return false;
   el.style.display='none';
   if(document.body.dataset.frontPopup===id)delete document.body.dataset.frontPopup;
+  /* Closing a front-screen-shaped match popup must restore the HUD in the same
+     turn. Depending only on hudflow's observer left mfMenuOpen latched in short
+     landscape until an unrelated mutation happened, so Back looked inert even
+     though the Inbox itself had closed. */
+  if(typeof mfFlowLayout==='function')mfFlowLayout();
   return true;
 }
 function openSettings(from){
@@ -2475,6 +2580,15 @@ function initNativeNavigation(){
    return path deterministic and gives Android Back the same clean hierarchy as
    a cold launch. */
 function returnToMainMenu(){
+  mfResultPresentationEpoch++;
+  mfLastResultCanRestart=false;
+  const networkRuntime=typeof window!=='undefined'&&window.MFMatchRuntime,
+    networkConsumer=typeof window!=='undefined'&&window.MFMatchCommandConsumer;
+  /* Only an explicit menu exit releases the match's input/lockstep ownership.
+     A closed socket or terminal screen must never reopen offline mutation. */
+  if(networkRuntime&&typeof networkRuntime.close==='function')networkRuntime.close();
+  if(networkConsumer&&typeof networkConsumer.leaveSession==='function')networkConsumer.leaveSession();
+  if(window.MFSocialUI&&typeof MFSocialUI.clearFinishedMatch==='function')MFSocialUI.clearFinishedMatch();
   /* Training's protected rules are scoped to its operation. This is the one
      intentional early-exit path; incidental UI state changes must not call it. */
   if(typeof cancelTrainingMission==='function') cancelTrainingMission();
@@ -2510,7 +2624,31 @@ function returnToMainMenu(){
    orders. Protected onboarding must retain one stable path to the real base
    cleanup so its faction gate is not unloaded by a Galactic return wrapper. */
 window.__MF_RETURN_TO_BASE_FOR_COMMISSIONING__=returnToMainMenu;
+function restartCurrentBattle(){
+  if(!gameEnded||!mfLastResultCanRestart)return false;
+  mfLastResultCanRestart=false;
+  mfResultPresentationEpoch++;
+  /* A completed loss may leave a pre-defeat recovery snapshot. Clear it before
+     building a genuinely fresh attempt on the same selected battlefield. */
+  if(typeof sessClear==='function')sessClear();
+  if(typeof adClearPostMatchAd==='function')adClearPostMatchAd();
+  if(typeof mfDepart!=='undefined')mfDepart.fromVictory=false;
+  paused=false;running=false;matchLive=false;
+  if(typeof resetInputState==='function')resetInputState();
+  const go=$('gameOver');if(go)go.style.display='none';
+  closeMenus();cancelPlace();hideFrontScreens();
+  mfLoadScreenFill();$('loadScr').style.display='flex';
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    applyTheme();newSkirmish();
+    $('loadScr').style.display='none';
+    stopAttract();
+    if(typeof mfFlowLayout==='function')mfFlowLayout();
+  }));
+  return true;
+}
 function continueToNextMap(){
+  const C=typeof window!=='undefined'&&window.MFMatchCommandConsumer;
+  if(C&&typeof C.sessionActive==='function'&&C.sessionActive())return returnToMainMenu();
   /* Rewards already landed in endGame/metaGrant. This only launches the next
      unlocked War Table site — do not call returnToMainMenu first or the
      attract diorama eats the loadout. */
@@ -2557,9 +2695,10 @@ function mfLoadScreenFill(){
   const $=id=>document.getElementById(id);
   const setT=(id,v)=>{ const e=$(id); if(e) e.textContent=v||''; };
   const MD=(typeof MAPDEFS!=='undefined'&&typeof curMap!=='undefined')?MAPDEFS[curMap]:null;
-  let P=null,R=null;
+  const mapKey=typeof curMap!=='undefined'?String(curMap):'';
+  let P=null,R=null,pk='';
   try{
-    const pk=(typeof planetForMap==='function')?planetForMap(curMap):null;
+    pk=(typeof planetForMap==='function')?planetForMap(curMap):'';
     P=(pk&&typeof PLANETS!=='undefined')?PLANETS[pk]:null;
     if(P&&P.regions) R=P.regions.find(r=>r.maps&&r.maps.indexOf(curMap)>=0)||null;
   }catch(e){}
@@ -2582,6 +2721,46 @@ function mfLoadScreenFill(){
     add('SCALE',MD&&MD.size);
     add('HAZARD',MD&&MD.hazard);
     host.innerHTML=chips.join('');
+  }
+  /* Drive the composition from the same authored assets the selected match
+     will actually render. The flat world survey is deliberately not an orb:
+     it reads as a deployment cartography layer, while the location sheet is
+     the real tactical ground material. A stable map hash shifts the crop so
+     sibling battlefields do not present as one repeated picture. */
+  const load=$('loadScr');
+  if(load){
+    let surface=null,profile=null,worldArt='';
+    try{
+      if(typeof mfTerrainSurfaceSelection==='function') surface=mfTerrainSurfaceSelection(
+        typeof curTheme!=='undefined'?curTheme:null,mapKey,R&&R.id);
+      if(typeof mfTerrainLocationProfile==='function') profile=mfTerrainLocationProfile(mapKey);
+      const art=typeof MF_PLANET_ART_V1!=='undefined'&&MF_PLANET_ART_V1.worlds&&MF_PLANET_ART_V1.worlds[pk];
+      worldArt=art&&art.channels&&art.channels.basecolor||'';
+    }catch(e){}
+    const safeArt=value=>/^(?:\.\/)?assets\/[a-z0-9_./-]+$/i.test(String(value||''))?String(value):'';
+    /* Relative url() values substituted into ui.css custom properties resolve
+       against src/styles/, not this document. Keep OTA data URIs, and anchor
+       packaged paths to the app entry before handing them to the stylesheet. */
+    const cssArtURL=value=>{
+      const rel=safeArt(value);if(!rel)return '';
+      const mapped=typeof mf2AssetURL==='function'?mf2AssetURL(rel):'./'+rel.replace(/^\.\//,'');
+      return mapped.startsWith('data:')?mapped:new URL(mapped,document.baseURI).href;
+    };
+    const terrainArt=cssArtURL(surface&&surface.albedo),surveyArt=cssArtURL(worldArt);
+    const accent=R&&/^#[0-9a-f]{6}$/i.test(R.color||'')?R.color:'#5ad4ff';
+    const n=parseInt(accent.slice(1),16),rgb=[(n>>16)&255,(n>>8)&255,n&255].join(',');
+    let seed=0;for(let i=0;i<mapKey.length;i++)seed=(seed*31+mapKey.charCodeAt(i))>>>0;
+    load.style.setProperty('--mf-match-terrain',terrainArt?'url("'+terrainArt+'")':'none');
+    load.style.setProperty('--mf-match-world',surveyArt?'url("'+surveyArt+'")':'none');
+    load.style.setProperty('--mf-match-accent',accent);
+    load.style.setProperty('--mf-match-accent-rgb',rgb);
+    load.style.setProperty('--mf-match-x',(28+(seed%45))+'%');
+    load.style.setProperty('--mf-match-y',(24+((seed>>>7)%53))+'%');
+    load.dataset.world=pk||'unknown';load.dataset.region=R&&R.id||'unknown';load.dataset.map=mapKey||'unknown';
+    load.dataset.surface=surface&&surface.key||'base';load.dataset.locationProfile=profile&&profile.key||'natural';
+    load.setAttribute('aria-label','Preparing '+((MD&&MD.nm)||'battlefield')+(P?' on '+P.nm:''));
+    setT('loadMissionCode',[(pk||'field').toUpperCase(),(R&&R.id||'open-site').toUpperCase(),mapKey.toUpperCase()].join(' // '));
+    setT('loadSurface',[(profile&&profile.key||'natural'),(surface&&surface.key||'base')].join(' · ').toUpperCase()+' MATERIAL SET');
   }
   /* Rotate the status line so a long generate does not look frozen on one
      string. Terrain gen blocks the main thread, so this is set once per show
@@ -2612,7 +2791,8 @@ function mfRequestBuildingService(kind,B,active){
   if(!B||!B.alive)return {ok:false,code:'building-gone'};
   if(typeof mfLocalOwnsBuilding==='function'&&!mfLocalOwnsBuilding(B))return {ok:false,code:'building-not-owned'};
   const id=blds.indexOf(B);if(id<0)return {ok:false,code:'invalid-building'};
-  const C=window.MFMatchCommandConsumer,target=C&&typeof C.buildingRef==='function'?C.buildingRef(id):{id,type:B.type},
+  const C=window.MFMatchCommandConsumer,networkOwned=!!(C&&typeof C.sessionActive==='function'&&C.sessionActive()),
+    target=C&&typeof C.buildingRef==='function'?C.buildingRef(id):{id,type:B.type},
     method=kind==='repair'?'submitRepair':'submitRecycle';
   if(C&&typeof C[method]==='function'){
     try{
@@ -2620,11 +2800,11 @@ function mfRequestBuildingService(kind,B,active){
       if(handled!==false)return {ok:true,network:true,pending:true};
     }catch(e){
       const st=window.MFMatchRuntime&&typeof MFMatchRuntime.status==='function'?MFMatchRuntime.status():null;
-      if(st&&st.state==='running')return {ok:false,code:'network-service-error'};
+       if(networkOwned||st&&st.state==='running')return {ok:false,code:'network-service-error'};
     }
   }
   const st=window.MFMatchRuntime&&typeof MFMatchRuntime.status==='function'?MFMatchRuntime.status():null;
-  if(st&&st.state==='running')return {ok:false,code:'network-service-unavailable'};
+  if(networkOwned||st&&st.state==='running')return {ok:false,code:'network-service-unavailable'};
   const S=window.MFBuildingService;
   if(!S)return {ok:false,code:'service-unavailable'};
   return kind==='repair'&&typeof S.setRepair==='function'?S.setRepair(id,!!active):
@@ -2641,8 +2821,8 @@ function mfBuildingUpgradePress(all){
     R=window.MFMatchRuntime,S=R&&typeof R.status==='function'?R.status():null;
   let result;
   if(all?!I.canUpgradeAll:!I.canUpgradeSelected)result={ok:false,message:all?I.batchReason:I.selectedReason};
-  else if(S&&(S.state==='running'||S.started&&!S.ended)){
-    if(S.state!=='running'){
+  else if(C&&typeof C.sessionActive==='function'&&C.sessionActive()){
+    if(!S||S.state!=='running'){
       toast('Reconnecting — upgrade order not sent');sfx('reject');return {ok:false,message:'Waiting for network connection'};
     }
     const receipt=C&&typeof C.submitUpgrade==='function'?C.submitUpgrade(openBld,!!all):null;
@@ -2809,11 +2989,28 @@ function wire(){
         :entryView==='campaign_hub'?$('ugaBtn'):$('startBtn');
       const finishLaunch=message=>{
         mfExplorationLaunching=false;
+        if(typeof mfLaunchVeilClose==='function')mfLaunchVeilClose();
         if(launchButton){launchButton.classList.remove('is-launching');launchButton.removeAttribute('aria-busy');}
         if(message&&typeof toast==='function')toast(message);
         return false;
       };
       if(launchButton){launchButton.classList.add('is-launching');launchButton.setAttribute('aria-busy','true');}
+      /* The pressed button alone is a 2px bar the player reported as nothing
+         happening, and the toast below lands in a rail the menus hide. Raise
+         the full-screen launch state in the same task as the tap: it is the
+         only feedback that survives the whole window in which this document
+         keeps painting while the module document loads. */
+      /* Name the veil after the control the player pressed, not the internal
+         entry view. UGA COMMAND deliberately opens entryView 'system' (see the
+         door below), so keying the title off the view announced a UGA COMMAND
+         tap as "UGA EXPEDITION" — a destination the player never asked for. */
+      const veilHome=(options&&options.launchButtonId==='ugaBtn')||entryView==='campaign_hub';
+      if(typeof mfLaunchVeilOpen==='function')mfLaunchVeilOpen(
+        veilHome?'UGA COMMAND':'UGA EXPEDITION',
+        veilHome?'Strategic controls are preparing':'Navigation is preparing',
+        ()=>finishLaunch(veilHome
+          ?'UGA Command did not open — tap again to retry'
+          :'The UGA expedition did not open — tap again to retry'));
       if(typeof toast==='function')toast(entryView==='campaign_hub'
         ?'Opening UGA Command — strategic controls are preparing'
         :'Opening the UGA expedition — navigation is preparing');
@@ -2861,14 +3058,36 @@ function wire(){
            the hidden preselection this ticket boundary is designed to remove. */
         const commissioning={factionId:null,commanderId:null};
         let commissionedReady=false;
-        if(gateState&&gateState.armed===true&&gateState.phase==='ready'
-          &&gateState.pending===false&&gateState.canEnterSpaceCareer===true){
-          const factionId=gateState.factionId,commanderId=gateState.starterCommanderId;
+        const okAuthority=(factionId,commanderId)=>{
           const row=roster.commanders.find(c=>c&&c.id===commanderId);
-          if(!factionId||!commanderId||roster.commander1ByCampaignFaction[factionId]!==commanderId
-            ||!row||row.campaignFactionId!==factionId)throw new Error('Commissioning authority mismatch');
-          commissioning.factionId=factionId;commissioning.commanderId=commanderId;
-          commissionedReady=true;
+          return !!(factionId&&commanderId&&roster.commander1ByCampaignFaction[factionId]===commanderId
+            &&row&&row.campaignFactionId===factionId);
+        };
+        /* AN ESTABLISHED CAREER ALREADY HAS ITS ISSUED COMMANDER.
+           The resolved-gate branch below is the only way a commissioning
+           assignment used to reach the bridge, and `arm()` DELETES that gate as
+           soon as a career has played anything. So every career past its first
+           match sent {null,null} forever: the module showed "Hire your first
+           commander" permanently, and its HIRE COMMANDER button routed to
+           new-career-faction, whose openFromRoute() returns false when the gate
+           is not pending — rejectMenuRoute then dropped the player on the main
+           menu with no way through. A played career has committed to its
+           faction, so META.setup.pf is a real choice rather than the historical
+           Nova quick-pick this boundary exists to reject, and its Commander 1
+           is the commander it was issued. Same roster authority either way; a
+           legacy career whose data fails that check simply stays uncommissioned
+           instead of breaking entry. */
+        const careerPlayed=!!((META.matches|0)>0||(META.standardMatches|0)>0||META.firstPlayed);
+        const resolvedGate=!!(gateState&&gateState.armed===true&&gateState.phase==='ready');
+        if(gateState&&gateState.pending===false&&gateState.canEnterSpaceCareer===true
+          &&(resolvedGate||careerPlayed)){
+          const factionId=gateState.factionId,commanderId=gateState.starterCommanderId;
+          if(resolvedGate&&!okAuthority(factionId,commanderId))
+            throw new Error('Commissioning authority mismatch');
+          if(okAuthority(factionId,commanderId)){
+            commissioning.factionId=factionId;commissioning.commanderId=commanderId;
+            commissionedReady=true;
+          }
         }
         const ticket={schemaVersion:2,kind:'MassfrontGalacticEntryV2',profileId,
                       issuedAt:now,expiresAt:now+7*24*60*60*1000,source:'massfront-base',entryView,
@@ -2939,6 +3158,7 @@ function wire(){
   mfBindTap($('armoryBtn'),()=>{
     initAudio(); sfx('ui');
     renderMetaHead(); renderArmory();
+    mfEnsureMenu3D('armoryMenuModel','unit',1,'LIVE CHASSIS');
     showFrontScreen('armory');
   });
   mfBindTap($('armoryBack'),()=>{
@@ -3152,8 +3372,11 @@ function wire(){
   if(goCont&&goCont.dataset.bound!=='1'){
     goCont.dataset.bound='1';
     mfBindTap(goCont,()=>{
-      if(typeof mfVictoryContinue==='function') mfVictoryContinue();
-      else if(typeof continueToNextMap==='function') continueToNextMap();
+      if(goCont.dataset.action==='restart') restartCurrentBattle();
+      else if(goCont.dataset.action==='continue'){
+        if(typeof mfVictoryContinue==='function') mfVictoryContinue();
+        else if(typeof continueToNextMap==='function') continueToNextMap();
+      }
     });
   }
   mfBindTap($('menuBtn'),mfOpenPause);
@@ -3576,8 +3799,8 @@ async function boot(){
     if(typeof renderCodex==='function') renderCodex();
     showScr('dossierScr');
   });
-  mfBindTap($('opsBtn'),()=>{ renderOps(); showScr('opsScr'); });
-  mfBindTap($('devBtn'),()=>{ renderDevelop(); showScr('devScr'); });
+  mfBindTap($('opsBtn'),()=>{ renderOps(); mfEnsureMenu3D('opsMenuModel','building','turret','LIVE DEFENSE'); showScr('opsScr'); });
+  mfBindTap($('devBtn'),()=>{ renderDevelop(); mfEnsureMenu3D('devMenuModel','building','techlab','LIVE SYSTEM'); showScr('devScr'); });
   mfBindTap($('devBack'),()=>{ showFrontScreen('startScreen'); renderMetaHead(); sfx('ui'); });
   mfBindTap($('opsBack'),()=>{ showFrontScreen('startScreen'); sfx('ui'); });
   /* One pinned button, two operations. Its label is set by opsSyncGo(); this

@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "presets": [
+    {"force":0,"name":"Calm","windSpeed":0.0,"Hs":0.0,"Tp":2.0,"fetch":5000,"gamma":1.0,"phillipsA":1e-05,"chop":0.0,"foamThreshold":0.55,"foamDecay":0.985,"foamCoverage":0.0,"sprayIntensity":0.0,"wakeStrength":0.15,"gameAmplitude":0.15,"massfrontHazard":"Calm"},
+    {"force":1,"name":"Light air","windSpeed":1.0,"Hs":0.1,"Tp":3.5,"fetch":10000,"gamma":1.5,"phillipsA":8e-05,"chop":0.35,"foamThreshold":0.52,"foamDecay":0.988,"foamCoverage":0.0,"sprayIntensity":0.0,"wakeStrength":0.25,"gameAmplitude":0.25,"massfrontHazard":"Calm"},
+    {"force":2,"name":"Light breeze","windSpeed":2.6,"Hs":0.2,"Tp":4.5,"fetch":20000,"gamma":2.0,"phillipsA":0.0002,"chop":0.55,"foamThreshold":0.5,"foamDecay":0.99,"foamCoverage":0.02,"sprayIntensity":0.0,"wakeStrength":0.35,"gameAmplitude":0.35,"massfrontHazard":"Calm"},
+    {"force":3,"name":"Gentle breeze","windSpeed":4.6,"Hs":0.6,"Tp":5.8,"fetch":40000,"gamma":2.5,"phillipsA":0.0005,"chop":0.85,"foamThreshold":0.48,"foamDecay":0.991,"foamCoverage":0.08,"sprayIntensity":0.05,"wakeStrength":0.5,"gameAmplitude":0.45,"massfrontHazard":"Breeze"},
+    {"force":4,"name":"Moderate breeze","windSpeed":6.7,"Hs":1.0,"Tp":7.0,"fetch":60000,"gamma":3.0,"phillipsA":0.0008,"chop":1.0,"foamThreshold":0.45,"foamDecay":0.992,"foamCoverage":0.15,"sprayIntensity":0.1,"wakeStrength":0.65,"gameAmplitude":0.55,"massfrontHazard":"Breeze"},
+    {"force":5,"name":"Fresh breeze","windSpeed":9.8,"Hs":2.0,"Tp":8.5,"fetch":80000,"gamma":3.3,"phillipsA":0.0012,"chop":1.15,"foamThreshold":0.42,"foamDecay":0.993,"foamCoverage":0.28,"sprayIntensity":0.2,"wakeStrength":0.8,"gameAmplitude":0.65,"massfrontHazard":"Breeze"},
+    {"force":6,"name":"Strong breeze","windSpeed":12.3,"Hs":3.0,"Tp":9.8,"fetch":100000,"gamma":3.3,"phillipsA":0.0016,"chop":1.3,"foamThreshold":0.4,"foamDecay":0.994,"foamCoverage":0.4,"sprayIntensity":0.35,"wakeStrength":0.9,"gameAmplitude":0.7,"massfrontHazard":"Gale"},
+    {"force":7,"name":"Near gale","windSpeed":15.4,"Hs":4.0,"Tp":11.0,"fetch":120000,"gamma":3.0,"phillipsA":0.002,"chop":1.4,"foamThreshold":0.38,"foamDecay":0.994,"foamCoverage":0.55,"sprayIntensity":0.5,"wakeStrength":1.0,"gameAmplitude":0.72,"massfrontHazard":"Gale"},
+    {"force":8,"name":"Gale","windSpeed":19.0,"Hs":5.5,"Tp":12.5,"fetch":150000,"gamma":2.8,"phillipsA":0.0025,"chop":1.5,"foamThreshold":0.35,"foamDecay":0.995,"foamCoverage":0.7,"sprayIntensity":0.7,"wakeStrength":1.05,"gameAmplitude":0.75,"massfrontHazard":"Gale"},
+    {"force":9,"name":"Strong gale","windSpeed":22.6,"Hs":7.0,"Tp":14.0,"fetch":180000,"gamma":2.5,"phillipsA":0.003,"chop":1.6,"foamThreshold":0.32,"foamDecay":0.995,"foamCoverage":0.82,"sprayIntensity":0.85,"wakeStrength":1.1,"gameAmplitude":0.7,"massfrontHazard":"Storm"},
+    {"force":10,"name":"Storm","windSpeed":26.7,"Hs":9.0,"Tp":15.5,"fetch":200000,"gamma":2.2,"phillipsA":0.0035,"chop":1.7,"foamThreshold":0.3,"foamDecay":0.996,"foamCoverage":0.92,"sprayIntensity":0.95,"wakeStrength":1.15,"gameAmplitude":0.65,"massfrontHazard":"Storm"},
+    {"force":11,"name":"Violent storm","windSpeed":30.9,"Hs":11.5,"Tp":17.0,"fetch":250000,"gamma":2.0,"phillipsA":0.004,"chop":1.8,"foamThreshold":0.28,"foamDecay":0.996,"foamCoverage":0.97,"sprayIntensity":1.0,"wakeStrength":1.2,"gameAmplitude":0.55,"massfrontHazard":"Hurricane"},
+    {"force":12,"name":"Hurricane","windSpeed":35.0,"Hs":14.0,"Tp":19.0,"fetch":300000,"gamma":1.8,"phillipsA":0.0045,"chop":1.9,"foamThreshold":0.25,"foamDecay":0.997,"foamCoverage":1.0,"sprayIntensity":1.0,"wakeStrength":1.25,"gameAmplitude":0.5,"massfrontHazard":"Hurricane"}
+  ]
+}

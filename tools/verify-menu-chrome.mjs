@@ -2,11 +2,9 @@
    source it came from. Three things live here because they share one boot, and
    the boot is the expensive part:
 
-   1. the command slices are drawn from the authored plate, clamp without
-      ellipsising the longest label, and stay inside the viewport;
-   2. the tap popout opens on the first tap and enters on the second, which is
-      only true while the interception sits on pointerup - mfBindTap commits
-      there, so a click-phase guard fires after the screen has already changed;
+   1. the three support slices and main entry use authored plates, wrap instead
+      of ellipsising, and stay inside a narrow phone or short landscape;
+   2. touch and keyboard each activate a destination on the first input;
    3. the update surface floats over the live menu instead of taking the screen,
       and minimises to a pill that leaves the menu tappable.
 
@@ -38,8 +36,7 @@ async function routeLocal(page) {
 }
 
 /* Boot, clear the launcher, and step back from the classic fallback's War Room
-   to the menu. The UGA slice stays hidden without the galactic payload, so
-   reveal it - a three-slice stack would not exercise the clamp. */
+   to the menu. The duplicate Explore Space button must not be mounted. */
 async function land(page, url) {
   await page.goto(url, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => !document.getElementById('mfBootCover'), {}, { timeout: 90000, polling: POLL });
@@ -50,7 +47,6 @@ async function land(page, url) {
   const back = page.locator('#warBack');
   if (await back.isVisible().catch(() => false)) await back.click().catch(() => {});
   await page.waitForTimeout(1400);
-  await page.evaluate(() => { const uga = document.getElementById('ugaBtn'); if (uga) uga.style.display = ''; });
   await page.waitForTimeout(450);
 }
 
@@ -71,13 +67,20 @@ try {
   const url = `http://127.0.0.1:${server.address().port}/?galacticFallback=classic`;
   browser = await launchPwBrowser({ ownershipMode: 'isolated', headless: true });
 
-  /* ---- 1. the slices, at the two widths that actually differ ---- */
-  for (const view of [{ name: 'portrait-412x900', width: 412, height: 900 }, { name: 'portrait-360x780', width: 360, height: 780 }]) {
+  /* ---- 1. phone, enlarged text, and short landscape ---- */
+  for (const view of [
+    { name: 'portrait-412x900', width: 412, height: 900, textScale: '100' },
+    { name: 'portrait-360x780', width: 360, height: 780, textScale: '100' },
+    { name: 'portrait-320x700-text200', width: 320, height: 700, textScale: '200' },
+    { name: 'landscape-915x412-text150', width: 915, height: 412, textScale: '150' }
+  ]) {
     const context = await browser.newContext({ viewport: { width: view.width, height: view.height }, deviceScaleFactor: 2, hasTouch: true, isMobile: true, serviceWorkers: 'block' });
     const page = await context.newPage();
     await routeLocal(page);
     await land(page, url);
-    const slices = await page.evaluate(() => [...document.querySelectorAll('#startScreen .menuSlices .slice')]
+    await page.evaluate(scale => { document.documentElement.dataset.mfTextScale = scale; }, view.textScale);
+    const layout = await page.evaluate(() => ({
+      slices: [...document.querySelectorAll('#startScreen .menuSlices .slice')]
       .filter(el => el.getBoundingClientRect().width > 2)
       .map(el => {
         const label = el.querySelector('b');
@@ -90,17 +93,34 @@ try {
           fromArt: /mf-ui-v3.menu_normal/.test(getComputedStyle(el).borderImageSource || ''),
           height: Math.round(rect.height)
         };
-      }));
+      }),
+      entry: (() => {
+        const button = document.getElementById('startBtn');
+        const rect = button.getBoundingClientRect();
+        return {
+          label: button.textContent.trim(),
+          clipped: button.scrollWidth > button.clientWidth + 1,
+          offscreen: rect.left < -0.5 || rect.right > innerWidth + 0.5,
+          height: Math.round(rect.height),
+          fromArt: /mf-ui-v3.deploy_normal/.test(getComputedStyle(button).borderImageSource || '')
+        };
+      })(),
+      duplicate: !!document.getElementById('ugaBtn'),
+      documentOverflow: document.documentElement.scrollWidth > innerWidth + 1
+    }));
     await page.screenshot({ path: resolve(shots, `slices-${view.name}.png`), timeout: 30000 }).catch(() => {});
-    check(slices.length === 4, `${view.name}: all four command slices render (${slices.length})`);
-    check(slices.every(s => s.fromArt), `${view.name}: every slice is drawn from the authored plate`);
-    check(!slices.some(s => s.clipped), `${view.name}: no label is ellipsised (${slices.filter(s => s.clipped).map(s => s.text).join(', ') || 'none'})`);
-    check(!slices.some(s => s.offscreen), `${view.name}: no slice leaves the viewport`);
-    check(new Set(slices.map(s => s.height)).size === 1, `${view.name}: the stack is one consistent height (${[...new Set(slices.map(s => s.height))].join('/')}px)`);
+    check(layout.slices.length === 3 && !layout.duplicate, `${view.name}: one game entry and three support slices`);
+    check(layout.slices.every(s => s.fromArt) && layout.entry.fromArt, `${view.name}: authored plates remain`);
+    check(!layout.slices.some(s => s.clipped) && !layout.entry.clipped,
+      `${view.name}: complete labels render without ellipsis`);
+    check(!layout.slices.some(s => s.offscreen) && !layout.entry.offscreen && !layout.documentOverflow,
+      `${view.name}: controls remain inside the viewport`);
+    check(layout.entry.label.includes('ENTER MASSFRONT') && layout.entry.height >= 44,
+      `${view.name}: truthful main action has a touch-sized target`);
     await context.close();
   }
 
-  /* ---- 2. the popout, then 3. the update float ---- */
+  /* ---- 2. first-input navigation, then 3. the update float ---- */
   const context = await browser.newContext({ viewport: { width: 412, height: 900 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true, serviceWorkers: 'block' });
   const page = await context.newPage();
   const errors = [];
@@ -111,44 +131,45 @@ try {
   const visibleScreens = () => page.evaluate(() => [...document.querySelectorAll('#startScreen,.overlay')]
     .filter(el => el.offsetParent !== null && el.getBoundingClientRect().height > 40).map(el => el.id).join('+') || '(none)');
   const home = await visibleScreens();
-
-  await page.locator('#opsBtn').click();
-  await page.waitForTimeout(420);
-  const opened = await page.evaluate(() => {
-    const slice = document.getElementById('opsBtn');
-    const panel = slice.nextElementSibling;
-    return {
-      open: slice.classList.contains('is-open'),
-      expanded: slice.getAttribute('aria-expanded'),
-      out: !!panel && panel.classList.contains('is-out'),
-      height: panel ? Math.round(panel.getBoundingClientRect().height) : 0,
-      text: panel ? (panel.textContent || '').trim() : '',
-      alignedRight: !!panel && Math.round(panel.getBoundingClientRect().right) === Math.round(slice.getBoundingClientRect().right),
-      selectedArt: /mf-ui-v3.menu_selected/.test(getComputedStyle(slice).borderImageSource || '')
+  await page.evaluate(() => {
+    window.__menuRoutes = [];
+    const original = showFrontScreen;
+    showFrontScreen = function(id) {
+      if (id === 'opsScr' || id === 'devScr') window.__menuRoutes.push(id);
+      return original.apply(this, arguments);
     };
   });
-  await page.screenshot({ path: resolve(shots, 'popout-open.png'), timeout: 30000 }).catch(() => {});
-  check(opened.open && opened.expanded === 'true', 'the first tap opens the slice and reports it');
-  check(opened.out && opened.height > 20, `the description panel is revealed (${opened.height}px)`);
-  check(/campaign ladder/.test(opened.text), 'the panel carries the slice description');
-  check(/ENTER/.test(opened.text), 'the panel offers an explicit enter action');
-  check(opened.alignedRight, 'the panel aligns to the slice spine');
-  check(opened.selectedArt, 'the open slice swaps to the authored selected plate');
-  check(await visibleScreens() === home, 'the first tap does not navigate');
-
-  await page.locator('#devBtn').click();
-  await page.waitForTimeout(380);
-  const only = await page.evaluate(() => [...document.querySelectorAll('#startScreen .menuSlices .slice.is-open')].map(s => s.id));
-  check(only.length === 1 && only[0] === 'devBtn', `only the newest slice stays open (${JSON.stringify(only)})`);
-
-  await page.locator('#devBtn').click();
-  await page.waitForTimeout(900);
-  const entered = await visibleScreens();
-  check(entered !== home, `the second tap enters (${home} -> ${entered})`);
+  await page.locator('#opsBtn').click();
+  await page.waitForTimeout(400);
+  const touch = await page.evaluate(() => ({ screen: document.body.dataset.frontScreen, routes: window.__menuRoutes.slice() }));
+  check(touch.screen === 'opsScr' && touch.routes.join(',') === 'opsScr',
+    `one touch opens Operations exactly once (${JSON.stringify(touch)})`);
 
   await page.evaluate(() => { if (typeof showFrontScreen === 'function') showFrontScreen('startScreen'); });
-  await page.waitForTimeout(700);
+  await page.waitForTimeout(350);
   check(await visibleScreens() === home, 'the menu is reachable again from the slice destination');
+  await page.locator('#devBtn').focus();
+  await page.keyboard.press('Enter');
+  await page.waitForTimeout(400);
+  const keyboard = await page.evaluate(() => ({ screen: document.body.dataset.frontScreen, routes: window.__menuRoutes.slice() }));
+  check(keyboard.screen === 'devScr' && keyboard.routes.join(',') === 'opsScr,devScr',
+    `one Enter opens Development exactly once (${JSON.stringify(keyboard)})`);
+  await page.evaluate(() => { if (typeof showFrontScreen === 'function') showFrontScreen('startScreen'); });
+  await page.waitForTimeout(350);
+
+  await page.evaluate(() => {
+    window.__menuEntries = [];
+    window.__MF_BUILD_HAS_GALACTIC_EXPLORATION = true;
+    mfOpenExploration = async view => { window.__menuEntries.push(view); return true; };
+  });
+  await page.locator('#startBtn').click();
+  await page.waitForTimeout(120);
+  await page.locator('#startBtn').focus();
+  await page.keyboard.press('Enter');
+  await page.waitForTimeout(120);
+  const entries = await page.evaluate(() => window.__menuEntries.slice());
+  check(entries.join(',') === 'campaign_hub,campaign_hub',
+    `touch and Enter each open the MASSFRONT home exactly once (${JSON.stringify(entries)})`);
 
   const floatState = () => page.evaluate(() => {
     const scr = document.getElementById('updScr');

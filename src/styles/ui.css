@@ -384,12 +384,12 @@ body.mfMenuOpen #hotUtilityPanel,body.menuMode #hotUtilityPanel{display:none!imp
    the absolute fallback above. */
 #topbar #goalBar{flex:1 1 100%;position:relative;top:auto;left:auto;transform:none;z-index:auto;
   width:auto;max-width:none;margin:1px 0 0;box-sizing:border-box;
-  min-height:var(--hudIntelH);max-height:none;justify-content:center;gap:6px;padding:3px 8px;
+  min-height:max(44px,var(--hudIntelH));max-height:none;justify-content:center;gap:6px;padding:3px 8px;
   white-space:nowrap;overflow:hidden;
   background:rgba(4,10,18,.4) padding-box,var(--steelB) border-box;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
 #goalDetailBtn{appearance:none;-webkit-appearance:none;display:flex;align-items:center;justify-content:center;gap:6px;
-  width:100%;min-width:0;min-height:24px;margin:0;padding:0;border:0;background:none;color:inherit;
+  width:100%;min-width:0;min-height:44px;margin:0;padding:0;border:0;background:none;color:inherit;
   font:inherit;letter-spacing:inherit;white-space:inherit;overflow:hidden;cursor:pointer}
 #goalDetailBtn:focus-visible{outline:2px solid #77ddff;outline-offset:1px;border-radius:6px}
 #goalBar .hudIntelChip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:7px;
@@ -1071,7 +1071,7 @@ body.mfDeparting #placeUI,body.mfDeparting #unitCard,body.mfDeparting #gameOver{
    bar and gives the wordmark about a tenth of the screen. Keep both pieces of
    progression, but as slim rows on the pack progress track, and drop the long
    description line - it is the same copy the destination screen opens with. */
-#startScreen #mfNextUnlockRail{margin:6px auto 0;padding:0;width:min(96vw,440px);gap:6px}
+#startScreen #mfNextUnlockRail{margin:6px auto 0;padding:0;width:min(96%,440px);gap:6px}
 #startScreen .mfNextCard{flex:1 1 0;padding:5px 8px 6px;gap:2px;border-radius:6px}
 #startScreen .mfNextHead{gap:5px}
 #startScreen .mfNextHead b{font-size:8.5px;letter-spacing:.1em}
@@ -1159,6 +1159,11 @@ body.mfDeparting #placeUI,body.mfDeparting #unitCard,body.mfDeparting #gameOver{
 .sItem:active{transform:scale(.98)}
 .sItem.owned{opacity:.62}
 .sEm{font-size:25px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))}
+#storeList .sEm{position:relative;flex:0 0 62px;width:62px;height:62px;display:grid;place-items:center;overflow:hidden;
+  border:1px solid rgba(89,194,239,.34);border-radius:10px;background:linear-gradient(145deg,rgba(19,55,74,.88),rgba(4,13,23,.96));
+  box-shadow:inset 0 1px rgba(255,255,255,.07),0 5px 13px rgba(0,0,0,.35)}
+#storeList .sEm::after{content:'';position:absolute;inset:5px;pointer-events:none;border:1px solid rgba(255,181,74,.18);border-radius:6px}
+#storeList .sEm .itemArt{width:58px!important;height:58px!important;object-fit:contain}
 .sTx{flex:1}
 .sTx b{font-size:14px;color:#eaf7ff;letter-spacing:.03em}
 .sTier{color:var(--gold);font-size:11.5px;font-family:var(--fT)}
@@ -1386,13 +1391,18 @@ body.mfDeparting #placeUI,body.mfDeparting #unitCard,body.mfDeparting #gameOver{
 .optGrid .dbtn{min-width:0}
 .commanderPickLbl{margin-top:15px!important}
 .commanderGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
-.commanderCard{min-width:0;min-height:156px;padding:7px 6px 8px;border-radius:11px;text-align:left;color:#a9c9dd;
+.commanderCard{position:relative;min-width:0;min-height:166px;padding:7px 6px 8px;border-radius:11px;text-align:left;color:#a9c9dd;
   border:1px solid rgba(115,164,199,.26);background:linear-gradient(180deg,rgba(20,34,51,.96),rgba(7,14,24,.98));
   box-shadow:0 5px 15px rgba(0,0,0,.28);touch-action:manipulation}
 .commanderCard.on{color:#fff;border-color:var(--cmd,#5db6ff);box-shadow:0 0 16px color-mix(in srgb,var(--cmd,#5db6ff) 32%,transparent)}
-.commanderCard img{display:block;width:100%;height:76px;object-fit:cover;object-position:center 18%;border-radius:7px;margin-bottom:6px;opacity:.72;
+.commanderPortraitFrame{position:relative;display:block;margin-bottom:7px}.commanderCard img{display:block;width:100%;height:92px;object-fit:cover;object-position:center 18%;border-radius:7px;opacity:.72;
   border:1px solid color-mix(in srgb,var(--cmd,#5db6ff) 28%,transparent);box-shadow:inset 0 0 14px rgba(0,0,0,.5)}
 .commanderCard.on img{opacity:1}
+.commanderAbilityFloats{position:absolute;left:5px;right:5px;bottom:-6px;display:flex;gap:4px;justify-content:center;pointer-events:none}
+.commanderAbilityFloat{display:grid;grid-template-columns:19px 1fr;align-items:center;min-width:0;flex:1;height:28px;padding:3px 4px;border:1px solid rgba(114,189,221,.3);border-radius:7px;background:rgba(3,11,20,.92);box-shadow:0 4px 9px rgba(0,0,0,.5)}
+.commanderAbilityFloat i{display:grid!important;place-items:center;width:19px;height:19px;margin:0!important;border-radius:5px;color:#eafaff!important;background:color-mix(in srgb,var(--cmd,#5db6ff) 24%,#08131f);font:900 12px/1 var(--fT)!important;letter-spacing:0!important}
+.commanderAbilityFloat b{margin:0!important;color:#92b8cb!important;font:900 5.5px/1 var(--fT)!important;letter-spacing:.04em;white-space:nowrap}
+.commanderAbilityFloat.signature{border-color:color-mix(in srgb,var(--cmd,#5db6ff) 54%,transparent)}
 .commanderCard b,.commanderCard i,.commanderCard small{display:block;overflow:hidden;text-overflow:ellipsis}
 .commanderCard i{font:800 7.5px var(--fT);letter-spacing:.12em;color:var(--cmd,#5db6ff);font-style:normal;white-space:nowrap}
 .commanderCard b{margin-top:2px;font:800 9px/1.15 var(--fT);color:#e9f6ff}
@@ -1547,6 +1557,50 @@ input,textarea,#profName{-webkit-user-select:text;user-select:text}
 .subMenuHead h2{margin:0;color:#8be8ff;letter-spacing:.22em;font-size:19px;font-family:var(--fT);
   text-shadow:0 0 14px rgba(65,200,255,.5)}
 .subMenuHead span{display:block;margin-top:4px;color:#7399b5;font-size:10px;letter-spacing:.06em;font-weight:700}
+
+/* A destination should announce itself as a place, not as a heading over a
+   ledger. These shallow panoramas are real, original menu art; the dark falloff
+   keeps every surrounding control readable without painting prose over the
+   illustration. The scan is one compositor-only ambient cue and is stopped by
+   the reduced-motion contract below. */
+.mfMenuHero{--mf-menu-art:none;position:relative;flex:0 0 auto;width:min(calc(100% - var(--sal) - var(--sar) - 28px),760px);
+  height:clamp(86px,15vh,138px);margin:2px auto 7px;overflow:hidden;border:1px solid rgba(91,202,240,.32);
+  border-radius:12px;background-color:#050c14;background-image:var(--mf-menu-art);background-size:cover;background-position:center;
+  box-shadow:0 11px 28px rgba(0,0,0,.34),inset 0 1px rgba(255,255,255,.07);isolation:isolate}
+.mfMenuHero::before{content:"";position:absolute;z-index:1;inset:0;pointer-events:none;
+  background:linear-gradient(90deg,rgba(2,8,15,.62),transparent 28%,transparent 72%,rgba(2,8,15,.62)),
+    linear-gradient(0deg,rgba(1,7,13,.68),transparent 48%,rgba(4,13,22,.12));
+  box-shadow:inset 0 0 0 5px rgba(3,12,20,.22),inset 0 -1px rgba(89,212,255,.22)}
+.mfMenuHero::after{content:"";position:absolute;z-index:2;left:-38%;top:0;width:32%;height:100%;pointer-events:none;
+  background:linear-gradient(90deg,transparent,rgba(92,220,255,.17),transparent);transform:skewX(-18deg);
+  animation:mfMenuHeroScan 7.8s ease-in-out infinite}
+.mfMenuHero--operations{--mf-menu-art:url('../../assets/textures/ui/menu-art-v1/operations-war-table-v1.webp')}
+.mfMenuHero--arsenal{--mf-menu-art:url('../../assets/textures/ui/menu-art-v1/arsenal-fabrication-bay-v1.webp')}
+.mfMenuHero--research,.mfMenuHero--systems{--mf-menu-art:url('../../assets/textures/ui/menu-art-v1/research-directorate-v1.webp')}
+.mfMenuHero--contracts{--mf-menu-art:url('../../assets/textures/ui/menu-art-v1/contracts-intel-table-v1.webp')}
+.mfMenuHero--career{--mf-menu-art:url('../../assets/textures/ui/menu-art-v1/career-service-record-v1.webp')}
+.mfMenuHero--settings{--mf-menu-art:url('../../assets/textures/ui/menu-art-v1/settings-calibration-bay-v1.webp')}
+.mfMenuHero--inbox{--mf-menu-art:url('../../assets/textures/ui/menu-art-v1/inbox-communications-v1.webp')}
+.mfMenuHero--social{--mf-menu-art:url('../../assets/textures/ui/menu-art-v1/social-crew-lounge-v1.webp')}
+.mfMenu3DHost{position:absolute;z-index:3;right:4px;top:4px;bottom:4px;width:min(45%,178px);pointer-events:none}
+.mfMenu3DHost>.mfIntelPreview{width:100%;height:100%;min-height:0;margin:0;border-color:rgba(91,221,255,.4);border-radius:7px;
+  background:radial-gradient(ellipse at 55% 64%,rgba(38,104,145,.2),transparent 58%),rgba(2,8,14,.62)}
+.mfMenu3DHost .mfIntelPreviewTag{left:auto;right:5px;top:5px;font-size:7px;background:rgba(2,8,14,.8)}
+.mfMenu3DHost .mfIntelPreview::before{opacity:.18}
+@media(max-width:380px){.mfMenu3DHost{width:42%}}
+#settingsScr>.mfMenuHero{height:clamp(70px,11vh,96px)}
+@keyframes mfMenuHeroScan{0%,28%{transform:translateX(0) skewX(-18deg);opacity:0}44%{opacity:.75}72%,100%{transform:translateX(440%) skewX(-18deg);opacity:0}}
+
+/* Screen entry has five visual groups at most. It deliberately moves the
+   presentation, never the hit target under a finger, and replays only when
+   showFrontScreen explicitly enters the route. */
+.mfFrontEntering>.subMenuHead,.mfFrontEntering>h2{animation:mfFrontScreenReveal .22s ease-out both}
+.mfFrontEntering>.mfMenuHero{animation:mfFrontScreenReveal .26s .035s ease-out both}
+.mfFrontEntering>.screenTabs,.mfFrontEntering>.tabRow,.mfFrontEntering>#matRow{animation:mfFrontScreenReveal .24s .07s ease-out both}
+.mfFrontEntering>.opsScroll,.mfFrontEntering>.dailyScroll,.mfFrontEntering>.profileScroll,.mfFrontEntering>.settingsScroll,
+.mfFrontEntering>.warScroll,.mfFrontEntering>.inboxScroll,.mfFrontEntering>#storeList{animation:mfFrontScreenReveal .26s .1s ease-out both}
+.mfFrontEntering>.setupFoot,.mfFrontEntering>.warFoot{animation:mfFrontScreenReveal .2s .13s ease-out both}
+@keyframes mfFrontScreenReveal{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .settingsScroll{flex:1 1 auto;min-height:0;width:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;
   overscroll-behavior:contain;touch-action:pan-y;padding:0 calc(var(--sar) + 14px) 12px calc(var(--sal) + 14px)}
 #profileScr{display:none;padding:0!important;justify-content:flex-start!important;overflow:hidden}
@@ -1702,25 +1756,79 @@ input,textarea,#profName{-webkit-user-select:text;user-select:text}
 #updBtn:disabled{opacity:.45}
 #updCancel{padding:9px 10px;background:linear-gradient(180deg,rgba(70,28,24,.96),rgba(34,12,10,.97)) padding-box,
              linear-gradient(160deg,#ffc9bd,#ff6a55 45%,#5e1d14 75%,#ffb0a2) border-box}
-/* LOADING SCREEN. PLANETS[] carries ds/biodome/sector/diameter/dayLen/temp/
-   climate/lore plus per-region poi/hook, and almost none of it was ever shown.
-   The wait is unavoidable (terrain gen is heavy at 2048); use it to say where
-   the player actually is. */
-/* Opaque, unlike the shared .overlay 0.9 alpha: the menu showing through a
-   loading screen reads as a stuck transition rather than a deliberate wait,
-   and the intel text below has to sit on a settled background to be read. */
-#loadScr{background:radial-gradient(120% 90% at 50% 34%,#0a1622 0%,#050b13 58%,#03070e 100%)}
-#loadScr .mfLoadBrand{position:relative;display:grid;place-items:center;width:min(68vw,410px);aspect-ratio:1280/681;margin:0 auto 2px}
-#loadScr .mfLoadBrand img{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 10px 24px #000b)}
-#loadScr .mfLoadBrandFallback{font:900 clamp(34px,10vw,58px)/1 var(--fT);letter-spacing:.07em;color:#eefbff;text-shadow:0 0 28px #54dcff38;white-space:nowrap}
-#loadEyebrow{font:700 9.5px/1 var(--fT);letter-spacing:.30em;color:#5f87a6;margin-bottom:9px}
-#loadPoi{margin-top:7px;font:700 12px/1.3 var(--fT);letter-spacing:.20em;color:#5dff9a}
-#loadHook{margin-top:9px;max-width:min(86vw,470px);font:500 12px/1.6 var(--fU);color:#9fb8cc;text-align:center}
-#loadStats{margin-top:12px;display:flex;flex-wrap:wrap;justify-content:center;gap:6px 8px;max-width:min(86vw,470px)}
-#loadStats .lsChip{display:flex;gap:5px;align-items:baseline;padding:3px 8px;border-radius:6px;
-  background:rgba(12,21,34,.66);border:1px solid rgba(120,180,220,.16)}
-#loadStats .lsK{font:700 8px/1 var(--fT);letter-spacing:.16em;color:#5f87a6}
-#loadStats .lsV{font:700 9.5px/1 var(--fT);letter-spacing:.08em;color:#cfe6ff}
+/* MATCH loader — the second and only battlefield-specific loading archetype.
+   The terrain sheet, planet survey map, region colour and map composition all
+   come from the selected playable site. This is a deployment dossier, not a
+   generic spinner over an unrelated space backdrop. */
+#loadScr{--mf-match-accent:#5ad4ff;--mf-match-accent-rgb:90,212,255;--mf-match-x:50%;--mf-match-y:50%;
+  padding:0!important;align-items:stretch!important;overflow:hidden;isolation:isolate;color:#dff7ff;
+  background:#02070d!important;text-align:left!important}
+#loadScr .mfMatchLoadArt{position:absolute;inset:0;overflow:hidden;pointer-events:none;background:#02070d}
+#loadScr .mfMatchLoadTerrain{position:absolute;inset:-5%;transform:scale(1.06);opacity:.72;
+  background-image:linear-gradient(90deg,rgba(1,5,10,.96) 0,rgba(1,6,11,.72) 43%,rgba(1,7,12,.30) 73%,rgba(1,5,10,.78) 100%),var(--mf-match-terrain,none);
+  background-position:center,var(--mf-match-x) var(--mf-match-y);background-size:cover,cover;filter:saturate(.72) contrast(1.15) brightness(.62)}
+#loadScr .mfMatchLoadArt::before{content:'';position:absolute;z-index:2;inset:0;opacity:.30;
+  background:repeating-linear-gradient(90deg,transparent 0 79px,rgba(var(--mf-match-accent-rgb),.10) 80px 81px),repeating-linear-gradient(0deg,transparent 0 79px,rgba(var(--mf-match-accent-rgb),.07) 80px 81px),linear-gradient(105deg,transparent 51%,rgba(var(--mf-match-accent-rgb),.12) 51.2%,transparent 51.5%)}
+#loadScr .mfMatchLoadArt::after{content:'';position:absolute;z-index:4;inset:0;background:linear-gradient(180deg,rgba(1,5,9,.86),transparent 24%,transparent 68%,rgba(1,5,9,.94)),radial-gradient(circle at 73% 44%,transparent 0 25%,rgba(1,5,9,.62) 64%)}
+#loadScr .mfMatchLoadWorld{position:absolute;z-index:1;right:-7%;top:10%;width:min(63vw,780px);height:78%;opacity:.38;
+  border:1px solid rgba(var(--mf-match-accent-rgb),.34);clip-path:polygon(11% 0,100% 0,100% 89%,89% 100%,0 100%,0 11%);
+  background-image:linear-gradient(135deg,rgba(2,10,17,.20),rgba(2,9,15,.76)),var(--mf-match-world,none);background-size:cover,cover;background-position:center;
+  filter:saturate(.86) contrast(1.1);box-shadow:inset 0 0 70px #01050a,0 0 50px rgba(var(--mf-match-accent-rgb),.10)}
+#loadScr .mfMatchLoadRoute{position:absolute;z-index:3;right:8%;top:23%;width:min(47vw,560px);height:50%;opacity:.7;transform:skewX(-8deg)}
+#loadScr .mfMatchLoadRoute::before,#loadScr .mfMatchLoadRoute::after{content:'';position:absolute;border:1px solid rgba(var(--mf-match-accent-rgb),.44)}
+#loadScr .mfMatchLoadRoute::before{inset:8% 10% 14% 5%;clip-path:polygon(0 0,72% 0,100% 31%,100% 100%,16% 100%,0 82%)}
+#loadScr .mfMatchLoadRoute::after{left:28%;top:15%;width:38%;height:58%;border-style:dashed}
+#loadScr .mfMatchLoadRoute i{position:absolute;width:8px;height:8px;border:2px solid var(--mf-match-accent);background:#06121b;box-shadow:0 0 12px var(--mf-match-accent)}
+#loadScr .mfMatchLoadRoute i:nth-child(1){left:8%;top:18%}#loadScr .mfMatchLoadRoute i:nth-child(2){left:37%;top:64%}#loadScr .mfMatchLoadRoute i:nth-child(3){right:18%;top:29%}#loadScr .mfMatchLoadRoute i:nth-child(4){right:5%;bottom:13%}
+#loadScr .mfMatchLoadFrame{position:relative;z-index:6;min-height:100%;width:100%;display:grid;grid-template-rows:auto 1fr auto;gap:18px;
+  padding:max(20px,calc(var(--sat) + 12px)) max(22px,calc(var(--sar) + 16px)) max(20px,calc(var(--sab) + 12px)) max(22px,calc(var(--sal) + 16px));
+  border:1px solid rgba(var(--mf-match-accent-rgb),.30);box-shadow:inset 0 0 0 8px rgba(1,7,12,.38)}
+#loadScr .mfMatchLoadHead{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;border-bottom:1px solid rgba(var(--mf-match-accent-rgb),.24);padding-bottom:10px}
+#loadScr .mfLoadBrand{position:relative;display:grid;place-items:center;width:clamp(150px,24vw,260px);aspect-ratio:1200/673;flex:0 0 auto}
+#loadScr .mfLoadBrand img{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 9px 20px #000c)}
+#loadScr .mfLoadBrandFallback{font:900 clamp(20px,4vw,38px)/1 var(--fT);letter-spacing:.07em;color:#eefbff;text-shadow:0 0 28px rgba(var(--mf-match-accent-rgb),.3);white-space:nowrap}
+#loadScr .mfMatchLoadIdentity{display:grid;justify-items:end;gap:4px;padding-top:5px;text-align:right}
+#loadScr .mfMatchLoadIdentity span,#loadScr .mfMatchLoadFoot span{font:700 8px/1.35 var(--fT);letter-spacing:.2em;color:#6e93a6}
+#loadScr .mfMatchLoadIdentity b,#loadScr .mfMatchLoadFoot b{font:700 9px/1.4 var(--fT);letter-spacing:.12em;color:var(--mf-match-accent)}
+#loadScr .mfMatchLoadBrief{align-self:end;width:min(610px,88vw);padding:20px 22px 18px;border-left:2px solid var(--mf-match-accent);
+  background:linear-gradient(90deg,rgba(2,9,16,.94),rgba(3,13,22,.66) 77%,transparent);box-shadow:-16px 0 40px #01060a99}
+#loadEyebrow{font:700 9px/1 var(--fT);letter-spacing:.30em;color:var(--mf-match-accent);margin-bottom:9px}
+#loadScr #loadTitle{margin:0;font-size:clamp(24px,5vw,46px)!important;line-height:1.04;letter-spacing:.035em;text-wrap:balance}
+#loadPoi{margin-top:9px;font:700 12px/1.3 var(--fT);letter-spacing:.20em;color:#e9fbff}
+#loadHook{margin-top:10px;max-width:540px;font:500 12px/1.55 var(--fU);color:#9fb8cc;text-align:left}
+#loadStats{margin-top:14px;display:flex;flex-wrap:wrap;justify-content:flex-start;gap:6px 8px;max-width:560px}
+#loadStats .lsChip{display:flex;gap:6px;align-items:baseline;padding:5px 8px;border-radius:2px;background:rgba(4,16,26,.78);border:1px solid rgba(var(--mf-match-accent-rgb),.22)}
+#loadStats .lsK{font:700 7px/1 var(--fT);letter-spacing:.16em;color:#65889b}
+#loadStats .lsV{font:700 9px/1 var(--fT);letter-spacing:.08em;color:#d7edf5}
+#loadScr .mfMatchLoadFoot{display:grid;grid-template-columns:minmax(150px,1fr) auto auto;align-items:end;gap:18px;border-top:1px solid rgba(var(--mf-match-accent-rgb),.24);padding-top:11px}
+#loadScr .mfMatchLoadFoot>div:first-child{display:grid;gap:4px}
+#loadSub{font:700 9px/1.4 var(--fT);letter-spacing:.18em;color:#b7d2de;text-align:right}
+#loadScr .mfMatchLoadSignal{height:22px;display:flex;align-items:flex-end;gap:3px}
+#loadScr .mfMatchLoadSignal i{display:block;width:4px;background:var(--mf-match-accent);box-shadow:0 0 8px rgba(var(--mf-match-accent-rgb),.58);animation:mfMatchSignal 1.1s ease-in-out infinite alternate}
+#loadScr .mfMatchLoadSignal i:nth-child(1){height:7px}#loadScr .mfMatchLoadSignal i:nth-child(2){height:14px;animation-delay:.1s}#loadScr .mfMatchLoadSignal i:nth-child(3){height:22px;animation-delay:.2s}#loadScr .mfMatchLoadSignal i:nth-child(4){height:12px;animation-delay:.3s}#loadScr .mfMatchLoadSignal i:nth-child(5){height:18px;animation-delay:.4s}
+@keyframes mfMatchSignal{to{opacity:.28;transform:scaleY(.55);transform-origin:bottom}}
+@media(max-width:620px){#loadScr .mfMatchLoadWorld{right:-32%;width:112vw;opacity:.31}#loadScr .mfMatchLoadRoute{right:-14%;width:82vw;opacity:.48}#loadScr .mfMatchLoadFrame{gap:10px;padding:max(14px,calc(var(--sat) + 8px)) max(14px,calc(var(--sar) + 10px)) max(14px,calc(var(--sab) + 8px)) max(14px,calc(var(--sal) + 10px))}#loadScr .mfLoadBrand{width:145px}#loadScr .mfMatchLoadIdentity span{display:none}#loadScr .mfMatchLoadBrief{width:100%;padding:16px 14px 14px}#loadScr #loadTitle{font-size:clamp(23px,8vw,34px)!important}#loadHook{font-size:11px}#loadScr .mfMatchLoadFoot{grid-template-columns:1fr auto;gap:9px}#loadSub{grid-column:1/-1;grid-row:1;text-align:left}#loadScr .mfMatchLoadFoot>div:first-child{grid-column:1;grid-row:2}#loadScr .mfMatchLoadSignal{grid-column:2;grid-row:2}}
+@media(orientation:landscape) and (max-height:560px){#loadScr .mfMatchLoadFrame{grid-template-rows:62px 1fr 47px}#loadScr .mfLoadBrand{width:128px}#loadScr .mfMatchLoadBrief{align-self:center;width:min(54vw,580px);padding:11px 15px}#loadScr #loadTitle{font-size:clamp(22px,4.6vw,36px)!important}#loadHook{margin-top:6px;line-height:1.35}#loadStats{margin-top:8px}#loadScr .mfMatchLoadWorld{top:5%;height:90%}}
+@media(prefers-reduced-motion:reduce){#loadScr .mfMatchLoadSignal i{animation:none}}
+
+/* NORMAL recovery blocker. Boot and UGA carry the same sealed command-link
+   composition in their self-contained CSS; early/modern WebGL recovery uses
+   this shared shell without inventing a third visual loader. */
+.mfNormalRecovery{--mf-normal-accent:#83edff;position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;overflow:hidden;isolation:isolate;padding:26px;color:#d8f7ff;text-align:center;background:radial-gradient(ellipse at 50% 18%,#0c2637,#06131f 40%,#02060c 78%);font-family:var(--fT,system-ui,sans-serif)}
+.mfNormalRecovery::before{content:'';position:absolute;inset:-8%;opacity:.28;background:repeating-linear-gradient(90deg,transparent 0 126px,#72dff112 127px 128px,transparent 129px 254px),repeating-linear-gradient(0deg,transparent 0 92px,#72dff10c 93px 94px,transparent 95px 186px)}
+.mfNormalRecovery::after{content:'';position:absolute;inset:max(14px,var(--sat,0px)) max(14px,var(--sar,0px)) max(14px,var(--sab,0px)) max(14px,var(--sal,0px));border:1px solid #75c3d52a;pointer-events:none}
+.mfNormalRecoveryPanel{position:relative;z-index:2;width:min(540px,88vw);display:grid;justify-items:center;gap:12px;padding:20px 0;border-top:1px solid #71cce133;border-bottom:1px solid #72b8cc20}
+.mfNormalRecoveryBrand{position:relative;width:min(78vw,360px);aspect-ratio:1200/673;display:grid;place-items:center;margin-bottom:-8px}
+.mfNormalRecoveryBrand img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 10px 24px #000b)}
+.mfNormalRecoveryBrand span{font:900 clamp(30px,9vw,54px)/1 var(--fT,sans-serif);letter-spacing:.07em;color:#eefbff}
+.mfNormalRecoveryKicker{font:700 8px/1.4 ui-monospace,monospace;letter-spacing:.22em;color:#6fa8be}
+.mfNormalRecoveryTitle{font:900 14px/1.4 var(--fT,sans-serif);letter-spacing:.1em;color:var(--mf-normal-accent)}
+.mfNormalRecoveryBody{max-width:390px;font:500 12px/1.55 var(--fU,system-ui,sans-serif);color:#9fb8cc}
+.mfNormalRecoverySignal{width:min(340px,75vw);height:4px;overflow:hidden;background:#183344}
+.mfNormalRecoverySignal i{display:block;width:28%;height:100%;background:linear-gradient(90deg,#2b96c3,#91f6ff);box-shadow:0 0 14px #5ee1ff;animation:mfNormalRecoverySignal 1.8s ease-in-out infinite}
+.mfNormalRecovery button{min-width:156px;min-height:44px;margin-top:4px;padding:11px 24px;border:1px solid #48cfff;border-radius:3px;background:linear-gradient(180deg,#174a67,#0b2639);color:#eaf7ff;font:900 10px/1 var(--fT,sans-serif);letter-spacing:.12em}
+@keyframes mfNormalRecoverySignal{0%{transform:translateX(-120%)}55%,100%{transform:translateX(360%)}}
+@media(prefers-reduced-motion:reduce){.mfNormalRecoverySignal i{width:100%;animation:none}}
 #updBarO{margin-top:9px;height:7px;border-radius:5px;overflow:hidden;
   background:rgba(4,10,18,.85);box-shadow:inset 0 1px 3px rgba(0,0,0,.7)}
 /* Per-file download feed. Hidden in mini exactly like the bar it sits under. */
@@ -1995,6 +2103,11 @@ body.hudTacticalDock #fps,body.hudTacticalDock.fpsOn #fps{display:none!important
   border:1px solid transparent;
   background:linear-gradient(180deg,rgba(15,26,42,.92),rgba(8,15,26,.94)) padding-box,
              linear-gradient(160deg,rgba(120,170,205,.30),rgba(30,60,88,.18)) border-box}
+.ordVisual{flex:0 0 70px;align-self:stretch;min-height:70px;position:relative;overflow:hidden;border:1px solid rgba(89,194,239,.3);border-radius:9px;
+  background:#050c14 url('../../assets/textures/ui/menu-art-v1/operations-war-table-v1.webp') 45% center/auto 100% no-repeat}
+.ordVisual.arsenal{background-image:url('../../assets/textures/ui/menu-art-v1/arsenal-fabrication-bay-v1.webp');background-position:58% center}
+.ordVisual.intel{background-image:url('../../assets/textures/ui/menu-art-v1/contracts-intel-table-v1.webp');background-position:52% center}
+.ordVisual::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent 45%,rgba(5,12,20,.62));box-shadow:inset 0 0 0 4px rgba(2,8,14,.22)}
 .ordItem.done{background:linear-gradient(180deg,rgba(14,34,24,.94),rgba(7,20,14,.95)) padding-box,
              linear-gradient(160deg,rgba(120,235,170,.46),rgba(24,80,50,.26)) border-box;
   box-shadow:0 0 14px rgba(80,230,150,.20)}
@@ -2012,6 +2125,7 @@ body.hudTacticalDock #fps,body.hudTacticalDock.fpsOn #fps{display:none!important
   border:1px solid transparent;background:var(--panelG2) padding-box,var(--steelB) border-box}
 .ordItem.done .ordAct{color:#062;background:linear-gradient(180deg,#7ef0b4,#2bd672) padding-box,
              linear-gradient(160deg,#d8ffe9,#1f9c62) border-box}
+@media(max-width:380px){.ordVisual{flex-basis:54px}.ordItem{gap:8px;padding-left:8px;padding-right:8px}}
 
 .dossItem{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:12px;text-align:left;
   border:1px solid transparent;
@@ -2408,10 +2522,9 @@ body.hudTacticalDock #fps,body.hudTacticalDock.fpsOn #fps{display:none!important
 #accSync{margin-top:9px;font-size:10px;line-height:1.5;color:#9fc0d8;font-weight:600;text-align:left}
 
 /* Asset-pack download line — same register as the updater panel above it. */
-#packPanel{display:none;width:min(88vw,340px);margin-top:9px;padding:8px 11px;border-radius:11px;
-  border:1px solid transparent;
-  background:linear-gradient(180deg,rgba(14,26,40,.9),rgba(8,16,27,.92)) padding-box,
-             linear-gradient(160deg,rgba(120,170,205,.26),rgba(30,60,88,.12)) border-box}
+#packPanel{display:none;width:min(88vw,340px);margin-top:9px;padding:8px 11px 10px;border-radius:2px;
+  border:1px solid rgba(83,196,226,.34);box-shadow:inset 3px 0 #54dcff;
+  background:linear-gradient(135deg,rgba(3,17,27,.97),rgba(5,31,43,.93))}
 #packPanel .packRow{display:flex;align-items:center;justify-content:space-between;gap:10px}
 #packTxt{font-family:var(--fT);font-size:9.5px;letter-spacing:.13em;color:#8be8ff}
 #packSub{font-size:9px;margin-top:2px;color:#8fb3cc;font-weight:600}
@@ -2811,27 +2924,39 @@ button:focus-visible,[role="button"]:focus-visible,input:focus-visible,textarea:
   padding:2px calc(var(--sar) + 16px) max(calc(var(--sab) + 18px),24px) calc(var(--sal) + 16px);
   scroll-padding-block-end:max(calc(var(--sab) + 72px),82px)}
 .warGrid{display:flex;flex-direction:column;gap:10px;width:min(100%,460px);margin:0 auto;padding-bottom:4px}
+/* WAR TABLE: DEV MODULES. Development surfaces are not operations, and they
+   used to sit in .warGrid as siblings of TRAINING / STANDARD / CAMPAIGN. Borrow
+   the Settings group shell (.setGroup) so the section reads as authored rather
+   than bolted on. .warGrid is a flex column, so this needs its own column
+   layout or the nested .warCard children collapse to the section's width. */
+.warDevGroup{display:flex;flex-direction:column;gap:10px;width:100%;box-sizing:border-box;
+  margin-top:6px;padding:11px;border-radius:14px;border:1px solid transparent;
+  background:linear-gradient(180deg,rgba(13,23,37,.92),rgba(7,13,22,.94)) padding-box,
+             linear-gradient(160deg,rgba(120,170,205,.3),rgba(30,60,88,.16)) border-box}
+.warDevHd{text-align:left;font-family:var(--fT);font-size:10.5px;letter-spacing:.17em;color:#8be8ff;font-weight:900}
+.warDevDs{text-align:left;margin-top:-4px;font-size:10px;line-height:1.35;color:#6f91aa;font-weight:600}
 .warCard{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:start;column-gap:12px;row-gap:8px;width:100%;text-align:left;padding:13px 14px 16px;
   overflow:visible;box-sizing:border-box;
-  border-radius:12px;cursor:pointer;position:relative;
-  border:1px solid transparent;background:var(--panelG) padding-box,var(--steelB) border-box;
-  box-shadow:0 3px 12px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.1)}
+  border-radius:9px 2px 2px 9px;cursor:pointer;position:relative;
+  border:0;border-left:3px solid var(--warAccent,#73d9f4);
+  background:linear-gradient(90deg,rgba(18,48,70,.82),rgba(7,19,33,.84) 70%,rgba(7,19,33,.5));
+  box-shadow:inset 0 -1px rgba(115,217,244,.22),0 5px 16px rgba(0,0,0,.3)}
+.warCard[data-mode="campaign"]{--warAccent:#efc96d}
+.warCard[data-mode="training"]{--warAccent:#8ee9d3}
 .warCard:active{transform:scale(.985)}
 .warCard.locked{opacity:.5;cursor:default}
 .warCard.locked:active{transform:none}
 .warCard.locked.browse{opacity:.78;cursor:pointer}
 .warCard.locked.browse:active{transform:scale(.985)}
-.warEm{grid-column:1;font-size:26px;line-height:1;filter:drop-shadow(0 0 6px rgba(139,232,255,.35))}
+.warEm{grid-column:1;font-size:26px;line-height:1;color:var(--warAccent,#73d9f4);filter:drop-shadow(0 0 6px rgba(139,232,255,.35))}
 .warBody{grid-column:2;min-width:0;display:block}
 .warNm{display:block;font-family:var(--fT);font-size:15px;font-weight:800;letter-spacing:.13em;color:#eaf7ff}
-.warDs{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;
-  margin-top:3px;font-size:10.5px;line-height:1.35;color:#a8c6da;font-weight:600}
-.warFootTx{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;
-  margin-top:4px;font-size:9px;letter-spacing:.07em;color:#7399b5;font-weight:700;text-transform:uppercase}
+.warDs{display:block;margin-top:3px;font-size:12px;line-height:1.3;color:#c0d8e7;font-weight:600;overflow-wrap:anywhere}
+.warFootTx{display:block;margin-top:4px;font-size:10.5px;line-height:1.3;letter-spacing:.035em;color:#93b3c8;font-weight:700;text-transform:uppercase;overflow-wrap:anywhere}
 .warReward{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin-top:7px;min-width:0;max-width:100%}.warReward b{flex:0 0 auto;padding:3px 5px;
   border:1px solid color-mix(in srgb,var(--mode,#63d9ff) 48%,transparent);border-radius:5px;background:color-mix(in srgb,var(--mode,#63d9ff) 12%,transparent);
-  color:var(--mode,#63d9ff);font:900 8px/1 var(--fT);letter-spacing:.07em}.warReward small{flex:1 1 8em;min-width:0;overflow:hidden;
-  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow-wrap:anywhere;color:#dfecf4;font:800 8px/1.2 var(--fT);letter-spacing:.03em}
+  color:var(--mode,#63d9ff);font:900 10px/1.15 var(--fT);letter-spacing:.04em}.warReward small{flex:1 1 8em;min-width:0;
+  display:block;overflow-wrap:anywhere;color:#dfecf4;font:800 10px/1.2 var(--fT);letter-spacing:.02em}
 .warLock{grid-column:1/-1;justify-self:start;max-width:100%;font-family:var(--fT);font-size:9px;font-weight:800;
   letter-spacing:.08em;color:#ffd66f;border:1px solid rgba(255,214,111,.34);border-radius:6px;padding:4px 7px;
   background:rgba(48,36,10,.6);white-space:normal;line-height:1.25}
@@ -2849,8 +2974,8 @@ button:focus-visible,[role="button"]:focus-visible,input:focus-visible,textarea:
   position:relative;left:auto;right:auto;bottom:auto;margin-top:6px;padding:2px 4px 0}
 @media (max-width:430px){
   .warEm{font-size:22px}
-  .warNm{font-size:13.5px}
-  .warDs{font-size:9.5px}
+  .warNm{font-size:14px}
+  .warDs{font-size:11.5px}
 }
 
 /* PLANET + REGION MAP PICKER (Battle Setup → MAP tab). The planet owns the
@@ -2921,9 +3046,27 @@ button:focus-visible,[role="button"]:focus-visible,input:focus-visible,textarea:
    display:none first — see the #warScr note. A new .overlay without it paints
    over the menu the moment the launch title finishes. */
 #inboxScr{display:none;justify-content:flex-start;padding-left:0;padding-right:0}
-.inboxScroll{flex:1 1 auto;width:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;
+.inboxScroll{flex:1 1 auto;box-sizing:border-box;width:100%;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;
   padding:2px calc(var(--sar) + 16px) 10px calc(var(--sal) + 16px)}
-.inboxScroll .sHead{width:min(94vw,460px);margin-left:auto;margin-right:auto}
+.inboxScroll .sHead{width:min(100%,460px);margin-left:auto;margin-right:auto}
+.inboxScroll .sHead:focus-visible{outline:2px solid #ffe08a;outline-offset:3px}
+/* A compact, sticky jump rail puts requests and direct messages within one
+   touch of the first fold, even when the player opens the sealed arc archive. */
+#inboxQuickNav{position:sticky;top:0;z-index:5;box-sizing:border-box;width:min(100%,460px);
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:0 auto 6px;padding:4px 0 7px;
+  background:linear-gradient(180deg,rgba(5,14,26,.99) 78%,rgba(5,14,26,.82))}
+#inboxQuickNav .inboxJump{display:flex;align-items:center;justify-content:center;gap:5px;min-width:0;min-height:44px;
+  padding:5px 6px;border:1px solid rgba(80,174,208,.34);border-bottom:2px solid rgba(89,212,255,.7);
+  border-radius:8px;background:linear-gradient(180deg,rgba(14,53,75,.92),rgba(4,20,35,.96));
+  color:#d4efff;font:800 .71875rem/1.12 var(--fT);letter-spacing:.04em;cursor:pointer;touch-action:manipulation}
+#inboxQuickNav .inboxJump:active{background:rgba(22,81,109,.96)}
+#inboxQuickNav .inboxJump:focus-visible,#inboxArchive summary:focus-visible,
+#inboxDispatches .inboxItem:focus-visible{outline:2px solid #ffe08a;outline-offset:2px}
+#inboxQuickNav .inboxJumpCount{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 3px;
+  border-radius:6px;background:#f7c66f;color:#11202d;font:900 .625rem/1 var(--fT)}
+#inboxQuickNav .inboxJumpCount[hidden]{display:none}
+html[data-mf-text-scale]:not([data-mf-text-scale="100"]) #inboxQuickNav{display:flex;overflow-x:auto;scrollbar-width:none;touch-action:pan-x}
+html[data-mf-text-scale]:not([data-mf-text-scale="100"]) #inboxQuickNav .inboxJump{flex:0 0 auto;min-width:7.75rem}
 /* The unread count belongs on the heading of the list it counts, now that the
    inbox is one scrolling page instead of a tab strip. */
 .sHeadCount{display:none;margin-left:8px;padding:1px 6px;border-radius:8px;vertical-align:middle;
@@ -2931,25 +3074,40 @@ button:focus-visible,[role="button"]:focus-visible,input:focus-visible,textarea:
 .sHeadCount.on{display:inline-block}
 /* Arc progression. Built by renderInbox(); the Dossier used to carry this line
    and handed it over when it became the faction codex. */
-#inboxDispHead{width:min(94vw,460px);margin:5px auto 0;text-align:center;
-  color:#8fb3cc;font:700 10.5px/1.4 var(--fU);letter-spacing:.05em}
+#inboxDispHead{width:min(100%,460px);margin:5px auto 0;text-align:center;
+  color:#a4c5d6;font:700 .71875rem/1.4 var(--fU);letter-spacing:.03em}
 #inboxDispatches,#inboxFriends,#inboxMessages,#inboxNews,#inboxUpdates{display:flex;flex-direction:column;gap:7px;
-  width:min(94vw,460px);margin:7px auto 0}
-.inboxItem{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:11px 12px;
+  width:min(100%,460px);margin:7px auto 0}
+#inboxArchive{width:min(100%,460px);margin:11px auto 0}
+#inboxArchive summary{box-sizing:border-box;display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-height:44px;padding:9px 11px;
+  list-style:none;border:1px solid rgba(222,168,87,.35);border-radius:9px;
+  background:linear-gradient(100deg,rgba(64,42,20,.86),rgba(9,26,39,.96));
+  color:#ffe2aa;font:800 .75rem/1.2 var(--fT);letter-spacing:.06em;cursor:pointer}
+#inboxArchive summary::-webkit-details-marker{display:none}
+#inboxArchive summary::after{content:'+';flex:0 0 auto;font:900 1rem/1 var(--fT)}
+#inboxArchive[open] summary::after{content:'−'}
+#inboxArchive .inboxArchiveCount{margin-left:auto;color:#d2b988;font:800 .65625rem/1.2 var(--fT);
+  letter-spacing:.03em;overflow-wrap:anywhere}
+#inboxArchive .inboxArchiveList{display:flex;flex-direction:column;gap:7px;padding-top:7px}
+.inboxItem{box-sizing:border-box;display:flex;align-items:center;gap:10px;width:100%;min-height:44px;text-align:left;padding:11px 12px;
   border-radius:10px;cursor:pointer;border:1px solid transparent;
   background:var(--panelG) padding-box,var(--steelB) border-box}
 .inboxItem:active{transform:scale(.985)}
+#inboxFriends .inboxItem.unread{flex-wrap:wrap}
+#inboxFriends .inboxItem.unread .inboxMeta{width:100%;justify-content:flex-end}
+#inboxArchive .inboxItem.locked{cursor:default;border-color:rgba(158,112,58,.24);
+  background:linear-gradient(90deg,rgba(43,31,21,.72),rgba(5,15,26,.9))}
 .inboxDot{flex:0 0 auto;width:8px;height:8px;border-radius:50%;background:rgba(120,160,190,.35)}
 .inboxItem.unread .inboxDot{background:#5be69f;box-shadow:0 0 7px rgba(91,230,159,.85)}
 .inboxTx{flex:1 1 auto;min-width:0;display:block}
-.inboxTx b{display:block;font-family:var(--fT);font-size:11px;font-weight:800;letter-spacing:.08em;
-  color:#cfe8ff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.inboxTx b{display:block;font-family:var(--fT);font-size:.75rem;line-height:1.25;font-weight:800;letter-spacing:.04em;
+  color:#cfe8ff;overflow-wrap:anywhere}
 .inboxItem.unread .inboxTx b{color:#eaf7ff}
-.inboxTx span{display:block;margin-top:2px;font-size:9px;letter-spacing:.05em;color:#7f9db4;font-weight:600;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.inboxMeta{flex:0 0 auto;font-family:var(--fT);font-size:9px;font-weight:800;letter-spacing:.1em;color:#7399b5}
+.inboxTx span{display:block;margin-top:2px;font-size:.6875rem;line-height:1.3;letter-spacing:.02em;color:#95b6ca;
+  font-weight:600;overflow-wrap:anywhere}
+.inboxMeta{flex:0 0 auto;font-family:var(--fT);font-size:.6875rem;font-weight:800;letter-spacing:.04em;color:#8baec4}
 .inboxItem.unread .inboxMeta{color:#5be69f}
-.inboxEmpty{padding:13px 12px;border-radius:10px;font-size:10px;line-height:1.5;color:#8fb3cc;
+.inboxEmpty{padding:13px 12px;border-radius:10px;font-size:.75rem;line-height:1.5;color:#8fb3cc;
   border:1px dashed rgba(120,170,205,.26);background:rgba(10,17,28,.4)}
 @media (max-width:430px){
   .menuStrip{gap:5px}
@@ -3122,11 +3280,11 @@ body.menuMode #inboxHudBtn{display:none}
   border:1px solid rgba(105,205,249,.28);background:#02060c;box-shadow:0 18px 44px rgba(0,0,0,.42),inset 0 1px rgba(255,255,255,.06)}
 .mfLauncherHeroArt{position:absolute;inset:0;overflow:hidden;background:#000}
 .mfLauncherHeroArt::after{content:'';position:absolute;inset:0;
-  background:linear-gradient(90deg,rgba(1,6,11,.96) 0%,rgba(2,8,15,.77) 46%,rgba(2,8,14,.20) 74%,rgba(2,7,13,.62) 100%),
-             linear-gradient(0deg,rgba(1,5,10,.88),transparent 54%,rgba(1,5,10,.18))}
-.mfLauncherHeroArt img{position:absolute;width:100%;height:100%;object-fit:cover;transform:scale(1.62);filter:saturate(.92) contrast(1.08) brightness(.92)}
+  background:linear-gradient(90deg,rgba(1,6,11,.92) 0%,rgba(2,8,15,.66) 48%,rgba(2,8,14,.08) 100%),
+             linear-gradient(0deg,rgba(1,5,10,.88),transparent 72%,rgba(1,5,10,.08))}
+.mfLauncherHeroArt img{position:absolute;width:100%;height:100%;object-fit:cover;object-position:center;filter:saturate(.92) contrast(1.08) brightness(.92)}
 .mfLauncherSweep{position:absolute;z-index:2;left:-12%;top:0;width:34%;height:100%;opacity:.55;
-  background:linear-gradient(90deg,transparent,rgba(110,222,255,.22),transparent);transform:skewX(-18deg);animation:mfLaunchSweep 5.6s ease-in-out infinite}
+  background:linear-gradient(90deg,transparent,rgba(110,222,255,.22),transparent);transform:skewX(-18deg);animation:mfLauncherHeroSweep 5.6s ease-in-out infinite}
 .mfLauncherOrbit{position:absolute;z-index:2;right:-50px;top:-56px;width:236px;height:236px;border-radius:50%;
   border:1px solid rgba(111,219,255,.22);box-shadow:0 0 44px rgba(40,171,222,.08),inset 0 0 38px rgba(50,178,230,.06)}
 .mfLauncherOrbit::before,.mfLauncherOrbit::after{content:'';position:absolute;border-radius:50%;border:1px dashed rgba(108,210,250,.16)}
@@ -3180,6 +3338,9 @@ body.menuMode #inboxHudBtn{display:none}
   color:#9bf1b9;border:1px solid rgba(91,230,159,.28);background:rgba(22,79,49,.34);font:900 7px/1 var(--fT);letter-spacing:.13em}
 .mfLauncherReleaseBanner>div{position:relative;z-index:1;min-width:0}.mfLauncherReleaseBanner h4{margin:0;color:#ecf9ff;font:900 11px/1.15 var(--fT);letter-spacing:.12em}
 .mfLauncherReleaseBanner p{margin:5px 0 0;color:#8faabb;font:600 9.5px/1.4 var(--fU)}
+.mfLauncherReleaseBanner details{margin-top:7px;color:#a9c5d5;font:700 8px/1.4 var(--fU)}
+.mfLauncherReleaseBanner details summary{min-height:28px;display:inline-flex;align-items:center;cursor:pointer;color:#80d4f1;letter-spacing:.08em}
+.mfLauncherReleaseBanner details p{margin:0 0 5px;overflow-wrap:anywhere}
 .mfLauncherTabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:7px;background:rgba(2,9,16,.46)}
 .mfLauncherTabs button{min-width:0;min-height:44px;padding:7px 4px;border-radius:7px;border:1px solid rgba(83,143,176,.20);
   color:#6f91a7;background:#0c1b2a;font:800 7px/1.12 var(--fT);letter-spacing:.08em;white-space:normal}
@@ -3241,12 +3402,17 @@ body.mfLauncherGate .mfLauncherFoot{grid-template-columns:minmax(0,.78fr) minmax
   min-width:0;width:100%;max-width:100%;justify-self:stretch;overflow:hidden
 }
 
-@keyframes mfLaunchSweep{0%,18%{transform:translateX(-125%) skewX(-18deg);opacity:0}40%{opacity:.58}72%,100%{transform:translateX(420%) skewX(-18deg);opacity:0}}
+@keyframes mfLauncherHeroSweep{0%,18%{transform:translateX(-125%) skewX(-18deg);opacity:0}40%{opacity:.58}72%,100%{transform:translateX(420%) skewX(-18deg);opacity:0}}
 @keyframes mfLaunchProgress{to{background-position:22px 0}}
 
 /* Phone cards get the full viewport width. The former two-column layout fit
    mathematically at 412px but reduced the artwork to postage stamps. */
 @media(max-width:520px){
+  .mfLauncherHero{min-height:220px}
+  .mfLauncherHeroArt::after{background:linear-gradient(0deg,rgba(1,6,11,.98) 0%,rgba(1,6,11,.88) 28%,rgba(1,6,11,.12) 86%)}
+  .mfLauncherHeroCopy{min-height:220px;width:100%;padding:16px;justify-content:flex-end}
+  .mfLauncherHero h2{max-width:270px;font-size:clamp(21px,6vw,27px);line-height:1.02}
+  .mfLauncherHero p{max-width:290px;line-height:1.35}
   .mfLauncherPackRail{grid-template-columns:1fr}.mfLauncherPack{min-height:168px}
   .mfLauncherPack>div{min-height:122px;padding-top:48px;padding-right:116px}
   .mfLauncherPack>button{width:auto;min-width:96px;position:absolute;right:0;bottom:0}
@@ -3764,7 +3930,10 @@ body.mfMenuOpen #cmdrTx,body.menuMode #cmdrTx{display:none!important}
 #heroRankEm{font-size:.875rem}#heroLvlTxt{font-size:.6875rem}
 #cmdrTxWho{font-size:.625rem}#cmdrTxRank,#cmdrTxTag{font-size:.53125rem}#cmdrTxLine{font-size:.78125rem}
 
-.overlay h1:focus-visible,.overlay h2:focus-visible{outline:2px solid #ffe08a;outline-offset:5px}
+/* Route headings receive programmatic focus for screen-reader orientation.
+   A button-style gold rectangle looked like a selected/tutorial target on
+   first entry; keep a quiet focus cue while leaving control rings intact. */
+.overlay h1:focus-visible,.overlay h2:focus-visible{outline:0;box-shadow:inset 0 -2px rgba(255,224,138,.7)}
 html[data-mf-text-scale]:not([data-mf-text-scale="100"]) .sItem{align-items:flex-start;flex-wrap:wrap}
 html[data-mf-text-scale]:not([data-mf-text-scale="100"]) .sBuy{margin-left:auto}
 html[data-mf-text-scale]:not([data-mf-text-scale="100"]) .settingsNav{overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none;touch-action:pan-x}
@@ -3889,10 +4058,13 @@ body.mf-cinematic-hud{
   --mfHudTouch:clamp(44px,5.8vmin,54px);
   --mfHudTopProfile:clamp(50px,13.4vw,76px);
   --mfHudTopRow:var(--mfHudTouch);
-  --mfHudIntel:clamp(28px,6.2vmin,34px);
+  --mfHudIntel:44px;
   --mfHudTopClear:calc(var(--sat) + var(--mfHudTopRow) + var(--mfHudIntel) + var(--mfHudGap) * 3);
   --mfHudDockRows:calc(var(--mfHudTouch) * 2 + var(--mfHudGap) * 3);
-  --mfHudDockClear:calc(var(--sab) + var(--mfHudDockRows) + var(--mfHudEdge));
+  /* #cmdbar floors its own bottom edge at 28px when the host reports no safe
+     area. Context panels must reserve that same floor; using --sab alone put
+     Base Finder 28px inside the command dock on both phone orientations. */
+  --mfHudDockClear:calc(max(var(--sab),28px) + var(--mfHudDockRows) + var(--mfHudEdge));
   --mfHudMap:clamp(74px,23vw,112px);
   --mfHudContextW:min(66vw,390px);
   --mfHudTextGoal:max(9px,.5625rem);
@@ -4322,6 +4494,10 @@ body.mf-cinematic-hud.mfNoticeFeedOpen #cmdbar #hotSlots{display:none!important}
    Context width is computed from the actual map bay, preventing a 344px overlap. */
 @media (max-width:430px) and (orientation:portrait){
   body.mf-cinematic-hud{--mfHudTopProfile:clamp(50px,15vw,62px);--mfHudContextW:calc(100vw - var(--sal) - var(--sar) - var(--mfHudMap) - var(--mfHudEdge) * 3)}
+  /* Measured at 412x915, the directory's border landed 3px inside the two-row
+     command dock even though both shared the nominal dock-clear lane. Reserve
+     one additional 4px instrument gap on compact portrait phones only. */
+  body.mf-cinematic-hud .baseFinder{bottom:calc(var(--mfHudDockClear) + var(--mfHudGap) + 4px)}
   body.mf-cinematic-hud #topbar{grid-template-columns:repeat(3,minmax(0,1fr)) repeat(3,44px)}
   body.mf-cinematic-hud #topbar>.res{min-height:44px;padding:1px 2px;gap:2px}
   body.mf-cinematic-hud #topbar>.res .rate{display:none}
@@ -4454,7 +4630,7 @@ body.mf-cinematic-hud.mfNoticeFeedOpen #cmdbar #hotSlots{display:none!important}
    the left rail and centre camera unobstructed. */
 @media (orientation:landscape) and (max-height:600px){
   body.mf-cinematic-hud{
-    --mfHudTopProfile:54px;--mfHudTopRow:44px;--mfHudIntel:28px;
+    --mfHudTopProfile:54px;--mfHudTopRow:44px;--mfHudIntel:44px;
     --mfHudMap:clamp(76px,23vh,96px);--mfHudDockW:min(65vw,560px);
     --mfHudDockRows:54px;--mfHudContextW:min(32vw,320px);
     --mfHudLeftRailW:calc(100vw - var(--sal) - var(--sar) - var(--mfHudEdge) * 2 - var(--mfHudDockW) - var(--mfHudGap))
@@ -4468,7 +4644,7 @@ body.mf-cinematic-hud.mfNoticeFeedOpen #cmdbar #hotSlots{display:none!important}
   }
   body.mf-cinematic-hud #topbar>.res .rate{display:none}
   body.mf-cinematic-hud #topbar #goalBar{
-    position:absolute;left:0;top:calc(44px + var(--mfHudGap));width:100%;height:28px;min-height:28px;max-height:28px;
+    position:absolute;left:0;top:calc(44px + var(--mfHudGap));width:100%;height:44px;min-height:44px;max-height:44px;
     justify-self:auto;white-space:nowrap
   }
   body.mf-cinematic-hud #cmdbar{
@@ -4609,8 +4785,8 @@ body.mf-cinematic-hud #mfNoticeHistory .mfNoticeItem time,
 body.mf-cinematic-hud #mfNoticeHistory .mfNoticeItem i,
 body.mf-cinematic-hud #mfNoticeHistory .mfNoticeRepeat{font-size:var(--mfHudTextMeta)}
 body.mf-cinematic-hud.uiPlacing #selInfo{display:none!important}
-html[data-mf-text-scale="125"] body.mf-cinematic-hud{--mfHudIntel:30px}
-html[data-mf-text-scale="150"] body.mf-cinematic-hud{--mfHudIntel:34px}
+html[data-mf-text-scale="125"] body.mf-cinematic-hud{--mfHudIntel:44px}
+html[data-mf-text-scale="150"] body.mf-cinematic-hud{--mfHudIntel:44px}
 html[data-mf-text-scale="200"] body.mf-cinematic-hud{--mfHudIntel:48px}
 /* At 200% on a safe-area portrait, the measured top rail is taller than the
    nominal row variables: the weather chip's flow fallback otherwise begins
@@ -5078,7 +5254,7 @@ body.mf-cinematic-hud #mfNoticeHistory .mfNoticeItem[data-severity="critical"]::
 body.mf-cinematic-hud #mfNoticeHistory .mfNoticeItem[data-severity="reward"]::before{background:#7ee6a1}
 body.mf-cinematic-hud #mfNoticeHistory .mfNoticeItem[data-severity="comms"]::before{background:#b59af3}
 body.mf-cinematic-hud #mfNoticeHistory .mfNoticeGlyph{
-  grid-column:1;width:22px;height:22px;justify-self:center;display:grid;place-items:center;color:#7bdcff;font:900 15px/1 var(--fT)
+  grid-column:1;width:22px;height:22px;justify-self:center;display:grid;place-items:center;color:#7bdcff;font:900 var(--mfHudTextFeed)/1 var(--fT)
 }
 body.mf-cinematic-hud #mfNoticeHistory .mfNoticeItem[data-severity="critical"] .mfNoticeGlyph{color:#ff8278}
 body.mf-cinematic-hud #mfNoticeHistory .mfNoticeItem[data-severity="reward"] .mfNoticeGlyph{color:#83e7a4}
@@ -5087,13 +5263,13 @@ body.mf-cinematic-hud #mfNoticeHistory .mfNoticeCopy{
   grid-column:2;min-width:0;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:5px
 }
 body.mf-cinematic-hud #mfNoticeHistory .mfNoticeCopy i{
-  grid-column:1;color:#729cb5;font:800 6px/1 var(--fT);letter-spacing:.06em;font-style:normal
+  grid-column:1;color:#729cb5;font:800 var(--mfHudTextMeta)/1 var(--fT);letter-spacing:.06em;font-style:normal
 }
 body.mf-cinematic-hud #mfNoticeHistory .mfNoticeCopy>span{
   grid-column:2;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#dcecf4;line-height:1.2
 }
 body.mf-cinematic-hud #mfNoticeHistory .mfNoticeItem time{
-  grid-column:3;color:#67869a;font:700 7px/1 var(--fU);font-variant-numeric:tabular-nums;text-align:right
+  grid-column:3;color:#67869a;font:700 var(--mfHudTextMeta)/1 var(--fU);font-variant-numeric:tabular-nums;text-align:right
 }
 body.mf-cinematic-hud #mfNoticeHistory .mfNoticeRepeat{
   grid-column:3;padding:2px 3px;border-radius:7px;color:#d7f4ff;background:rgba(43,121,157,.36);font:800 7px/1 var(--fT)
@@ -5125,6 +5301,25 @@ body.mf-cinematic-hud #mfNoticeHistory .mfNoticeEmpty{margin:0;padding:20px 10px
   body.mf-cinematic-hud #topbar>.res[data-mf-resource="energy"]::after{content:'NRG'}
   body.mf-cinematic-hud #topbar>.res[data-mf-resource="command"]::after{content:'CMD'}
   body.mf-cinematic-hud #mfNoticeHistory{width:calc(100vw - var(--sal) - var(--sar) - var(--mfHudEdge) * 2)}
+}
+/* At 412px the 480px catalogue sheets occupied 55% of the viewport and
+   covered 57% of the centre playfield. The duplicate role preview spent the
+   first fold on explanation while the authored cards (with Inspect targets)
+   and queue sat below it. Keep all cards, queues and grades scrollable, but
+   return the upper battlefield to orders. The smaller 360px layout has its
+   own height rule; this is the measured 400-430px phone band. */
+@media (min-width:400px) and (max-width:430px) and (orientation:portrait){
+  body.mf-cinematic-hud #topbar>.res b{font-size:max(13px,var(--mfHudTextMeta))}
+  body.mf-cinematic-hud #mfCinematicContext>#buildMenu,
+  body.mf-cinematic-hud #mfCinematicContext>#prodMenu{max-height:min(35dvh,310px)}
+  body.mf-cinematic-hud #mfCinematicContext :is(#buildMenu,#prodMenu) .menuRoleBrief{display:none}
+  /* A feed that crosses the minimap is lifted by hudflow into the centre.
+     This right lane clears the map horizontally, so that same measured owner
+     parks the still-scrollable history just above the command dock. */
+  body.mf-cinematic-hud #mfNoticeHistory{
+    left:auto;right:calc(var(--sar) + var(--mfHudEdge));width:min(67vw,276px);
+    bottom:calc(var(--mfHudDockClear) + var(--mfHudTouch) + var(--mfHudGap))
+  }
 }
 @media (max-height:620px){
   body.mf-cinematic-hud #mfNoticeHistory{max-height:min(45dvh,186px)}
@@ -5224,11 +5419,49 @@ html[data-mf-text-scale]:not([data-mf-text-scale="100"]) body.mf-cinematic-hud #
 .is-launching::before{content:'';position:absolute;left:50%;bottom:6px;width:min(64%,120px);height:2px;
   transform:translateX(-50%);border-radius:2px;z-index:1;
   background:linear-gradient(90deg,transparent,#6be7ff,transparent);
-  animation:mfLaunchSweep 1.05s linear infinite}
-@keyframes mfLaunchSweep{0%{clip-path:inset(0 100% 0 0)}50%{clip-path:inset(0 0 0 0)}100%{clip-path:inset(0 0 0 100%)}}
+  animation:mfLaunchActionSweep 1.05s linear infinite}
+@keyframes mfLaunchActionSweep{0%{clip-path:inset(0 100% 0 0)}50%{clip-path:inset(0 0 0 0)}100%{clip-path:inset(0 0 0 100%)}}
+/* The full-screen launch state (mfLaunchVeilOpen in src/ui/hud.js). Opening
+   UGA Command or the Ocean Tester replaces this document, and the browser goes
+   on painting this one until the next is ready — several seconds on a phone,
+   with no feedback of any kind. This owns that window. Above every menu
+   surface (.overlay is 50, #modSplash 200) and below the boot cover at 930,
+   so a cold boot still owns the screen. pointer-events swallows the repeat
+   taps a dead-looking button invites; the deadline in hud.js guarantees it
+   cannot strand the player behind it. */
+#mfLaunchVeil{position:fixed;inset:0;z-index:900;display:none;align-items:center;justify-content:center;
+  padding:26px;pointer-events:auto;color:#d8f7ff;text-align:center;font-family:var(--fT,system-ui,sans-serif);
+  background:radial-gradient(ellipse at 50% 34%,#0c2637f2,#06131ffa 42%,#02060cfc 80%)}
+#mfLaunchVeil.show{display:flex}
+#mfLaunchVeil .mfLvCard{width:min(360px,100%);display:grid;justify-items:center}
+#mfLaunchVeil .mfLvKicker{font:650 9px/1.4 ui-monospace,monospace;letter-spacing:.24em;color:#6fa8be}
+#mfLaunchVeil .mfLvTitle{margin-top:9px;font:900 clamp(20px,6.2vw,28px)/1.06 var(--fT,system-ui,sans-serif);
+  letter-spacing:.08em;color:#f1fcff;text-shadow:0 0 26px #72d9ff3d}
+#mfLaunchVeil .mfLvBar{position:relative;margin-top:18px;width:min(232px,72%);height:3px;border-radius:3px;
+  background:#75c3d52e;overflow:hidden}
+#mfLaunchVeil .mfLvBar>i{position:absolute;inset:0;border-radius:3px;
+  background:linear-gradient(90deg,transparent,#83edff,transparent);
+  animation:mfLaunchActionSweep 1.05s linear infinite}
+#mfLaunchVeil .mfLvNote{margin-top:13px;max-width:30ch;color:#9fc2d4;
+  font:600 11px/1.45 var(--fU,system-ui,sans-serif)}
+/* MENU-TIME NOTICES. body.mfMenuOpen hides #toast because it is a battlefield
+   rail, which also silently discarded every line a front screen raised — the
+   launch messages and, worse, the failure reasons behind an apparently dead
+   button. Give those a lane of their own at the foot of the menu, clear of the
+   authored headers and tab rows, instead of unhiding the combat position. */
+body.mfMenuOpen #toast.noticeBox.mfMenuNotice{display:block!important;
+  top:auto;bottom:calc(var(--sab) + 18px);left:50%;right:auto;transform:translateX(-50%);
+  width:min(330px,calc(100vw - var(--sal) - var(--sar) - 26px));max-height:none;
+  white-space:normal;overflow:visible;text-overflow:clip;z-index:210}
 /* Reduced motion still needs a state change, just not a moving one. */
 @media(prefers-reduced-motion:reduce){
   .is-launching::before{animation:none;background:#6be7ff;clip-path:none;opacity:.75}
+  #mfLaunchVeil .mfLvBar>i{animation:none;background:#6be7ff;clip-path:none;opacity:.8}
+  .mfMenuHero::after{animation:none;opacity:.22;transform:translateX(190%) skewX(-18deg)}
+  .mfFrontEntering>.subMenuHead,.mfFrontEntering>h2,.mfFrontEntering>.mfMenuHero,.mfFrontEntering>.screenTabs,
+  .mfFrontEntering>.tabRow,.mfFrontEntering>#matRow,.mfFrontEntering>.opsScroll,.mfFrontEntering>.dailyScroll,
+  .mfFrontEntering>.profileScroll,.mfFrontEntering>.settingsScroll,.mfFrontEntering>.warScroll,.mfFrontEntering>.inboxScroll,
+  .mfFrontEntering>#storeList,.mfFrontEntering>.setupFoot,.mfFrontEntering>.warFoot{animation:none}
 }
 
 /* ---------- FLOATING UPDATE POPUP ---------- */
@@ -5289,6 +5522,11 @@ html[data-mf-text-scale]:not([data-mf-text-scale="100"]) body.mf-cinematic-hud #
 #updScr.mfFloat #mfLaunchPlay{display:none!important}
 #updScr.mfFloat .mfLauncherFoot{display:flex;grid-template-columns:none}
 #updScr.mfFloat .mfLauncherFoot #updBack{flex:1 1 auto;width:auto;min-width:0;margin:0}
+@media (orientation:landscape) and (min-width:640px) and (max-height:620px){
+  #updScr.mfFloat{justify-content:center;padding:max(var(--sat,0px),8px) max(var(--sar,0px),8px) max(var(--sab,0px),8px) max(var(--sal,0px),8px)}
+  #updScr.mfFloat #mfLauncherScroll{width:min(78vw,720px);max-height:calc(100vh - 78px)}
+  #updScr.mfFloat .mfLauncherFoot{width:min(78vw,720px)}
+}
 /* Reserve the pill height at the foot of the menu while it is collapsed, so a
    parked download never sits on top of the dock destinations. */
 body.mfUpdMin #startScreen{padding-bottom:72px}
@@ -5304,7 +5542,7 @@ body.mfUpdFloating{overflow:auto}
    arbitrary indent — which is also why they clamp cleanly on a narrow phone
    instead of forcing an eight-character label into a fixed column. */
 #startScreen .menuSlices{display:flex;flex-direction:column;align-items:flex-end;gap:6px;
-  width:min(94vw,420px);margin-top:14px;grid-template-columns:none}
+  width:min(94%,420px);margin-top:14px;grid-template-columns:none}
 /* The plates are the authored production pack, not CSS. Every number here is
    read straight out of mf-ui-v3/ASSET_MANIFEST.json: the menu button is a
    horizontal three-slice with 144px/56px caps on a 256px-tall source, so the
@@ -5317,13 +5555,13 @@ body.mfUpdFloating{overflow:auto}
 #startScreen .menuSlices .slice{
   --sliceH:44px;--capL:calc(var(--sliceH) * .5625);--capR:calc(var(--sliceH) * .21875);
   position:relative;box-sizing:border-box;width:auto;max-width:100%;
-  height:var(--sliceH);min-height:var(--sliceH);max-height:var(--sliceH);
-  display:flex;align-items:center;justify-content:flex-end;gap:9px;padding:0 14px;
+  height:auto;min-height:var(--sliceH);max-height:none;
+  display:flex;align-items:center;justify-content:flex-end;gap:9px;padding:7px 14px;
   border-style:solid;border-width:0 var(--capR) 0 var(--capL);border-color:transparent;border-radius:0;
   border-image-source:url('../../assets/textures/ui/mf-ui-v3/menu_normal.png');
   border-image-slice:0 56 0 144 fill;border-image-repeat:stretch;
   background:none;box-shadow:none;color:#dff2fb;text-align:right}
-#startScreen .menuSlices .slice.is-open{border-image-source:url('../../assets/textures/ui/mf-ui-v3/menu_selected.png')}
+#startScreen .menuSlices .slice:focus-visible{border-image-source:url('../../assets/textures/ui/mf-ui-v3/menu_selected.png')}
 #startScreen .menuSlices .slice:active{border-image-source:url('../../assets/textures/ui/mf-ui-v3/menu_pressed.png');transform:translateX(-3px)}
 #startScreen .menuSlices .slice[disabled],#startScreen .menuSlices .slice.locked{
   border-image-source:url('../../assets/textures/ui/mf-ui-v3/menu_disabled.png')}
@@ -5333,10 +5571,10 @@ body.mfUpdFloating{overflow:auto}
   width:calc(var(--sliceH) * .40);height:calc(var(--sliceH) * .20);
   background:url('../../assets/textures/ui/mf-ui-v3/accent_triple_slash.png') center/contain no-repeat}
 #startScreen .menuSlices .slice .sliceBody{display:grid;gap:2px;justify-items:end;min-width:0}
-#startScreen .menuSlices .slice .sliceBody b{font:800 clamp(12px,3.3vw,15px)/1.05 var(--fT,system-ui);letter-spacing:.04em;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+#startScreen .menuSlices .slice .sliceBody b{font:800 clamp(.75rem,3.3vw,.9375rem)/1.12 var(--fT,system-ui);letter-spacing:.04em;
+  white-space:normal;overflow:visible;max-width:100%;text-align:right}
 #startScreen .menuSlices .slice .sliceBody small{display:flex;align-items:center;gap:5px;color:#8fb6c6;
-  font:700 7px/1 ui-monospace,monospace;letter-spacing:.12em;white-space:nowrap}
+  font:700 .5625rem/1.15 ui-monospace,monospace;letter-spacing:.08em;white-space:normal;flex-wrap:wrap;justify-content:flex-end}
 /* Live faction share bar, the one piece of state worth carrying collapsed. */
 #startScreen .menuSlices .sliceBar{display:inline-flex;gap:2px;font-style:normal}
 #startScreen .menuSlices .sliceBar s{width:13px;height:4px;text-decoration:none;background:#37506010}
@@ -5344,38 +5582,31 @@ body.mfUpdFloating{overflow:auto}
 #startScreen .menuSlices .sliceBar s:nth-child(2){background:#e0574f}
 #startScreen .menuSlices .sliceBar s:nth-child(3){background:#54707f}
 #startScreen .menuSlices .slice .gDot{position:absolute;top:4px;right:2px}
-/* The popout the tapped slice reveals. It is a sibling rather than extra
-   height on the slice, because the plate is a border-image whose caps stretch
-   to the box height - growing the button would rake its edge steeper and pull
-   the corner ticks long. Right-aligned with a cyan spine so it reads as
-   hanging off the slice above it rather than as a new row. */
-#startScreen .menuSlices .sliceOut{
-  width:min(100%,340px);max-height:0;opacity:0;overflow:hidden;
-  margin:0;padding:0 11px 0 0;border-right:2px solid rgba(107,231,255,0);
-  display:flex;flex-direction:column;align-items:flex-end;gap:4px;text-align:right;
-  color:#9fc3d6;font:600 11.5px/1.45 var(--fT,system-ui);letter-spacing:.015em;
-  transition:max-height .22s cubic-bezier(.2,.7,.3,1),opacity .17s ease,
-    margin .22s cubic-bezier(.2,.7,.3,1),padding .22s cubic-bezier(.2,.7,.3,1),border-color .22s ease}
-#startScreen .menuSlices .sliceOut.is-out{
-  max-height:96px;opacity:1;margin:1px 0 3px;padding:7px 11px 8px 0;
-  border-right-color:rgba(107,231,255,.55)}
-#startScreen .menuSlices .sliceOutGo{color:#6be7ff;font:800 10.5px/1 var(--fT,system-ui);letter-spacing:.14em}
-@media(prefers-reduced-motion:reduce){
-  #startScreen .menuSlices .sliceOut{transition:none}
-}
-/* Narrow phones once needed the gutters and the /// mark clawed back so TECH &
-   DEVELOPMENT would not ellipsise. The lighter slice type buys that back on
-   its own - the longest label now measures 143px inside a 275px content box at
-   360 - so only the container widens, and the label keeps the same clamp it
-   has everywhere else rather than being forced back up to 17px here. */
+/* The longest title may wrap at enlarged text sizes rather than disappearing
+   behind an ellipsis. Keep the wider stack on narrow phones. */
 @media (max-width:380px){
-  #startScreen .menuSlices{width:min(97vw,420px)}
+  #startScreen .menuSlices{width:min(97%,420px)}
+}
+/* At 320px/200% the rem floor made DEVELOPMENT wider than its entire plate,
+   and the two-line ENTER MASSFRONT text painted outside the gold art. Keep a
+   visibly enlarged label but size it to the actual phone lane. */
+@media(max-width:430px){
+  html[data-mf-text-scale="200"] #startScreen .menuSlices .slice{width:100%;min-height:60px;padding:8px 9px;gap:5px}
+  html[data-mf-text-scale="200"] #startScreen .menuSlices .slice .sliceMark{width:13px}
+  html[data-mf-text-scale="200"] #startScreen .menuSlices .slice .sliceBody b{font-size:clamp(17px,5vw,21px);line-height:1.12;letter-spacing:.015em;overflow-wrap:anywhere}
+  html[data-mf-text-scale="200"] #startScreen .menuSlices .slice .sliceBody small{font-size:11px;line-height:1.2;letter-spacing:.02em;overflow-wrap:anywhere}
+  html[data-mf-text-scale="200"] #startScreen #startBtn{width:min(97%,420px);font-size:17px;letter-spacing:0;line-height:1.15;min-height:64px;padding:8px 6px;gap:4px;white-space:nowrap}
+  html[data-mf-text-scale="200"] #startScreen #startBtn .ctaChev{width:20px}
+  html[data-mf-text-scale="200"] #startScreen #greetLine{font-size:12px;letter-spacing:0;white-space:nowrap;overflow:visible;text-overflow:clip;line-height:1.15}
+  html[data-mf-text-scale="200"] #startScreen #greetSub{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;line-height:1.15}
+  html[data-mf-text-scale="200"] #startScreen #metaRes{grid-column:1/-1;grid-row:3;justify-content:center;gap:10px;flex-wrap:wrap}
+  html[data-mf-text-scale="200"] #startScreen .metaResCell b{overflow:visible;text-overflow:clip}
 }
 /* Short landscape: the stack has to give height back, not overflow. */
 @media (orientation:landscape) and (max-height:560px){
   #startScreen .menuSlices{gap:5px;width:min(70vw,430px);margin-top:8px}
   #startScreen .menuSlices .slice{--sliceH:42px}
-  #startScreen .menuSlices .slice .sliceBody b{font-size:14px}
+  #startScreen .menuSlices .slice .sliceBody b{font-size:.875rem}
   #startScreen .menuSlices .slice .sliceBody small{display:none}
 }
 
@@ -5388,7 +5619,10 @@ body.mfUpdFloating{overflow:auto}
    and the CTA. Unknown children default to the left column, so a card added to
    the menu later stacks safely instead of landing in the middle of the nav. */
 @media (orientation:landscape) and (max-height:560px){
-  #startScreen{display:grid!important;align-content:start;justify-content:center;
+  /* Only the routed home may override showFrontScreen's flex layout. Applying
+     !important to every landscape #startScreen also beat the inline display:none
+     written when a battle starts, reopening the menu over a live rotated match. */
+  body[data-front-screen="startScreen"] #startScreen{display:grid!important;align-content:start;justify-content:center;
     grid-template-columns:minmax(0,1fr) minmax(280px,420px);
     grid-template-rows:auto auto auto;
     column-gap:22px;row-gap:6px;
@@ -5423,11 +5657,11 @@ body.mfUpdFloating{overflow:auto}
    and .mbtn sheen sweep is switched off because it would slide across it. */
 #startScreen #startBtn{
   --ctaH:54px;--ctaCap:calc(var(--ctaH) * 1.1375);
-  position:relative;isolation:isolate;box-sizing:border-box;width:min(94vw,420px);
-  height:var(--ctaH);min-height:var(--ctaH);max-height:var(--ctaH);
-  display:flex;align-items:center;justify-content:center;gap:9px;white-space:nowrap;
-  padding:0 calc(var(--ctaH) * .18);
-  font:900 clamp(14px,4.2vw,19px)/1 var(--fT,system-ui);letter-spacing:.045em;color:#2a1c02;
+  position:relative;isolation:isolate;box-sizing:border-box;width:min(94%,420px);
+  height:auto;min-height:var(--ctaH);max-height:none;
+  display:flex;align-items:center;justify-content:center;gap:9px;white-space:normal;text-wrap:balance;text-align:center;
+  padding:8px calc(var(--ctaH) * .18);
+  font:900 clamp(.875rem,4.2vw,1.1875rem)/1 var(--fT,system-ui);letter-spacing:.045em;color:#2a1c02;
   border-style:solid;border-width:0;border-color:transparent;border-radius:0;
   border-image-source:url('../../assets/textures/ui/mf-ui-v3/deploy_normal.png');
   border-image-slice:0 364 0 364 fill;border-image-width:0 var(--ctaCap);border-image-repeat:stretch;
@@ -5438,7 +5672,7 @@ body.mfUpdFloating{overflow:auto}
   background:url('../../assets/textures/ui/mf-ui-v3/accent_deploy_chevrons.png') center/contain no-repeat}
 #startScreen #startBtn:active{border-image-source:url('../../assets/textures/ui/mf-ui-v3/deploy_pressed.png');transform:translateY(1px)}
 @media (orientation:landscape) and (max-height:560px){
-  #startScreen #startBtn{--ctaH:48px;font-size:16px;width:min(70vw,430px)}
+  #startScreen #startBtn{--ctaH:48px;font-size:1rem;width:min(70vw,430px)}
 }
 
 /* Dock destinations get the authored nav plate: 352x288 with a 48px border all

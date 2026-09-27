@@ -292,10 +292,22 @@ function preflight(candidate,source,hashes){
     !same(bindingMatrix,expectedMatrix)||source.bindings.bindings.some(item=>
       item.bindingId!==`layout-binding__${item.packId}__${item.templateId}`))
     return reject('GAP_BINDING_MATRIX_INVALID',{expected:expectedMatrix,actual:bindingMatrix});
+  /* The chart also carries the four War Table homeworld bodies (lore-only in
+     the exploration module, named by their surfaceHomeworlds star id). This
+     check predates that merge and compared the whole body list; only the
+     exploration bodies belong to the stage-10 inventory. */
+  const homeworldNames=new Set(source.theatre.sourceInventories.surfaceHomeworlds.ids);
   const showcasePlanetIds=[];
   for(const system of Object.values(source.showcase)) for(const planet of system.planets) showcasePlanetIds.push(planet.id);
+  const explorationShowcaseIds=showcasePlanetIds.filter(id=>source.theatre.sourceInventories.authoredExplorationPlanets.ids.includes(id));
+  const homeworldExtras=showcasePlanetIds.filter(id=>!source.theatre.sourceInventories.authoredExplorationPlanets.ids.includes(id));
+  const homeworldSolo=homeworldExtras.every(id=>{
+    const system=Object.values(source.showcase).find(entry=>entry.planets.some(planet=>planet.id===id));
+    return system&&system.planets.length===1&&homeworldNames.has(id.split('_').pop());
+  });
   if(source.theatre.planetAuthority!=='EXPLORATION_MODULE_SHOWCASE_SYSTEMS'||
-    !same(showcasePlanetIds,source.theatre.sourceInventories.authoredExplorationPlanets.ids))
+    !same(source.theatre.sourceInventories.authoredExplorationPlanets.ids,explorationShowcaseIds)||
+    homeworldExtras.length!==homeworldNames.size||!homeworldSolo)
     return reject('GAP_SHOWCASE_AUTHORITY_DRIFT');
 
   const nexusExpected=expectedNexus(source),nexusPack=source.packs.packs.find(item=>item.packId===NEXUS_PACK);

@@ -1,7 +1,10 @@
 import { resolve } from 'node:path';
+import { mkdir } from 'node:fs/promises';
 import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
 
 const root=resolve(import.meta.dirname,'..');
+const evidenceDir=resolve(root,'tmp','social-ui-probe-'+new Date().toISOString().replace(/[:.]/g,'-'));
+await mkdir(evidenceDir,{recursive:true});
 const checks=[];
 function check(name,ok,detail=''){
   checks.push(!!ok);
@@ -11,6 +14,7 @@ function check(name,ok,detail=''){
 const browser=await launchPwBrowser();
 try{
   const page=await browser.newPage({viewport:{width:412,height:900},hasTouch:true});
+  const pageErrors=[];page.on('pageerror',e=>pageErrors.push(e.message));
   await page.setContent(`<!doctype html><html><head><style>
     :root{--sal:0px;--sar:0px;--sat:0px;--fT:system-ui}.overlay{position:fixed;inset:0;display:none;flex-direction:column}.menuStrip{display:grid}.screenTabs{display:flex}.screenTabBtn{min-height:48px;flex:1}.warFoot{margin-top:auto}.mbtn,.sbtn{min-height:48px}
   </style></head><body><div id="startScreen" class="overlay" style="display:flex"><div class="menuStrip"></div></div><div id="inboxMessages"></div><script>
@@ -60,7 +64,7 @@ try{
   check('aggregate card states its privacy boundary',await page.getByText('Global total · named cards use only friends, your lobby and recent World Chat',{exact:true}).isVisible());
   check('named online commander comes only from friend presence',await page.getByText('FRIEND · ONLINE',{exact:true}).isVisible());
   check('cloud commander identity renders as a visual profile card',await page.getByText('YOUR CLOUD COMMANDER ID',{exact:true}).isVisible()&&await page.locator('.socialVisualHero .socialAvatar').count()>0);
-  await page.screenshot({path:resolve(root,'tmp','social-ui-overhaul-probe.png'),fullPage:true});
+  await page.screenshot({path:resolve(evidenceDir,'social-mobile.png'),fullPage:true});
   const liveCalls=await page.evaluate(()=>__socialCalls.filter(x=>x[0]==='onlineHeartbeat').length);
   await page.evaluate(async()=>{showFrontScreen('startScreen');await MFSocialUI.refreshOnline();});
   check('online polling pauses when Social screen is hidden',await page.evaluate(n=>__socialCalls.filter(x=>x[0]==='onlineHeartbeat').length===n,liveCalls));
@@ -99,7 +103,13 @@ try{
   await page.evaluate(async()=>{__socialCaps.lobbies=true;__socialCaps.invites=true;await MFSocialUI.refresh(true);MFSocialUI.setTab('lobby');});
   check('enabled server exposes Create Lobby',await page.getByRole('button',{name:/CREATE LOBBY/}).isEnabled());
   check('incoming lobby invitation is visible',(await page.locator('#socialPaneLobby').getByText(/A1B2C3D4/).count())>0);
-  check('Co-op UI offers two through four human slots',await page.getByLabel('Lobby player slots').locator('option').evaluateAll(os=>os.map(o=>o.value).join(',')==='2,3,4'));
+  check('Co-op UI offers only two supported human seats',await page.getByLabel('Lobby player slots').locator('option').evaluateAll(os=>os.map(o=>o.value).join(',')==='2'));
+  await page.evaluate(()=>{MFSocialUI.state.lobbyDraft.slots=4;});
+  await page.getByRole('button',{name:/CREATE LOBBY/}).click();
+  await page.waitForTimeout(20);
+  check('Co-op submission clamps tampered draft to two players',await page.evaluate(()=>__socialCalls.some(x=>x[0]==='createLobby'&&x[1].mode==='coop'&&x[1].slots===2)));
+  await page.getByRole('button',{name:'LEAVE',exact:true}).click();
+  await page.waitForTimeout(20);
   await page.getByLabel('Lobby mode').selectOption('skirmish');
   check('Skirmish UI offers only two players',await page.getByLabel('Lobby player slots').locator('option').evaluateAll(os=>os.map(o=>o.value).join(',')==='2'));
   await page.evaluate(()=>{MFSocialUI.state.lobbyDraft.slots=4;});
@@ -108,6 +118,10 @@ try{
   check('Skirmish submission clamps tampered draft to two players',await page.evaluate(()=>__socialCalls.some(x=>x[0]==='createLobby'&&x[1].mode==='skirmish'&&x[1].slots===2)));
   check('created lobby code is rendered',(await page.locator('#socialPaneLobby').getByText(/DEADBEEF/).count())>0);
   check('lobby keeps match relay locked',await page.getByText('MATCH RELAY NOT CONNECTED',{exact:true}).isVisible());
+  await page.evaluate(()=>{MFSocialUI.state.lobby.rules.slots=4;MFSocialUI.setTab('lobby');});
+  check('legacy four-seat lobby states unsupported size',await page.getByText('MATCH SIZE NOT SUPPORTED',{exact:true}).isVisible());
+  check('legacy four-seat lobby cannot ready',!(await page.locator('#socialPaneLobby button').filter({hasText:/^READY$/}).isEnabled()));
+  await page.evaluate(()=>{MFSocialUI.state.lobby.rules.slots=2;MFSocialUI.setTab('lobby');});
   await page.getByRole('button',{name:'READY',exact:true}).click();
   await page.waitForTimeout(20);
   check('ready state reaches server client',(await page.evaluate(()=>__socialCalls.some(x=>x[0]==='readyLobby'&&x[3]===true))));
@@ -129,11 +143,13 @@ try{
   await chooser.getByRole('button',{name:'SAVE COMMANDER ID'}).click();
   await page.waitForTimeout(30);
   check('one-time chooser persists through canonical client contract',await page.evaluate(()=>__socialUsername==='Fixed_9'&&__socialCalls.some(x=>x[0]==='claimUsername'&&x[1]==='Fixed_9'))&&await chooser.getByText('Fixed_9',{exact:true}).isVisible());
+  check('Social UI has no page errors',pageErrors.length===0,pageErrors.join(' | '));
 } finally {
-  await closePwBrowser();
+  await closePwBrowser(browser);
 }
 
 const passed=checks.filter(Boolean).length;
+console.log('Social UI evidence: '+evidenceDir);
 console.log(`\n${passed}/${checks.length} social UI checks passed`);
 if(passed!==checks.length)process.exitCode=1;
 process.exit(passed===checks.length?0:1);

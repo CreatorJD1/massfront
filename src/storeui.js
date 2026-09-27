@@ -117,15 +117,17 @@ function armBodyHTML(){
   const cat=ARM_CATS.find(c=>c.id===armTab)||ARM_CATS[0];
   const intro='<div class="armCatIntro"><b>'+cat.nm+'</b><span>'+cat.ds+'</span></div>';
   if(cat.id==='identity') return intro+armColorsHTML();
-  if(cat.id==='inventory') return intro+armInventoryHTML();
-  if(cat.id==='loadout') return intro+armSessionLoadoutHTML();
+  if(cat.id==='inventory') return armInventoryHTML();
+  if(cat.id==='loadout') return armSessionLoadoutHTML();
   const F=ARM_MARKET_FILTERS.find(f=>f.id===armMarketFilter)||ARM_MARKET_FILTERS[0],ids=F.items.length?F.items:cat.items;
   const filters='<div class="armMarketFilters">'+ARM_MARKET_FILTERS.map(f=>'<button type="button" class="armMarketFilter '+(f.id===F.id?'on':'')+'" data-market-filter="'+f.id+'">'+f.nm+'</button>').join('')+'</div>';
   const items=ids.map(id=>STORE.find(s=>s.id===id)).filter(Boolean)
     .sort((a,b)=>a.cost[0]-b.cost[0]);          // cheap-first = early-buy-first
   if(!items.length) return '<div class="devNone">Nothing in this category yet.</div>';
-  const hero=items[0],heroTier=META.owned[hero.id]||0;
-  return '<section class="armMarketHero"><div>'+itemArt('st_'+hero.id,hero.em,66)+'</div><span><i>REQUISITION MARKET</i>'+mfOwnershipBadgeHTML('permanent')+'<b>'+hero.nm+'</b><small>'+(heroTier>=hero.max?'SYSTEM MAXED':perkFx(hero.id,Math.min(hero.max,heroTier+1)))+'</small></span></section>'+intro+filters+items.map(armItemHTML).join('');
+  const hero=items.find(it=>(META.owned[it.id]||0)<it.max)||items[0],heroTier=META.owned[hero.id]||0,maxed=heroTier>=hero.max;
+  /* The illustrated lead is a real requisition, not a second noninteractive
+     title card that delays the first purchase choice on a phone. */
+  return '<button type="button" class="armMarketHero" data-market-feature="'+hero.id+'" '+(maxed?'disabled':'')+'><div>'+itemArt('st_'+hero.id,hero.em,66)+'</div><span><i>NEXT REQUISITION</i>'+mfOwnershipBadgeHTML('permanent')+'<b>'+hero.nm+'</b><small>'+(maxed?'ALL SYSTEMS MAXED':perkFx(hero.id,heroTier+1))+'</small><strong>'+(maxed?'MAXED':'ADD TIER '+(heroTier+1)+' · ⬡ '+hero.cost[heroTier])+'</strong></span></button>'+filters+items.map(armItemHTML).join('');
 }
 function invRarityLegend(){
   return '<div class="invLegend">'+INV_RARITIES.map(r=>
@@ -206,6 +208,12 @@ function armInvFilterHTML(){
   return '<div class="armInvFilters" aria-label="Armory item categories">'+ARM_INV_FILTERS.map(f=>
     '<button type="button" class="armInvFilter'+(armInvFilter===f.id?' on':'')+'" data-inv-filter="'+f.id+'">'+f.nm+'</button>').join('')+'</div>';
 }
+function armInvFitStripHTML(b){
+  const slots=['weapon','armor','utility'].map(slot=>({slot,it:INV_GEAR.find(g=>g.id===b.equipped[slot])}));
+  for(let i=0;i<2;i++)slots.push({slot:'SUPPLY '+(i+1),it:INV_CONSUMABLES.find(c=>c.id===b.ready[i])});
+  return '<div class="armFitHead"><b>CURRENT LOADOUT</b><span>TAP TO VIEW SLOTS ›</span></div><div class="armFitStrip" aria-label="Current deployment slots">'
+    +slots.map(x=>'<button type="button" class="armFitChip" data-open-loadout="1" style="--rar:'+(x.it?invRarity(x.it.rarity).col:'#5f9ab5')+'" aria-label="Open loadout, '+x.slot+' '+(x.it?x.it.nm:'empty')+'"><span class="armFitArt">'+(x.it?armInvIcon(x.it,30):'◇')+'</span><span><i>'+x.slot.toUpperCase()+'</i><b>'+(x.it?x.it.nm:'EMPTY')+'</b></span></button>').join('')+'</div>';
+}
 function armInvComparison(e,b){
   const fx=armInvEffect(e.it.id);
   if(e.kind==='supply'){
@@ -254,6 +262,11 @@ function armInvReq(e){
    pick is held in module state rather than META: it is a step in readying, not
    something worth persisting if the player walks away mid-decision. */
 let armInvLockPick={};
+function armInvValidLockPick(id){
+  const pick=armInvLockPick[id];
+  if(invLockableTypes().indexOf(pick)>=0)return pick;
+  delete armInvLockPick[id];return null;
+}
 function armInvLockHTML(e,b){
   if(!e||e.kind!=='supply') return '';
   if(invConsumableScope(e.it.id)!=='type') return '';
@@ -263,7 +276,7 @@ function armInvLockHTML(e,b){
     return '<div class="armInvLock armInvLockOn"><span>LOCKED TO</span><b>'
       +(invLockName(ty)||'—').toUpperCase()+'</b></div>';
   }
-  const pick=armInvLockPick[e.it.id];
+  const pick=armInvValidLockPick(e.it.id);
   const list=invLockableTypes();
   return '<div class="armInvLock"><span>LOCK TO CHASSIS</span>'
     +'<div class="armInvLockRow">'+list.map(t=>
@@ -277,11 +290,12 @@ function armInvPreviewHTML(e,b){
   const it=e.it,n=armInvOwned(e,b),on=armInvEquipped(e,b),r=invRarity(it.rarity),fx=armInvEffect(it.id),scope=e.kind==='gear'?'equipped':'match';
   const full=e.kind==='supply'&&!on&&b.ready.length>=2;
   /* Blocked on a chassis, not on stock: say which. */
-  const needLock=e.kind==='supply'&&!on&&invConsumableScope(it.id)==='type'&&armInvLockPick[it.id]==null;
+  const lockPick=e.kind==='supply'&&invConsumableScope(it.id)==='type'?armInvValidLockPick(it.id):null;
+  const needLock=e.kind==='supply'&&!on&&invConsumableScope(it.id)==='type'&&lockPick==null;
   const action=!n?'RECOVER IN OPERATIONS':on?(e.kind==='gear'?'UNEQUIP FROM SESSION':'REMOVE FROM MISSION')
     :full?'MISSION SLOTS FULL':needLock?'PICK A CHASSIS FIRST'
     :(e.kind==='gear'?'EQUIP '+it.slot.toUpperCase()
-      :'READY FOR '+(invConsumableScope(it.id)==='type'?invLockName(armInvLockPick[it.id]).toUpperCase():'MISSION'));
+      :'READY FOR '+(invConsumableScope(it.id)==='type'?invLockName(lockPick).toUpperCase():'MISSION'));
   return '<section class="armInvPreview" style="--rar:'+r.col+'" aria-label="Selected item effect preview">'
     +'<div class="armInvPreviewArt">'+armInvIcon(it,54)+'</div><div class="armInvPreviewInfo"><i>'+r.nm+' · '+(e.kind==='gear'?it.slot.toUpperCase()+' GEAR':'MISSION CONSUMABLE')+'</i>'
     +mfOwnershipBadgeHTML(scope)+'<b>'+it.nm+'</b><span>ACCOUNT STOCK · '+n+'</span></div>'
@@ -303,9 +317,10 @@ function armInvItemHTML(e,b){
 }
 function armInventoryHTML(){
   const b=invBag(),entries=armInvFilteredEntries(b),selected=armInvEnsureSelection(entries,b);
-  return armInvLayerStatsHTML(b,'account')+invRarityLegend()+armInvFilterHTML()+armInvPreviewHTML(selected,b)
+  return armInvFitStripHTML(b)+armInvFilterHTML()+armInvPreviewHTML(selected,b)
     +'<div class="armInvSectionLabel"><b>STORED ITEMS</b><span>'+entries.filter(e=>armInvOwned(e,b)>0).length+' OWNED IN VIEW</span></div>'
-    +'<div class="armVaultList">'+entries.map(e=>armInvItemHTML(e,b)).join('')+'</div>';
+    +'<div class="armVaultList">'+entries.map(e=>armInvItemHTML(e,b)).join('')+'</div>'
+    +'<details class="armInvDetails" data-arm-detail="collection"><summary>COLLECTION &amp; RARITY <span>›</span></summary>'+armInvLayerStatsHTML(b,'account')+invRarityLegend()+'</details>';
 }
 function armLoadGearSlotHTML(slot,b){
   const g=INV_GEAR.find(x=>x.id===b.equipped[slot]);
@@ -339,10 +354,12 @@ function armSessionEffectsHTML(b){
 }
 function armSessionLoadoutHTML(){
   const b=invBag();
-  return armInvLayerStatsHTML(b,'session')+'<div class="armLoadoutRule"><b>5 HARD SLOTS</b><span>One weapon · one armor · one utility · two mission supplies</span></div>'
-    +'<div class="armLoadoutGrid">'+['weapon','armor','utility'].map(s=>armLoadGearSlotHTML(s,b)).join('')
-    +armLoadSupplySlotHTML(0,b)+armLoadSupplySlotHTML(1,b)+'</div>'+armSessionEffectsHTML(b)
-    +'<button type="button" class="armReturnVault" data-open-vault="1">▦ OPEN ACCOUNT ARMORY</button>';
+  return '<div class="armLoadoutGrid">'+['weapon','armor','utility'].map(s=>armLoadGearSlotHTML(s,b)).join('')
+    +armLoadSupplySlotHTML(0,b)+armLoadSupplySlotHTML(1,b)+'</div>'
+    +'<button type="button" class="armReturnVault" data-open-vault="1">▦ OPEN ACCOUNT ARMORY</button>'
+    +'<details class="armInvDetails" data-arm-detail="loadout"><summary>LOADOUT RULES &amp; EFFECTS <span>›</span></summary>'
+    +armInvLayerStatsHTML(b,'session')+'<div class="armLoadoutRule"><b>5 HARD SLOTS</b><span>One weapon · one armor · one utility · two mission supplies</span></div>'
+    +armSessionEffectsHTML(b)+'</details>';
 }
 /* The STYLE tab is now the UNLOCK counter, not the wardrobe: choosing which
    livery you wear moved to Profile → Identity, next to the callsign and the
@@ -474,6 +491,7 @@ function armCartAdd(kind,id){
   if(kind==='perk'||kind==='deal')armCart=armCart.filter(e=>!((e.kind==='perk'||e.kind==='deal')&&e.id===id));
   if(armCart.some(e=>armCartKey(e)===armCartKey(entry))){toast(R.nm+' is already in your basket');sfx('ui');return;}
   armCart.push(entry);armCartOpen=true;toast(R.nm+' added to basket');sfx('ui');renderArmory();
+  const list=document.getElementById('storeList');if(list)list.scrollTop=0;
 }
 function armCartRows(){return armCart.map(e=>({entry:e,item:armCartResolve(e)})).filter(x=>x.item);}
 function armCartTotal(){return armCartRows().reduce((n,x)=>n+x.item.price,0);}
@@ -514,11 +532,21 @@ function armCartCheckout(){
 renderArmory=function(){
   const list=document.getElementById('storeList');
   if(!list) return;
+  if(typeof invRevalidateReadyFaction==='function')invRevalidateReadyFaction(false);
   /* The screen is hidden (display:none) exactly when this render is the one
      that precedes opening the Armory — any later render happens with it visible
      and must not replay the entrance. */
   const opening=(()=>{ const s=document.getElementById('armory'); return !!(s&&getComputedStyle(s).display==='none'); })();
-  list.innerHTML=armHeadHTML()+mfProgressionGuideHTML('arsenal')+armCartHTML()+(armTab==='market'?armDealsHTML():'')+armBodyHTML();
+  const openDetails=Array.from(list.querySelectorAll('details[data-arm-detail][open]')).map(d=>d.dataset.armDetail);
+  const pending=armCartOpen||armCart.length>0,showCart=pending||armTab==='market'||armTab==='identity';
+  const cart=showCart?armCartHTML():'';
+  /* Decision first: a pending basket is the next confirmation; otherwise the
+     illustrated purchase, owned item, or slot leads. Guides and daily offers
+     remain in a disclosure rather than filling the first phone screen. */
+  list.innerHTML=armHeadHTML()+(pending?cart:'')+armBodyHTML()+(pending?'':cart)
+    +'<details class="armMore" data-arm-detail="more"><summary>'+(armTab==='market'?'GUIDE &amp; DAILY OFFERS':'ARSENAL GUIDE')+' <span>›</span></summary>'
+    +mfProgressionGuideHTML('arsenal')+(armTab==='market'?armDealsHTML():'')+'</details>';
+  list.querySelectorAll('details[data-arm-detail]').forEach(d=>{if(openDetails.includes(d.dataset.armDetail))d.open=true;});
   const tabs=document.getElementById('armTabs');
   if(tabs){
     tabs.classList.toggle('fits',tabs.scrollWidth<=tabs.clientWidth+2);
@@ -540,6 +568,9 @@ renderArmory=function(){
 
   list.querySelectorAll('.armMarketFilter').forEach(btn=>mfBindTap(btn,ev=>{
     ev.stopPropagation();armMarketFilter=btn.dataset.marketFilter||'all';sfx('ui');renderArmory();
+  }));
+  list.querySelectorAll('[data-market-feature]').forEach(btn=>mfBindTap(btn,ev=>{
+    ev.stopPropagation();if(!btn.disabled)armCartAdd('perk',btn.dataset.marketFeature);
   }));
   list.querySelectorAll('[data-cart-toggle]').forEach(btn=>mfBindTap(btn,ev=>{
     ev.stopPropagation();armCartOpen=!armCartOpen;sfx('ui');renderArmory();
@@ -603,6 +634,9 @@ renderArmory=function(){
   }));
   list.querySelectorAll('[data-open-vault]').forEach(el=>mfBindTap(el,ev=>{
     ev.stopPropagation(); armTab='inventory'; sfx('ui'); renderArmory(); list.scrollTop=0;
+  }));
+  list.querySelectorAll('[data-open-loadout]').forEach(el=>mfBindTap(el,ev=>{
+    ev.stopPropagation();armTab='loadout';sfx('ui');renderArmory();list.scrollTop=0;
   }));
 
   /* Every requisition tap stages an item. Currency changes only in the single

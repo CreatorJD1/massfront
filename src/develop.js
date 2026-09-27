@@ -41,7 +41,10 @@ function matGrant(g){ const b=matBag(); for(const k in g) b[k]=(b[k]||0)+g[k]; m
    as the alt text and as the fallback if an image ever fails to load. */
 function itemArt(id,em,size){
   const s=size||34;
-  const src=(typeof ITEM_ART!=='undefined'&&ITEM_ART[id])||('./assets/icons/items/'+id+'.png');
+  const rel=(typeof ITEM_ART!=='undefined'&&ITEM_ART[id])||('assets/icons/items/'+id+'.png');
+  /* New research art must resolve from the OTA asset map on older Android
+     installers, not only from files bundled into a fresh 1.33.89 package. */
+  const src=typeof mf2AssetURL==='function'?mf2AssetURL(rel):('./'+String(rel).replace(/^\.\//,''));
   return '<img class="itemArt" src="'+src+'" alt="'+(em||'')+'" '
     +'style="width:'+s+'px;height:'+s+'px" '
     +'onerror="this.outerHTML=\'<span class=&quot;itemEm&quot;>'+(em||'')+'</span>\'">';
@@ -124,10 +127,11 @@ const DEVTREE=[
  {id:'ability',    br:'XENOLOGY',    nm:'Weaponised Relics',ds:'Unlocks craftable Commander abilities',
   cost:{relic:12,isotope:40}, data:42, req:['relictech']},
 
- /* Faction doctrines are deliberately separate unlock paths. The original
-    account tree made four armies read as different paint over the same
-    technology. These keys are faction-prefixed so ownership can never leak
-    between lines when player-faction selection becomes available. */
+  /* Faction doctrines are deliberately separate unlock paths. The original
+     account tree made the playable armies read as different paint over the same
+     technology. These keys are faction-prefixed so ownership can never leak
+     between lines. Brood capabilities belong to enemy simulation and Intel,
+     never to this player progression tree. */
  {id:'asc_siege_foundry', fac:'ascendancy', br:'FABRICATION', nm:'Siege Foundry', ds:'Dominion artillery leave factories with +12% maximum health',
   cost:{alloy:55,circuit:18}, data:12, req:[]},
  {id:'asc_iron_discipline', fac:'ascendancy', br:'DOCTRINE', nm:'Iron Discipline', ds:'Dominion formation orders use 12% tighter spacing for groups of 4 or more',
@@ -141,16 +145,14 @@ const DEVTREE=[
   cost:{alloy:30,circuit:42}, data:15, req:['syn_quantum_grid']},
  {id:'syn_phase_lattice', fac:'syndicate', br:'XENOLOGY', nm:'Phase Lattice', ds:'Phase Arks transfer cargo at 96 range instead of requiring a 22-range landing approach',
   cost:{circuit:58,isotope:24,relic:1}, data:26, req:['syn_drone_mesh']},
-
- {id:'hor_gene_splice', fac:'horde', br:'FABRICATION', nm:'Gene Splice Pit', ds:'AI DOSSIER - future Brood player tech for biomass kill-recovery; no player combat effect while Brood is AI-only',
-  cost:{alloy:24,isotope:16}, data:12, req:[]},
- {id:'hor_synaptic_tide', fac:'horde', br:'DOCTRINE', nm:'Synaptic Tide', ds:'AI DOSSIER - Tidecasters form automatically at critical Brood mass; player unlock is reserved until Brood is playable',
-  cost:{circuit:26,isotope:28}, data:16, req:['hor_gene_splice']},
- {id:'hor_living_siege', fac:'horde', br:'XENOLOGY', nm:'Living Siege', ds:'AI DOSSIER - Massflesh is currently an AI breakthrough carrier; player unlock is reserved until Brood is playable',
-  cost:{alloy:60,isotope:32,relic:2}, data:28, req:['hor_synaptic_tide']},
 ];
 function devDone(){ META.res=META.res||{}; return META.res; }
-function devHas(id){ return !!devDone()[id]; }
+function devHas(id){
+  /* Online's shared neutral setup cannot inherit one browser's paid/unlocked
+     account tech. Per-seat progression requires an explicit future protocol. */
+  if(window.__MF_NETWORK_SETUP__)return false;
+  return !!devDone()[id];
+}
 function devAvail(n){ return n.req.every(devHas); }
 function devMissing(n){
   const b=matBag(), out=[];
@@ -161,7 +163,7 @@ function devMissing(n){
 function devBuy(n,silent){
   if(!n||devHas(n.id)) return false;
   if(typeof mfFactionTechPurchasable==='function'&&!mfFactionTechPurchasable(n.id)){
-    if(!silent) toast('AI DOSSIER — Brood unlocks become available in Development only when the faction is playable');
+    if(!silent) toast('BROOD THREAT DATA — enemy capabilities cannot be researched or equipped');
     return false;
   }
   if(!devAvail(n)){ if(!silent) toast('🔒 Requires '+n.req.map(r=>DEVTREE.find(x=>x.id===r).nm).join(', ')); return false; }
@@ -357,7 +359,24 @@ function modOwned(){
   }
   return META.mods;
 }
-function modEquipped(){ META.equip=META.equip||[]; return META.equip; }
+function modEquipped(){
+  /* Imported careers could fit duplicate, broken or unknown module ids and
+     bypass the one-to-three slot limit. applyModules then applied duplicates
+     twice while the UI still claimed a bounded loadout. Normalize the saved
+     fit itself, not only the presenter; preserve unrecognized owned stock for
+     forward compatibility, but never let it run as an active module. */
+  const raw=Array.isArray(META.equip)?META.equip:[],owned=modOwned(),res=META.res||{};
+  const slots=1+(res.slot2?1:0)+(res.slot3?1:0),clean=[];
+  for(const id of raw){
+    if(clean.length>=slots)break;
+    if(typeof id!=='string'||clean.indexOf(id)>=0||!(owned[id]>0)||
+       !MODULES.some(m=>m.id===id))continue;
+    clean.push(id);
+  }
+  if(raw.length!==clean.length||raw.some((id,i)=>id!==clean[i]))META.equip=clean;
+  else META.equip=raw;
+  return META.equip;
+}
 function modCraft(m){
   if(!devHas(m.req)){ toast('🔒 Unlock '+(DEVTREE.find(r=>r.id===m.req)||{}).nm+' in Development first'); return; }
   const quote=modCraftQuote(m);
@@ -472,7 +491,10 @@ function renderDevelop(){
   if(tr){
     tr.setAttribute('role','tablist');
     tr.setAttribute('aria-label','Development categories');
-    tr.innerHTML=[['research','🔬','UNLOCKS'],['craft','🔧','CRAFTING'],['loadout','★','LOADOUT']]
+    /* Arsenal owns the broad account LOADOUT. This tab is specifically the
+       crafted module fit, so naming it prevents two destinations promising the
+       same job while preserving the separate progression system. */
+    tr.innerHTML=[['research','🔬','UNLOCKS'],['craft','🔧','CRAFTING'],['loadout','★','MODULE FIT']]
       .map(([k,e,n])=>'<button class="tabBtn'+(devTab===k?' on':'')+'" data-k="'+k+'" role="tab" aria-selected="'+(devTab===k?'true':'false')+'" aria-controls="devBody">'
         +'<span class="tEm">'+e+'</span>'+n+'</button>').join('');
     tr.querySelectorAll('.tabBtn').forEach(x=>mfBindTap(x,ev=>{

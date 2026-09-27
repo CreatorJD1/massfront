@@ -13,6 +13,8 @@ const sources = Object.fromEntries(await Promise.all(sourcePaths.map(async path 
 const sourceBefore = Object.fromEntries(Object.entries(sources).map(([path, text]) => [path, sha(text)]));
 const STATE = 'massfront.exploration.mount.state.v1', SESSION = 'massfront.exploration.mount.v1', READY = 'massfront.exploration.mount.ready.v1';
 const PREFIX = 'massfront-content/galactic-exploration/';
+const STORM_STATE = 'massfront.stormpeak.mount.state.v1';
+const STORM_PREFIX = 'massfront-content/stormpeak-ocean/';
 const ROOT = '/data/user/0/com.creatorjd.massfront/files/';
 const BASE_VERSION = '1.33.76';
 function store() {
@@ -83,7 +85,11 @@ function fixture(options = {}) {
     async appendFile(options) { return write('appendFile', options); }
   };
   async function write(method, call) {
-    assert.equal(call.directory, 'DATA'); assert.match(call.path, /^massfront-content\/galactic-exploration\/[a-f0-9]{64}\/modules\/space_exploration\//);
+    /* Two mounts now live under massfront-content/: the Galactic pack, keyed by
+       its manifest hash, and the Ocean Theatre Tester, keyed by release plus its
+       entry hash. Both must stay inside their own immutable directory. */
+    assert.equal(call.directory, 'DATA');
+    assert.match(call.path, /^massfront-content\/(galactic-exploration\/[a-f0-9]{64}\/modules\/space_exploration|stormpeak-ocean\/\d+\.\d+\.\d+-[a-f0-9]{16}\/modules\/stormpeak_ocean)\//);
     assert.ok(!call.path.includes('..')); assert.ok(!call.encoding, 'binary bridge payload must not be interpreted as UTF8');
     const data = Buffer.from(call.data, 'base64'); assert.ok(data.length <= 256 * 1024);
     writes.push({ method, path: call.path, bytes: data.length });
@@ -113,6 +119,13 @@ function fixture(options = {}) {
       Plugins: { Filesystem: fs, WebView: Object.fromEntries(['setServerBasePath', 'persistServerBasePath', 'setServerAssetPath'].map(name => [name, () => { nativeRootCalls++; throw new Error('FORBIDDEN WEBVIEW ROOT REPLACEMENT'); }])) }
     },
     fetch: async (url, config = {}) => {
+      /* The Stormpeak closure rides the OTA payload as data: URIs, so its mount
+         reads bytes straight out of window.__MF_OTA_STORMPEAK with fetch()
+         instead of from IDB. Still no network: a data: URI is self-contained. */
+      if (String(url).startsWith('data:')) {
+        const body = String(url).slice(String(url).indexOf(',') + 1);
+        return new Response(Buffer.from(body, 'base64'), { status: 200 });
+      }
       const parsed = new URL(url); assert.equal(parsed.origin, 'https://localhost', 'no external networking permitted in contract fixture');
       assert.equal(config.cache, 'no-store');
       const prefix = '/_capacitor_file_' + ROOT; assert.ok(parsed.pathname.startsWith(prefix));
@@ -141,10 +154,10 @@ function fixture(options = {}) {
     assert.equal(nativeRootCalls, 0);
     assert.equal(localStorage.getItem('massfront_meta_default'), '{"sentinel":"career preserved"}');
     assert.equal(localStorage.getItem('massfront_profile'), 'profile-preserved');
-    assert.ok(localStorage.writes.every(key => [STATE, READY].includes(key)), 'only mount metadata may change localStorage');
+    assert.ok(localStorage.writes.every(key => [STATE, READY, STORM_STATE].includes(key)), 'only mount metadata may change localStorage');
     assert.ok(sessionStorage.writes.every(key => key === SESSION), 'only mount context may change sessionStorage');
   };
-  return { sandbox, api, seed, localStorage, sessionStorage, nativeFiles, writes, reads, events, controls, invariants,
+  return { sandbox, api, storm: sandbox.MFNativeStormpeakContent, seed, localStorage, sessionStorage, nativeFiles, writes, reads, events, controls, invariants,
     runNextTimer:async()=>{const row=timers.entries().next().value;assert.ok(row,'expected a scheduled callback');timers.delete(row[0]);return row[1]();},
     pendingTimers:()=>timers.size,
     state: () => JSON.parse(localStorage.getItem(STATE) || 'null') };
@@ -329,6 +342,95 @@ await test('rollback re-hashes the last-good native directory before returning i
   f.nativeFiles.get(build.nativeRoot+'src/space_module.js')[0]^=255;
   assert.equal((await f.api.prepare(next.spec)).reason,'content-rollback-integrity');
 });
+/* ---------- OCEAN THEATRE TESTER: A DOCUMENT CARRIED BY THE UPDATE ----------
+   modules/ cannot ride the OTA payload (every artifact in it is JavaScript,
+   because the payload is executed, not written), so an install older than the
+   tester has no document to open and the card reads as dead. bundle-update.mjs
+   carries the closure inline as data: URIs; these contracts cover writing it
+   out and refusing anything unbound, unsafe or unverified. */
+function stormpeakClosure(patch = {}) {
+  const files = new Map([
+    ['index.html', Buffer.from('<!doctype html><title>Stormpeak</title>')],
+    ['assets/StormpeakLab-aaaa.js', Buffer.from('export const ocean=1;')],
+    ['assets/waternormals-bbbb.jpg', Buffer.alloc(300 * 1024 + 11, 7)]
+  ]);
+  const version = patch.version || BASE_VERSION;
+  let rows = [...files].map(([path, data]) => ({ path, bytes: data.length, sha256: sha(data),
+    uri: 'data:application/octet-stream;base64,' + data.toString('base64') }));
+  if (patch.mutate) rows = patch.mutate(rows);
+  const entry = rows.find(row => row.path === 'index.html');
+  const generation = version + '-' + (entry ? entry.sha256.slice(0, 16) : 'none');
+  return { files, generation, nativeRoot: STORM_PREFIX + generation + '/modules/stormpeak_ocean/',
+    payload: { version, totalBytes: rows.reduce((sum, row) => sum + row.bytes, 0), files: rows } };
+}
+function withStorm(closure, options = {}) {
+  const f = use(options);
+  f.sandbox.__MF_OTA_STORMPEAK = closure ? closure.payload : null;
+  return f;
+}
+
+await test('inline closure is written to immutable DATA storage and opened same-origin', async () => {
+  const closure = stormpeakClosure(), f = withStorm(closure);
+  const result = await f.storm.prepare();
+  assert.equal(result.ok, true, result.reason);
+  assert.ok(result.openUrl.startsWith('https://localhost/_capacitor_file_/'));
+  assert.ok(result.openUrl.endsWith('/' + closure.nativeRoot + 'index.html'));
+  for (const [path, data] of closure.files)
+    assert.deepEqual(Buffer.from(f.nativeFiles.get(closure.nativeRoot + path)), data, path + ' was not written verbatim');
+  assert.equal(JSON.parse(f.localStorage.getItem(STORM_STATE)).generation, closure.generation);
+});
+
+await test('a closure bound to another release is refused before any native write', async () => {
+  const f = withStorm(stormpeakClosure({ version: '9.9.9' }));
+  const before = f.writes.length;
+  assert.equal((await f.storm.prepare()).reason, 'stormpeak-not-delivered');
+  assert.equal(f.writes.length, before, 'an unbound closure must not touch native storage');
+  assert.equal(f.localStorage.getItem(STORM_STATE), null);
+});
+
+await test('absolute, traversing and missing-entry closures are refused', async () => {
+  for (const mutate of [
+    rows => rows.map(row => row.path === 'index.html' ? { ...row, path: '/index.html' } : row),
+    rows => rows.map(row => row.path === 'index.html' ? { ...row, path: '../index.html' } : row),
+    rows => rows.filter(row => row.path !== 'index.html')
+  ]) {
+    const f = withStorm(stormpeakClosure({ mutate }));
+    const before = f.writes.length;
+    assert.equal((await f.storm.prepare()).reason, 'stormpeak-not-delivered');
+    assert.equal(f.writes.length, before);
+  }
+});
+
+await test('a declared hash that does not match the inlined bytes cannot mount', async () => {
+  const f = withStorm(stormpeakClosure({ mutate: rows => rows.map(row =>
+    row.path === 'assets/StormpeakLab-aaaa.js' ? { ...row, sha256: 'f'.repeat(64) } : row) }));
+  assert.equal((await f.storm.prepare()).reason, 'stormpeak-native-readback');
+});
+
+await test('corrupted native readback fails the mount instead of opening it', async () => {
+  const f = withStorm(stormpeakClosure());
+  f.controls.corruptReads = true;
+  assert.equal((await f.storm.prepare()).reason, 'stormpeak-native-readback');
+});
+
+await test('a second mount of the same release rewrites nothing', async () => {
+  const closure = stormpeakClosure(), f = withStorm(closure);
+  assert.equal((await f.storm.prepare()).ok, true);
+  const after = f.writes.length;
+  assert.equal((await f.storm.prepare()).ok, true);
+  assert.equal(f.writes.length, after, 'already-verified files must not be rewritten');
+});
+
+await test('no native filesystem and wrong-origin mapping both refuse cleanly', async () => {
+  assert.equal((await withStorm(stormpeakClosure(), { noFs: true }).storm.prepare()).reason, 'native-content-unavailable');
+  assert.equal((await withStorm(null).storm.prepare()).reason, 'stormpeak-not-delivered');
+  const f = withStorm(stormpeakClosure());
+  f.controls.wrongOrigin = true;
+  const result = await f.storm.prepare();
+  assert.equal(result.ok, false);
+  assert.ok(/content-native-origin|stormpeak-entry-origin/.test(result.reason), result.reason);
+});
+
 await test('all cases preserve native root and player-owned keys', () => { for (const f of fixtures) f.invariants(); });
 
 const sourceAfter = Object.fromEntries(await Promise.all(sourcePaths.map(async path => [path, sha(await readFile(path))])));

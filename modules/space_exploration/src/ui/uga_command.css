@@ -1,5 +1,6 @@
-/* MASSFRONT UGA command overlay. The central transparency is intentional: the
-   authored Three.js cutaway remains the only representation of the ship. */
+/* MASSFRONT UGA command overlay. Room views keep the authored Three.js cutaway
+   as the interactive authority inside a procedural inspection bay. Directory
+   views use sealed contextual interiors; no ship screen exposes outer space. */
 
 .uga-return-services { display: flex; flex-direction: column; gap: 12px; }
 .uga-return-services > .uga-primary-button { flex: 0 0 auto; width: 100%; min-height: 44px; }
@@ -65,6 +66,32 @@
 .uga-command-front dl div { display: flex; align-items: baseline; gap: 4px; }
 .uga-command-front dt { color: #617e8a; font: 6px/1 Consolas, monospace; }
 .uga-command-front dd { margin: 0; color: #bcd3dc; font: 700 7px/1 Consolas, monospace; }
+/* L1 duty watch: the front card now carries its own action pair. The watch is
+   the one control that advances the strategic clock from the home screen, so
+   it wears the shared amber pulse only while the front is not breached. The
+   card's grid columns are icon / copy / actions instead of icon / copy / nav. */
+.uga-front-actions {
+  grid-column: 3;
+  grid-row: 1 / 3;
+  display: flex;
+  max-height: 68px;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 4px;
+}
+.uga-front-actions button {
+  min-width: 88px;
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 0 8px;
+}
+.uga-front-actions button[data-front-watch] { font-size: 7px; letter-spacing: .05em; }
+.uga-front-actions button:not([data-front-watch]) { min-height: 26px; }
+
 .uga-command-front > button {
   grid-column: 3;
   grid-row: 1 / 3;
@@ -115,6 +142,8 @@
   .uga-command-front > div strong { font-size: 11px; }
   .uga-command-front dl { gap: 7px; }
   .uga-command-front > button { min-width: 82px; padding: 0 5px; font-size: 7px; }
+  .uga-front-actions { gap: 3px; max-height: 66px; }
+  .uga-front-actions button { min-width: 82px; min-height: 28px; padding: 0 5px; font-size: 7px; }
   .uga-command-quick { gap: 3px; }
   .uga-command-quick button { min-height: 44px; flex-direction: column; gap: 2px; }
   .uga-command-quick .uga-svg { width: 14px; height: 14px; }
@@ -522,6 +551,75 @@
 
 .uga-section-title { padding: 1px 0 13px; border-bottom: 1px solid rgba(92, 196, 232, .18); }
 .uga-section-title p { margin-top: 8px; }
+.uga-command-visual {
+  --uga-command-art: url('../../assets/runtime/ui/menu-art-v1/operations-war-table-v1.webp');
+  position: relative;
+  min-height: clamp(92px, 17vh, 142px);
+  margin: 10px 0;
+  overflow: hidden;
+  border: 1px solid rgba(66, 221, 255, .3);
+  border-radius: 9px;
+  background: #050c14 var(--uga-command-art) center / cover no-repeat;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, .3), inset 0 1px rgba(255, 255, 255, .06);
+  isolation: isolate;
+}
+.uga-command-visual.is-arsenal { --uga-command-art: url('../../assets/runtime/ui/menu-art-v1/arsenal-fabrication-bay-v1.webp'); }
+.uga-command-visual.is-research { --uga-command-art: url('../../assets/runtime/ui/menu-art-v1/research-directorate-v1.webp'); }
+.uga-command-visual.is-contracts { --uga-command-art: url('../../assets/runtime/ui/menu-art-v1/contracts-intel-table-v1.webp'); }
+.uga-command-visual.is-navigation { --uga-command-art: url('../../assets/runtime/ui/menu-art-v1/uga-navigation-bridge-v1.webp'); }
+.uga-command-visual.is-survey { --uga-command-art: url('../../assets/runtime/ui/menu-art-v1/uga-survey-lab-v1.webp'); }
+.uga-command-visual.is-habitat { --uga-command-art: url('../../assets/runtime/ui/menu-art-v1/uga-habitat-medical-v1.webp'); }
+.uga-command-visual.is-hangar { --uga-command-art: url('../../assets/runtime/ui/menu-art-v1/uga-strike-hangar-v1.webp'); }
+.uga-command-visual.is-logistics { --uga-command-art: url('../../assets/runtime/ui/menu-art-v1/uga-logistics-cargo-v1.webp'); }
+.uga-command-visual.is-embassy { --uga-command-art: url('../../assets/runtime/ui/menu-art-v1/uga-coalition-embassy-v1.webp'); }
+.uga-command-visual.is-concourse,
+.uga-command-visual.is-systems { --uga-command-art: url('../../assets/runtime/ui/menu-art-v1/uga-command-concourse-v1.webp'); }
+.uga-command-visual.is-engineering { --uga-command-art: url('../../assets/runtime/ui/menu-art-v1/uga-engineering-systems-v1.webp'); }
+.uga-command-visual::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgba(2, 10, 17, .52), transparent 28%, transparent 72%, rgba(2, 10, 17, .52)),
+    linear-gradient(0deg, rgba(2, 10, 17, .62), transparent 52%, rgba(2, 10, 17, .08));
+  box-shadow: inset 0 0 0 5px rgba(1, 8, 14, .2);
+}
+.uga-command-visual::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  left: -32%;
+  top: 0;
+  width: 28%;
+  height: 100%;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(66, 221, 255, .16), transparent);
+  transform: skewX(-17deg);
+  animation: uga-command-art-scan 8.4s ease-in-out infinite;
+}
+.uga-command-visual > i {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  top: 50%;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(255, 181, 74, .56);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 16px rgba(255, 181, 74, .14);
+  opacity: .64;
+}
+.uga-command-visual > i::before,
+.uga-command-visual > i::after { content: ""; position: absolute; background: rgba(255, 181, 74, .72); }
+.uga-command-visual > i::before { left: -7px; right: -7px; top: 50%; height: 1px; }
+.uga-command-visual > i::after { top: -7px; bottom: -7px; left: 50%; width: 1px; }
+@keyframes uga-command-art-scan {
+  0%, 30% { transform: translateX(0) skewX(-17deg); opacity: 0; }
+  46% { opacity: .72; }
+  72%, 100% { transform: translateX(470%) skewX(-17deg); opacity: 0; }
+}
 .uga-record-list { display: grid; gap: 7px; margin-top: 10px; }
 .uga-record-card { min-height: 89px; padding: 9px; display: grid; grid-template-columns: 35px 1fr auto; gap: 9px; align-items: start; border: 1px solid rgba(92, 196, 232, .16); background: rgba(14, 40, 53, .18); }
 .uga-record-sigil { width: 34px; height: 34px; display: grid; place-items: center; color: var(--uga-cyan); border: 1px solid rgba(66, 221, 255, .24); }
@@ -587,7 +685,13 @@
 .operation-debrief-section dt { color: #628292; }
 .operation-debrief-section dd { min-width: 0; margin: 0; overflow-wrap: anywhere; color: #c1dbe5; text-align: right; }
 
-.uga-deployment-planner { margin-top: 12px; padding: 11px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; border: 1px solid rgba(255, 181, 74, .25); background: rgba(55, 36, 12, .15); }
+.uga-deployment-planner { --deployment-faction: #70e5ff; --deployment-faction-wash: rgba(40, 123, 153, .22); margin-top: 12px; padding: 11px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; border: 1px solid var(--deployment-faction); background: linear-gradient(135deg, var(--deployment-faction-wash), rgba(4, 19, 28, .75) 48%); }
+.uga-deployment-planner[data-faction-id="dominion"] { --deployment-faction: #ff9471; --deployment-faction-wash: rgba(153, 54, 31, .25); }
+.uga-deployment-planner[data-faction-id="syndicate"] { --deployment-faction: #d1a2ff; --deployment-faction-wash: rgba(91, 45, 137, .27); }
+.uga-deployment-planner .uga-deployment-summary > span,
+.uga-deployment-planner .uga-deployment-summary strong,
+.uga-deployment-planner [data-deployment-station="base_deployer"].is-active > span { color: var(--deployment-faction); }
+.uga-deployment-planner [data-deployment-station="base_deployer"].is-active { border-color: var(--deployment-faction); box-shadow: inset 0 -2px 0 var(--deployment-faction); background: linear-gradient(135deg, var(--deployment-faction-wash), rgba(7, 26, 37, .7)); }
 .uga-deployment-planner.is-invalid { border-color: rgba(255, 94, 98, .68); box-shadow: inset 0 0 24px rgba(255, 94, 98, .08); }
 .uga-deployment-planner header { grid-column: 1 / -1; }
 .uga-deployment-planner header small { color: var(--uga-amber); font: 6px/1 Consolas, monospace; }
@@ -1561,10 +1665,12 @@
   .uga-campaign-hub .uga-hub-route { grid-template-columns: 34px minmax(0, 1fr); }
   .uga-campaign-hub .uga-hub-route > button { grid-column: 1 / -1; width: 100%; }
   .uga-quick-actions { bottom: 48px; min-height: 44px; }
+  .uga-command-visual { min-height: 78px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .uga-command-shell *, .uga-command-shell *::before, .uga-command-shell *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  .uga-command-visual::after { animation: none !important; opacity: .18; transform: translateX(190%) skewX(-17deg); }
 }
 
 /* NEXUS-VII authored interior construction */
@@ -2123,11 +2229,15 @@
   gap: 10px;
   border: 1px solid var(--uga-line);
   border-radius: 8px;
-  background: var(--uga-panel-soft);
+  --uga-progress-art: url('../../assets/runtime/ui/menu-art-v1/operations-war-table-v1.webp');
+  background: linear-gradient(90deg, rgba(3, 15, 24, .96) 0%, rgba(3, 15, 24, .85) 55%, rgba(3, 15, 24, .42) 100%), var(--uga-progress-art) 76% center / cover no-repeat;
   color: #d9edf4;
   text-align: left;
   cursor: pointer;
 }
+.uga-progress-route:nth-child(2) { --uga-progress-art: url('../../assets/runtime/ui/menu-art-v1/contracts-intel-table-v1.webp'); }
+.uga-progress-route:nth-child(3) { --uga-progress-art: url('../../assets/runtime/ui/menu-art-v1/research-directorate-v1.webp'); }
+.uga-progress-route > * { position: relative; z-index: 1; }
 .uga-progress-route::after {
   content: "";
   position: absolute;
@@ -2441,6 +2551,109 @@
 .uga-objective.is-commission,
 .uga-objective[data-objective] { box-shadow: none; }
 
+/* The home directive is an illustrated action card, not a second text panel
+   beneath a decorative hero. Each scene depicts the actual next service. */
+.uga-campaign-hub .uga-objective { gap: 9px; }
+.uga-objective-hero {
+  position: relative;
+  isolation: isolate;
+  min-height: clamp(148px, 22vh, 190px);
+  overflow: hidden;
+  border: 1px solid rgba(142, 211, 239, .3);
+  border-radius: 7px;
+  background: #06111a;
+  text-align: left;
+}
+.uga-objective-hero.is-embassy { --uga-objective-art: url('../../assets/runtime/ui/menu-art-v1/uga-coalition-embassy-v1.webp'); }
+.uga-objective-hero.is-survey { --uga-objective-art: url('../../assets/runtime/ui/menu-art-v1/uga-survey-lab-v1.webp'); }
+.uga-objective-hero.is-hangar { --uga-objective-art: url('../../assets/runtime/ui/menu-art-v1/uga-strike-hangar-v1.webp'); }
+.uga-objective-hero.is-navigation { --uga-objective-art: url('../../assets/runtime/ui/menu-art-v1/uga-navigation-bridge-v1.webp'); }
+.uga-objective-art {
+  position: absolute;
+  inset: 0;
+  display: block;
+  background: #06111a var(--uga-objective-art) center / cover no-repeat;
+}
+.uga-objective-hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(0deg, rgba(2, 8, 14, .96), rgba(2, 8, 14, .55) 42%, transparent 85%);
+}
+.uga-objective-hero-copy {
+  position: absolute;
+  z-index: 2;
+  right: 12px;
+  bottom: 12px;
+  left: 12px;
+  min-width: 0;
+  text-shadow: 0 2px 8px #02070c;
+}
+.uga-objective-hero-copy small { color: #ffcb7c; font: 800 9px/1.15 Consolas, monospace; letter-spacing: .1em; }
+.uga-objective-hero-copy h3 { margin: 5px 0 0; color: #fff8eb; font-size: clamp(17px, 4.5vw, 22px); line-height: 1.16; overflow-wrap: anywhere; }
+.uga-campaign-hub .uga-journey { margin: 0; }
+.uga-objective-brief { border-top: 1px solid rgba(137, 186, 205, .24); color: #b6c9d4; text-align: left; }
+.uga-objective-brief > summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  list-style: none;
+  color: #91c6d9;
+  font: 800 9px/1 Consolas, monospace;
+  letter-spacing: .1em;
+  cursor: pointer;
+}
+.uga-objective-brief > summary::-webkit-details-marker { display: none; }
+.uga-objective-brief > summary::after { content: '+'; margin-left: auto; color: #ccecf7; font: 700 18px/1 system-ui; }
+.uga-objective-brief[open] > summary::after { content: '−'; }
+.uga-objective-brief > summary:focus-visible { outline: 2px solid var(--uga-cyan); outline-offset: -2px; }
+.uga-objective-brief > p { margin: 0 0 8px; font-size: 11px; line-height: 1.4; overflow-wrap: anywhere; }
+.uga-objective-brief > p > b { color: var(--uga-cyan); }
+@media (max-width: 380px) and (orientation: portrait) {
+  .uga-objective-hero { min-height: 150px; }
+  .uga-objective-hero-copy h3 { font-size: 17px; }
+}
+@media (orientation: landscape) and (max-height: 560px) {
+  .uga-objective-hero { min-height: 112px; }
+}
+
+/* Command already shows the real cutaway above its inspector. A second tall
+   picture and a grey 24px plate buried the next action below the phone fold.
+   Keep the commissioned scene as a short place cue and let work lead. */
+.uga-campaign-hub.is-room-embedded .uga-objective {
+  margin-top: 0;
+  padding: 6px;
+  gap: 6px;
+  border: 1px solid rgba(255, 181, 74, .45);
+  border-image: none;
+  background: linear-gradient(145deg, rgba(8, 29, 42, .96), rgba(3, 13, 22, .96));
+}
+.uga-campaign-hub.is-room-embedded .uga-objective-hero {
+  min-height: 82px;
+  border-color: rgba(255, 181, 74, .34);
+}
+.uga-campaign-hub.is-room-embedded .uga-objective-hero-copy { right: 10px; bottom: 8px; left: 10px; }
+.uga-campaign-hub.is-room-embedded .uga-objective-hero-copy small { font-size: 10px; }
+.uga-campaign-hub.is-room-embedded .uga-objective-hero-copy h3 { font-size: 16px; line-height: 1.15; }
+.uga-campaign-hub.is-room-embedded .uga-objective .uga-primary-button { min-height: 44px; font-size: 12px; letter-spacing: .04em; }
+/* The selected ship tab and sheet handle already identify Command Core. On
+   compact screens its duplicate inspector heading pushed the actual work out
+   of sight; Room Systems below still carries the full hardware information. */
+@media (max-width: 900px), (max-height: 620px) and (max-width: 1024px) {
+  .uga-command-shell[data-stage="room"][data-district="command"] .uga-context-heading { display: none; }
+}
+@media (max-width: 1024px) and (max-height: 620px) and (orientation: landscape) {
+  /* Clear the district rail at 102px while reclaiming enough inspector height
+     for both the illustrated directive and its full-size action above dock. */
+  .uga-command-shell[data-stage="room"][data-district="command"].is-sheet-expanded .uga-context-panel { top: 102px; }
+  .uga-command-shell[data-stage="room"][data-district="command"] .uga-campaign-hub.is-room-embedded .uga-objective { padding: 5px; gap: 5px; }
+  .uga-command-shell[data-stage="room"][data-district="command"] .uga-campaign-hub.is-room-embedded .uga-objective-hero { min-height: 60px; }
+  .uga-command-shell[data-stage="room"][data-district="command"] .uga-campaign-hub.is-room-embedded .uga-objective-hero-copy { bottom: 6px; }
+  .uga-command-shell[data-stage="room"][data-district="command"] .uga-campaign-hub.is-room-embedded .uga-objective-hero-copy h3 { margin-top: 3px; }
+}
+
 /* FOLDABLE CATEGORIES
    Header carries the affordance so the whole bar is the target - a 12px
    chevron is not a touch target, and the header already spans the panel. */
@@ -2459,30 +2672,49 @@
    forgetting. */
 .uga-panel-section.is-collapsed > header { opacity: .72; }
 .uga-panel-section > header:focus-visible { outline: 2px solid var(--uga-cyan, #4fd8ff); outline-offset: 2px; }
+.uga-service-shelf {
+  --uga-service-art: url('../../assets/runtime/ui/menu-art-v1/operations-war-table-v1.webp');
+}
+.uga-service-shelf[data-service-group="massfront"] { --uga-service-art: url('../../assets/runtime/ui/menu-art-v1/arsenal-fabrication-bay-v1.webp'); }
+.uga-service-shelf[data-service-group="account"] { --uga-service-art: url('../../assets/runtime/ui/menu-art-v1/career-service-record-v1.webp'); }
+.uga-service-shelf > header {
+  min-height: 62px;
+  align-items: flex-end;
+  padding: 12px 32px 12px 14px;
+  border: 1px solid rgba(66, 221, 255, .2);
+  border-radius: 7px;
+  background-image: linear-gradient(90deg, rgba(2, 10, 17, .92), rgba(2, 10, 17, .54) 56%, rgba(2, 10, 17, .76)), var(--uga-service-art);
+  background-position: center;
+  background-size: cover;
+  box-shadow: inset 0 1px rgba(255, 255, 255, .05);
+}
+.uga-service-shelf.is-collapsed > header { min-height: 78px; opacity: 1; }
+.uga-service-shelf > header > span { color: #e6f7fc; text-shadow: 0 2px 8px #000; }
+.uga-service-shelf > header > small { color: var(--uga-amber); text-shadow: 0 2px 8px #000; }
 @media (prefers-reduced-motion: reduce) {
   .uga-panel-section > header::after { transition: none; }
 }
 
-/* PLATED SURFACES
-   panel_player_info carries modest 24px borders, which survives being stretched
-   to containers of very different heights. The heavier families - frame_viewport
-   at 92 logical, panel_statistics with its 108px header band - are authored for
-   fixed-size surfaces and would swallow a short card, so they stay unused until
-   there is a surface shaped for them. Restraint here is deliberate: plating
-   every box would trade "no art" for "ornament everywhere", which reads as
-   noisier, not richer. */
+/* The generic player-info plate made every UGA card a grey image box. Use the
+   ship's own navy glass, cyan divisions and amber next-action edge instead. */
 .uga-basic-access,
-.uga-panel-section,
 .uga-command-front {
-  border: 24px solid transparent;
-  border-image: url('../../../../assets/textures/ui/mf-ui-v3/panel_player_info.png') 48 fill / 24px / 0 stretch;
-  background: none;
-  padding: 2px 8px 10px;
+  border: 1px solid rgba(92, 196, 232, .3);
+  border-left: 3px solid var(--uga-amber);
+  border-image: none;
+  border-radius: 7px;
+  background: linear-gradient(110deg, rgba(7, 33, 48, .94), rgba(3, 15, 25, .88));
+  padding: 10px;
 }
-/* The plate already draws an edge; the old rules would sit inside it as a
-   second, competing border. */
+.uga-panel-section {
+  border: 0;
+  border-top: 1px solid rgba(92, 196, 232, .25);
+  border-image: none;
+  background: transparent;
+  padding: 6px 0 0;
+}
 .uga-basic-access > header,
-.uga-panel-section > header { border-bottom: none; }
+.uga-panel-section > header { border-bottom: 1px solid rgba(92, 196, 232, .16); }
 .uga-basic-access { margin-top: 10px; }
 
 /* The hub's own top-level blocks fold too, not just district sections. */
@@ -2541,6 +2773,57 @@
   height: auto;
 }
 
+/* Full-frame directories no longer reveal the orbital renderer around their
+   panels. They sit inside NEXUS-VII, while room stages retain the live 3D
+   compartment and its new inspection-bay enclosure. */
+.uga-command-shell[data-stage="full"] {
+  background:
+    linear-gradient(90deg, rgba(2, 10, 17, .88), rgba(2, 10, 17, .32) 42%, rgba(2, 10, 17, .76)),
+    url('../../assets/runtime/ui/menu-art-v1/uga-command-concourse-v1.webp') center / cover no-repeat;
+}
+.uga-command-shell[data-view="campaign_hub"] {
+  background:
+    linear-gradient(90deg, rgba(2, 10, 17, .9), rgba(2, 10, 17, .28) 46%, rgba(2, 10, 17, .8)),
+    url('../../assets/runtime/ui/menu-art-v1/uga-navigation-bridge-v1.webp') center / cover no-repeat;
+}
+.uga-command-shell[data-view="progress"] {
+  background-image:
+    linear-gradient(90deg, rgba(2, 10, 17, .88), rgba(2, 10, 17, .3) 42%, rgba(2, 10, 17, .76)),
+    url('../../assets/runtime/ui/menu-art-v1/uga-navigation-bridge-v1.webp');
+}
+.uga-command-shell[data-view="services"],
+.uga-command-shell[data-view="return-services"] {
+  background-image:
+    linear-gradient(90deg, rgba(2, 10, 17, .88), rgba(2, 10, 17, .3) 42%, rgba(2, 10, 17, .76)),
+    url('../../assets/runtime/ui/menu-art-v1/uga-command-concourse-v1.webp');
+}
+.uga-command-shell[data-view="inventory"],
+.uga-command-shell[data-view="logistics"] {
+  background-image:
+    linear-gradient(90deg, rgba(2, 10, 17, .88), rgba(2, 10, 17, .3) 42%, rgba(2, 10, 17, .76)),
+    url('../../assets/runtime/ui/menu-art-v1/uga-logistics-cargo-v1.webp');
+}
+.uga-command-shell[data-view="crew"] {
+  background-image:
+    linear-gradient(90deg, rgba(2, 10, 17, .88), rgba(2, 10, 17, .3) 42%, rgba(2, 10, 17, .76)),
+    url('../../assets/runtime/ui/menu-art-v1/uga-habitat-medical-v1.webp');
+}
+.uga-command-shell[data-view="factions"] {
+  background-image:
+    linear-gradient(90deg, rgba(2, 10, 17, .88), rgba(2, 10, 17, .3) 42%, rgba(2, 10, 17, .76)),
+    url('../../assets/runtime/ui/menu-art-v1/uga-coalition-embassy-v1.webp');
+}
+.uga-command-shell[data-view="research"] {
+  background-image:
+    linear-gradient(90deg, rgba(2, 10, 17, .88), rgba(2, 10, 17, .3) 42%, rgba(2, 10, 17, .76)),
+    url('../../assets/runtime/ui/menu-art-v1/research-directorate-v1.webp');
+}
+.uga-command-shell[data-view="intel"] {
+  background-image:
+    linear-gradient(90deg, rgba(2, 10, 17, .88), rgba(2, 10, 17, .3) 42%, rgba(2, 10, 17, .76)),
+    url('../../assets/runtime/ui/menu-art-v1/uga-survey-lab-v1.webp');
+}
+
 /* AUDIT FLOOR
    Measured on 2026-09-11 across eleven compartments and five menus at 412x900
    and 915x412: 66 controls under the 44px minimum and 183 text runs under the
@@ -2556,3 +2839,344 @@
    the 6-7px scale is logged in the audit and gets measured before it moves. */
 .uga-panel-section > header,
 .uga-basic-access > header { min-height: 44px; }
+
+/* On phones the 28px watch buttons squeezed the current-system readout into
+   ellipses. Give the controls their own row and keep pressure visible. */
+@media (max-width: 480px) and (orientation: portrait) {
+  .uga-command-front {
+    grid-template-columns: 27px minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+  }
+  .uga-command-front > span { grid-column: 1; grid-row: 1 / 3; }
+  .uga-command-front > div:not(.uga-front-actions) { grid-column: 2; grid-row: 1; }
+  .uga-command-front > div p { overflow: visible; text-overflow: clip; white-space: normal; line-height: 1.25; }
+  .uga-command-front dl { grid-column: 2; grid-row: 2; }
+  .uga-command-front > .uga-front-actions {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-height: none;
+  }
+  .uga-front-actions button { min-width: 0; min-height: 44px; padding: 0 5px; font-size: 8px; }
+}
+@media (max-width: 340px) and (orientation: portrait) {
+  .uga-command-front dl { display: none; }
+  .uga-command-front > span { grid-row: 1; }
+  .uga-command-front > .uga-front-actions { grid-row: 2; }
+}
+
+/* The inherited native button paint made these two controls flat grey blocks
+   inside an authored NEXUS-VII plate. Color communicates action and state. */
+.uga-command-shell .uga-front-actions button {
+  min-height: 44px;
+  border: 1px solid rgba(66, 221, 255, .42);
+  border-radius: 6px;
+  background: rgba(7, 39, 55, .9);
+  color: #c8f1fb;
+  font: 800 9px/1.15 "Segoe UI", sans-serif;
+  letter-spacing: .04em;
+  cursor: pointer;
+}
+.uga-command-shell .uga-front-actions button[data-front-watch] {
+  border-color: rgba(255, 181, 74, .48);
+  background: rgba(71, 42, 11, .82);
+  color: #ffdfa6;
+}
+.uga-command-shell .uga-front-actions button:disabled {
+  border-color: rgba(111, 145, 160, .22);
+  background: rgba(8, 25, 34, .72);
+  color: #7894a2;
+}
+
+/* A room opens on its actual work. Keep every crew, tier and socket control
+   available behind one large, explicit systems hatch rather than eleven long
+   inspectors that push the job below the phone fold. */
+.uga-hardware-details { margin-top: 14px; border-top: 1px solid rgba(92, 196, 232, .27); }
+.uga-hardware-details > summary {
+  min-height: 54px;
+  padding: 6px 9px;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto 14px;
+  gap: 8px;
+  align-items: center;
+  color: #d8eef5;
+  background: linear-gradient(90deg, rgba(10, 53, 72, .72), rgba(4, 23, 35, .76));
+  cursor: pointer;
+  list-style: none;
+}
+.uga-hardware-details > summary::-webkit-details-marker { display: none; }
+.uga-hardware-details > summary .uga-svg:first-child { width: 19px; height: 19px; color: var(--uga-cyan); }
+.uga-hardware-details > summary span { font-size: 12px; font-weight: 800; letter-spacing: .06em; }
+.uga-hardware-details > summary small { color: #a5c6d3; font: 11px/1.2 Consolas, monospace; }
+.uga-hardware-details > summary .uga-svg:last-child { width: 13px; height: 13px; color: var(--uga-amber); transform: rotate(90deg); }
+.uga-hardware-details[open] > summary .uga-svg:last-child { transform: rotate(-90deg); }
+.uga-hardware-details > summary:focus-visible { outline: 2px solid var(--uga-cyan); outline-offset: -2px; }
+.uga-hardware-body { padding: 4px 2px 8px; background: rgba(3, 20, 31, .56); }
+.uga-hardware-body .uga-panel-section > header span { font-size: 11px; letter-spacing: .04em; }
+.uga-hardware-body .uga-feature span { font-size: 11px; line-height: 1.3; }
+.uga-hardware-body .uga-feature span b { font-size: 10px; line-height: 1.2; }
+.uga-hardware-body .uga-socket-copy small { font-size: 10px; line-height: 1.2; }
+.uga-hardware-body .uga-socket-copy b { overflow: visible; font-size: 12px; line-height: 1.2; text-overflow: clip; white-space: normal; }
+.uga-hardware-body .uga-socket-effects,
+.uga-hardware-body .uga-socket-effects b { font-size: 10px; line-height: 1.3; }
+.uga-hardware-body .uga-module-picker select { min-height: 44px; font-size: 12px; }
+.uga-command-shell[data-stage="room"] .uga-upgrade-block { display: grid; grid-template-columns: minmax(0, 1fr) minmax(120px, auto); align-items: center; gap: 8px; padding: 8px 10px; }
+.uga-command-shell[data-stage="room"] .uga-upgrade-block .uga-primary-button { grid-column: auto; min-height: 44px; margin: 0; }
+.uga-command-shell[data-stage="room"] .uga-context-heading h2,
+.uga-command-shell[data-stage="full"] .uga-section-title h2 { overflow: visible; line-height: 1.2; text-overflow: clip; white-space: normal; overflow-wrap: break-word; }
+
+/* Full-screen directories already have commissioned room art behind their
+   panels. Repeating the same picture as an inline card is decorative scroll. */
+.uga-command-shell[data-stage="full"] .uga-command-visual { display: none; }
+
+/* Strike Bay opens with the actual battlefield and commander selectors. The
+   3D hangar stays visible above the bottom sheet, and all later loadout
+   stations remain available by scrolling its field row. */
+.uga-ground-route .uga-selected-map { display: block; margin: 1px 0 3px; color: #f9dba3; font-size: 12px; line-height: 1.25; white-space: normal; overflow-wrap: break-word; }
+@media (max-width: 760px) and (orientation: portrait) {
+  .uga-command-shell.is-deployment-mode.is-loadout-expanded .uga-context-panel { height: min(58dvh, calc(100dvh - 125px)); }
+  .uga-command-shell[data-district="hangar"].is-deployment-mode .uga-deployment-fields > header { display: none; }
+  .uga-command-shell.is-deployment-mode .uga-ground-route { grid-template-columns: minmax(0, 1fr); gap: 5px; padding: 7px 9px; }
+  .uga-command-shell.is-deployment-mode .uga-ground-route > div { display: flex; align-items: baseline; gap: 6px; }
+  .uga-command-shell.is-deployment-mode .uga-ground-route > div strong { margin: 0; overflow: visible; text-overflow: clip; white-space: normal; }
+  .uga-command-shell.is-deployment-mode .uga-ground-route > label > span { font-size: 10px; }
+  .uga-command-shell.is-deployment-mode .uga-deployment-identity { grid-template-columns: minmax(108px, .75fr) minmax(0, 1.25fr); gap: 7px; }
+  .uga-command-shell.is-deployment-mode .uga-deployment-readiness { grid-template-columns: minmax(0, 1fr); gap: 5px; padding: 7px; }
+  .uga-command-shell.is-deployment-mode .uga-deployment-readiness > span { grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 6px; }
+  .uga-command-shell.is-deployment-mode .uga-deployment-readiness small { color: #b6d9e4; font-size: 11px; line-height: 1.25; letter-spacing: 0; white-space: normal; overflow-wrap: break-word; }
+  .uga-command-shell.is-deployment-mode .uga-deployment-readiness b { font-size: 10px; white-space: nowrap; }
+  .uga-command-shell.is-deployment-mode .uga-deployment-readiness .uga-primary-button { width: 100%; }
+  .uga-hardware-details > summary { grid-template-columns: 22px minmax(0, 1fr) 14px; }
+  .uga-hardware-details > summary small { display: none; }
+  #moduleFrame[data-uga-visual-state="ready"] .uga-command-shell[data-stage="room"] .uga-command-visual { display: none; }
+  .uga-command-shell[data-stage="room"] .uga-upgrade-block { grid-template-columns: minmax(0, 1fr); }
+  .uga-hardware-body .uga-socket { grid-template-columns: 28px minmax(0, 1fr); gap: 5px 8px; padding: 7px 0; }
+  .uga-hardware-body .uga-socket > :nth-child(n + 3) { grid-column: 2; }
+}
+
+/* The WebGL canvas is shared with orbit. Until the optional cutaway has
+   actually loaded, its render() does not paint a frame, so the last planet
+   frame otherwise remains visible behind transparent room chrome. Seal only
+   place-based views with their authored interior; full directories have their
+   own art, and the real pickable cutaway returns at the ready state. */
+.uga-command-shell[data-stage="room"] { --uga-room-seal-art: url('../../assets/runtime/ui/menu-art-v1/uga-command-concourse-v1.webp'); }
+.uga-command-shell[data-district="navigation"] { --uga-room-seal-art: url('../../assets/runtime/ui/menu-art-v1/uga-navigation-bridge-v1.webp'); }
+.uga-command-shell[data-district="survey"] { --uga-room-seal-art: url('../../assets/runtime/ui/menu-art-v1/uga-survey-lab-v1.webp'); }
+.uga-command-shell[data-district="mission_ops"] { --uga-room-seal-art: url('../../assets/runtime/ui/menu-art-v1/contracts-intel-table-v1.webp'); }
+.uga-command-shell[data-district="research"] { --uga-room-seal-art: url('../../assets/runtime/ui/menu-art-v1/research-directorate-v1.webp'); }
+.uga-command-shell[data-district="fabricator"] { --uga-room-seal-art: url('../../assets/runtime/ui/menu-art-v1/arsenal-fabrication-bay-v1.webp'); }
+.uga-command-shell[data-district="engineering"] { --uga-room-seal-art: url('../../assets/runtime/ui/menu-art-v1/uga-engineering-systems-v1.webp'); }
+.uga-command-shell[data-district="factions"] { --uga-room-seal-art: url('../../assets/runtime/ui/menu-art-v1/uga-coalition-embassy-v1.webp'); }
+.uga-command-shell[data-district="habitat"] { --uga-room-seal-art: url('../../assets/runtime/ui/menu-art-v1/uga-habitat-medical-v1.webp'); }
+.uga-command-shell[data-district="hangar"] { --uga-room-seal-art: url('../../assets/runtime/ui/menu-art-v1/uga-strike-hangar-v1.webp'); }
+.uga-command-shell[data-district="logistics"] { --uga-room-seal-art: url('../../assets/runtime/ui/menu-art-v1/uga-logistics-cargo-v1.webp'); }
+#moduleFrame[data-scene="uga"]:not([data-uga-visual-state="ready"]) .uga-command-shell[data-stage="room"] {
+  background-color: #06131f;
+  background-image: linear-gradient(90deg, rgba(2, 10, 17, .72), rgba(2, 10, 17, .25) 48%, rgba(2, 10, 17, .73)), var(--uga-room-seal-art);
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+/* The room rail is a map of the explorer's interior, not three anonymous
+   decks. On phones its old DOM order painted room buttons before their deck
+   selector and stacked two telemetry bands over the same scene. */
+.uga-ship-location { display: none; }
+.uga-deck-filter-bar .uga-filter-chip small { color: var(--uga-cyan); font: 800 9px/1 Consolas, monospace; }
+.uga-deck-filter-bar .uga-filter-chip span { min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 480px) and (orientation: portrait) {
+  .uga-command-shell[data-stage="room"] {
+    --uga-mobile-header: calc(102px + max(6px, env(safe-area-inset-top)));
+  }
+  .uga-command-shell[data-stage="room"] .uga-command-header {
+    height: var(--uga-mobile-header);
+    min-height: var(--uga-mobile-header);
+    grid-template-rows: 44px 40px;
+    gap: 2px;
+    padding-top: max(6px, env(safe-area-inset-top));
+  }
+  .uga-command-shell[data-stage="room"] .uga-command-identity span:not(.uga-command-crest) {
+    display: block;
+    margin-top: 3px;
+    color: #9dcddd;
+    font: 800 9px/1.1 Consolas, monospace;
+    letter-spacing: .04em;
+    white-space: nowrap;
+  }
+  .uga-command-shell[data-stage="room"] .uga-resource-ribbon {
+    width: 100%;
+    height: 40px;
+    padding: 2px 0;
+    border-top: 1px solid rgba(100, 198, 229, .3);
+    border-bottom: 1px solid rgba(100, 198, 229, .3);
+    border-radius: 0;
+    background: rgba(3, 15, 24, .9);
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+  .uga-command-shell[data-stage="room"] .uga-resource-ribbon::after { display: none; }
+  .uga-command-shell[data-stage="room"] .uga-resource {
+    flex: 0 0 70px;
+    min-width: 70px;
+    height: 34px;
+    padding: 3px 5px 2px 18px;
+    border-left: 1px solid rgba(101, 180, 204, .15);
+  }
+  .uga-command-shell[data-stage="room"] .uga-resource > span { left: 3px; top: 7px; }
+  .uga-command-shell[data-stage="room"] .uga-resource b { font-size: 11px; line-height: 1; }
+  .uga-command-shell[data-stage="room"] .uga-resource small { display: block; margin-top: 3px; font-size: 8px; line-height: 1; }
+  .uga-command-shell[data-stage="room"] .uga-district-rail {
+    top: 4px;
+    left: var(--uga-edge);
+    right: var(--uga-edge);
+    height: 132px;
+    display: block;
+  }
+  .uga-command-shell[data-stage="room"] .uga-rail-top {
+    top: 0;
+    left: 0;
+    right: 0;
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) 93px;
+    grid-template-rows: 34px 44px;
+    gap: 4px;
+    margin: 0;
+  }
+  .uga-command-shell[data-stage="room"] .uga-ship-location {
+    grid-column: 1 / 3;
+    grid-row: 1;
+    min-width: 0;
+    display: grid;
+    align-content: center;
+    padding: 3px 7px;
+    border-left: 2px solid var(--uga-cyan);
+    background: rgba(3, 17, 27, .92);
+  }
+  .uga-command-shell[data-stage="room"] .uga-ship-location b { color: #e8f7fd; font-size: 10px; line-height: 1.1; letter-spacing: .04em; }
+  .uga-command-shell[data-stage="room"] .uga-ship-location small { color: #93c4d8; font: 800 8px/1.1 Consolas, monospace; }
+  .uga-command-shell[data-stage="room"] .uga-location-power { display: none; }
+  .uga-command-shell[data-stage="room"] .uga-ship-telemetry-badge {
+    grid-column: 3;
+    grid-row: 1;
+    width: auto;
+    min-width: 0;
+    height: 34px;
+    padding: 3px 5px;
+  }
+  .uga-command-shell[data-stage="room"] .uga-telemetry-power small { display: flex; font-size: 8px; line-height: 1; }
+  .uga-command-shell[data-stage="room"] .uga-telemetry-power small .uga-svg { width: 9px; height: 9px; }
+  .uga-command-shell[data-stage="room"] .uga-telemetry-power b { font-size: 10px; line-height: 1.1; white-space: nowrap; }
+  .uga-command-shell[data-stage="room"] .uga-overview-button { grid-column: 1; grid-row: 2; width: 44px; height: 44px; }
+  .uga-command-shell[data-stage="room"] .uga-sector-filter-bar {
+    grid-column: 2 / 4;
+    grid-row: 2;
+    width: auto;
+    min-width: 0;
+    min-height: 44px;
+    gap: 3px;
+    padding: 0;
+    background: transparent;
+  }
+  .uga-command-shell[data-stage="room"] .uga-filter-chip { min-width: 0; min-height: 44px; padding: 3px 2px; gap: 3px; font-size: 9px; letter-spacing: 0; }
+  .uga-command-shell[data-stage="room"] .uga-district-list {
+    position: absolute;
+    top: 82px;
+    left: 0;
+    right: 0;
+    width: auto;
+    height: 48px;
+    padding: 2px 24px 2px 2px;
+  }
+  .uga-command-shell[data-stage="room"] .uga-district-scroll-cue { top: 82px; }
+}
+
+@media (max-width: 1024px) and (max-height: 620px) and (orientation: landscape) {
+  .uga-command-shell[data-stage="room"] .uga-command-header {
+    height: 88px;
+    min-height: 88px;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 38px 36px;
+    gap: 2px;
+    padding: 4px 54px 4px 10px;
+  }
+  .uga-command-shell[data-stage="room"] .uga-command-identity span:not(.uga-command-crest) {
+    display: block;
+    margin-top: 2px;
+    color: #9dcddd;
+    font: 800 9px/1.1 Consolas, monospace;
+    letter-spacing: .04em;
+  }
+  .uga-command-shell[data-stage="room"] .uga-resource-ribbon {
+    width: 100%;
+    height: 36px;
+    padding: 2px 0;
+    border-top: 1px solid rgba(100, 198, 229, .3);
+    border-bottom: 1px solid rgba(100, 198, 229, .3);
+    border-radius: 0;
+    background: rgba(3, 15, 24, .9);
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+  .uga-command-shell[data-stage="room"] .uga-resource-ribbon::after { display: none; }
+  .uga-command-shell[data-stage="room"] .uga-resource { height: 30px; min-width: 68px; padding-block: 2px; }
+  .uga-command-shell[data-stage="room"] .uga-resource small { display: block; font-size: 8px; }
+  .uga-command-shell[data-stage="room"] .uga-command-stage { inset: 88px 0 54px; }
+  .uga-command-shell[data-stage="room"] .uga-district-rail {
+    top: 4px;
+    left: 10px;
+    right: 10px;
+    bottom: auto;
+    width: auto;
+    height: 100px;
+    display: block;
+  }
+  .uga-command-shell[data-stage="room"] .uga-rail-top {
+    top: 0;
+    left: 0;
+    right: 0;
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) 282px;
+    grid-template-rows: 44px;
+    align-items: stretch;
+    gap: 5px;
+    margin: 0;
+  }
+  .uga-command-shell[data-stage="room"] .uga-overview-button { grid-column: 1; grid-row: 1; width: 44px; height: 44px; }
+  .uga-command-shell[data-stage="room"] .uga-ship-location {
+    grid-column: 2;
+    grid-row: 1;
+    min-width: 0;
+    display: grid;
+    align-content: center;
+    padding: 4px 10px;
+    border-left: 2px solid var(--uga-cyan);
+    background: rgba(3, 17, 27, .92);
+  }
+  .uga-command-shell[data-stage="room"] .uga-ship-location b { color: #e8f7fd; font-size: 11px; line-height: 1.1; }
+  .uga-command-shell[data-stage="room"] .uga-ship-location small { color: #93c4d8; font: 800 9px/1.15 Consolas, monospace; }
+  .uga-command-shell[data-stage="room"] .uga-ship-telemetry-badge { display: none; }
+  .uga-command-shell[data-stage="room"] .uga-sector-filter-bar {
+    grid-column: 3;
+    grid-row: 1;
+    width: auto;
+    min-width: 0;
+    min-height: 44px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 3px;
+    padding: 0;
+    background: transparent;
+  }
+  .uga-command-shell[data-stage="room"] .uga-filter-chip { min-width: 0; min-height: 44px; padding: 3px 2px; gap: 3px; font-size: 9px; letter-spacing: 0; }
+  .uga-command-shell[data-stage="room"] .uga-district-list {
+    position: absolute;
+    top: 50px;
+    left: 0;
+    right: 0;
+    width: auto;
+    height: 48px;
+    padding: 2px 24px 2px 2px;
+  }
+  .uga-command-shell[data-stage="room"] .uga-district-scroll-cue { top: 50px; }
+}

@@ -55,6 +55,7 @@ function extractConst(source,name,exported=false){
 function validate(catalog,sources){
   if(!catalog||catalog.schemaVersion!==1||catalog.catalogId!=='massfront-stage10-exploration-planet-layout-profiles-v1')
     return fail('PLANET_PROFILE_SCHEMA_INVALID');
+  const SOURCE_PLANET_COUNT=7; // canon slot 7 (Zephyros) filled 2026-09-25; slot 8 stays pending.
   if(!exactKeys(catalog,TOP_KEYS)) return fail('PLANET_PROFILE_UNKNOWN_FIELD');
   if(catalog.status!=='AUTHORING_ONLY'||catalog.sourceOnly!==true||catalog.runtimeReady!==false||
     !same(catalog.runtimeRegistration,{manifest:false,boot:false,loader:false,runtimeActivationAllowed:false}))
@@ -70,15 +71,36 @@ function validate(catalog,sources){
   const bodies=[];
   for(const system of Object.values(sources.showcase)) for(let i=0;i<system.planets.length;i++)
     bodies.push({system,planet:system.planets[i],index:i});
-  const ids=bodies.map(row=>row.planet.id);
-  if(ids.length!==6||!same(authority.exactPlanetIds,ids)||
-    !same(sources.theatre.sourceInventories.authoredExplorationPlanets.ids,ids))
+  /* The chart also carries the four War Table homeworld bodies. They belong to
+     the base game's surface plan — stage-10 names them by their surface
+     inventory id (sombrero_AELOS, andromeda_PYRAETH, orion_NORDHALL,
+     helios_VESPERA) — not to the exploration slots. Every non-inventory body
+     must be the sole planet of a homeworld-named body; everything else must
+     match the exploration inventory exactly, in chart order. Before the War
+     Table merge this check compared the whole body list and could only pass
+     while the chart held the six exploration planets alone. */
+  const explorationIds=sources.theatre.sourceInventories.authoredExplorationPlanets.ids;
+  const homeworldNames=new Set(sources.theatre.sourceInventories.surfaceHomeworlds.ids);
+  const seenBodies=new Set();
+  for(const row of bodies){
+    if(seenBodies.has(row.planet.id)) return fail('PLANET_PROFILE_IDENTITY_COVERAGE_INVALID');
+    seenBodies.add(row.planet.id);
+  }
+  const exploration=bodies.filter(row=>explorationIds.includes(row.planet.id));
+  const extras=bodies.filter(row=>!explorationIds.includes(row.planet.id));
+  const ids=exploration.map(row=>row.planet.id);
+  if(!same(explorationIds,ids)||!same(authority.exactPlanetIds,ids)||
+    extras.length!==homeworldNames.size)
     return fail('PLANET_PROFILE_IDENTITY_COVERAGE_INVALID');
+  for(const row of extras){
+    if(!homeworldNames.has(row.planet.id.split('_').pop())||row.system.planets.length!==1)
+      return fail('PLANET_PROFILE_IDENTITY_COVERAGE_INVALID');
+  }
   if(!Array.isArray(catalog.identitySlots)||catalog.identitySlots.length!==8) return fail('PLANET_PROFILE_SLOT_COVERAGE_INVALID');
   for(let i=0;i<8;i++){
     const slot=catalog.identitySlots[i];
     if(slot?.slot!==i+1) return fail('PLANET_PROFILE_SLOT_INVALID',{index:i});
-    if(i<6){
+    if(i<SOURCE_PLANET_COUNT){
       if(slot.identityStatus!=='SOURCE_MATCHED'||slot.planetId!==ids[i]||slot.name!==bodies[i].planet.name)
         return fail('PLANET_PROFILE_SLOT_SOURCE_DRIFT',{index:i});
     }else if(slot.identityStatus!=='PENDING_CANON_NAME'||slot.planetId!==null||slot.name!==null)
@@ -104,7 +126,7 @@ function validate(catalog,sources){
   if(catalog.globalMapSupportFacts.standardSurface.supportLevel!=='NO_EXACT_SHOWCASE_PLANET_SURFACE_TOPOLOGY'||
     catalog.globalMapSupportFacts.standardSurface.exactSupportedPlanetIds.length)
     return fail('PLANET_PROFILE_UNPROVEN_STANDARD_SURFACE');
-  if(!Array.isArray(catalog.profiles)||catalog.profiles.length!==6||!same(catalog.profiles.map(row=>row.planetId),ids))
+  if(!Array.isArray(catalog.profiles)||catalog.profiles.length!==SOURCE_PLANET_COUNT||!same(catalog.profiles.map(row=>row.planetId),ids))
     return fail('PLANET_PROFILE_RECORD_COVERAGE_INVALID');
 
   let conditionalInteriors=0,standardBindings=0,conditionalSeaPlatforms=0;
@@ -149,11 +171,11 @@ function validate(catalog,sources){
     if(profile.evidenceState.identityAuthority!=='SOURCE_MATCHED'||profile.evidenceState.otherRequiredGates!=='MISSING'||
       profile.evidenceState.artifactPaths.length) return fail('PLANET_PROFILE_EVIDENCE_FALSE_GREEN',{planetId:profile.planetId});
   }
-  if(conditionalInteriors!==12||standardBindings!==0||conditionalSeaPlatforms!==1)
+  if(conditionalInteriors!==SOURCE_PLANET_COUNT*2||standardBindings!==0||conditionalSeaPlatforms!==1)
     return fail('PLANET_PROFILE_SUMMARY_INVALID',{conditionalInteriors,standardBindings,conditionalSeaPlatforms});
   const claims=catalog.assetClaims;
   if(!claims||Object.values(claims).some(value=>!Array.isArray(value)||value.length)) return fail('PLANET_PROFILE_ASSET_OR_CANON_CLAIMED');
-  return {ok:true,summary:{planetCount:6,pendingSlots:2,conditionalInteriors,standardBindings,conditionalSeaPlatforms,
+  return {ok:true,summary:{planetCount:SOURCE_PLANET_COUNT,pendingSlots:8-SOURCE_PLANET_COUNT,conditionalInteriors,standardBindings,conditionalSeaPlatforms,
     runtimeReady:false,assetClaimCount:0},semanticHash:digest(stable(catalog))};
 }
 
@@ -168,15 +190,15 @@ try{
   const catalog=JSON.parse(text.profiles),sources={showcase,theatre,manifest:text.manifest,boot:text.boot};
   const base=validate(catalog,sources);
   record('catalog.source-matched-and-inert',base.ok===true,{error:base.error||null,summary:base.summary||null});
-  record('coverage.six-planets-two-pending',base.ok&&base.summary.planetCount===6&&base.summary.pendingSlots===2);
-  record('concepts.twelve-restricted-interiors',base.ok&&base.summary.conditionalInteriors===12);
+  record('coverage.seven-planets-one-pending',base.ok&&base.summary.planetCount===7&&base.summary.pendingSlots===1);
+  record('concepts.fourteen-restricted-interiors',base.ok&&base.summary.conditionalInteriors===14);
   record('surface.zero-unproven-standard-bindings',base.ok&&base.summary.standardBindings===0);
   record('platform.caldris-only-conditional',base.ok&&base.summary.conditionalSeaPlatforms===1);
   record('activation.no-assets-no-runtime',base.ok&&base.summary.assetClaimCount===0&&base.summary.runtimeReady===false);
   const faults=[
     ['top-unknown',value=>{value.unprovenModel='fake.glb';},'PLANET_PROFILE_UNKNOWN_FIELD'],
     ['runtime',value=>{value.runtimeReady=true;},'PLANET_PROFILE_RUNTIME_ENABLED'],
-    ['slot-promoted',value=>{value.identitySlots[6]={slot:7,identityStatus:'SOURCE_MATCHED',planetId:'invented',name:'Invented'};},'PLANET_PROFILE_PENDING_SLOT_PROMOTED'],
+    ['slot-promoted',value=>{const index=value.identitySlots.findIndex(slot=>slot.identityStatus==='PENDING_CANON_NAME');value.identitySlots[index]={slot:index+1,identityStatus:'SOURCE_MATCHED',planetId:'invented',name:'Invented'};},'PLANET_PROFILE_PENDING_SLOT_PROMOTED'],
     ['identity-alias',value=>{value.identityAuthority.aliasesAllowed=true;},'PLANET_PROFILE_AUTHORITY_INVALID'],
     ['planet-order',value=>{value.profiles.reverse();},'PLANET_PROFILE_RECORD_COVERAGE_INVALID'],
     ['fact-biome',value=>{value.profiles[0].sourceFacts.biome='invented';},'PLANET_PROFILE_SOURCE_FACT_DRIFT'],

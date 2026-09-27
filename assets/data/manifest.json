@@ -112,6 +112,7 @@
     "src/galactic-operations.js",
     "src/onboarding.js",
     "src/career-faction-gate.js",
-    "src/ui/cinematic-hud.js"
+    "src/ui/cinematic-hud.js",
+    "src/stormpeak-tester.js"
   ]
 }

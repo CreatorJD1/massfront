@@ -4,17 +4,23 @@
    -------------------------------------------------------------------------- */
 
 export class AsteroidFieldMesh {
-  static create(count = 60, radius = 220, width = 45, random = Math.random) {
+  // `options` let a system restyle its belt. Defaults keep the warm grey
+  // palette that reads as rock under a star. Starless systems (Veyra's
+  // singularity) light rock only with the cool ship fills, so the warm
+  // palette rendered as glowing teal orbs — the 2026-09-25 bug report.
+  static create(count = 60, radius = 220, width = 45, random = Math.random, options = {}) {
     const field = new THREE.Group();
     const asteroids = [];
     const total = Math.max(0, Math.floor(count));
 
     const matRock = new THREE.MeshStandardMaterial({
-      color: 0x756b5d,
+      color: options.rockColor ?? 0x756b5d,
       roughness: 0.88,
       metalness: 0.12
     });
-    const matOreGlow = new THREE.MeshBasicMaterial({ color: 0x00f0ff });
+    const matOreGlow = new THREE.MeshBasicMaterial({ color: options.oreColor ?? 0x00f0ff });
+    // Per-instance shade keeps the band from flattening into one grey value.
+    const tint = options.rockTint || [1, 0.91, 0.78];
 
     let oreCount = 0;
     for (let i = 0; i < total; i++) {
@@ -71,7 +77,7 @@ export class AsteroidFieldMesh {
 
     let oreIndex = 0;
     asteroids.forEach((asteroid, index) => {
-      instanceColor.setRGB(asteroid.shade, asteroid.shade * 0.91, asteroid.shade * 0.78);
+      instanceColor.setRGB(asteroid.shade * tint[0], asteroid.shade * tint[1], asteroid.shade * tint[2]);
       if (typeof rockMesh.setColorAt === 'function') rockMesh.setColorAt(index, instanceColor);
       if (asteroid.hasOre) asteroid.oreIndex = oreIndex++;
     });

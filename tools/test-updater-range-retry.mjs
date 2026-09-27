@@ -6,7 +6,9 @@ import {fileURLToPath} from 'node:url';
 import vm from 'node:vm';
 
 const root=resolve(fileURLToPath(new URL('..',import.meta.url)));
-const source=await readFile(resolve(root,'src/updater.js'),'utf8');
+/* Optional path argument so a mutated copy can prove this gate still fails when
+   the cancellation it guards is removed. */
+const source=await readFile(process.argv[2]||resolve(root,'src/updater.js'),'utf8');
 const constants=source.match(/const UPD_FETCH_ATTEMPTS=[^;]+;/)?.[0];
 const start=source.indexOf('async function updReadResponseBytes');
 const end=source.indexOf('async function updDownloadArtifact',start);
@@ -15,8 +17,29 @@ assert.ok(constants&&start>=0&&end>start,'updater retry implementation is missin
 const warnings=[];
 let fetchImpl;
 const math=Object.create(Math); math.random=()=>0;
+/* Instrumented timers. updRetryDelay() schedules the backoff with setTimeout
+   and, on abort, clearTimeout()s it and rejects without that timer ever firing.
+   Recording the timers turns "cancellation interrupts the backoff" into a fact
+   this test can read directly, instead of racing a wall clock: the old version
+   asserted the call returned inside 180 ms while the first backoff is 220-440 ms,
+   so on a loaded machine (the publisher builds while its gates run) a correct
+   run blew the budget and aborted the release. Behaviour is unchanged — these
+   delegate to the real timers. */
+const timers=[];
+const recordingSetTimeout=(fn,ms,...rest)=>{
+  const record={ms,fired:false,cleared:false};
+  record.id=setTimeout(()=>{record.fired=true;return fn(...rest);},ms);
+  timers.push(record);
+  return record.id;
+};
+const recordingClearTimeout=id=>{
+  const record=timers.find(row=>row.id===id);
+  if(record) record.cleared=true;
+  return clearTimeout(id);
+};
 const sandbox={
-  URL,Date,Math:math,Uint8Array,AbortController,setTimeout,clearTimeout,
+  URL,Date,Math:math,Uint8Array,AbortController,
+  setTimeout:recordingSetTimeout,clearTimeout:recordingClearTimeout,
   location:{href:'https://localhost/'},navigator:{onLine:true},
   console:{warn:(...args)=>warnings.push(args)},
   UPD:{downloadRun:7,transferDiagnostic:null},
@@ -35,9 +58,12 @@ const sandbox={
 };
 vm.createContext(sandbox);
 vm.runInContext(constants+'\n'+source.slice(start,end)+`\n;globalThis.retryApi={
-  updFetchArtifactPart,updArtifactAttemptUrl,updArtifactDiagnostic
+  updFetchArtifactPart,updArtifactAttemptUrl,updArtifactDiagnostic,UPD_FETCH_BACKOFF_MS
 };`,sandbox,{filename:'src/updater.js:range-retry'});
 const api=sandbox.retryApi;
+/* Read the real backoff out of the source rather than restating it here. */
+const UPD_FETCH_BACKOFF_MS=api.UPD_FETCH_BACKOFF_MS;
+assert.ok(Number.isFinite(UPD_FETCH_BACKOFF_MS)&&UPD_FETCH_BACKOFF_MS>0,'UPD_FETCH_BACKOFF_MS should be exported for the cancellation case');
 
 const bytes=new TextEncoder().encode('ABCDEFGHIJ');
 const hash=value=>createHash('sha256').update(value).digest('hex');
@@ -161,13 +187,25 @@ reset();
 {
   let calls=0;
   fetchImpl=async()=>{calls++;throw new TypeError('radio dropped');};
-  const ac=new AbortController(),started=Date.now();
+  const ac=new AbortController();
+  timers.length=0;
   const pending=api.updFetchArtifactPart('https://cdn.example/object',manifest,file,
     chunks[0],0,chunks.length,7,ac,()=>{});
-  setTimeout(()=>ac.abort(),15);
+  /* Abort once the backoff timer exists, so this tests the interrupt rather
+     than a race to beat the scheduler. */
+  const armed=await new Promise(resolve=>{
+    const poll=()=>timers.length?resolve(true):setTimeout(poll,5);
+    poll();
+  });
+  assert.ok(armed&&timers.length===1,'the retry backoff should have scheduled exactly one timer');
+  const backoff=timers[0];
+  assert.ok(backoff.ms>=UPD_FETCH_BACKOFF_MS,`backoff timer should wait at least ${UPD_FETCH_BACKOFF_MS}ms, got ${backoff.ms}`);
+  ac.abort();
   await assert.rejects(pending,error=>error&&error.name==='AbortError');
   assert.equal(calls,1);
-  assert.ok(Date.now()-started<180,'cancel waited through retry backoff');
+  /* The interrupt, stated as the two things that must be true of that timer. */
+  assert.equal(backoff.cleared,true,'cancel must clear the pending retry backoff timer');
+  assert.equal(backoff.fired,false,'cancel waited through retry backoff');
 }
 
 console.log(JSON.stringify({ok:true,attempts:3,retryHttp:[408,425,429,500,503],

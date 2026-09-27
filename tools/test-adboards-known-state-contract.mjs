@@ -92,6 +92,7 @@ assert.match(adSource,/if \(visible\.length\) adDrawScreens\(visible,knownState\
   const seen=[];
   const ctx=vm.createContext({
     adBoards:[{x:1,y:2,creative:'a'}],adFlushFrames:()=>{},adCamBoundsSafe:()=>({}),adVis:()=>true,
+    adProjectedVisible:()=>true,adFogVisible:()=>true,adAdsEnabled:()=>true,adResetDwell:()=>{},adPauseAll:()=>{},
     performance:{now:()=>1000},AD_UPLOAD_MS:100,adUpdateCreatives:()=>{},adUpdateImpressions:()=>{},
     adUpdateRotation:()=>{},adDrawScreens:(_list,state)=>seen.push(state),Set,Math
   });

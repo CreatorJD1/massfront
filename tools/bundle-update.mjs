@@ -2,7 +2,7 @@
    the classic scripts so an older installed package is never asked to run new
    controllers against stale menu markup. One payload also keeps the channel
    atomic: shell and behavior can only arrive together. */
-import { readFileSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -30,15 +30,63 @@ for(const need of ['assets/data/unitrows.js','src/engine/organicfx.js','src/rumb
    PACK, and still heard nothing, because the index naming those takes was
    never delivered. The audio is useless without the list of what the audio is.
    37 KB inlined closes it; the pack still carries the actual sound. */
-const OTA_MIME={png:'image/png',jpg:'image/jpeg',json:'application/json',webp:'image/webp'};
+const OTA_MIME={png:'image/png',jpg:'image/jpeg',json:'application/json',webp:'image/webp',
+  /* The Stormpeak closure below needs these four. A module document is not art:
+     it is markup, a stylesheet, ES modules and a font. */
+  html:'text/html',css:'text/css',js:'text/javascript',ttf:'font/ttf',svg:'image/svg+xml'};
 const explorationDelivery=JSON.parse(readFileSync(join(root,'assets/data/exploration-pack-remote.json'),'utf8'));
 const hasExplorationDelivery=explorationDelivery.schema==='MassfrontExplorationPackRemoteV2';
 if(hasExplorationDelivery&&(!/^[a-f0-9]{64}$/.test(explorationDelivery.manifestSha256||'')
   ||!Number.isSafeInteger(explorationDelivery.manifestBytes)||explorationDelivery.manifestBytes<=0
   ||explorationDelivery.version!==version))throw new Error('OTA Galactic delivery descriptor is not bound to this release');
+
+/* THE OCEAN THEATRE TESTER RIDES THE UPDATE ITSELF.
+   modules/ has never been in the OTA payload, and cannot be: every artifact in
+   it is JavaScript, because the payload is EXECUTED rather than written to
+   disk. The tester is a separate DOCUMENT opened by URL, so an installed
+   package that predates the module has no file to serve and the tap dies —
+   which is exactly what was reported. Carry its built closure inline here as
+   data: URIs; src/content-mount.js materialises it into native storage on
+   first use and opens it through the same same-origin /_capacitor_file_/ route
+   the Galactic content pack already uses.
+   7 files / ~1.2 MiB, so roughly 1.6 MiB of base64 on every payload. That is
+   the price of the tester arriving WITH the update instead of as a second
+   download. Absent dist/ (a slim or diagnostic build) simply ships nothing. */
+const stormpeakDistDir=join(root,'modules/stormpeak_ocean/dist');
+const stormpeakManifestPath=join(stormpeakDistDir,'stormpeak-runtime-manifest-v1.json');
+let stormpeakDelivery=null;
+if(existsSync(stormpeakManifestPath)){
+  const manifest=JSON.parse(readFileSync(stormpeakManifestPath,'utf8'));
+  if(manifest.kind!=='StormpeakRuntimeManifestV1'||manifest.schemaVersion!==1
+    ||!Array.isArray(manifest.files)||!manifest.files.length)
+    throw new Error('Stormpeak runtime manifest is invalid; run modules/stormpeak_ocean npm run build:tester');
+  let total=0;
+  const files=manifest.files.map(entry=>{
+    const rel=String(entry.path||'').replace(/\\/g,'/');
+    /* Same path discipline as the content delivery contract: no absolute, no
+       traversal, and nothing that could escape the mount directory. */
+    if(!rel||rel.startsWith('/')||rel.includes('..')
+      ||rel.split('/').some(part=>!/^[A-Za-z0-9][A-Za-z0-9._+-]*$/.test(part)))
+      throw new Error('Unsafe stormpeak OTA path: '+rel);
+    const bytes=readFileSync(join(stormpeakDistDir,...rel.split('/')));
+    const hash='sha256-'+createHash('sha256').update(bytes).digest('hex');
+    if(bytes.length!==entry.bytes||hash!==entry.hash)
+      throw new Error('Stale stormpeak runtime manifest entry: '+rel+' — rebuild the tester');
+    const ext=rel.split('.').pop().toLowerCase(),mime=OTA_MIME[ext];
+    if(!mime) throw new Error('no OTA mime type for .'+ext+' ('+rel+') — add it to OTA_MIME');
+    total+=bytes.length;
+    return {path:rel,bytes:entry.bytes,sha256:hash.slice(7),uri:'data:'+mime+';base64,'+bytes.toString('base64')};
+  });
+  if(total!==manifest.totalBytes)
+    throw new Error('Stormpeak runtime manifest total does not match its files');
+  /* The mount refuses a closure with no entry point, so fail here instead. */
+  if(!files.some(file=>file.path==='index.html'))
+    throw new Error('Stormpeak OTA closure has no index.html entry point');
+  stormpeakDelivery={version,totalBytes:manifest.totalBytes,files};
+}
 const otaBinaryAssets=[
   'assets/data/exploration-pack-remote.json',
-  'assets/brand/massfront-title-command-conquer-overwhelm-v1.png',
+  'assets/brand/massfront-title-command-conquer-overwhelm-v1.webp',
   'assets/modifiers/modifier-art-atlas-v1.png',
   'assets/factions/cinematic/terran-frontline-command-v1.png',
   'assets/factions/cinematic/crimson-dominion-v1.png',
@@ -53,6 +101,19 @@ const otaBinaryAssets=[
   'assets/factions/commanders/syndicate_renn.jpg',
   'assets/factions/commanders/syndicate_nyx.jpg',
   'assets/factions/commanders/syndicate_voss.jpg',
+  /* Canonical speaking previews and contextual menu plates are new binary
+     dependencies in 1.33.89. CSS/source is replaced by OTA, so these bytes
+     must travel with it for devices whose installed package predates them. */
+  'assets/factions/commanders/nova_kai-speaking.webp',
+  'assets/factions/commanders/syndicate_renn-speaking.webp',
+  'assets/textures/ui/menu-art-v1/arsenal-fabrication-bay-v1.webp',
+  'assets/textures/ui/menu-art-v1/career-service-record-v1.webp',
+  'assets/textures/ui/menu-art-v1/contracts-intel-table-v1.webp',
+  'assets/textures/ui/menu-art-v1/inbox-communications-v1.webp',
+  'assets/textures/ui/menu-art-v1/operations-war-table-v1.webp',
+  'assets/textures/ui/menu-art-v1/research-directorate-v1.webp',
+  'assets/textures/ui/menu-art-v1/settings-calibration-bay-v1.webp',
+  'assets/textures/ui/menu-art-v1/social-crew-lounge-v1.webp',
   /* The cinematic command skin is referenced from ui.css. Include it in the
      atomic shell so OTA-only players do not render an unskinned fallback when
      their original installer predates the HUD overhaul. */
@@ -177,6 +238,12 @@ const OTA_RUNTIME_PATHS=[
   'assets/textures/ui/icons-legion.png',
   'assets/textures/ui/icons-syndicate.png',
   'assets/textures/ui/icons-horde.png',
+  /* itemArt() builds these paths dynamically, so source-string substitution
+     cannot see them. The resolver map is the correct OTA delivery seam. */
+  'assets/icons/items/res_asc_crown_battery.png',
+  'assets/icons/items/res_asc_iron_discipline.png',
+  'assets/icons/items/res_syn_drone_mesh.png',
+  'assets/icons/items/res_syn_phase_lattice.png',
   'assets/textures/materials/nova-rhino-v2-baseao.png',
   'assets/textures/materials/nova-rhino-v2-nre.png',
   'assets/textures/materials/nova-rhino-v2-masks.png',
@@ -238,6 +305,9 @@ const preludeRuntimeBase=`(function(){
      resolves. Absent in the APK/dev build, where the real files are on disk and
      the loaders fall back to their normal path. */
   window.__MF_OTA_HAS_GALACTIC_DELIVERY=${JSON.stringify(hasExplorationDelivery)};
+  /* The Ocean Theatre Tester's whole document closure, bound to this exact
+     release. src/content-mount.js writes it to native storage on demand. */
+  window.__MF_OTA_STORMPEAK=${JSON.stringify(stormpeakDelivery)};
   window.__MF_OTA_ASSETS=${JSON.stringify(otaRuntimeAssets)};
   window.mf2AssetURL=function(path){
     var p=String(path||'');

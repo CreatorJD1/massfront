@@ -39,8 +39,9 @@ const host = new MassfrontSoloHost({
 
 const state = createShowcaseReadyDomainState();
 state.profileId = profileId;
-state.missions.uga_pale_bloom.completions = 1;
-state.missions.uga_silent_spine.completions = 1;
+// This authority sweep includes later regions; their preceding missions are
+// settled, while each region's first-clear battlefield remains Compact.
+for (const missionId of Object.keys(MISSION_CATALOG)) state.missions[missionId].completions = 1;
 
 const operations = new Map();
 let index = 0;
@@ -48,12 +49,12 @@ for (const mission of Object.values(MISSION_CATALOG)) {
   const operation = createGroundOperation(state, {
     missionId: mission.id,
     factionId: mission.contractFactionId || 'nova',
-    mapId: getUgaGroundAreaForMission(mission.id).recommendedMapId
+    mapId: getUgaGroundAreaForMission(mission.id).maps.find(map => map.size === 'compact').id
   });
   operations.set(mission.id, operation);
   assert.equal(host.validateIntegratedOperation(operation), operation, `${mission.id} raw operation`);
   assert.deepEqual(operation.objective, mission.objective, `${mission.id} objective must remain authored`);
-  assert.equal(operation.battlefield.location.mapId, getUgaGroundAreaForMission(mission.id).recommendedMapId);
+  assert.equal(operation.battlefield.location.mapId, getUgaGroundAreaForMission(mission.id).maps.find(map => map.size === 'compact').id);
 
   const nonce = `galactic_adapter_${String(index).padStart(4, '0')}`;
   const request = createGroundOperationRequestV2(operation, {

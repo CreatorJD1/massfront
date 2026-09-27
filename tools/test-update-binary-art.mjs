@@ -149,12 +149,40 @@ function validateRuntimeAssetMap(runtimeText){
   }
   for(const path of ['assets/textures/ui/cmdicons.png','assets/textures/ui/icon-index.json',
     'assets/textures/ui/icons-nova.png','assets/textures/ui/icons-legion.png',
-    'assets/textures/ui/icons-syndicate.png','assets/textures/ui/icons-horde.png']){
+    'assets/textures/ui/icons-syndicate.png','assets/textures/ui/icons-horde.png',
+    'assets/icons/items/res_asc_crown_battery.png','assets/icons/items/res_asc_iron_discipline.png',
+    'assets/icons/items/res_syn_drone_mesh.png','assets/icons/items/res_syn_phase_lattice.png']){
     if(!Object.prototype.hasOwnProperty.call(map,path))fail('OTA runtime asset map is missing '+path);
   }
   if(!runtimeText.includes('window.mf2AssetURL=function'))
     fail('OTA runtime artifact does not install mf2AssetURL');
   return {assetCount:entries.length,embeddedBytes,uniquePayloads:hashes.size};
+}
+
+function validateInterfaceArt(artifacts){
+  const joined=artifacts.map(item=>item.text).join('\n'),checked=[];
+  const paths=[
+    'assets/factions/commanders/nova_kai-speaking.webp',
+    'assets/factions/commanders/syndicate_renn-speaking.webp',
+    'assets/textures/ui/menu-art-v1/arsenal-fabrication-bay-v1.webp',
+    'assets/textures/ui/menu-art-v1/career-service-record-v1.webp',
+    'assets/textures/ui/menu-art-v1/contracts-intel-table-v1.webp',
+    'assets/textures/ui/menu-art-v1/inbox-communications-v1.webp',
+    'assets/textures/ui/menu-art-v1/operations-war-table-v1.webp',
+    'assets/textures/ui/menu-art-v1/research-directorate-v1.webp',
+    'assets/textures/ui/menu-art-v1/settings-calibration-bay-v1.webp',
+    'assets/textures/ui/menu-art-v1/social-crew-lounge-v1.webp'
+  ];
+  for(const path of paths){
+    const bytes=readFileSync(join(root,...path.split('/')));
+    const uri='data:image/webp;base64,'+bytes.toString('base64');
+    const embedded=countOccurrences(joined,uri);
+    if(embedded<1)fail(path+' is not embedded in the OTA payload');
+    for(const ref of [path,'./'+path,'../../'+path,'../../../../'+path])
+      if(joined.includes(ref))fail(path+' still has an external OTA reference: '+ref);
+    checked.push({path,bytes:bytes.length,sha256:sha256(bytes),embedded});
+  }
+  return checked;
 }
 
 function validateCinematicHudArt(artifacts){
@@ -218,6 +246,7 @@ const selected=selectPayload();
 const loaded=selected.format==='per-file'?loadPerFilePayload(selected):loadLegacyPayload(selected);
 const runtimeAssets=validateRuntimeAssetMap(loaded.runtimeText);
 const cinematicHudArt=validateCinematicHudArt(loaded.artifacts);
+const interfaceArt=validateInterfaceArt(loaded.artifacts);
 const commanders=validateCommanderArt(loaded.artifacts);
 
 console.log(JSON.stringify({
@@ -229,5 +258,6 @@ console.log(JSON.stringify({
   payloadBytes:loaded.payloadBytes,
   runtimeAssets,
   cinematicHudArt,
+  interfaceArt,
   commanderArt:commanders
 },null,2));

@@ -22,8 +22,14 @@ const STATIONS = Object.freeze({
 
 const FACTION_COLORS = Object.freeze({
   nova: 0x42ddff,
-  dominion: 0xffa84b,
-  syndicate: 0xc87bff
+  dominion: 0xff684d,
+  syndicate: 0xb778ff
+});
+
+const FACTION_BAY_STYLES = Object.freeze({
+  nova: Object.freeze({ deck: 0x172b38, armor: 0x334d60, light: 0x42ddff, label: '#70e5ff', callout: 'NOVA // ORBITAL CARRIER' }),
+  dominion: Object.freeze({ deck: 0x302018, armor: 0x603027, light: 0xff684d, label: '#ff9471', callout: 'DOMINION // ASSAULT LANDER' }),
+  syndicate: Object.freeze({ deck: 0x251b34, armor: 0x49345e, light: 0xb778ff, label: '#d1a2ff', callout: 'SYNDICATE // PHASE MANTA' })
 });
 
 function semantic(object, role, hotspot = null) {
@@ -454,6 +460,25 @@ function addDeckLabel(parent, name, label, x, y, width, color = '#68dfff') {
   return decal;
 }
 
+function repaintDeckLabel(decal, label, color) {
+  const texture = decal?.material?.map;
+  const canvas = texture?.image;
+  const context = canvas?.getContext?.('2d');
+  if (!context) return;
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.strokeStyle = color;
+  context.globalAlpha = .72;
+  context.lineWidth = 3;
+  context.strokeRect(3, 3, canvas.width - 6, canvas.height - 6);
+  context.globalAlpha = .92;
+  context.fillStyle = color;
+  context.font = '700 31px Consolas, monospace';
+  context.textAlign = 'center';
+  context.textBaseline = 'middle';
+  context.fillText(label, canvas.width / 2, canvas.height / 2 + 1);
+  texture.needsUpdate = true;
+}
+
 function findHotspot(object) {
   let current = object;
   while (current) {
@@ -471,6 +496,8 @@ export function createUgaDeploymentArena(commandScene, options = {}) {
   let pilotHologram = null;
   let serviceArm = null;
   let operationalLight = null;
+  let bayLight = null;
+  let factionBerthLabel = null;
   let arenaHost = null;
   let selectedDeploymentShip = null;
   let authoredPresentation = null;
@@ -498,6 +525,7 @@ export function createUgaDeploymentArena(commandScene, options = {}) {
   const syndicateShipSecondary = material('Syndicate HQ Deployment Ship Trim', 0x68427d, 0x2e0c48, .15, { metalness: .62, roughness: .26, family: 'hq-deployment-ship-syndicate' });
   const shipHot = material('HQ Deployment Ship Hot Systems', 0x35150a, 0xff702e, .82, { metalness: .12, roughness: .18, family: 'hq-deployment-ship-emissive', selectionEmphasis: true });
   const accent = material('NEXUS-VII Operational Luminance', 0x09212c, 0x25b7df, .62, { metalness: .12, roughness: .22, family: 'strike-bay-systems', selectionEmphasis: true });
+  const factionRail = material('NEXUS-VII Faction Berth Rails', 0x17313a, 0x42ddff, .78, { metalness: .18, roughness: .26, family: 'strike-bay-faction-berth', selectionEmphasis: true });
   const amber = material('NEXUS-VII Cargo Lock Indicators', 0x291b0b, 0x5f3208, .30, { metalness: .22, roughness: .32, family: 'strike-bay-cargo', selectionEmphasis: true });
   const hazardDark = material('NEXUS-VII Hazard Stripe Dark', 0x090b0c, 0x000000, 0, { metalness: .42, roughness: .62, family: 'strike-bay-decal' });
   const holo = material('NEXUS-VII Personnel Hologram', 0x082b35, 0x1da7c9, .72, { transparent: true, opacity: .26, depthWrite: false, metalness: 0, roughness: .18, family: 'strike-bay-hologram', side: THREE.DoubleSide });
@@ -582,12 +610,20 @@ export function createUgaDeploymentArena(commandScene, options = {}) {
 
     // Strong floor hierarchy: service lanes, a deployer centerline, muster
     // boxes and alternating hazard segments around the maintenance turntable.
-    addStrip('hangar_MainServiceLanePort', -7.0, -15.5, -7.0, 14.9, .10, accent);
-    addStrip('hangar_MainServiceLaneStarboard', 7.0, -15.5, 7.0, 14.9, .10, accent);
+    addStrip('hangar_MainServiceLanePort', -7.0, -15.5, -7.0, 14.9, .16, factionRail);
+    addStrip('hangar_MainServiceLaneStarboard', 7.0, -15.5, 7.0, 14.9, .16, factionRail);
+    addStrip('hangar_FactionBerthThreshold', -6.8, -10.2, 6.8, -10.2, .20, factionRail);
+    // Keep the faction signature beside the actual .42-scale craft. The outer
+    // lanes alone reduce to one-pixel marks in the phone's cutaway camera.
+    addStrip('hangar_FactionBerthPort', -3.45, -7.65, -3.45, -.55, .38, factionRail);
+    addStrip('hangar_FactionBerthStarboard', 3.45, -7.65, 3.45, -.55, .38, factionRail);
+    addStrip('hangar_FactionBerthAft', -3.45, -.55, 3.45, -.55, .34, factionRail);
+    addStrip('hangar_FactionBerthThresholdPort', -3.45, -7.65, -1.95, -8.55, .38, factionRail);
+    addStrip('hangar_FactionBerthThresholdStarboard', 3.45, -7.65, 1.95, -8.55, .38, factionRail);
     addStrip('hangar_DeployerCenterline', 0, -15.5, 0, 14.9, .075, amber);
     addStrip('hangar_MusterBaseline', -11.4, -8.85, -7.2, -8.85, .095, amber);
     addStrip('hangar_CargoLane', 7.0, 1.75, 11.2, 1.75, .085, amber);
-    addDeckLabel(root, 'hangar_DeployerLaneLabel', 'DEPLOYMENT // BERTH 01', 0, 1.25, 4.2);
+    factionBerthLabel = addDeckLabel(root, 'hangar_DeployerLaneLabel', 'NOVA // ORBITAL CARRIER', 0, 1.25, 5.2);
     addDeckLabel(root, 'hangar_CommandChassisLabel', 'COMMAND CHASSIS 01', 4.5, -.42, 2.15);
     addDeckLabel(root, 'hangar_MusterLaneLabel', 'MUSTER 01 // 02 // 03', -9.3, -9.25, 2.55, '#f2b34d');
     addDeckLabel(root, 'hangar_StructureCargoLabel', 'STRUCTURE CARGO', 9.15, 8.25, 2.25, '#f2b34d');
@@ -809,7 +845,7 @@ export function createUgaDeploymentArena(commandScene, options = {}) {
     operationalLight.position.set(4.5, -4.5, 8.4);
     operationalLight.target.position.set(0, -.3, 1.2);
     root.add(operationalLight, operationalLight.target);
-    const bayLight = new THREE.PointLight(0x2ab7d8, .46, 18, 2.0);
+    bayLight = new THREE.PointLight(0x2ab7d8, .70, 18, 2.0);
     bayLight.position.set(-4.8, 1.8, 3.8);
     root.add(bayLight);
 
@@ -894,15 +930,24 @@ export function createUgaDeploymentArena(commandScene, options = {}) {
       }
     }
     activeStation = STATIONS[draft?.station] ? draft.station : activeStation;
-    const factionColor = FACTION_COLORS[draft?.proxyFactionId] || FACTION_COLORS.nova;
+    const shipFaction = DEPLOYMENT_SHIP_PROFILES[draft?.proxyFactionId] ? draft.proxyFactionId : 'nova';
+    const factionColor = FACTION_COLORS[shipFaction];
+    const bayStyle = FACTION_BAY_STYLES[shipFaction];
     const restrainedFactionColor = new THREE.Color(factionColor).multiplyScalar(.36);
     for (const mat of accentMaterials) {
       mat.emissive?.copy?.(restrainedFactionColor);
       if (mat === holo) mat.color?.copy?.(restrainedFactionColor);
     }
+    // The NEXUS-VII pressure shell stays shared, but the active commander's
+    // leased berth carries their faction's deck paint, armor, rails and light.
+    transit.color.setHex(bayStyle.deck);
+    commandArmor.color.setHex(bayStyle.armor);
+    factionRail.color.setHex(bayStyle.deck);
+    factionRail.emissive.setHex(bayStyle.light);
+    bayLight?.color.setHex(bayStyle.light);
+    repaintDeckLabel(factionBerthLabel, bayStyle.callout, bayStyle.label);
     const stagedUnitCount = (draft?.deploymentManifest?.units || []).reduce((sum, item) => sum + Math.max(0, Number(item.count) || 0), 0);
     const stagedStructureCount = (draft?.deploymentManifest?.structures || []).reduce((sum, item) => sum + Math.max(0, Number(item.count) || 0), 0);
-    const shipFaction = DEPLOYMENT_SHIP_PROFILES[draft?.proxyFactionId] ? draft.proxyFactionId : 'nova';
     selectedDeploymentShip = null;
     for (const [factionId, ship] of deploymentShips) {
       ship.visible = Boolean(draft) && factionId === shipFaction;
@@ -931,7 +976,8 @@ export function createUgaDeploymentArena(commandScene, options = {}) {
         station: activeStation,
         deploymentShipId: selectedDeploymentShip?.userData?.ship_id || null,
         deploymentShipSourceModelBuilder: selectedDeploymentShip?.userData?.source_model_builder || null,
-        deploymentShipRepresentation: selectedDeploymentShip?.userData?.representation || null
+        deploymentShipRepresentation: selectedDeploymentShip?.userData?.representation || null,
+        bayStyleId: shipFaction
       } : null;
     }
     if (draft) frameArena(false);

@@ -242,6 +242,16 @@ function dailyOrderRenderSig(orders,st){
     st.claimed[o.id]?1:0
   ].join(':')).join('|');
 }
+
+/* Give each order a glanceable tactical subject before the player reads it.
+   The class selects a crop from the sealed NEXUS-VII rooms; the order data
+   remains the only source of mechanics and progress. */
+function dailyOrderVisualKind(order){
+  const stat=String(order?.stat||'');
+  if(stat==='built'||stat.startsWith('goal_')) return 'arsenal';
+  if(stat.startsWith('map_')||stat.startsWith('wc_')||stat==='nests') return 'intel';
+  return 'operations';
+}
 function renderDaily(){
   renderDailyDot();
   const b2=document.getElementById('boostRow2');
@@ -272,6 +282,7 @@ function renderDaily(){
       const done=p>=o.goal, claimed=orderClaimed(o);
       const bk=o.rw.boost?o.rw.boost[0]:null;
       h+='<div class="ordItem'+(claimed?' claimed':done?' done':'')+'" data-id="'+o.id+'">'
+        +'<div class="ordVisual '+dailyOrderVisualKind(o)+'" role="img" aria-label="NEXUS-VII tactical order display"></div>'
         +'<div class="ordTx"><b>'+o.nm+'</b><span>'+o.ds+'</span>'
         +'<div class="ordBarO"><div class="ordBarF" style="width:'+(p/o.goal*100)+'%"></div></div>'
         +'<div class="ordRw">⬡ '+o.rw.cores+(bk?'   ·   '+

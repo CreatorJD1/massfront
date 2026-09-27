@@ -1,0 +1,37 @@
+---
+description: Stormpeak / MASSFRONT Tessendorf ocean theatre
+alwaysApply: true
+---
+
+# Stormpeak / MASSFRONT
+
+TanStack Start + React 19 + Tailwind v4 + three.js WebGL2. No Rapier. No auth/db required to play.
+
+## Ocean (do not drift these)
+
+- Tessendorf FFT (JONSWAP, multi-cascade, Jacobian foam) + CPU/GPU-matched Gerstner swell.
+- Gerstner sets MUST stay in sync across `oceanMaterial` vertex, `gerstnerGLSL`, and CPU `SWELL`. Y is `48 * tanh(disp.y/48)`.
+- FFT `displacementScale` is cut so Gerstner owns the 100ft-class sets; do not crank FFT Y or you get cyan iceberg crests.
+- Dual mesh LOD: far/near/ultra with `uLodMode` 1/2/3.
+- Ocean material is `DoubleSide`. Backfaces = Snell’s window + TIR + caustics. `uUnderwater` tints the front face jade, not black.
+- Remount the lab with `SIM_REV` in `OceanViewport.tsx`. NEVER `import('StormpeakLab?rev=')` — that infinite-HMR loops.
+
+## Camera / hydro
+
+- `OrbitFollowControls` has `dive` (world units below surface). Hydro preset starts submerged (`dive: 42`, ~90 m at `DEPTH_VIS=2.2`).
+- Q deeper, E rise, Shift+wheel dives. Space is pause. Active ping is **P**, not Space.
+- Underwater: fog RGB(0.03,0.16,0.18) far 160, exposure 0.88, clear 0x072830, god rays / caustic sheets / bubbles via `underwaterFx.js`.
+
+## Acoustics
+
+- Mackenzie 1981 SSP, storm mixed-layer / thermocline / SOFAR from Beaufort.
+- Snell ray tracer, Thorp absorption, Wenz-like NL, PPI + SSP canvases.
+- Sonar ribbons: thin teal, `depthTest true`, AdditiveBlending. Fat white quads overlay the scene — never go back to that.
+
+## Physics
+
+- Multi-point heave/pitch/roll spring-damper on hulls (`buoyancy.js`). Splash pool. Wet `MeshStandardMaterial` `onBeforeCompile` (`wet-caustic-v3`, `uCamUnder`).
+
+## HUD
+
+- Map settings panel is collapsible. Deploy starts the live theatre (do not gate behind a brief that no-ops).

@@ -35,6 +35,8 @@
 const SESS_KEY = 'mf_dropped_session_v1';
 const SESS_MAX_UNITS = 4000;      // DEBT: map-total snapshot slice, not a pop cap. Each combat faction is capped by FACTION_POP_CAP (500).
 const SESS_TTL_MS = 45 * 60 * 1000;
+let sessMatchProfileId=null;
+function sessBindMatchProfile(id){ sessMatchProfileId=typeof id==='string'&&id?id:null; }
 
 function sessCanSnapshot(){
   try{
@@ -47,13 +49,16 @@ function sessCanSnapshot(){
       (typeof storyCampaignPlanBorrowed==='function'&&storyCampaignPlanBorrowed())||
       (typeof storyCampaignActiveId!=='undefined'&&!!storyCampaignActiveId),
       unsupportedWeekly=typeof weeklyMode!=='undefined'&&!!weeklyMode,
-      unsupportedTraining=typeof trainingMissionActive==='function'&&trainingMissionActive();
+      unsupportedTraining=typeof trainingMissionActive==='function'&&trainingMissionActive(),
+      /* Online seats reconnect through the match authority; a local snapshot
+         cannot faithfully restore the other commanders or shared clock. */
+      unsupportedNetwork=typeof window!=='undefined'&&!!window.__MF_NETWORK_SETUP__;
     return typeof running !== 'undefined' && running &&
            typeof demoMode !== 'undefined' && !demoMode &&
            typeof gameEnded !== 'undefined' && !gameEnded &&
            typeof heroIdx !== 'undefined' && heroIdx >= 0 &&
            typeof ualive !== 'undefined' && !!ualive[heroIdx] &&
-           !unsupportedCampaign && !unsupportedWeekly && !unsupportedTraining;
+           !unsupportedCampaign && !unsupportedWeekly && !unsupportedTraining && !unsupportedNetwork;
   }catch(e){ return false; }
 }
 
@@ -631,6 +636,40 @@ function sessApplyHeroState(C){
   if(H.income){bonusMass=H.income[0];bonusEnergy=H.income[1];}
   if(H.maxHp>0&&heroIdx>=0&&ualive[heroIdx]){uhpm[heroIdx]=H.maxHp;uhp[heroIdx]=Math.min(uhp[heroIdx],H.maxHp);}
 }
+/* The account bag no longer contains a consumed charge after deployment. A
+   regenerated recovery world therefore cannot infer the old per-chassis
+   multiplier from inventory; preserve the effective match state instead. */
+function sessCaptureLoadoutState(){
+  return {schema:1,
+    consumables:typeof _mfMatchCons!=='undefined'&&Array.isArray(_mfMatchCons)?_mfMatchCons.map(c=>c.id):[],
+    gear:typeof _mfMatchGear!=='undefined'&&Array.isArray(_mfMatchGear)?_mfMatchGear.map(g=>g.id):[],
+    typeHp:Array.from(typeHpMult),typeDmg:Array.from(typeDmgMult),
+    modifiers:[resHpMult,resRngMult,resEnergyMult,bldSpeedMult,
+      resBldHpMult,resDefDmgMult,labBufferMult]};
+}
+function sessCheckLoadoutState(s){
+  const L=s.loadout,bad={ok:false,code:'SESSION_LOADOUT_INVALID'};
+  if(!L||L.schema!==1||!Array.isArray(L.consumables)||L.consumables.length>2||
+     !Array.isArray(L.gear)||L.gear.length>3||
+     L.consumables.some((id,i)=>L.consumables.indexOf(id)!==i||
+       !INV_CONSUMABLES.some(c=>c.id===id))||
+     L.gear.some((id,i)=>L.gear.indexOf(id)!==i||!INV_GEAR.some(g=>g.id===id))||
+     !Array.isArray(L.typeHp)||L.typeHp.length!==typeHpMult.length||
+     !Array.isArray(L.typeDmg)||L.typeDmg.length!==typeDmgMult.length||
+     L.typeHp.some(v=>!Number.isFinite(v)||v<.1||v>10)||
+     L.typeDmg.some(v=>!Number.isFinite(v)||v<.1||v>10)||
+     !Array.isArray(L.modifiers)||L.modifiers.length!==7||
+     L.modifiers.some(v=>!Number.isFinite(v)||v<0||v>100))return bad;
+  return {ok:true,state:L};
+}
+function sessApplyLoadoutState(C){
+  const L=C&&C.state;if(!L)return;
+  typeHpMult.set(L.typeHp);typeDmgMult.set(L.typeDmg);
+  [resHpMult,resRngMult,resEnergyMult,bldSpeedMult,
+    resBldHpMult,resDefDmgMult,labBufferMult]=L.modifiers;
+  _mfMatchCons=L.consumables.map(id=>INV_CONSUMABLES.find(c=>c.id===id));
+  _mfMatchGear=L.gear.map(id=>INV_GEAR.find(g=>g.id===id));
+}
 /* Relic handles survive a seed regen. Unit/building handles do not. */
 function sessRemapHandle(h,uMap,bMap){
   if(h==null||h===-1) return -1;
@@ -737,11 +776,15 @@ function sessRestoreOrders(U,spawned,uMap,bMap,patrols){
 function sessSnapshot(reason){
   if(!sessCanSnapshot()) return false;
   try{
+    /* Bind to the career that launched this fight, not a profile picker that
+       might have changed while the match kept running in the background. */
+    const profileId=sessMatchProfileId||typeof PROFILES!=='undefined'&&PROFILES&&PROFILES.active;
+    if(typeof profileId!=='string'||!profileId)return false;
     const location=sessCaptureLocation();
     const currentPre=typeof mfPreflightLocationPlanV1==='function'?mfPreflightLocationPlanV1(curMap):null;
     if(currentPre&&currentPre.status==='FULL_V1'&&!location)return false;
     const snap={
-      v:2, at:Date.now(), reason:reason||'unknown',
+      v:2, at:Date.now(), reason:reason||'unknown',profileId,
       /* The setup is what regenerates the world. Everything terrain-shaped
          falls out of it, which is why the snapshot is kilobytes not megabytes. */
       setup: (typeof META!=='undefined'&&META.setup)?META.setup:null,
@@ -768,6 +811,7 @@ function sessSnapshot(reason){
          instead of recreating salvage or rolling Commander XP backward. */
       wrecks:sessCaptureWrecks(),
       hero:sessCaptureHeroState(),
+      loadout:sessCaptureLoadoutState(),
       extraStats:{nests:stats.nests|0,reclaimed:+(stats.reclaimed||0),campaignCache:stats.campaignCache|0},
     };
     const text=JSON.stringify(snap);
@@ -787,6 +831,13 @@ function sessLoad(){
     if(!raw) return null;
     const s=JSON.parse(raw);
     if(!s||(s.v!==1&&s.v!==2)||!s.units) return null;
+    /* Legacy snapshots had no profile identity. They cannot be safely offered
+       to a different local career, so fail closed once instead of importing
+       somebody else's units, currency and battle outcome. */
+    if(typeof s.profileId!=='string'||!s.profileId){
+      window.__mfSessionReject='SESSION_PROFILE_UNBOUND';sessClear();return null;
+    }
+    if(typeof PROFILES==='undefined'||!PROFILES||s.profileId!==PROFILES.active)return null;
     /* An hours-old snapshot is not a dropped session, it is an abandoned one,
        and offering it teaches the player that the prompt is noise. */
     if(Date.now()-(s.at||0)>SESS_TTL_MS){ sessClear(); return null; }
@@ -797,10 +848,10 @@ function sessLoad(){
     const location=sessLocationPrecheck(s);
     if(!location.ok){ window.__mfSessionReject=location.code;sessClear();return null; }
     if(s.v===2){
-      const W=sessCheckWrecks(s),H=sessCheckHeroState(s),X=s.extraStats;
+      const W=sessCheckWrecks(s),H=sessCheckHeroState(s),L=sessCheckLoadoutState(s),X=s.extraStats;
       const extraOk=!!X&&Number.isInteger(X.nests)&&X.nests>=0&&Number.isFinite(X.reclaimed)&&
         X.reclaimed>=0&&Number.isInteger(X.campaignCache)&&X.campaignCache>=0;
-      if(!W.ok||!H.ok||!extraOk){window.__mfSessionReject=!W.ok?W.code:!H.ok?H.code:'SESSION_STATS_INVALID';
+      if(!W.ok||!H.ok||!L.ok||!extraOk){window.__mfSessionReject=!W.ok?W.code:!H.ok?H.code:!L.ok?L.code:'SESSION_STATS_INVALID';
         sessClear();return null;}
     }
     return s;
@@ -825,6 +876,9 @@ function sessDescribe(s){
    battlefield that regenerated identically, not rebuilding the battlefield. */
 function sessRestoreInto(s){
   if(!s) return false;
+  if(typeof PROFILES==='undefined'||!PROFILES||s.profileId!==PROFILES.active){
+    window.__mfSessionReject='SESSION_PROFILE_MISMATCH';return false;
+  }
   /* Validate the regenerated FULL_V1 world and every additive payload before
      killing even one fresh object. A failed recovery must leave a playable
      freshly generated match, not half of the snapshot and half of the reset. */
@@ -832,15 +886,19 @@ function sessRestoreInto(s){
     rosterCheck=coreCheck.ok&&setupCheck.ok?sessCheckRosterRealizable(s):null,
     locationCheck=coreCheck.ok&&setupCheck.ok&&rosterCheck.ok?sessLocationCurrentCheck(s):null;
   const wreckCheck=coreCheck.ok&&setupCheck.ok?sessCheckWrecks(s):null,
-    heroCheck=coreCheck.ok&&setupCheck.ok?sessCheckHeroState(s):null;
+    heroCheck=coreCheck.ok&&setupCheck.ok?sessCheckHeroState(s):null,
+    loadoutCheck=coreCheck.ok&&setupCheck.ok?sessCheckLoadoutState(s):null;
   const X=s.extraStats,extraOk=s.v===1||!!X&&Number.isInteger(X.nests)&&X.nests>=0&&
     Number.isFinite(X.reclaimed)&&X.reclaimed>=0&&Number.isInteger(X.campaignCache)&&X.campaignCache>=0;
-  if(!coreCheck.ok||!setupCheck.ok||!rosterCheck.ok||!locationCheck.ok||!wreckCheck.ok||!heroCheck.ok||!extraOk){
+  if(!coreCheck.ok||!setupCheck.ok||!rosterCheck.ok||!locationCheck.ok||!wreckCheck.ok||!heroCheck.ok||!loadoutCheck.ok||!extraOk){
     window.__mfSessionReject=!coreCheck.ok?coreCheck.code:!setupCheck.ok?setupCheck.code:!rosterCheck.ok?rosterCheck.code:!locationCheck.ok?locationCheck.code:!wreckCheck.ok?wreckCheck.code:
-      !heroCheck.ok?heroCheck.code:'SESSION_STATS_INVALID';
+      !heroCheck.ok?heroCheck.code:!loadoutCheck.ok?loadoutCheck.code:'SESSION_STATS_INVALID';
     sessClear();return false;
   }
   try{
+    /* Restore effective modifiers before replay spawns units and structures:
+       those constructors compute maximum health from the live multipliers. */
+    sessApplyLoadoutState(loadoutCheck);
     /* Clear whatever the fresh start spawned before laying the snapshot down,
        or the player resumes with two commanders and a doubled army. */
     for(let i=0;i<unitHigh;i++) if(ualive[i]) killUnit(i,true);
@@ -1067,7 +1125,6 @@ function sessResume(){
       const C=commanderById(s.playerCommander),R=COMMANDER_ROSTERS[playerFaction]||[];
       if(C&&!C.aiOnly&&R.indexOf(C)>=0)playerCommanderId=s.playerCommander;
     }
-    if(typeof applyTheme==='function') applyTheme();
     /* Do not require SITE_STAMP here: on a cold reload no world has been
        generated yet. newSkirmish() realizes the saved topology below, and
        sessRestoreInto() performs the full identity/resource check before it
@@ -1077,7 +1134,6 @@ function sessResume(){
     if(typeof sfx==='function') sfx('ui');
     if(typeof hideFrontScreens==='function') hideFrontScreens();
     if(typeof audMusicEnterMatch==='function') audMusicEnterMatch();
-    if(typeof newSkirmish==='function') newSkirmish();
     /* SKIP THE LANDING. A resumed match should not ask the player to choose a
        drop site again — they landed nine minutes ago, and their HQ is in the
        snapshot. Put the carrier on the saved HQ and deploy it automatically, so
@@ -1090,17 +1146,34 @@ function sessResume(){
        guessing a delay — a fixed timeout was silently landing nothing at all.
        Bounded, so a map that never becomes deployable leaves the player at the
        normal drop screen instead of hanging on a spinner. */
-    let tries=0;
-    const land=function(){
-      if(++tries>140) return;                       // ~35 s ceiling
+    if(typeof mfLoadScreenFill==='function') mfLoadScreenFill();
+    const load=document.getElementById('loadScr');if(load)load.style.display='flex';
+    /* Terrain realization is synchronous and can take seconds. Yield two
+       frames so the selected-world dossier actually paints instead of jumping
+       from the menu to a frozen browser frame. Keep restoration itself one
+       transaction inside the callback; a failure still clears the bad save. */
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
       try{
-        if(typeof carrierCanDeploy!=='function'||typeof deployCarrier!=='function') return;
-        if(hq&&typeof carrier!=='undefined'){ carrier.x=hq[2]; carrier.y=hq[3]; }
-        if(typeof matchLive!=='undefined'&&matchLive) return;   // already down
-        if(carrierCanDeploy()){ deployCarrier(); return; }
-      }catch(e){}
-      setTimeout(land,250);
-    };
-    setTimeout(land,250);
+        if(typeof applyTheme==='function') applyTheme();
+        if(typeof newSkirmish==='function') newSkirmish();
+        let tries=0;
+        const land=function(){
+          if(++tries>140) return;                       // ~35 s ceiling
+          try{
+            if(typeof carrierCanDeploy!=='function'||typeof deployCarrier!=='function') return;
+            if(hq&&typeof carrier!=='undefined'){ carrier.x=hq[2]; carrier.y=hq[3]; }
+            if(typeof matchLive!=='undefined'&&matchLive) return;   // already down
+            if(carrierCanDeploy()){ deployCarrier(); return; }
+          }catch(e){}
+          setTimeout(land,250);
+        };
+        setTimeout(land,250);
+      }catch(e){ sessClear(); sessRenderResume(); }
+      finally{
+        if(load)load.style.display='none';
+        if(typeof stopAttract==='function')stopAttract();
+        if(typeof mfFlowLayout==='function')mfFlowLayout();
+      }
+    }));
   }catch(e){ sessClear(); sessRenderResume(); }
 }

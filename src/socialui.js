@@ -10,14 +10,14 @@
 (function(){
   'use strict';
   const SOCIAL_OFFLINE="You're offline — Social Command is read-only until your connection returns.";
-  const S={tab:'friends',busy:false,epoch:0,threadEpoch:0,session:'',connection:'idle',caps:null,reason:'',gate:'',friends:[],incoming:[],
+  const S={tab:'friends',returnTo:'start',busy:false,epoch:0,threadEpoch:0,session:'',connection:'idle',caps:null,reason:'',gate:'',friends:[],incoming:[],
     presence:{},selected:'',messages:[],messageDraft:'',messageBusy:false,presenceSelf:'online',
     worldMessages:[],worldDraft:'',worldBusy:false,worldProfile:'',
     handleBusy:false,handleError:'',
     onlinePlayers:null,onlineUpdatedAt:0,onlineBusy:false,
-    lobby:null,lobbyInvites:[],lobbyBusy:false,lobbyDraft:{mode:'coop',slots:4},
+    lobby:null,lobbyInvites:[],lobbyBusy:false,lobbyDraft:{mode:'coop',slots:2},
     lobbyCompatibility:null,preparedMatch:null,launchReceipt:null};
-  let lobbyPollBusy=false,lobbyPollTimer=null,onlinePollTimer=null,worldPollTimer=null;
+  let lobbyPollBusy=false,lobbyPollLastAt=0,lobbyPollTimer=null,onlinePollTimer=null,worldPollTimer=null;
   const q=id=>document.getElementById(id);
   const signedIn=()=>!!(window.MFSocial&&typeof MFSocial.signedIn==='function'&&MFSocial.signedIn());
   const identity=()=>{
@@ -53,7 +53,7 @@
      delivery. The existing input order functions are selection-bound and
      hard-code team 0, so they are not a safe remote-seat dispatcher. A match
      stays locked until a simulation module registers one typed applyTick seam. */
-  const MR_PROTOCOL='massfront-match',MR_VERSION=1,MR_SUBPROTOCOL='massfront.v1';
+  const MR_PROTOCOL='massfront-match',MR_VERSION=2,MR_SUBPROTOCOL='massfront.v2';
   const MR_HASH_RE=/^[a-f0-9]{64}$/,MR_ID_RE=/^[a-f0-9]{32}$/,MR_CODE_RE=/^[a-z][a-z0-9_]{0,47}$/;
   function mrInt(v,min,max){const n=Number(v);return Number.isSafeInteger(n)&&n>=min&&n<=max?n:null;}
   function mrInputDelayMax(buildVersion){
@@ -93,12 +93,12 @@
   }
   function createMatchRuntime(){
     let consumer=null,socket=null,socketSerial=0,state='idle',expected=null,account='',tick=0,seq=0,lastAcceptedSeq=0;
-    let started=false,ended=false,intentional=false,welcomeSeen=false,lastGeneration=0,resumeToken='';
+    let started=false,prepared=false,bootstrapSent=false,prepareHash='',prepareGeneration=0,ended=false,intentional=false,welcomeSeen=false,lastGeneration=0,resumeToken='';
     let graceMs=10000,graceDeadline=0,reconnectAttempt=0,reconnectTimer=null,welcomeTimer=null,resumeThroughTick=-1;
     let connectResolve=null,connectReject=null,pending=new Map(),hashTicks=new Set();
     const reconnectBackoff=[120,250,500,900,1400,2000];
     function snapshot(){return mrFreeze({state,matchId:expected&&expected.matchId||'',seat:expected&&expected.seat||0,
-      tick,generation:lastGeneration,started,ended,pending:pending.size,consumer:!!consumer,reconnecting:state==='reconnecting'});}
+      tick,generation:lastGeneration,started,prepared,ended,pending:pending.size,consumer:!!consumer,reconnecting:state==='reconnecting'});}
     function emit(type,detail){
       const clean=mrFreeze(mrCopy(Object.assign({type},detail||{})));
       try{window.dispatchEvent(new CustomEvent('massfront-match:'+type,{detail:clean}));}catch(e){}
@@ -110,9 +110,13 @@
     function resolveConnect(){if(connectResolve){const fn=connectResolve;connectResolve=connectReject=null;fn(snapshot());}}
     function closeSocket(code,reason){const s=socket;socket=null;if(s)try{s.close(code,reason);}catch(e){}}
     function fatal(code,closeCode){
-      if(ended&&state==='ended')return;
-      intentional=true;ended=true;resumeToken='';clearTimers();setState('error',{code});emit('protocolError',{code});
+      if(ended)return;
+      /* A terminal protocol fault owns one error and one socket close. Queued
+         inbound frames from that socket must not replay the fault or reopen a
+         result after gameplay has stopped. */
+      intentional=true;ended=true;resumeToken='';socketSerial++;clearTimers();setState('error',{code});
       rejectConnect(code);closeSocket(closeCode||1002,closeCode===1011?'runtime unavailable':'protocol error');
+      emit('protocolError',{code});
     }
     function socketReady(){return !!socket&&socket.readyState===1;}
     function send(frame){
@@ -126,6 +130,22 @@
         return v&&typeof v.buildVersion==='string'&&MR_HASH_RE.test(v.manifestHash)&&MR_HASH_RE.test(v.balanceHash)
           ?{buildVersion:v.buildVersion,manifestHash:v.manifestHash,balanceHash:v.balanceHash}:null;
       }catch(e){return null;}
+    }
+    async function setupDigest(setup){
+      const bytes=new TextEncoder().encode(JSON.stringify(setup));
+      const digest=new Uint8Array(await crypto.subtle.digest('SHA-256',bytes));
+      return Array.from(digest,b=>b.toString(16).padStart(2,'0')).join('');
+    }
+    function canonicalSetup(setup){
+      if(!mrExact(setup,['schema','mode','slots','map','seed','preset','difficulty','playerFaction','commander',
+          'enemyFaction','goal','timeLimit','resPace','crateRate','infestationOn','defenseFocus','deploymentPackage','wildcards'])||
+        setup.schema!==1||!['coop','skirmish'].includes(setup.mode)||setup.slots!==2||
+        setup.map!=='aelos_north_medium'||typeof setup.seed!=='string'||!/^network:[a-f0-9]{32}:[a-f0-9]{64}$/.test(setup.seed)||
+        setup.preset!==(setup.mode==='skirmish'?'compact':'standard')||setup.difficulty!==1||
+        setup.playerFaction!=='nova'||setup.commander!=='nova_kai'||setup.enemyFaction!=='horde'||
+        setup.goal!=='annihilate'||setup.timeLimit!==600||setup.resPace!==1||setup.crateRate!==1||
+        setup.infestationOn!==false||setup.defenseFocus!==0||setup.deploymentPackage!=='prepared'||setup.wildcards!==0)return false;
+      return setup.seed==='network:'+expected.matchId+':'+expected.rulesHash;
     }
     function baseFrame(v){return mrKeys(v,Object.keys(v))&&v.protocol===MR_PROTOCOL&&v.v===MR_VERSION&&typeof v.type==='string';}
     function sameAccount(){return account&&account===sessionStamp();}
@@ -153,6 +173,9 @@
         if(!consumer||typeof consumer.resumeState!=='function'||consumer.resumeState({resumeFromTick:from,replayThroughTick:through,lastSeq:accepted})!==true)
           return fatal('consumer_resume_rejected',1011);
         pending.clear();seq=lastAcceptedSeq=accepted;tick=from;resumeThroughTick=through;
+        /* A pre-tick reconnect may be waiting for startReady, not a fresh
+           prepare. Keep the proven tick-zero setup until the server either
+           reissues start or explicitly sends another prepare. */
       }
       resumeToken=body.resumeToken;body.resumeToken='';lastGeneration=generation;graceMs=10000;welcomeSeen=true;
       if(welcomeTimer){clearTimeout(welcomeTimer);welcomeTimer=null;}
@@ -186,10 +209,27 @@
       if(!welcomeSeen){if(body.type!=='welcome')return fatal('welcome_required');return welcome(body,kind,serial,resumeCursor);}
       if(!sameAccount())return fatal('account_changed',1008);
       if(body.type==='welcome')return fatal('duplicate_welcome');
+      if(body.type==='prepare'){
+        const seats=body.seats,hash=String(body.setupHash||'');
+        if(started||!['welcomed','preparing'].includes(state)||!mrExact(body,['protocol','v','type','tick','seats','setup','setupHash'])||
+          body.tick!==0||!Array.isArray(seats)||seats.length!==2||seats[0]!==1||seats[1]!==2||
+          !seats.includes(expected.seat)||!canonicalSetup(body.setup)||!MR_HASH_RE.test(hash))return fatal('invalid_prepare');
+        let calculated='';try{calculated=await setupDigest(body.setup);}catch(e){return fatal('setup_hash_unavailable',1011);}
+        if(serial!==socketSerial)return;
+        if(calculated!==hash)return fatal('setup_hash_mismatch',1008);
+        prepared=true;bootstrapSent=false;prepareHash=hash;prepareGeneration++;setState('preparing');
+        emit('prepare',{tick:0,seats:seats.slice(),setup:mrCopy(body.setup),setupHash:hash});return;
+      }
       if(body.type==='start'){
-        const seats=body.seats;if(!mrKeys(body,['protocol','v','type','tick','seats'])||body.tick!==0||!Array.isArray(seats)||seats.length<2||seats.length>4||
-           !seats.every((v,i)=>mrInt(v,1,4)!=null&&(i===0||v>seats[i-1]))||!seats.includes(expected.seat)||started||state==='replaying'||state==='syncing')return fatal('invalid_start');
-        started=true;setState('running');emit('start',{tick:0,seats:seats.slice()});return;
+        const seats=body.seats,reissued=started&&tick===0&&state==='running';
+        if(!mrKeys(body,['protocol','v','type','tick','seats'])||body.tick!==0||!Array.isArray(seats)||seats.length<2||seats.length>4||
+            !seats.every((v,i)=>mrInt(v,1,4)!=null&&(i===0||v>seats[i-1]))||!seats.includes(expected.seat)||
+            !prepared||!bootstrapSent||!MR_HASH_RE.test(prepareHash)||
+            !(reissued||!started&&['preparing','welcomed'].includes(state)))return fatal('invalid_start');
+        if(!send({protocol:MR_PROTOCOL,v:MR_VERSION,type:'startReady',tick:0,setupHash:prepareHash}))
+          return fatal('start_ready_send_failed',1011);
+        if(!reissued){started=true;setState('running');emit('start',{tick:0,seats:seats.slice()});}
+        return;
       }
       if(body.type==='tick'){
         const replaying=state==='replaying';
@@ -307,7 +347,7 @@
          !MR_HASH_RE.test(value.rulesHash)||rulesHash!==value.rulesHash||value.expiresAt<=Date.now()){
         token='';throw Object.assign(new Error('Match compatibility rejected.'),{code:'compatibility_mismatch'});
       }
-      clearTimers();intentional=false;ended=false;started=false;tick=0;seq=0;lastAcceptedSeq=0;pending.clear();hashTicks.clear();resumeToken='';resumeThroughTick=-1;
+      clearTimers();intentional=false;ended=false;started=false;prepared=false;bootstrapSent=false;prepareHash='';prepareGeneration=0;tick=0;seq=0;lastAcceptedSeq=0;pending.clear();hashTicks.clear();resumeToken='';resumeThroughTick=-1;
       lastGeneration=0;expected=value;account=sessionStamp();
       return connectSocket('seat',token).finally(()=>{token='';});
     }
@@ -319,6 +359,17 @@
       if(mrBytes(frame)>16384||!send(frame)){seq--;return null;}
       pending.set(next,{targetTick,count:clean.length});return mrFreeze({seq:next,targetTick,count:clean.length});
     }
+    async function bootstrapReady(setupHash){
+      if(state!=='preparing'||!prepared||bootstrapSent||setupHash!==prepareHash||!socketReady())return false;
+      const generation=prepareGeneration;
+      if(typeof mfGameplayStateHash!=='function')return fatal('state_hash_unavailable',1011);
+      let hash='';try{hash=String(await mfGameplayStateHash()||'');}catch(e){return fatal('state_hash_unavailable',1011);}
+      if(state!=='preparing'||setupHash!==prepareHash||generation!==prepareGeneration)return false;
+      if(!MR_HASH_RE.test(hash))return fatal('state_hash_invalid',1011);
+      if(!send({protocol:MR_PROTOCOL,v:MR_VERSION,type:'bootstrapReady',tick:0,setupHash,hash}))
+        return fatal('bootstrap_ready_send_failed',1011);
+      bootstrapSent=true;emit('bootstrapReady',{tick:0,setupHash,hash});return true;
+    }
     function registerConsumer(value){
       if(!value||typeof value!=='object'||typeof value.applyTick!=='function'||consumer&&consumer!==value)return false;
       consumer=value;emit('consumer',{registered:true});try{render();}catch(e){}return true;
@@ -328,9 +379,16 @@
       if(state!=='idle'&&state!=='closed'&&state!=='ended')fatal('consumer_unregistered',1011);
       consumer=null;emit('consumer',{registered:false});try{render();}catch(e){}return true;
     }
-    function close(){intentional=true;ended=true;resumeToken='';clearTimers();closeSocket(1000,'client closed');setState('closed');}
+    function close(){
+      if(state==='closed')return;
+      /* Intentional terminal/menu exit invalidates callbacks already queued by
+         this socket. Otherwise a late tick can be treated as a new protocol
+         failure after the no-reward result has closed the match. */
+      intentional=true;ended=true;resumeToken='';socketSerial++;clearTimers();
+      rejectConnect('client_closed');closeSocket(1000,'client closed');setState('closed');
+    }
     const api={registerConsumer,unregisterConsumer,ready:()=>!!consumer&&typeof WebSocket==='function'&&!!(window.MFSocial&&MFSocial.matchSocketUrl),
-      submitCommands,status:snapshot,close};
+      submitCommands,bootstrapReady,status:snapshot,close};
     Object.freeze(api);
     return {api,acceptCredential};
   }
@@ -404,7 +462,7 @@
     return hero;
   }
   function channelHero(){
-    const card=document.createElement('div');card.className='socialChannelHero';const orb=document.createElement('span');orb.className='socialChannelOrb';orb.textContent='LIVE';orb.setAttribute('aria-hidden','true');card.appendChild(orb);
+    const card=document.createElement('div');card.className='socialChannelHero';const consoleBox=document.createElement('div');consoleBox.className='socialChannelConsole';consoleBox.setAttribute('aria-hidden','true');consoleBox.innerHTML='<span></span><span></span><span></span><i>LIVE LINK</i>';card.appendChild(consoleBox);
     const copy=document.createElement('div');const b=document.createElement('b');b.textContent='WORLD COMMAND NET';copy.appendChild(b);const s=document.createElement('span');s.textContent='Public commander channel. Tap a username for profile actions; never share contact details.';copy.appendChild(s);card.appendChild(copy);return card;
   }
   async function claimHandle(input){
@@ -450,10 +508,11 @@
     const st=document.createElement('style');st.id='mfSocialStyle';st.textContent=`
 #socialScr{background:linear-gradient(180deg,#08111ee8,#03070df8);z-index:105;align-items:center;justify-content:flex-start!important;padding:0!important;overflow:hidden}
 #socialScr .socialBody{flex:1 1 auto;min-height:0;width:min(100%,920px);max-width:100%;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;padding:10px calc(var(--sar) + 12px) 24px calc(var(--sal) + 12px)}
-#socialScr .screenTabs{width:min(calc(100% - var(--sal) - var(--sar) - 20px),720px)}
+#socialScr .screenTabs{width:min(calc(100% - var(--sal) - var(--sar) - 20px),720px)}#socialScr .screenTabBtn:disabled{opacity:.38;filter:saturate(.25);cursor:not-allowed}
 #socialScr .socialPane{display:none;width:100%;min-width:0}#socialScr .socialPane.on{display:block}.socialStack{display:grid;gap:10px;min-width:0}
-.socialVisualHero{position:relative;isolation:isolate;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:13px;align-items:center;min-height:92px;overflow:hidden;border:1px solid #367b96;background:radial-gradient(circle at 12% 18%,#34c5e42c,transparent 34%),linear-gradient(120deg,#102c3e,#091622 64%,#0b2530);box-shadow:inset 0 1px #d7f8ff1a,0 8px 24px #0007;padding:14px}.socialVisualHero:after{content:"";position:absolute;z-index:-1;inset:auto -18px -42px auto;width:150px;height:150px;border:18px solid #67dbf018;border-radius:50%;box-shadow:0 0 0 9px #67dbf00c}.socialHeroText{min-width:0}.socialHeroText small{display:block;color:#6fa1b7;font:800 9px var(--fT);letter-spacing:.16em}.socialHeroText p{margin:7px 0 0;color:#8bafc1;font-size:10px;line-height:1.4}.socialUsernameChip{display:inline-flex;max-width:100%;align-items:center;gap:6px;margin-top:5px;padding:5px 9px;border:1px solid #58bad0;background:#0a2431;color:#e7fbff;font:900 13px var(--fT);letter-spacing:.07em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 0 14px #4acbe321}.socialUsernameChip:before{content:"◆";color:#63e0ef;font-size:8px}.socialAvatar{position:relative;display:grid;place-items:center;flex:0 0 auto;width:52px;height:52px;border:1px solid hsl(var(--avatarHue,190) 75% 65%);clip-path:polygon(18% 0,82% 0,100% 18%,100% 82%,82% 100%,18% 100%,0 82%,0 18%);background:radial-gradient(circle at 34% 28%,#ffffff3d,transparent 23%),linear-gradient(145deg,hsl(var(--avatarHue,190) 65% 42%),hsl(var(--avatarHue,190) 70% 15%));color:#f3fdff;text-shadow:0 1px 3px #000;font:900 16px var(--fT);box-shadow:inset 0 0 0 3px #06101a99,0 0 15px hsl(var(--avatarHue,190) 70% 46% / .28)}.socialAvatar.sm{width:42px;height:42px;font-size:13px}.socialAvatar .socialPresence{position:absolute;right:1px;bottom:2px;border:2px solid #071019;width:10px;height:10px}.socialHandleGate{grid-template-columns:auto minmax(0,1fr)}.socialHandleForm{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;width:100%}.socialHandleForm input{min-height:48px;min-width:0;box-sizing:border-box;border:1px solid #4b8ea7;background:#06121c;color:#effcff;padding:10px 12px;font:800 13px system-ui,sans-serif;outline:none}.socialHandleForm input:focus{border-color:#72e4f4;box-shadow:0 0 0 2px #72e4f428}.socialHandleError{grid-column:1/-1;color:#f2a7ad;font-size:10px;min-height:14px}
-.socialNamedGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:8px}.socialPlayerCard{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:center;border:1px solid #264a5f;background:linear-gradient(135deg,#0b1c29,#07121c);padding:9px;min-width:0}.socialPlayerCard .socialWho b{display:inline-flex;padding:4px 7px;border:1px solid #396b81;background:#0a2230;color:#dff8ff}.socialPlayerCard .socialActs{grid-column:1/-1;justify-content:stretch}.socialPlayerCard .socialActs .socialAction{flex:1}.socialSourcePill{display:inline-flex;margin-top:5px;padding:3px 6px;border-radius:10px;background:#163344;color:#85bfd4;font:800 8px var(--fT);letter-spacing:.09em}.socialSourcePill.online{background:#123a2c;color:#83e2ae}.socialSourcePill.away{background:#3b3015;color:#e9ca75}.socialChannelHero{position:relative;overflow:hidden;display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center;border:1px solid #356b83;background:radial-gradient(circle at 10% 50%,#52d8ed2b,transparent 28%),linear-gradient(120deg,#0b2938,#08141f);padding:13px}.socialChannelOrb{display:grid;place-items:center;width:54px;height:54px;border:1px solid #63d8ed;border-radius:50%;background:radial-gradient(circle,#5de0ee55 0 16%,#0f5c7388 17% 31%,#06131e 33%);color:#c9f9ff;font:900 11px var(--fT);box-shadow:0 0 18px #40d9ef45}.socialChannelHero b{display:block;color:#e4faff;font:900 12px var(--fT);letter-spacing:.12em}.socialChannelHero span{display:block;margin-top:5px;color:#83aabd;font-size:10px;line-height:1.4}
+.socialVisualHero{position:relative;isolation:isolate;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:13px;align-items:center;min-height:92px;overflow:hidden;border:1px solid #367b96;background:linear-gradient(112deg,#102c3e,#091622 64%,#0b2530);box-shadow:inset 0 1px #d7f8ff1a,0 8px 24px #0007;padding:14px}.socialVisualHero:after{content:"";position:absolute;z-index:-1;right:-22px;bottom:-28px;width:196px;height:112px;clip-path:polygon(22% 0,100% 0,100% 100%,0 100%);background:repeating-linear-gradient(90deg,#67dbf00b 0 1px,transparent 1px 24px),linear-gradient(145deg,#67dbf014,transparent 58%);border-top:1px solid #67dbf019;transform:skewX(-18deg)}.socialHeroText{min-width:0}.socialHeroText small{display:block;color:#6fa1b7;font:800 9px var(--fT);letter-spacing:.16em}.socialHeroText p{margin:7px 0 0;color:#8bafc1;font-size:10px;line-height:1.4}.socialUsernameChip{display:inline-flex;max-width:100%;align-items:center;gap:6px;margin-top:5px;padding:5px 9px;border:1px solid #58bad0;background:#0a2431;color:#e7fbff;font:900 13px var(--fT);letter-spacing:.07em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 0 14px #4acbe321}.socialUsernameChip:before{content:"◆";color:#63e0ef;font-size:8px}.socialAvatar{position:relative;display:grid;place-items:center;flex:0 0 auto;width:52px;height:52px;border:1px solid hsl(var(--avatarHue,190) 75% 65%);clip-path:polygon(18% 0,82% 0,100% 18%,100% 82%,82% 100%,18% 100%,0 82%,0 18%);background:radial-gradient(circle at 34% 28%,#ffffff3d,transparent 23%),linear-gradient(145deg,hsl(var(--avatarHue,190) 65% 42%),hsl(var(--avatarHue,190) 70% 15%));color:#f3fdff;text-shadow:0 1px 3px #000;font:900 16px var(--fT);box-shadow:inset 0 0 0 3px #06101a99,0 0 15px hsl(var(--avatarHue,190) 70% 46% / .28)}.socialAvatar.sm{width:42px;height:42px;font-size:13px}.socialAvatar .socialPresence{position:absolute;right:1px;bottom:2px;border:2px solid #071019;width:10px;height:10px}.socialHandleGate{grid-template-columns:auto minmax(0,1fr)}.socialHandleForm{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;width:100%}.socialHandleForm input{min-height:48px;min-width:0;box-sizing:border-box;border:1px solid #4b8ea7;background:#06121c;color:#effcff;padding:10px 12px;font:800 13px system-ui,sans-serif;outline:none}.socialHandleForm input:focus{border-color:#72e4f4;box-shadow:0 0 0 2px #72e4f428}.socialHandleError{grid-column:1/-1;color:#f2a7ad;font-size:10px;min-height:14px}
+.socialSignInGate{display:grid;grid-template-columns:minmax(132px,.72fr) minmax(0,1.4fr);gap:14px;align-items:stretch;border:1px solid #3c7890;background:linear-gradient(125deg,#0b2230,#07121d 70%);box-shadow:inset 0 1px #d9f8ff14,0 12px 30px #0008;padding:14px}.socialRelayConsole{position:relative;isolation:isolate;display:grid;align-content:end;min-height:126px;overflow:hidden;border:1px solid #315f73;clip-path:polygon(8% 0,100% 0,100% 88%,92% 100%,0 100%,0 12%);background:linear-gradient(155deg,#142c39 0 12%,#071018 13% 76%,#102834 77%);box-shadow:inset 8px 8px 18px #ffffff0a,inset -10px -10px 20px #0009}.socialRelayConsole:before{content:"NEXUS-VII / SQUAD RELAY";position:absolute;left:14px;top:12px;color:#719aae;font:800 7px var(--fT);letter-spacing:.12em}.socialRelayConsole:after{content:"";position:absolute;left:13px;right:13px;top:34px;height:44px;border:1px solid #285066;background:repeating-linear-gradient(90deg,#4ed9ee16 0 1px,transparent 1px 12px),repeating-linear-gradient(0deg,#4ed9ee10 0 1px,transparent 1px 10px),#050d14;box-shadow:inset 0 0 18px #42cce315}.socialRelayRails{position:relative;z-index:1;display:flex;gap:5px;align-items:flex-end;height:30px;margin:0 14px 12px}.socialRelayRails i{display:block;flex:1;height:7px;border:1px solid #5a3e2d;background:#22130e}.socialRelayRails i:first-child{height:13px}.socialRelayRails i:last-child{height:20px}.socialGateCopy{display:flex;min-width:0;flex-direction:column;justify-content:center}.socialGateCopy small{color:#75a5ba;font:800 9px var(--fT);letter-spacing:.16em}.socialGateCopy h3{margin:6px 0 0;color:#ecfbff;font:900 16px var(--fT);letter-spacing:.08em}.socialGateCopy p{margin:8px 0 12px;color:#91adbd;font-size:11px;line-height:1.5}.socialGateFeatures{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.socialGateFeature{position:relative;min-width:0;border:1px solid #223f51;background:#081520;padding:11px 10px 10px 37px}.socialGateFeature:before{position:absolute;display:grid;place-items:center;left:9px;top:10px;width:20px;height:20px;border:1px solid #3b7188;background:#0d2937;color:#8de8f3;font:900 7px var(--fT)}.socialGateFeature[data-kind="roster"]:before{content:"ID"}.socialGateFeature[data-kind="comms"]:before{content:"RX"}.socialGateFeature[data-kind="lobby"]:before{content:"2P"}.socialGateFeature b{display:block;color:#ccebf5;font:900 9px var(--fT);letter-spacing:.09em}.socialGateFeature span{display:block;margin-top:4px;color:#6f91a3;font-size:9px;line-height:1.35}
+  .socialNamedGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:8px}.socialPlayerCard{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:center;border:1px solid #264a5f;background:linear-gradient(135deg,#0b1c29,#07121c);padding:9px;min-width:0}.socialPlayerCard .socialWho b{display:inline-flex;padding:4px 7px;border:1px solid #396b81;background:#0a2230;color:#dff8ff}.socialPlayerCard .socialActs{grid-column:1/-1;justify-content:stretch}.socialPlayerCard .socialActs .socialAction{flex:1}.socialSourcePill{display:inline-flex;margin-top:5px;padding:3px 6px;border-radius:10px;background:#163344;color:#85bfd4;font:800 8px var(--fT);letter-spacing:.09em}.socialSourcePill.online{background:#123a2c;color:#83e2ae}.socialSourcePill.away{background:#3b3015;color:#e9ca75}.socialChannelHero{position:relative;overflow:hidden;display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center;border:1px solid #356b83;background:linear-gradient(120deg,#0b2938,#08141f);padding:13px}.socialChannelConsole{position:relative;display:flex;align-items:flex-end;gap:4px;width:64px;height:50px;box-sizing:border-box;border:1px solid #559ab0;clip-path:polygon(9% 0,100% 0,100% 84%,88% 100%,0 100%,0 16%);background:repeating-linear-gradient(0deg,#55dced0d 0 1px,transparent 1px 9px),#07141e;padding:9px 8px 17px;box-shadow:inset 0 0 15px #42d3e31e,5px 7px 0 #030a10}.socialChannelConsole span{display:block;width:9px;margin:0;background:#64d9e8;box-shadow:0 0 7px #64d9e875}.socialChannelConsole span:nth-child(1){height:9px}.socialChannelConsole span:nth-child(2){height:18px}.socialChannelConsole span:nth-child(3){height:13px}.socialChannelConsole i{position:absolute;left:8px;bottom:4px;color:#8bbdca;font:800 6px var(--fT);font-style:normal;letter-spacing:.1em}.socialChannelHero b{display:block;color:#e4faff;font:900 12px var(--fT);letter-spacing:.12em}.socialChannelHero>div:last-child>span{display:block;margin-top:5px;color:#83aabd;font-size:10px;line-height:1.4}
 .socialNotice,.socialCard{border:1px solid #24445a;background:linear-gradient(145deg,#0d1b29,#08121d);box-shadow:inset 0 1px #ffffff0a;padding:13px;border-radius:4px;color:#8ba8bb}
 .socialNotice{display:flex;min-width:0;flex-direction:column;gap:4px;line-height:1.4;text-align:left}.socialNotice b,.socialCard h3{margin:0;color:#d7edfa;font:800 11px var(--fT);letter-spacing:.12em}.socialNotice span{font-size:11px;overflow-wrap:anywhere}.socialNotice.good{border-color:#255d4b}.socialNotice.warn{border-color:#72552b}.socialNotice.bad{border-color:#6c3036}
 .socialToolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}.socialToolbar input,.socialToolbar select,.socialComposer textarea,.socialJoin input{min-height:44px;box-sizing:border-box;border:1px solid #31566d;background:#07101a;color:#e8f6ff;border-radius:3px;padding:9px 11px;font:700 12px system-ui,sans-serif;outline:none}.socialToolbar input:focus,.socialToolbar select:focus,.socialComposer textarea:focus{border-color:#63cce8;box-shadow:0 0 0 2px #63cce82a}.socialToolbar input{flex:1 1 180px;min-width:0}.socialToolbar select{flex:1 1 130px}
@@ -468,9 +527,11 @@
 .socialLaunch{margin-top:10px;padding-top:10px;border-top:1px solid #1d3749}.socialLaunch .socialToolbar{margin:8px 0 0}.socialLaunchCode{font:700 10px ui-monospace,monospace;color:#81b9cf;overflow-wrap:anywhere}
 #socialStatusDot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#53616a;margin-left:4px;vertical-align:middle}.socialReady #socialStatusDot{background:#5be69f;box-shadow:0 0 7px #5be69f99}.socialLimited #socialStatusDot{background:#e2bd58}.socialOffline #socialStatusDot{background:#d77a4a;box-shadow:0 0 7px #d77a4a88}
 @media(min-width:760px){.socialLobbyGrid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.socialPane{padding:0 8px}}
-@media(max-width:520px){.socialVisualHero{grid-template-columns:auto minmax(0,1fr)}.socialVisualHero>.socialAction{grid-column:1/-1;width:100%}.socialInvite{grid-template-columns:1fr}.socialInvite .socialActs{justify-content:stretch}.socialInvite .socialAction{flex:1}.socialCreate{grid-template-columns:1fr 1fr}.socialCreate .socialAction{grid-column:1/-1}.socialWorldMessage .socialActs{display:grid;grid-template-columns:1fr 1fr}}
+@media(max-width:520px){.socialVisualHero{grid-template-columns:auto minmax(0,1fr)}.socialVisualHero>.socialAction{grid-column:1/-1;width:100%}.socialSignInGate{grid-template-columns:112px minmax(0,1fr)}.socialRelayConsole{min-height:118px}.socialGateFeatures{grid-template-columns:1fr}.socialInvite{grid-template-columns:1fr}.socialInvite .socialActs{justify-content:stretch}.socialInvite .socialAction{flex:1}.socialCreate{grid-template-columns:1fr 1fr}.socialCreate .socialAction{grid-column:1/-1}.socialWorldMessage .socialActs{display:grid;grid-template-columns:1fr 1fr}}
 @media(max-width:410px){.socialHandleForm{grid-template-columns:1fr}.socialHandleForm .socialAction{width:100%}.socialActs{grid-column:1/-1;justify-content:stretch}.socialActs .socialAction{flex:1}.socialPerson{grid-template-columns:auto minmax(0,1fr)}.socialWho{grid-column:2}.socialComposer{grid-template-columns:1fr}.socialComposer .socialAction{min-height:48px}.socialAction{padding-left:10px;padding-right:10px}.socialJoin{display:grid;grid-template-columns:1fr}.socialJoin .socialAction{width:100%}.socialWorldHead{grid-template-columns:auto minmax(0,1fr)}.socialWorldHead small{grid-column:2}.socialWorldText,.socialWorldMessage .socialActs{margin-left:0}}
 @media(orientation:landscape) and (max-height:560px){#socialScr .socialBody{padding-top:5px;padding-bottom:8px}.socialMessages{max-height:32vh}}
+.socialCreate{grid-template-columns:minmax(0,1fr) auto}
+@media(max-width:520px){.socialCreate{grid-template-columns:1fr}.socialCreate .socialAction{grid-column:1}}
 `;
     document.head.appendChild(st);
   }
@@ -480,13 +541,14 @@
     if(!menu){
       const strip=document.querySelector('#startScreen .menuStrip');
       if(strip){menu=document.createElement('button');menu.type='button';menu.className='sbtn';menu.id='socialBtn';
-        menu.innerHTML='<span class="sEmj">◉</span><span>Social <i id="socialStatusDot" aria-hidden="true"></i></span>';
+        menu.innerHTML='<span class="sEmj">▦</span><span>Social <i id="socialStatusDot" aria-hidden="true"></i></span>';
         menu.setAttribute('aria-label','Friends, chat and multiplayer lobby');strip.appendChild(menu);}
     }
     let scr=q('socialScr');
     if(!scr){
       scr=document.createElement('div');scr.className='overlay';scr.id='socialScr';scr.style.display='none';
-      scr.innerHTML='<div class="subMenuHead"><h2>◉ SOCIAL COMMAND</h2><span>Friends · direct comms · player lobby</span></div>'+
+      scr.innerHTML='<div class="subMenuHead"><h2>▦ SOCIAL COMMAND</h2><span>Friends · direct comms · player lobby</span></div>'+
+        '<div class="mfMenuHero mfMenuHero--social" role="img" aria-label="NEXUS-VII crew briefing lounge and squad roster wall"></div>'+
         '<div class="screenTabs" role="tablist" aria-label="Social categories">'+
         '<button id="socialTabFriends" class="screenTabBtn on" type="button" role="tab" data-social-tab="friends" aria-selected="true" aria-controls="socialPaneFriends"><span class="tabGlyph">♟</span><span>FRIENDS</span></button>'+
         '<button id="socialTabWorld" class="screenTabBtn" type="button" role="tab" data-social-tab="world" aria-selected="false" aria-controls="socialPaneWorld" tabindex="-1"><span class="tabGlyph">◎</span><span>WORLD</span></button>'+
@@ -497,14 +559,14 @@
       document.body.appendChild(scr);
     }
     bind(menu,open);
-    bind(q('socialBack'),()=>{if(typeof sfx==='function')sfx('ui');if(typeof showFrontScreen==='function')showFrontScreen('startScreen');});
+    bind(q('socialBack'),closeSocial);
     scr.querySelectorAll('[data-social-tab]').forEach(b=>bind(b,()=>setTab(b.dataset.socialTab)));
     const tabs=scr.querySelector('.screenTabs');
     if(tabs&&tabs.dataset.mfSocialKeys!=='1'){
       tabs.dataset.mfSocialKeys='1';
       tabs.addEventListener('keydown',e=>{
         if(e.key!=='ArrowLeft'&&e.key!=='ArrowRight'&&e.key!=='Home'&&e.key!=='End')return;
-        const list=[...tabs.querySelectorAll('[data-social-tab]')],at=Math.max(0,list.indexOf(document.activeElement));
+        const list=[...tabs.querySelectorAll('[data-social-tab]')].filter(b=>!b.disabled);if(!list.length)return;const at=Math.max(0,list.indexOf(document.activeElement));
         const next=e.key==='Home'?0:e.key==='End'?list.length-1:
           (at+(e.key==='ArrowRight'?1:list.length-1))%list.length;
         e.preventDefault();setTab(list[next].dataset.socialTab);list[next].focus();
@@ -513,28 +575,53 @@
     return scr;
   }
   function setTab(tab){
-    S.tab=tab==='world'||tab==='chat'||tab==='lobby'?tab:'friends';
+    const requested=tab==='world'||tab==='chat'||tab==='lobby'?tab:'friends';
+    S.tab=!signedIn()&&requested!=='friends'?'friends':requested;
     const scr=ensureShell();
-    scr.querySelectorAll('[data-social-tab]').forEach(b=>{
-      const on=b.dataset.socialTab===S.tab;b.classList.toggle('on',on);b.setAttribute('aria-selected',on?'true':'false');b.tabIndex=on?0:-1;
-    });
-    for(const t of ['friends','world','chat','lobby']){
-      const p=q('socialPane'+t.charAt(0).toUpperCase()+t.slice(1));if(p){const on=t===S.tab;p.classList.toggle('on',on);p.hidden=!on;}
-    }
+    syncTabShell(scr);
     render();
     if(S.tab==='world'&&S.caps&&S.caps.worldChat===true&&!S.worldMessages.length)loadWorldMessages();
     if(S.tab==='chat'&&S.selected&&S.caps&&S.caps.chat===true&&!S.messages.length)loadMessages();
   }
+  function syncTabShell(scr){
+    const locked=!signedIn();
+    scr.querySelectorAll('[data-social-tab]').forEach(b=>{
+      const on=b.dataset.socialTab===S.tab;b.classList.toggle('on',on);b.setAttribute('aria-selected',on?'true':'false');b.tabIndex=on?0:-1;
+      const unavailable=locked&&b.dataset.socialTab!=='friends';b.disabled=unavailable;b.setAttribute('aria-disabled',unavailable?'true':'false');b.title=unavailable?'Sign in from Friends to unlock this channel.':'';
+    });
+    for(const t of ['friends','world','chat','lobby']){
+      const p=q('socialPane'+t.charAt(0).toUpperCase()+t.slice(1));if(p){const on=t===S.tab;p.classList.toggle('on',on);p.hidden=!on;}
+    }
+  }
+  function socialReturnTarget(){
+    const data=document.body&&document.body.dataset||{};
+    if(data.frontPopup==='inboxScr')return 'match-inbox';
+    if(data.frontScreen==='inboxScr')return 'inbox';
+    return 'start';
+  }
+  function closeSocial(){
+    if(typeof sfx==='function')sfx('ui');const dest=S.returnTo;S.returnTo='start';
+    if(dest==='match-inbox'&&typeof showMatchPopup==='function'){
+      if(typeof renderInbox==='function')renderInbox();showMatchPopup('inboxScr');return;
+    }
+    if(dest==='inbox'&&typeof showFrontScreen==='function'){
+      if(typeof renderInbox==='function')renderInbox();showFrontScreen('inboxScr');return;
+    }
+    if(typeof showFrontScreen==='function')showFrontScreen('startScreen');
+  }
   function open(tab){
     syncSession();
+    if(!document.body||document.body.dataset.frontScreen!=='socialScr')S.returnTo=socialReturnTarget();
     if(tab==='friends'||tab==='world'||tab==='chat'||tab==='lobby')S.tab=tab;
     ensureShell();if(typeof initAudio==='function')initAudio();if(typeof sfx==='function')sfx('ui');
     setTab(S.tab);
     if(typeof showFrontScreen==='function')showFrontScreen('socialScr');refresh(false);
   }
   function signedOut(host){
-    host.appendChild(line('SIGN IN REQUIRED','Friends and direct messages use your MASSFRONT account. Solo play remains available without one.','warn'));
-    host.appendChild(button('OPEN ACCOUNT',()=>{if(typeof apOpen==='function')apOpen(q('socialBtn'));else if(typeof showFrontScreen==='function')showFrontScreen('profileScr');}));
+    const gate=document.createElement('section');gate.className='socialSignInGate';
+    const consoleBox=document.createElement('div');consoleBox.className='socialRelayConsole';consoleBox.setAttribute('role','img');consoleBox.setAttribute('aria-label','NEXUS-VII secure squad relay console offline');const rails=document.createElement('span');rails.className='socialRelayRails';rails.innerHTML='<i></i><i></i><i></i>';consoleBox.appendChild(rails);gate.appendChild(consoleBox);
+    const copy=document.createElement('div');copy.className='socialGateCopy';const eyebrow=document.createElement('small');eyebrow.textContent='CREW LOUNGE · SECURE RELAY OFFLINE';copy.appendChild(eyebrow);const title=document.createElement('h3');title.textContent='CONNECT YOUR SQUAD LINK';copy.appendChild(title);const p=document.createElement('p');p.textContent='Sign in once to unlock commander rosters, direct comms and verified player lobbies. Solo operations stay available offline.';copy.appendChild(p);copy.appendChild(button('OPEN ACCOUNT',()=>{if(typeof apOpen==='function')apOpen(q('socialBtn'));else if(typeof showFrontScreen==='function')showFrontScreen('profileScr');}));gate.appendChild(copy);
+    const features=document.createElement('div');features.className='socialGateFeatures';for(const row of [['roster','FRIEND ROSTER','Presence and squad invites'],['comms','PRIVATE COMMS','Accepted-friend channels'],['lobby','BATTLE LOBBY','Verified co-op staging']]){const feature=document.createElement('div');feature.className='socialGateFeature';feature.dataset.kind=row[0];const b=document.createElement('b');b.textContent=row[1];feature.appendChild(b);const s=document.createElement('span');s.textContent=row[2];feature.appendChild(s);features.appendChild(feature);}gate.appendChild(features);host.appendChild(gate);
   }
   function capabilityReason(kind){
     if(!signedIn())return 'Sign in to use '+kind+'.';
@@ -548,8 +635,12 @@
   }
   function render(){
     syncSession();const scr=ensureShell(),body=scr.querySelector('.socialBody');
+    if(!signedIn())S.tab='friends';syncTabShell(scr);
     if(body)body.setAttribute('aria-busy',(S.busy||S.messageBusy||S.worldBusy||S.lobbyBusy)?'true':'false');
-    renderFriends();renderWorld();renderChat();renderLobby();renderInboxBridge();statusDot();
+    renderFriends();
+    if(signedIn()){renderWorld();renderChat();renderLobby();}
+    else for(const id of ['socialPaneWorld','socialPaneChat','socialPaneLobby']){const pane=q(id);if(pane)pane.textContent='';}
+    renderInboxBridge();statusDot();
   }
   function statusDot(){
     const b=q('socialBtn');if(!b)return;b.classList.remove('socialReady','socialLimited','socialOffline');
@@ -569,11 +660,12 @@
     const friendReason=capabilityReason('friends');
     if(friendReason){stack.appendChild(line('FRIENDS UNAVAILABLE',friendReason,'warn'));stack.appendChild(button('RETRY',()=>refresh(true),'socialAction alt',S.busy));return;}
     connectionNotice(stack);const netOff=transportReason(),writeOff=S.busy||!!netOff;
-    const online=document.createElement('div');online.className='socialOnlineCard'+(Number.isSafeInteger(S.onlinePlayers)?'':' unknown');
+    const countKnown=Number.isSafeInteger(S.onlinePlayers),countLive=countKnown&&S.connection==='ready'&&!offline();
+    const online=document.createElement('div');online.className='socialOnlineCard'+(countLive?'':' unknown');
     const pulse=document.createElement('span');pulse.className='socialOnlinePulse';pulse.setAttribute('aria-hidden','true');online.appendChild(pulse);
-    const value=document.createElement('div');value.className='socialOnlineValue';const n=document.createElement('strong');n.id='socialOnlineCount';n.textContent=Number.isSafeInteger(S.onlinePlayers)?String(S.onlinePlayers):'—';value.appendChild(n);
-    const label=document.createElement('b');label.textContent=S.caps.onlineCount===true?'PLAYERS ONLINE':'ONLINE COUNT UNAVAILABLE';value.appendChild(label);
-    const privacy=document.createElement('small');privacy.textContent='Global total · named cards use only friends, your lobby and recent World Chat';value.appendChild(privacy);online.appendChild(value);stack.appendChild(online);
+    const value=document.createElement('div');value.className='socialOnlineValue';const n=document.createElement('strong');n.id='socialOnlineCount';n.textContent=countKnown?String(S.onlinePlayers):'—';value.appendChild(n);
+    const label=document.createElement('b');label.textContent=countLive?'PLAYERS ONLINE':countKnown?'LAST KNOWN ONLINE':'ONLINE COUNT UNAVAILABLE';value.appendChild(label);
+    const privacy=document.createElement('small');privacy.textContent=countKnown&&!countLive?'Cached count · reconnect and refresh for live status':'Global total · named cards use only friends, your lobby and recent World Chat';value.appendChild(privacy);online.appendChild(value);stack.appendChild(online);
     const named=namedOnlineCommanders();sectionTitle(stack,'ONLINE COMMANDERS',named.length);
     if(!named.length)stack.appendChild(line('NO NAMED CONTACTS ONLINE','The global total stays visible. Names appear here only for online friends or commanders currently in your lobby.'));
     else{const grid=document.createElement('div');grid.className='socialNamedGrid';for(const row of named)grid.appendChild(namedCard(row));stack.appendChild(grid);}
@@ -619,6 +711,50 @@
     const key=String(row&&row.username||'').toLowerCase();
     return row&&row.friend===true||S.friends.some(f=>String(f.username||'').toLowerCase()===key);
   }
+  function fillWorldFeed(feed,preserveScroll){
+    const oldTop=preserveScroll?feed.scrollTop:0;
+    const follow=!preserveScroll||feed.scrollHeight-feed.clientHeight-feed.scrollTop<=24;
+    let anchorId='',anchorOffset=0;
+    if(!follow){
+      const view=feed.getBoundingClientRect();
+      for(const card of feed.children){
+        if(card.dataset.messageId&&card.getBoundingClientRect().bottom>view.top){
+          anchorId=card.dataset.messageId;anchorOffset=card.getBoundingClientRect().top-view.top;break;
+        }
+      }
+    }
+    feed.textContent='';
+    if(S.worldBusy&&!S.worldMessages.length)feed.appendChild(line('LOADING WORLD CHAT','Fetching the latest public messages…'));
+    else if(!S.worldMessages.length)feed.appendChild(line('NO WORLD MESSAGES','Be the first commander to open the channel.'));
+    for(const row of S.worldMessages.slice().reverse()){
+      const card=document.createElement('article');card.className='socialWorldMessage'+(row.self?' mine':'');
+      if(row.id!=null)card.dataset.messageId=String(row.id);
+      const head=document.createElement('div');head.className='socialWorldHead';head.appendChild(avatar(row.username,row.friend?'online':'',true));const name=document.createElement('b');name.textContent=safeName(row.username)+(row.self?' · YOU':'');head.appendChild(name);
+      const at=document.createElement('small');const dt=new Date(Number(row.at)||0);at.textContent=Number(row.at)?dt.toLocaleString():'';head.appendChild(at);card.appendChild(head);
+      const body=document.createElement('div');body.className='socialWorldText';body.textContent=String(row.body||'').slice(0,2000);card.appendChild(body);
+      const acts=document.createElement('div');acts.className='socialActs';const friend=worldIsFriend(row),self=row.self===true;
+      acts.appendChild(button('VIEW',()=>{S.worldProfile=safeName(row.username);renderWorld();},'socialAction alt',false));
+      const addWhy=self?'This is your profile.':friend?'Already an accepted friend.':transportReason();
+      acts.appendChild(button('ADD FRIEND',()=>requestFriend(row.username),'socialAction',S.busy||!!addWhy,addWhy));
+      const pmWhy=self?'This is your profile.':!friend?'Private messages require an accepted friendship.':capabilityReason('chat')||transportReason();
+      acts.appendChild(button('PRIVATE MESSAGE',()=>selectFriend(row.username),'socialAction',!!pmWhy,pmWhy));
+      let inviteWhy='';if(self)inviteWhy='This is your profile.';else if(!friend)inviteWhy='Lobby invites require an accepted friendship.';else if(!S.lobby)inviteWhy='Create or join a Co-op or Versus lobby first.';else if(!S.caps||S.caps.invites!==true)inviteWhy='Lobby invitations are not enabled on this server.';else inviteWhy=transportReason();
+      acts.appendChild(button('INVITE',()=>inviteFriend(row.username),'socialAction alt',!!inviteWhy,inviteWhy));
+      const blockWhy=self?'You cannot block yourself.':capabilityReason('blocking')||transportReason();
+      acts.appendChild(button('BLOCK',()=>blockFriend(row.username),'socialAction danger',S.busy||!!blockWhy,blockWhy));
+      const reportWhy=self?'You cannot report your own message.':capabilityReason('reporting')||transportReason();
+      acts.appendChild(button('REPORT',()=>reportWorld(row),'socialAction danger',S.worldBusy||!!reportWhy,reportWhy));
+      card.appendChild(acts);feed.appendChild(card);
+    }
+    if(typeof requestAnimationFrame==='function')requestAnimationFrame(()=>{
+      if(!feed.isConnected)return;
+      if(follow){feed.scrollTop=feed.scrollHeight;return;}
+      feed.scrollTop=Math.min(oldTop,Math.max(0,feed.scrollHeight-feed.clientHeight));
+      if(anchorId)for(const card of feed.children)if(card.dataset.messageId===anchorId){
+        feed.scrollTop+=card.getBoundingClientRect().top-feed.getBoundingClientRect().top-anchorOffset;break;
+      }
+    });
+  }
   function renderWorld(){
     const host=q('socialPaneWorld');if(!host)return;host.textContent='';const stack=document.createElement('div');stack.className='socialStack';host.appendChild(stack);
     if(!signedIn()){signedOut(stack);return;}
@@ -631,32 +767,10 @@
       const friend=S.friends.some(f=>String(f.username||'').toLowerCase()===S.worldProfile.toLowerCase()),p=document.createElement('section');p.className='socialVisualHero socialWorldProfile';p.appendChild(avatar(S.worldProfile,friend?String(S.presence[S.worldProfile.toLowerCase()]||'offline'):''));
       const copy=document.createElement('div');copy.className='socialHeroText';const label=document.createElement('small');label.textContent='PLAYER PROFILE · '+safeName(S.worldProfile);copy.appendChild(label);const chip=document.createElement('b');chip.className='socialUsernameChip';chip.textContent=safeName(S.worldProfile);copy.appendChild(chip);const detail=document.createElement('p');detail.textContent=(friend?'Accepted friend · messaging and lobby actions available.':'Public commander · not currently an accepted friend.')+' Private account details and last-seen are never shown.';copy.appendChild(detail);p.appendChild(copy);p.appendChild(button('CLOSE PROFILE',()=>{S.worldProfile='';renderWorld();},'socialAction alt'));stack.appendChild(p);
     }
-    const feed=document.createElement('div');feed.id='socialWorldFeed';feed.className='socialWorldFeed';feed.setAttribute('role','log');feed.setAttribute('aria-live','polite');
-    if(S.worldBusy&&!S.worldMessages.length)feed.appendChild(line('LOADING WORLD CHAT','Fetching the latest public messages…'));
-    else if(!S.worldMessages.length)feed.appendChild(line('NO WORLD MESSAGES','Be the first commander to open the channel.'));
-    for(const row of S.worldMessages.slice().reverse()){
-      const card=document.createElement('article');card.className='socialWorldMessage'+(row.self?' mine':'');
-      const head=document.createElement('div');head.className='socialWorldHead';head.appendChild(avatar(row.username,row.friend?'online':'',true));const name=document.createElement('b');name.textContent=safeName(row.username)+(row.self?' · YOU':'');head.appendChild(name);
-      const at=document.createElement('small');const dt=new Date(Number(row.at)||0);at.textContent=Number(row.at)?dt.toLocaleString():'';head.appendChild(at);card.appendChild(head);
-      const body=document.createElement('div');body.className='socialWorldText';body.textContent=String(row.body||'').slice(0,2000);card.appendChild(body);
-      const acts=document.createElement('div');acts.className='socialActs';const friend=worldIsFriend(row),self=row.self===true;
-      acts.appendChild(button('VIEW',()=>{S.worldProfile=safeName(row.username);renderWorld();},'socialAction alt',false));
-      const addWhy=self?'This is your profile.':friend?'Already an accepted friend.':netOff;
-      acts.appendChild(button('ADD FRIEND',()=>requestFriend(row.username),'socialAction',S.busy||!!addWhy,addWhy));
-      const pmWhy=self?'This is your profile.':!friend?'Private messages require an accepted friendship.':capabilityReason('chat')||netOff;
-      acts.appendChild(button('PRIVATE MESSAGE',()=>selectFriend(row.username),'socialAction',!!pmWhy,pmWhy));
-      let inviteWhy='';if(self)inviteWhy='This is your profile.';else if(!friend)inviteWhy='Lobby invites require an accepted friendship.';else if(!S.lobby)inviteWhy='Create or join a Co-op or Versus lobby first.';else if(!S.caps||S.caps.invites!==true)inviteWhy='Lobby invitations are not enabled on this server.';else inviteWhy=netOff;
-      acts.appendChild(button('INVITE',()=>inviteFriend(row.username),'socialAction alt',!!inviteWhy,inviteWhy));
-      const blockWhy=self?'You cannot block yourself.':capabilityReason('blocking')||netOff;
-      acts.appendChild(button('BLOCK',()=>blockFriend(row.username),'socialAction danger',S.busy||!!blockWhy,blockWhy));
-      const reportWhy=self?'You cannot report your own message.':capabilityReason('reporting')||netOff;
-      acts.appendChild(button('REPORT',()=>reportWorld(row),'socialAction danger',S.worldBusy||!!reportWhy,reportWhy));
-      card.appendChild(acts);feed.appendChild(card);
-    }
+    const feed=document.createElement('div');feed.id='socialWorldFeed';feed.className='socialWorldFeed';feed.setAttribute('role','log');feed.setAttribute('aria-live','polite');fillWorldFeed(feed,false);
     stack.appendChild(feed);
     const form=document.createElement('div');form.className='socialComposer';const ta=document.createElement('textarea');ta.id='socialWorldBody';ta.maxLength=500;ta.placeholder='Message World Chat';ta.setAttribute('aria-label','World Chat message');ta.value=S.worldDraft;ta.disabled=!!netOff;ta.addEventListener('input',()=>{S.worldDraft=ta.value;});form.appendChild(ta);form.appendChild(button('SEND',()=>sendWorldMessage(ta),'socialAction',S.worldBusy||!!netOff,netOff));stack.appendChild(form);
     stack.appendChild(button(S.worldBusy?'REFRESHING…':'REFRESH WORLD CHAT',()=>loadWorldMessages(),'socialAction alt',S.worldBusy||!!netOff,netOff));
-    if(typeof requestAnimationFrame==='function')requestAnimationFrame(()=>{const log=q('socialWorldFeed');if(log)log.scrollTop=log.scrollHeight;});
   }
   function renderChat(){
     const host=q('socialPaneChat');if(!host)return;host.textContent='';const stack=document.createElement('div');stack.className='socialStack';host.appendChild(stack);
@@ -684,17 +798,18 @@
     connectionNotice(grid);const netOff=transportReason(),locked=S.lobbyBusy||!!netOff||!!S.launchReceipt;
     const status=document.createElement('div');status.className='socialCard';const h=document.createElement('h3');h.textContent=S.lobby?'STAGING LOBBY · '+S.lobby.code:'PLAYER LOBBY';status.appendChild(h);
     if(!S.lobby){
-      status.appendChild(line('NO ACTIVE LOBBY','Create a private staging room or enter a friend’s eight-character code.'));
+      status.appendChild(line('2-SEAT TEST MATCH','Aelos North · Nova Kai · fixed loadout. No gear is spent or progression awarded. Create a room or enter a friend code.','warn'));
       const create=document.createElement('div');create.className='socialCreate';
       const mode=document.createElement('select');mode.setAttribute('aria-label','Lobby mode');
-      for(const x of [['coop','CO-OP VS AI'],['skirmish','SKIRMISH · 2P']]){const o=document.createElement('option');o.value=x[0];o.textContent=x[1];o.selected=S.lobbyDraft.mode===x[0];mode.appendChild(o);}mode.disabled=locked;mode.addEventListener('change',()=>{S.lobbyDraft.mode=mode.value==='skirmish'?'skirmish':'coop';if(S.lobbyDraft.mode==='skirmish')S.lobbyDraft.slots=2;renderLobby();});create.appendChild(mode);
-      const slots=document.createElement('select');slots.setAttribute('aria-label','Lobby player slots');
-      const allowedSlots=S.lobbyDraft.mode==='skirmish'?[2]:[2,3,4];if(!allowedSlots.includes(S.lobbyDraft.slots))S.lobbyDraft.slots=allowedSlots[0];
-      for(const n of allowedSlots){const o=document.createElement('option');o.value=String(n);o.textContent=n+' PLAYERS';o.selected=S.lobbyDraft.slots===n;slots.appendChild(o);}slots.disabled=locked;slots.addEventListener('change',()=>{const n=Number(slots.value);S.lobbyDraft.slots=allowedSlots.includes(n)?n:allowedSlots[0];});create.appendChild(slots);
+      for(const x of [['coop','CO-OP VS AI · 2P'],['skirmish','SKIRMISH · 2P']]){const o=document.createElement('option');o.value=x[0];o.textContent=x[1];o.selected=S.lobbyDraft.mode===x[0];mode.appendChild(o);}mode.disabled=locked;mode.addEventListener('change',()=>{S.lobbyDraft.mode=mode.value==='skirmish'?'skirmish':'coop';S.lobbyDraft.slots=2;renderLobby();});create.appendChild(mode);
       create.appendChild(button(S.lobbyBusy?'CREATING…':'CREATE LOBBY',createLobby,'socialAction',locked,netOff));status.appendChild(create);
       const join=document.createElement('div');join.className='socialJoin';const input=document.createElement('input');input.maxLength=8;input.placeholder='Eight-character code';input.autocapitalize='characters';input.autocomplete='off';input.spellcheck=false;input.pattern='[A-Fa-f0-9]{8}';input.setAttribute('aria-label','Lobby code');input.disabled=locked;input.addEventListener('input',()=>{input.value=input.value.toUpperCase().replace(/[^A-F0-9]/g,'').slice(0,8);});input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!locked){e.preventDefault();joinLobby(input.value);}});join.appendChild(input);join.appendChild(button('JOIN',()=>joinLobby(input.value),'socialAction',locked,netOff));status.appendChild(join);
     }else{
-      const rule=S.lobby.rules||{},members=Array.isArray(S.lobby.members)?S.lobby.members:[];status.appendChild(line('RULES',String(rule.mode||'skirmish').toUpperCase()+' · '+String(rule.map||'auto').toUpperCase()+' · '+Number(rule.slots||2)+' SLOTS','good'));
+      const rule=S.lobby.rules||{},members=Array.isArray(S.lobby.members)?S.lobby.members:[],supportedSeats=Number(rule.slots||2)===2;
+      const mapLabel=rule.map==='auto'||rule.map==='aelos_north_medium'?'AELOS NORTH':String(rule.map||'unknown').toUpperCase();
+      status.appendChild(line('RULES',String(rule.mode||'skirmish').toUpperCase()+' · '+mapLabel+' · '+Number(rule.slots||2)+' SLOTS',supportedSeats?'good':'warn'));
+      status.appendChild(line('2-SEAT TEST MATCH','Aelos North · Nova Kai · fixed loadout. No gear is spent or progression awarded.','warn'));
+      if(!supportedSeats)status.appendChild(line('MATCH SIZE NOT SUPPORTED','This game build plays two human seats. This older lobby can be left, but cannot launch a live match here.','warn'));
       sectionTitle(status,'ROSTER',members.length);
       const submitted=S.lobbyCompatibility&&S.lobbyCompatibility.lobbyId===S.lobby.id&&S.lobbyCompatibility.revision===S.lobby.revision;
       const roster=document.createElement('div');roster.className='socialNamedGrid';
@@ -705,11 +820,13 @@
       }
       status.appendChild(roster);
       const me=members.find(m=>m.self),acts=document.createElement('div');acts.className='socialToolbar';
-      acts.appendChild(button(me&&me.ready?'NOT READY':'READY',()=>setLobbyReady(!(me&&me.ready)),'socialAction',locked,netOff));
+      acts.appendChild(button(me&&me.ready?'NOT READY':'READY',()=>setLobbyReady(!(me&&me.ready)),'socialAction',locked||(!supportedSeats&&!(me&&me.ready)),netOff||(!supportedSeats?'This build supports two-player realtime matches only.':'')));
       acts.appendChild(button('REFRESH',refreshLobby,'socialAction alt',locked,netOff));acts.appendChild(button('LEAVE',leaveLobby,'socialAction danger',locked,netOff));status.appendChild(acts);
       const launch=document.createElement('div');launch.className='socialLaunch';
       const runtime=window.MFMatchRuntime,runtimeReady=!!(runtime&&typeof runtime.ready==='function'&&runtime.ready());
       const realtime=S.caps.realtimeMatch===true;
+      /* The format and no-progression limits are shown above the roster,
+         before players commit to READY; do not repeat a paragraph here. */
       if(S.launchReceipt){
         const rs=runtime&&typeof runtime.status==='function'?runtime.status():{state:'unavailable'};
         launch.appendChild(line('CREDENTIAL HANDED TO MATCH RUNTIME','Seat '+S.launchReceipt.seat+' · '+String(rs.state||'connecting').toUpperCase()+'. The credential is not stored or displayed.','good'));
@@ -720,12 +837,16 @@
           ?'Compatibility is bound to lobby revision '+S.lobby.revision+'. Any roster or ready change requires another verification.'
           :'Hash the executing packaged or OTA game, then submit it for this exact lobby revision.',submitted?'good':'warn'));
         const launchActions=document.createElement('div');launchActions.className='socialToolbar';
-        launchActions.appendChild(button(S.lobbyBusy?'VERIFYING…':(submitted?'VERIFY AGAIN':'VERIFY THIS BUILD'),verifyLobbyBuild,'socialAction alt',locked,netOff));
-        const full=members.length===Number(rule.slots),allReady=full&&members.every(m=>m.ready===true);
+        launchActions.appendChild(button(S.lobbyBusy?'VERIFYING…':(submitted?'VERIFY AGAIN':'VERIFY THIS BUILD'),verifyLobbyBuild,'socialAction alt',locked||!supportedSeats,netOff||(!supportedSeats?'This build supports two-player realtime matches only.':'')));
+        const configuredSlots=Number(rule.slots)||2,readyCount=members.filter(m=>m.ready===true).length,
+          verifiedCount=members.filter(m=>m.compatible===true&&m.compatibilityRevision===S.lobby.revision).length;
+        const full=members.length===configuredSlots,allReady=full&&readyCount===configuredSlots;
         const allVerified=allReady&&members.every(m=>m.compatible===true&&m.compatibilityRevision===S.lobby.revision);
+        launch.appendChild(line('LAUNCH READINESS',members.length+'/'+configuredSlots+' seats · '+readyCount+'/'+configuredSlots+
+          ' ready · '+verifiedCount+'/'+configuredSlots+' build verified',allVerified?'good':'warn'));
         const handoff=realtime&&runtimeReady&&typeof window.mfMatchCredentialHandoff==='function';
         if(me&&me.host){
-          let why='';if(!full)why='Every configured seat must be occupied.';else if(!allReady)why='Every player must be ready.';
+          let why='';if(!supportedSeats)why='This build supports two-player realtime matches only.';else if(!full)why='Every configured seat must be occupied.';else if(!allReady)why='Every player must be ready.';
           else if(!allVerified)why='Every current seat must have server-confirmed build verification.';
           else if(!realtime)why='The server has not enabled realtime match rooms.';
           else if(!runtimeReady)why='A deterministic match command consumer is not registered.';
@@ -827,13 +948,18 @@
     if(S.worldBusy||transportReason()||!signedIn()||!S.caps||S.caps.worldChat!==true)return;
     const stamp=S.session;S.worldBusy=true;if(!silent)renderWorld();const r=await socialCall('worldMessages',null,30);
     if(stamp!==sessionStamp())return;S.worldBusy=false;noteTransportFailure(r);
-    if(r&&r.ok)S.worldMessages=r.messages||[];else if(!silent)say((r&&r.message)||'Could not load World Chat.');
-    renderWorld();
+    let changed=true;
+    if(r&&r.ok){const next=r.messages||[];changed=JSON.stringify(S.worldMessages)!==JSON.stringify(next);S.worldMessages=next;}
+    else if(!silent)say((r&&r.message)||'Could not load World Chat.');
+    /* Silent polling updates only the log. Replacing the entire tab every
+       eight seconds detached a focused textarea and closed mobile keyboards. */
+    const feed=silent&&r&&r.ok&&S.tab==='world'&&socialScreenVisible()?q('socialWorldFeed'):null;
+    if(feed&&feed.isConnected){if(changed)fillWorldFeed(feed,true);}else renderWorld();
   }
   async function sendWorldMessage(input){
     if(S.worldBusy||transportReason()||!S.caps||S.caps.worldChat!==true)return;
     const body=String(input&&input.value||S.worldDraft);S.worldDraft=body;S.worldBusy=true;renderWorld();const r=await socialCall('sendWorldMessage',body);S.worldBusy=false;noteTransportFailure(r);
-    if(r&&r.ok){S.worldDraft='';say('World Chat message posted.');await loadWorldMessages(true);return;}
+    if(r&&r.ok){S.worldDraft='';say('World Chat message posted.');renderWorld();await loadWorldMessages(true);return;}
     say((r&&r.message)||'Could not post to World Chat.');renderWorld();
   }
   async function reportWorld(row){
@@ -862,7 +988,7 @@
     if(r&&r.ok){S.messageDraft='';if(r.message)S.messages.push(r.message);say('Message sent.');}else say((r&&r.message)||'Could not send message.');renderChat();renderInboxBridge();
   }
   async function createLobby(){
-    if(S.lobbyBusy||transportReason())return;const mode=S.lobbyDraft.mode==='skirmish'?'skirmish':'coop',n=Number(S.lobbyDraft.slots),slots=mode==='skirmish'?2:([2,3,4].includes(n)?n:2);S.lobbyDraft.mode=mode;S.lobbyDraft.slots=slots;S.lobbyBusy=true;render();const rules={mode,slots,map:'auto'},r=await socialCall('createLobby',rules);S.lobbyBusy=false;noteTransportFailure(r);
+    if(S.lobbyBusy||transportReason())return;const mode=S.lobbyDraft.mode==='skirmish'?'skirmish':'coop',slots=2;S.lobbyDraft.mode=mode;S.lobbyDraft.slots=slots;S.lobbyBusy=true;render();const rules={mode,slots,map:'auto'},r=await socialCall('createLobby',rules);S.lobbyBusy=false;noteTransportFailure(r);
     if(r&&r.ok&&r.lobby){adoptLobby(r.lobby);say('Lobby created · '+S.lobby.code);}else say((r&&r.message)||'Could not create lobby.');render();
   }
   async function joinLobby(code){
@@ -876,7 +1002,7 @@
     else say((r&&r.message)||'Lobby is unavailable.');render();
   }
   async function setLobbyReady(ready){
-    if(!S.lobby||S.lobbyBusy||transportReason())return;S.lobbyBusy=true;render();const r=await socialCall('readyLobby',S.lobby.id,S.lobby.revision,ready);S.lobbyBusy=false;noteTransportFailure(r);
+    if(!S.lobby||S.lobbyBusy||transportReason()||(ready&&Number(S.lobby.rules&&S.lobby.rules.slots)!==2))return;S.lobbyBusy=true;render();const r=await socialCall('readyLobby',S.lobby.id,S.lobby.revision,ready);S.lobbyBusy=false;noteTransportFailure(r);
     if(r&&r.ok&&r.lobby)adoptLobby(r.lobby);else say((r&&r.message)||'Could not update ready state.');render();
   }
   async function leaveLobby(){
@@ -894,8 +1020,17 @@
   }
   function adoptLobby(next){
     const old=S.lobby,changed=!old||!next||old.id!==next.id||old.revision!==next.revision;
+    const viewChanged=changed||JSON.stringify(old)!==JSON.stringify(next);
     S.lobby=next||null;
-    if(changed){S.lobbyCompatibility=null;S.preparedMatch=null;S.launchReceipt=null;}
+    if(changed){S.lobbyCompatibility=null;S.preparedMatch=null;S.launchReceipt=null;lobbyPollLastAt=0;}
+    return viewChanged;
+  }
+  function clearFinishedMatch(){
+    if(!S.launchReceipt)return false;
+    /* Launch closed this staging lobby server-side. Keep friends and chat, but
+       do not leave Social locked to an already-spent credential after return. */
+    S.lobby=null;S.lobbyCompatibility=null;S.preparedMatch=null;S.launchReceipt=null;lobbyPollLastAt=0;
+    render();return true;
   }
   async function acceptLaunchedMatch(match,quiet){
     if(!match||!S.lobby||match.lobbyId!==S.lobby.id||S.launchReceipt)return false;
@@ -910,16 +1045,22 @@
     if(lobbyPollBusy||S.lobbyBusy||S.busy||!S.lobby||S.launchReceipt||S.preparedMatch||transportReason()||
        !signedIn()||!S.caps||S.caps.matchLaunch!==true||S.caps.realtimeMatch!==true||
        typeof document!=='undefined'&&document.visibilityState==='hidden')return;
-    const members=Array.isArray(S.lobby.members)?S.lobby.members:[],slots=Number(S.lobby.rules&&S.lobby.rules.slots)||2;
-    if(members.length!==slots||!members.every(m=>m.ready===true&&m.compatible===true&&m.compatibilityRevision===S.lobby.revision))return;
-    const id=S.lobby.id,revision=S.lobby.revision;lobbyPollBusy=true;
+    const members=Array.isArray(S.lobby.members)?S.lobby.members:[],me=members.find(m=>m.self),now=Date.now();
+    /* Only the server knows when another seat became verified and the host
+       launched. A cached roster's incompatible flag can never gate discovery
+       of that very update. Poll promptly after local readiness, more slowly
+       while staging, and only one request at a time. */
+    const interval=me&&me.ready||S.lobbyCompatibility?1500:6000;
+    if(lobbyPollLastAt&&now-lobbyPollLastAt<interval)return;
+    const id=S.lobby.id,revision=S.lobby.revision,epoch=S.epoch,stamp=S.session;
+    lobbyPollBusy=true;lobbyPollLastAt=now;
     const r=await socialCall('getLobby',id);lobbyPollBusy=false;
-    if(!S.lobby||S.lobby.id!==id||S.lobby.revision!==revision)return;
+    if(epoch!==S.epoch||stamp!==S.session||!S.lobby||S.lobby.id!==id||S.lobby.revision!==revision)return;
     if(r&&r.ok&&r.match){await acceptLaunchedMatch(r.match,true);return;}
-    if(r&&r.ok&&r.lobby)adoptLobby(r.lobby);
+    if(r&&r.ok&&r.lobby&&adoptLobby(r.lobby)&&socialScreenVisible())renderLobby();
   }
   async function verifyLobbyBuild(){
-    if(!S.lobby||S.lobbyBusy||transportReason()||!S.caps||S.caps.matchLaunch!==true)return;
+    if(!S.lobby||S.lobbyBusy||transportReason()||!S.caps||S.caps.matchLaunch!==true||Number(S.lobby.rules&&S.lobby.rules.slots)!==2)return;
     const id=S.lobby.id,revision=S.lobby.revision,rules=S.lobby.rules,epoch=S.epoch;
     S.lobbyBusy=true;render();const r=await socialCall('verifyLobbyCompatibility',id,revision,rules);
     if(epoch!==S.epoch||!S.lobby||S.lobby.id!==id||S.lobby.revision!==revision){S.lobbyBusy=false;render();return;}
@@ -931,6 +1072,7 @@
     if(!S.lobby||S.lobbyBusy||transportReason()||!S.caps||S.caps.matchLaunch!==true||S.caps.realtimeMatch!==true||
        !window.MFMatchRuntime||!MFMatchRuntime.ready()||typeof window.mfMatchCredentialHandoff!=='function')return;
     const members=Array.isArray(S.lobby.members)?S.lobby.members:[],slots=Number(S.lobby.rules&&S.lobby.rules.slots)||2;
+    if(slots!==2)return;
     if(members.length!==slots||!members.every(m=>m.ready===true&&m.compatible===true&&m.compatibilityRevision===S.lobby.revision))return;
     const me=members.find(m=>m.self);if(!me||!me.host)return;
     const id=S.lobby.id,revision=S.lobby.revision,epoch=S.epoch;S.lobbyBusy=true;render();
@@ -960,7 +1102,7 @@
     else if(S.reason){title='CHAT STATUS UNCONFIRMED';body=S.reason;tone='warn';}
     host.appendChild(line(title,body,tone));host.appendChild(button('OPEN SOCIAL',()=>open('chat'),'socialAction alt'));
   }
-  window.MFSocialUI={init:initSocialUIImpl,open,refresh,refreshOnline:refreshOnlineAggregate,refreshWorld:loadWorldMessages,setTab,renderInboxMessages:renderInboxBridge,state:S};
+  window.MFSocialUI={init:initSocialUIImpl,open,refresh,refreshOnline:refreshOnlineAggregate,refreshWorld:loadWorldMessages,setTab,renderInboxMessages:renderInboxBridge,clearFinishedMatch,state:S};
   function initSocialUIImpl(){
     ensureShell();syncSession();
     if(typeof window!=='undefined'&&!window.__mfSocialNetworkBound){

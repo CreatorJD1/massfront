@@ -12,15 +12,16 @@ let PROFILES={active:null,seq:0,list:[]};
    Every entry is gated on account rank, so the roster is also the progression
    readout: a locked card states the rank that opens it rather than hiding.
 
-   The four here are the canonical faction commanders — the portraits and names
+   These are the canonical PLAYABLE faction commanders — the portraits and names
    already exist in assets/factions and src/factions.js, so nothing is invented.
+   The Brood Sovereign is deliberately absent: the Brood is the universal threat,
+   never a career identity or player unlock.
    Adding another is one line: give it an id, a faction key for the portrait,
    and the rank index that unlocks it. `unlock:0` means available from Recruit. */
 const CHARACTERS=[
-  {id:'kai',      fac:'nova',       nm:'Captain Elara Kai',   role:'Terran Frontline Command', unlock:0},
-  {id:'renn',     fac:'syndicate',  nm:'Broker Lys Renn',     role:'Syndicate Coalition',      unlock:2},
-  {id:'vex',      fac:'ascendancy', nm:'Lord Darion Vex',     role:'Crimson Dominion',         unlock:5},
-  {id:'sovereign',fac:'horde',      nm:'The Brood Sovereign', role:'Brood Swarm',              unlock:8}
+  {id:'kai',  fac:'nova',       nm:'Captain Elara Kai', role:'Terran Frontline Command', unlock:0, portrait:'./assets/factions/commanders/nova_kai.jpg'},
+  {id:'renn', fac:'syndicate',  nm:'Broker Lys Renn',   role:'Syndicate Coalition',      unlock:2, portrait:'./assets/factions/commanders/syndicate_renn.jpg'},
+  {id:'vex',  fac:'ascendancy', nm:'Lord Darion Vex',   role:'Crimson Dominion',         unlock:5, portrait:'./assets/factions/commanders/legion_vex.jpg'}
 ];
 /* Callsign suffixes. Cosmetic, stacked on top of the chosen commander name. */
 const TITLES=[
@@ -44,7 +45,7 @@ function charById(id){ return CHARACTERS.find(c=>c.id===id)||null; }
 function charUnlocked(entry){ return metaRankIdx() >= (entry.unlock|0); }
 function charPortrait(id){
   const c=charById(id); if(!c) return null;
-  return './assets/factions/'+c.fac+'_192.jpg';
+  return c.portrait;
 }
 /* The identity actually in force. Falls back to the rank emblem so a profile
    that predates this system, or one whose character is no longer unlocked
@@ -174,7 +175,7 @@ function mfApplyTextScale(value){
 }
 const DEF_SETTINGS={sound:true,music:true,fog:true,shake:true,fps:false,cine:true,dayNight:true,
                       haptics:true,formationPreview:true,orderPaths:true,screenGrade:'neutral',
-                      godMode:false,tutorialVoice:true,sfxVol:4,ambVol:4,musicVol:3,voiceVol:4,audioLevelSteps:2,
+                      godMode:false,oceanTester:false,tutorialVoice:true,sfxVol:4,ambVol:4,musicVol:3,voiceVol:4,audioLevelSteps:2,
                       perf:'auto',menubg:'dim',healthBars:'select',teamIdMode:false,textScale:100,
                      quality:mfGuessMobile()?'medium':'high', gfxAdvOpen:false};
 /* CAREER RECORD. The old set was four numbers, which is enough to compute a
@@ -416,9 +417,13 @@ function metaLoad(){
   const needCoreGrantRepair=Array.isArray(META.coreGrantPending)&&META.coreGrantPending.some(grant=>
     !grant||!Number.isFinite(Number(grant.amount))||Number(grant.amount)<=0||!grant.idemKey);
   const needAudioLevelV2=!(META.settings&&META.settings.audioLevelSteps===2);
+  const oldModules=JSON.stringify([META.mods,META.equip]);
   metaHarden();
+  if(typeof modEquipped==='function')modEquipped();
+  const needModuleRepair=oldModules!==JSON.stringify([META.mods,META.equip]);
   const overlapMigration=armoryRetireOverlaps();
-  if(needGfxMed||needExplorationRetire||needCoreGrantRepair||needAudioLevelV2||needNewCareerGateSeed||overlapMigration.changed) metaSave();
+  if(needGfxMed||needExplorationRetire||needCoreGrantRepair||needAudioLevelV2||needNewCareerGateSeed||
+     needModuleRepair||overlapMigration.changed) metaSave();
 }
 /* Local save is the source of truth for progress on THIS device. Harden it so a
    transient write failure (quota pressure, a WebView hiccup) does not silently
@@ -431,6 +436,9 @@ function metaSave(){
      metaHarden. Keep the retirement invariant at the serialization boundary
      so local, cloud, file-import and profile-switch paths all converge. */
   armoryRetireOverlaps();
+  /* Direct account restores/imports bypass metaLoad. Normalize the fitted
+     module list here too so malformed slots never reach the next match. */
+  if(typeof modEquipped==='function')modEquipped();
   if(META.settings){
     delete META.settings.experimentalExploration;
     delete META.settings.expExploration;
@@ -652,6 +660,7 @@ function switchProfile(id){
   wcChoice=clamp(META.wcPref|0,0,3);
   document.querySelectorAll('.wbtn').forEach(b=>b.classList.toggle('on',+b.dataset.w===wcChoice));
   renderMetaHead();
+  if(typeof sessRenderResume==='function')sessRenderResume();
 }
 
 /* ---------- account ranks ---------- */
@@ -938,16 +947,25 @@ function invConsumableScope(id){
   const c=INV_CONSUMABLES.find(x=>x.id===id);
   return (c&&c.scope)||'army';
 }
-/* The chassis a charge may be locked to: every machine the player can actually
-   field. Derived from TYPES rather than a hand-written list, so a new unit is
-   lockable the day it ships instead of the day someone remembers this file. */
+/* Mirror the production menu's facility lists, then ask the doctrine roster
+   which of those chassis THIS faction fields. TYPES is a shared rules table:
+   merely having a type/name never meant a Nova, Dominion or Syndicate factory
+   could build it. A lock to an excluded chassis spent a rare charge for no use. */
 function invLockableTypes(){
-  const out=[];
+  const out=[],seen=new Set();
   if(typeof TYPES==='undefined') return out;
-  for(let t=0;t<TYPES.length;t++){
-    const T=TYPES[t];
-    if(!T||!T.name||T.hero||T.brood||T.massflesh) continue;
-    out.push(t);
+  const facilities={
+    fac:[0,1,9,18,10,2,3,6,7,11,16,19,20,21,22,23,24,27,32],
+    tgate:[8,26],harbor:[14,15],airfield:[5,17,25]
+  };
+  for(const facility in facilities){
+    const list=facilities[facility],fielded=typeof factionDoctrineRoster==='function'
+      ?factionDoctrineRoster(list,facility,0):list;
+    for(const t of fielded){
+      const T=TYPES[t];
+      if(!T||!T.name||T.hero||T.brood||T.massflesh||seen.has(t))continue;
+      seen.add(t);out.push(t);
+    }
   }
   return out;
 }
@@ -974,6 +992,22 @@ function invBag(){
   for(const k in b.readyTy) if(b.ready.indexOf(k)<0) delete b.readyTy[k];
   return b;
 }
+/* A saved lock belongs to the faction that could field its chassis. Changing
+   the player faction releases incompatible ready slots without spending stock;
+   the player can pick a useful chassis in the new roster. */
+function invRevalidateReadyFaction(silent){
+  const b=invBag(),allowed=invLockableTypes(),removed=[];
+  for(const id of b.ready.slice()){
+    if(invConsumableScope(id)!=='type')continue;
+    if(allowed.indexOf(b.readyTy[id])>=0)continue;
+    b.ready.splice(b.ready.indexOf(id),1);delete b.readyTy[id];removed.push(id);
+  }
+  if(removed.length){
+    metaSave();
+    if(!silent)toast('Chassis lock no longer fits this faction — supply returned to Armory');
+  }
+  return removed;
+}
 function invEquipGear(id){
   const b=invBag(), g=INV_GEAR.find(x=>x.id===id);
   if(!g||(b.gear[id]||0)<=0) return false;
@@ -989,10 +1023,10 @@ function invReadyConsumable(id,ty){
     if(c.scope==='type'){
       /* A type-scoped charge with no chassis is the old army-wide behaviour
          wearing a new label. Refuse it and say what is missing. */
-      if(!(ty>=0)||invLockableTypes().indexOf(ty|0)<0){
+      if(!Number.isInteger(ty)||invLockableTypes().indexOf(ty)<0){
         toast('Pick a chassis to lock '+c.nm+' to'); return false;
       }
-      b.readyTy[id]=ty|0;
+      b.readyTy[id]=ty;
     }
     b.ready.push(id);
   }
@@ -1064,25 +1098,49 @@ function invGrantModeReward(win,mode,loot){
   if(loot&&Array.isArray(loot.consumables))loot.consumables.push(drop);
   return drop;
 }
-/* Called after permanent perks and Development modules so every multiplier is
-   layered once and the utility-slot build bonus is not reset by applyModules. */
+let invPendingReadied=null;
+function invAbandonReadied(){ invPendingReadied=null; }
+/* Apply effects while the carrier is being positioned, but reserve stock until
+   deployment actually begins. Closing a pre-deploy map must not consume the
+   one-use supply; a failed persistence write must not allow free deployment. */
 function invApplyLoadout(){
+  invRevalidateReadyFaction(true);
   const b=invBag();
   for(const s of ['weapon','armor','utility']){
     const g=INV_GEAR.find(x=>x.id===b.equipped[s]);
     if(g&&(b.gear[g.id]||0)>0) try{g.apply();}catch(e){}
   }
-  const used=[];
+  const used=[],rows=[];
   for(const id of b.ready){
     const c=INV_CONSUMABLES.find(x=>x.id===id);
     if(!c||(b.consumables[id]||0)<=0) continue;
     /* -1 means army-wide; a type-scoped charge without a lock falls back to the
        old global effect rather than doing nothing at all. */
-    try{c.apply(b.readyTy&&b.readyTy[id]!=null?b.readyTy[id]:-1);}catch(e){}
-    b.consumables[id]--; used.push(c);
+    try{c.apply(b.readyTy&&b.readyTy[id]!=null?b.readyTy[id]:-1);}catch(e){continue;}
+    used.push(c);rows.push({id,ty:b.readyTy[id]});
   }
-  b.ready=[]; b.readyTy={}; metaSave();
+  invPendingReadied={profileId:PROFILES.active,rows};
   return used;
+}
+function invCommitReadied(){
+  const pending=invPendingReadied;
+  if(!pending)return true;
+  if(pending.profileId!==PROFILES.active)return false;
+  const b=invBag(),rows=pending.rows;
+  if(rows.some(row=>b.ready.indexOf(row.id)<0||(b.consumables[row.id]||0)<=0||
+      b.readyTy[row.id]!==row.ty))return false;
+  if(!rows.length){invPendingReadied=null;return true;}
+  const oldReady=b.ready.slice(),oldTy={...b.readyTy},oldCounts={};
+  for(const row of rows){ oldCounts[row.id]=b.consumables[row.id];b.consumables[row.id]--; }
+  b.ready=b.ready.filter(id=>!rows.some(row=>row.id===id));
+  for(const row of rows)delete b.readyTy[row.id];
+  if(metaSave()!==true){
+    b.ready=oldReady;b.readyTy=oldTy;
+    for(const id in oldCounts)b.consumables[id]=oldCounts[id];
+    return false;
+  }
+  invPendingReadied=null;
+  return true;
 }
 /* MUST stay in lockstep with AB_CD in commander.js — the rebuild loop below is
    driven by AB_CD.length, so a shorter AB_BASE writes `undefined * cd` = NaN
@@ -1116,7 +1174,7 @@ function applyMetaPerks(){                    // call AFTER resetWorld, skirmish
 }
 // Neural Uplink: boost commander XP gain
 const _heroXP0=heroXP;
-heroXP=function(x){ _heroXP0(x*(1+0.15*(META.owned.neural||0))); };
+heroXP=function(x){ _heroXP0(x*(window.__MF_NETWORK_SETUP__?1:1+0.15*(META.owned.neural||0))); };
 
 /* ============================================================
    SESSION RULES — victory goal, clock, resource pace, crate rate
@@ -1512,26 +1570,20 @@ function renderMetaHead(){
 }
 
 /* ---------- war room ----------
-   Four operations behind one door. Playable modes come first and the locked
-   ones stay VISIBLE rather than hidden — a locked card that explains itself is
-   a roadmap; a hidden one is just a menu that looks small. */
-/* Ordered by development priority, which is also the order a player should meet
-   them: learn, skirmish, then enter the authored solo Prologue. MMO / Co-op
-   stay visible as roadmap cards and never enter a stub. */
+   Keep this direct-battle menu to its three playable solo routes. Network
+   staging belongs in Social Command and future warfronts belong in UGA;
+   duplicating locked roadmap cards here made the War Room look like a second
+   authority for those services. Deep-link guards remain in the setup path. */
 const WAR_MODES=[
-  {id:'training', em:'\u25b6', nm:'TRAINING',  ds:'Field orientation under KEEL guidance',
+  {id:'training', em:'\u25b6', nm:'TRAINING',  ds:'KEEL-guided field orientation',
    foot:''},
   /* Standard is the finished local mode. Advertising co-op here while the
      hosted service is locked creates a false affordance: the player taps a
      promised mode and lands in single-player setup instead. */
-  {id:'standard', em:'\u2694', nm:'STANDARD',  ds:'Single-player against AI, with optional AI allies',
-   foot:'4 planets \u00b7 16 regions \u00b7 48 conquest battlefields'},
-  {id:'campaign', em:'\u2b21', nm:'CAMPAIGN',  ds:'Guided story missions with authored objectives',
-   foot:'5-mission playable Prologue \u00b7 solo authored objectives'},
-  {id:'mmo',      em:'\u2637', nm:'MMO',       ds:'Persistent planets \u00b7 build a commander HQ, take ground',
-   foot:'Persistent warfront \u00b7 not yet in play', locked:'LONG TERM'},
-  {id:'coop',   em:'\u25c8', nm:'CO-OP', ds:'Two commanders against adaptive AI',
-   foot:'Separate online service \u00b7 not yet in play', locked:'NETWORK IN DEVELOPMENT'}
+  {id:'standard', em:'\u2694', nm:'STANDARD',  ds:'Solo skirmish \u00b7 optional AI allies',
+   foot:'4 planets \u00b7 16 regions \u00b7 48 battlefields'},
+  {id:'campaign', em:'\u2b21', nm:'CAMPAIGN',  ds:'Guided Prologue missions',
+   foot:'5 playable missions'}
 ];
 function renderWarRoom(){
   const g=document.getElementById('warGrid'); if(!g) return;
@@ -1547,7 +1599,7 @@ function renderWarRoom(){
     if(M.id==='training'&&T){
       foot=T.state;
       sub=(T.action||'\u25b6 START TRAINING').replace(/^\S+\s+/,'');
-      sub=sub.charAt(0)+sub.slice(1).toLowerCase()+' \u00b7 protected drop, no early rush';
+      sub=sub.charAt(0)+sub.slice(1).toLowerCase();
     }
     const C=MODE_REWARD_CONTRACTS[M.id],it=C&&C.item?INV_CONSUMABLES.find(x=>x.id===C.item):null;
     const reward=C?'<span class="warReward" style="--mode:'+C.accent+'"><b>+'+Math.round((C.xp-1)*100)+'% XP</b>'
@@ -1689,7 +1741,9 @@ function mfBindTap(el,fn){
   });
   el.addEventListener('click',e=>{
     /* A real pointer tap produces pointerup and then click. Swallow only that
-       duplicate; Enter/Space and assistive-tech clicks have no pointer commit. */
+       duplicate; Enter/Space and assistive-tech clicks have detail=0 even if a
+       pointer activated another control a moment ago. */
+    if(e.detail===0){if(!el.disabled)fn(e);return;}
     /* The pointerup callback is allowed to replace its own button (tabbed
        screens do this). The following click can then be retargeted to a NEW
        button at that coordinate, so the duplicate guard must be shared across
@@ -2301,7 +2355,7 @@ function renderArmory(){
     const t=META.owned[it.id]||0, maxed=t>=it.max;
     const cost=maxed?0:it.cost[t];
     h+='<div class="sItem'+(maxed?' owned':'')+'" data-id="'+it.id+'">'
-      +'<div class="sEm">'+(typeof itemArt==='function'?itemArt('st_'+it.id,it.em,36):it.em)+'</div>'
+      +'<div class="sEm">'+(typeof itemArt==='function'?itemArt('st_'+it.id,it.em,58):it.em)+'</div>'
       +'<div class="sTx"><b>'+it.nm+(it.max>1?' <span class="sTier">'+t+'/'+it.max+'</span>':'')+'</b>'
       +'<div class="sDs">'+it.ds+'</div></div>'
       +'<div class="sBuy">'+(maxed?'✓ MAX':'⬡ '+cost)+'</div></div>';

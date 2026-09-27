@@ -47,8 +47,8 @@ C.testFaction='syndicate';C.unlocks.add('syn_quantum_grid');C.drawn=0;run('drawE
 C.unlocks.add('syn_drone_mesh');const drone=run('spawnUnit(1,0,0,0)'),enemy=run('spawnUnit(2,1,20,0)');C.stats.t=3;run('unitTick(.1)');run(`dealDamage(${enemy},100,0,${drone})`);eq(C.lastDamage,110,'Drone Mesh mark damage');
 C.unlocks.add('syn_phase_lattice');const ark=run('spawnUnit(3,0,0,0)');C.mfAirliftHolds[ark]={gen:C.ugen[ark],mission:{x:80,y:0}};run('mfAirliftPostTick(.1)');eq(C.unloaded,1,'Phase Lattice transfer');
 
-if(run("mfFactionTechBroodGate('hor_gene_splice')")!==false)throw new Error('Brood future gate must remain closed');
-if(run("mfFactionTechPurchasable('hor_gene_splice')")!==false)throw new Error('Brood dossier must not be purchasable');
+if(run("mfFactionTechBroodGate('hor_gene_splice')")!==false)throw new Error('Brood player gate must remain permanently closed');
+if(run("mfFactionTechPurchasable('hor_gene_splice')")!==false)throw new Error('Brood threat capability must not be purchasable');
 run("devBuy({id:'hor_gene_splice'})");
 if(C.unlocks.has('hor_gene_splice'))throw new Error('Brood dossier purchase guard failed');
-console.log('Faction tech behavior passed: Dominion 3/3, Syndicate 3/3, Brood gate 3/3.');
+console.log('Faction tech behavior passed: Dominion 3/3, Syndicate 3/3, permanent Brood exclusion 3/3.');

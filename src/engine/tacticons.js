@@ -330,6 +330,19 @@ function buildIconAtlas(){
   mfDefIcon('pl_ring', (c,r)=>{ c.strokeStyle='#fff'; c.lineWidth=Math.max(7,r*0.17);
     const p=[]; for(let i=0;i<6;i++){ const a=Math.PI/6+i*Math.PI/3; p.push([Math.cos(a)*r*.95,Math.sin(a)*r*.95]); }
     mfPoly(c,p); c.stroke(); });
+  /* Four separated ignition wedges, not a selection ring. The former thin
+     diagonal ticks measured only about 2x5 CSS px on a 22 px command icon,
+     and merged when nearby firing stacks overlapped. Broad cardinal wedges
+     sit outside the plate without covering its faction or role glyph. */
+  mfDefIcon('fire_cue', (c,r)=>{ c.fillStyle='#fff';
+    for(let k=0;k<4;k++){
+      const a=k*Math.PI*.5,dx=Math.cos(a),dy=Math.sin(a),px=-dy,py=dx;
+      const inner=r*.63,outer=r*.98,half=r*.16;
+      c.beginPath();c.moveTo(dx*inner+px*half,dy*inner+py*half);
+      c.lineTo(dx*outer,dy*outer);
+      c.lineTo(dx*inner-px*half,dy*inner-py*half);c.closePath();c.fill();
+    }
+  });
 
   /* ---- unit role glyphs (11, keys mirror UCAT) ---- */
   mfDefIcon('u_inf', mfGlyph((c,r)=>{ c.beginPath(); c.arc(0,-r*.34,r*.24,0,Math.PI*2); c.fill();
@@ -775,6 +788,32 @@ function mfIconStackDraw(gh){
     }
   }
 }
+let _mfFireCueSerial=0,_mfFireCueSeen=new Uint32Array(4096);
+function mfIconFireCueBegin(){
+  _mfFireCueSerial=(_mfFireCueSerial+1)>>>0;
+  if(!_mfFireCueSerial){_mfFireCueSeen.fill(0);_mfFireCueSerial=1;}
+  if(typeof unitHigh==='number'&&_mfFireCueSeen.length<unitHigh){
+    const next=new Uint32Array(Math.max(unitHigh,_mfFireCueSeen.length*2));
+    next.set(_mfFireCueSeen);_mfFireCueSeen=next;
+  }
+}
+function mfIconFireCueUnit(i){
+  if(!bbIcon||!mfIcoTex||!MF_ICO.fire_cue||i<0||i>=unitHigh||!ualive[i])return false;
+  const head=_stkOn&&i<_stkLead.length&&_stkLead[i]>=0?_stkLead[i]:i;
+  if(_mfFireCueSeen[head]===_mfFireCueSerial)return false;
+  const count=_stkOn?_stkCnt[head]:1,stack=count>1,T=TYPES[utype[head]];
+  if(!T)return false;
+  const mark=stack?.92:Math.max(mfIconQ(mfUnitSpan(T)),mfCmdIconQ(T));
+  if(mark<=0)return false;     // the visible mesh already carries the shot
+  const C=stack?mfIconStackCentroid(head):null,X=stack?C[0]:ux[head],Y=stack?C[1]:uy[head];
+  const H=typeof unitGroundY==='function'?unitGroundY(T,X,Y,head):terrainH(X,Y)+(T.air?58:0);
+  const dpx=mfIconDpx(T)*(stack?1+Math.min(.35,Math.log(count)*.12):1);
+  /* Queue after the plate/glyph, in the same existing icon draw call. One
+     pulse per stacked squad even when many rifles release on the same tick. */
+  bbIcon.add(MF_ICO.fire_cue,X,Y,H+2,dpx*1.85,0,255,184,54,Math.round(245*mark));
+  _mfFireCueSeen[head]=_mfFireCueSerial;
+  return true;
+}
 function mfIconStackRingLeads(vis,isCmd){
   if(!_stkOn) return null;
   _stkRingOut.length=0;
@@ -807,8 +846,12 @@ function mfIconStackMembers(lead){
 }
 function mfIconStackSelect(i){
   const lead=(i>=0&&i<_stkLead.length&&_stkLead[i]>=0)?_stkLead[i]:i;
-  if(lead<0||uteam[lead]!==0) return false;
-  const mem=mfIconStackMembers(lead).filter(j=>ualive[j]&&uteam[j]===0);
+  if(lead<0) return false;
+  /* A stack is grouped by team, not by human commander slot. Filter ownership
+     at selection time so PvP seat 2 can select its team-1 plate and co-op
+     commanders cannot silently take another player's units. */
+  const owns=j=>typeof mfLocalOwnsUnit==='function'?mfLocalOwnsUnit(j):uteam[j]===0;
+  const mem=mfIconStackMembers(lead).filter(j=>ualive[j]&&owns(j));
   if(!mem.length) return false;
   const allOn=mem.every(i=>usel[i]);
   if(typeof clearSel==='function') clearSel();

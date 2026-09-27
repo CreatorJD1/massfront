@@ -64,7 +64,10 @@ import {
 } from '../src/domain/index.js';
 
 let constructionEventSequence = 0;
-const PALE_BLOOM_MAP_ID = 'karak_meridian_quarantine_standard';
+/* Frontier ladder tier 4 gates standard/large behind a compact clear; the
+   showcase-ready state fabricates veteran surveys but no operations history,
+   so only the always-open compact drop launches from it. */
+const PALE_BLOOM_MAP_ID = 'karak_meridian_quarantine_compact';
 
 function finishConstruction(state, cycles, source = 'test') {
   constructionEventSequence += 1;
@@ -106,8 +109,9 @@ function verifyLockedCatalog() {
     'hangar',
     'logistics'
   ]);
-  assert.deepEqual(Object.keys(SYSTEM_CATALOG), ['aelos', 'veyra', 'karak']);
-  assert.equal(FACTION_CATALOG.nova.name, 'Nova Coalition');
+  assert.deepEqual(Object.keys(SYSTEM_CATALOG), ['aelos', 'veyra', 'karak', 'sombrero_i', 'andromeda_iv', 'orion_arc', 'helios_core']);
+  assert.equal(FACTION_CATALOG.nova.name, 'Terran Frontline Command',
+    'Nova display name must stay the canon label from src/faction-id.js — any name containing "coalition" canonicalises to the Syndicate in the identity seam');
   assert.equal(FACTION_CATALOG.dominion.name, 'Crimson Dominion');
   assert.equal(FACTION_CATALOG.syndicate.name, 'Syndicate Coalition');
   assert.equal(FACTION_CATALOG.uga.role, 'neutral_non_sovereign_coordinator');
@@ -163,7 +167,10 @@ function verifyPlanetSurveyOwnershipAndDepletion() {
     veyra_photon_ring: 'veyra_nacre',
     veyra_derelict_echo: 'veyra_orison',
     karak_silent_beacons: 'karak_meridian',
-    karak_hive_scan: 'karak_meridian'
+    karak_hive_scan: 'karak_meridian',
+    aelos_capitol_vector: 'aelos_caldris',
+    veyra_cinder_reach_fix: 'veyra_orison',
+    karak_grid_triangulation: 'karak_meridian'
   });
   const wrongPlanet = getSurveyEligibility(createInitialDomainState(), 'aelos_phase_trace', { planetId: 'aelos_ithara' });
   assert.equal(wrongPlanet.ok, false);
@@ -189,15 +196,17 @@ function verifyDeterministicSoloFrontPressure() {
   let state = commissionCareerFaction(createInitialDomainState(), 'nova');
   const aelosBefore = state.world.systems.aelos.soloFront.pressure;
   const hiddenVeyraBefore = state.world.systems.veyra.soloFront.pressure;
-  state = deployProbe(state, 'aelos_traffic_census').state;
+  /* The only survey runnable from a fresh state: Ithara sits behind the
+     planet ladder and the phase trace behind the capitol-vector chain. */
+  state = deployProbe(state, 'aelos_capitol_vector').state;
   assert.equal(state.world.systems.aelos.soloFront.pressure, aelosBefore + 2, 'unresolved discovered fronts worsen with survey cycles');
   assert.equal(state.world.systems.aelos.soloFront.lastDelta, 2);
-  assert.equal(state.world.systems.aelos.soloFront.lastCause, 'survey:aelos_traffic_census');
+  assert.equal(state.world.systems.aelos.soloFront.lastCause, 'survey:aelos_capitol_vector');
   assert.equal(state.world.systems.veyra.soloFront.pressure, hiddenVeyraBefore, 'undiscovered fronts do not accumulate hidden punishment');
 
   let capped = commissionCareerFaction(createInitialDomainState(), 'nova');
   capped.world.systems.aelos.soloFront.pressure = 99;
-  capped = deployProbe(capped, 'aelos_traffic_census').state;
+  capped = deployProbe(capped, 'aelos_capitol_vector').state;
   assert.equal(capped.world.systems.aelos.soloFront.pressure, 100, 'front pressure has a hard cap');
   assert.equal(capped.world.systems.aelos.soloFront.lastDelta, 1, 'recorded delta reflects cap clamping');
 
@@ -207,7 +216,7 @@ function verifyDeterministicSoloFrontPressure() {
     resolved.missions[mission.id].completions = 1;
   }
   const resolvedPressure = resolved.world.systems.aelos.soloFront.pressure;
-  resolved = deployProbe(resolved, 'aelos_traffic_census').state;
+  resolved = deployProbe(resolved, 'aelos_capitol_vector').state;
   assert.equal(resolved.world.systems.aelos.soloFront.pressure, resolvedPressure, 'a fully resolved front stops worsening');
   assert.equal(resolved.world.systems.aelos.soloFront.lastDelta, 0);
 }
@@ -227,18 +236,24 @@ function completeAelosVeyraKarakChain() {
   assert.ok(codes(lockedPurge.locks).includes('ACTIVE_INFESTATION_REQUIRED'));
   assert.ok(codes(lockedPurge.locks).includes('HIVE_INTELLIGENCE_REQUIRED'));
 
-  assert.equal(getSurveyEligibility(state, 'aelos_traffic_census').ok, true);
-  state = deployProbe(state, 'aelos_traffic_census').state;
-  assert.ok(state.discoveries.foundIds.includes('aelos_traffic_cipher'));
-  assert.equal(state.intelligence.bySystem.aelos, 1);
-  assert.equal(state.surveys.aelos_traffic_census.depleted, true);
-  expectDomainIssue(() => deployProbe(state, 'aelos_traffic_census'), 'SURVEY_DEPLETED');
-
+  /* Tier 1 — the aelos rung. The ladder scans sit in front of the classic
+     pair: the capitol vector fixes the Sombrero route, the phase trace
+     refuses to run until it has, and Ithara stays laddered behind Caldris. */
+  assert.ok(codes(getSurveyEligibility(state, 'aelos_phase_trace').issues).includes('SURVEY_CHAIN_REQUIRED'));
+  assert.ok(codes(getSurveyEligibility(state, 'aelos_traffic_census').issues).includes('PLANET_LADDER_REQUIRED'));
+  state = deployProbe(state, 'aelos_capitol_vector').state;
+  assert.equal(state.world.systems.sombrero_i.discovered, true);
+  assert.ok(state.story.completedStepIds.includes('sombrero_route_open'));
   state = deployProbe(state, 'aelos_phase_trace').state;
   assert.ok(state.discoveries.foundIds.includes('veyra_route_solution'));
   assert.equal(state.world.systems.veyra.discovered, true);
   assert.equal(state.surveys.veyra_photon_ring.status, 'available');
   assert.ok(state.story.completedStepIds.includes('veyra_route_open'));
+  state = deployProbe(state, 'aelos_traffic_census').state;
+  assert.ok(state.discoveries.foundIds.includes('aelos_traffic_cipher'));
+  assert.equal(state.intelligence.bySystem.aelos, 3);
+  assert.equal(state.surveys.aelos_traffic_census.depleted, true);
+  expectDomainIssue(() => deployProbe(state, 'aelos_traffic_census'), 'SURVEY_DEPLETED');
   state = plotCourse(state, 'veyra');
   assert.equal(state.route.systemId, 'veyra');
 
@@ -248,12 +263,17 @@ function completeAelosVeyraKarakChain() {
   state = upgradeDistrict(state, 'survey');
   state = finishConstruction(state, 2);
   assert.equal(state.ship.districts.survey.level, 2);
-  state = deployProbe(state, 'veyra_photon_ring').state;
+  /* Orison charts before Nacre: Nacre is planet rung 2 and opens only once
+     Orison's primary survey — the derelict echo — has depleted. */
+  state = deployProbe(state, 'veyra_cinder_reach_fix').state;
+  assert.equal(state.world.systems.andromeda_iv.discovered, true);
+  assert.ok(state.story.completedStepIds.includes('andromeda_route_open'));
   state = deployProbe(state, 'veyra_derelict_echo').state;
-  assert.ok(state.discoveries.foundIds.includes('veyra_photon_archive'));
   assert.ok(state.discoveries.foundIds.includes('karak_distress_vector'));
   assert.equal(state.world.systems.karak.discovered, true);
   assert.ok(state.story.completedStepIds.includes('karak_route_open'));
+  state = deployProbe(state, 'veyra_photon_ring').state;
+  assert.ok(state.discoveries.foundIds.includes('veyra_photon_archive'));
   state = plotCourse(state, 'karak');
   assert.equal(state.route.systemId, 'karak');
 
@@ -263,6 +283,10 @@ function completeAelosVeyraKarakChain() {
   assert.equal(state.world.systems.karak.infestation.active, true);
   assert.equal(state.world.systems.karak.infestation.confirmed, true);
   assert.equal(state.world.systems.karak.infestation.hiveTargetsConfirmed, false);
+  state = deployProbe(state, 'karak_grid_triangulation').state;
+  assert.equal(state.world.systems.orion_arc.discovered, true);
+  assert.ok(state.story.completedStepIds.includes('orion_route_open'));
+
   const hiveLevelLock = getSurveyEligibility(state, 'karak_hive_scan');
   assert.equal(hiveLevelLock.ok, false);
   assert.ok(codes(hiveLevelLock.issues).includes('SURVEY_LEVEL_REQUIRED'));
@@ -272,10 +296,20 @@ function completeAelosVeyraKarakChain() {
   assert.equal(state.ship.districts.survey.level, 3);
   state = deployProbe(state, 'karak_hive_scan').state;
   assert.equal(state.world.systems.karak.infestation.hiveTargetsConfirmed, true);
-  assert.equal(state.intelligence.bySystem.karak, 4);
+  assert.equal(state.world.systems.helios_core.discovered, true);
+  assert.equal(state.intelligence.bySystem.karak, 5);
   assert.ok(state.discoveries.foundIds.includes('karak_hive_geometry'));
   assert.ok(state.story.completedStepIds.includes('karak_hive_mapped'));
-  assert.equal(state.resources.probes, 2, 'all six authored surveys deplete once');
+  /* Nine authored surveys against the eight-probe complement: the final hive
+     scan rides the campaign-critical emergency waiver instead of failing, and
+     is then depleted like any other scan. */
+  assert.equal(state.resources.probes, 0);
+  expectDomainIssue(() => deployProbe(state, 'karak_hive_scan'), 'SURVEY_DEPLETED');
+
+  /* The host contracts and persistence checks each relaunch from this state
+     and pay one probe per beginGroundOperation; the three-probe resupply
+     target cannot top stores back up, so grant the test fleet directly. */
+  state.resources.probes += 12;
 
   state = enqueueConstruction(state, 'mission_ops');
   state = finishConstruction(state, 2);
@@ -334,7 +368,7 @@ function verifyMissionLocksAndProxies(progressionState) {
   assert.equal(factionLock.eligible, false);
   assert.ok(codes(factionLock.locks).includes('MISSION_FACTION_EXCLUSIVE'));
   expectDomainIssue(
-    () => beginGroundOperation(showcase, { missionId: 'nova_heliograph_wake', factionId: 'syndicate', mapId: 'aelos_heliograph_standard' }),
+    () => beginGroundOperation(showcase, { missionId: 'nova_heliograph_wake', factionId: 'syndicate', mapId: 'aelos_heliograph_compact' }),
     'MISSION_FACTION_EXCLUSIVE'
   );
 }
@@ -404,6 +438,13 @@ function verifyAccountProfileIsolation() {
 }
 
 function verifyPendingPersistenceAndResults(progressionState) {
+  /* The initial ship's fitted Command modules carry casualtyForecast: 1,
+     which lifts the first reported injury a band and erases the light-injury
+     recovery cycle this section exercises. Clear the sockets so the block
+     tests the injury/recovery contract itself, not the holotable perk. */
+  for (const socketId of Object.keys(progressionState.ship.districts.command.modules)) {
+    progressionState.ship.districts.command.modules[socketId] = null;
+  }
   assert.equal(DOCTRINE_CATALOG.containment.scoreModifier, 8);
   assert.deepEqual(Object.fromEntries(Object.entries(SUPPORT_CATALOG).map(([id, entry]) => [id, entry.scoreModifier])), {
     survey_drones: 4,
@@ -737,6 +778,19 @@ function verifyConstructionSystem() {
   fabricatorState.resources.credits = 99999;
   fabricatorState.resources.alloys = 9999;
   fabricatorState.resources.components = 9999;
+  /* Commission the launch cores first: with them missing, the commissioning
+     reserve anticipates the whole post-completion grid (fabricator tier-3
+     included) and refuses a job that would strand the cores 2 MW short.
+     Engineering L3 raises generation so the forge and megaship-yard draws
+     still leave the projected grid positive. */
+  for (const districtId of ['mission_ops', 'hangar']) {
+    fabricatorState = enqueueConstruction(fabricatorState, districtId);
+    fabricatorState = finishConstruction(fabricatorState, 2);
+  }
+  fabricatorState = enqueueConstruction(fabricatorState, 'engineering');
+  fabricatorState = finishConstruction(fabricatorState, 2);
+  fabricatorState = enqueueConstruction(fabricatorState, 'engineering');
+  fabricatorState = finishConstruction(fabricatorState, 3);
   fabricatorState = enqueueConstruction(fabricatorState, 'fabricator');
   fabricatorState = finishConstruction(fabricatorState, 2);
   assert.equal(getConstructionCapacity(fabricatorState), 1);
@@ -747,15 +801,29 @@ function verifyConstructionSystem() {
   fabricatorState = finishConstruction(fabricatorState, 3);
   assert.equal(getConstructionCapacity(fabricatorState), 4, 'Tier-3 Fabricator plus Megaship Yards authorizes four active jobs');
 
+  /* The hard queue limit only binds on a fully commissioned hull: on a fresh
+     state the launch reserve both caps effective capacity and demands spare
+     power for the still-missing cores (the earlier capacity asserts cover
+     that path). Commission the six optional districts, then pile the queue. */
   let fullQueue = createInitialDomainState();
   fullQueue.resources.credits = 99999;
   fullQueue.resources.alloys = 9999;
   fullQueue.resources.components = 9999;
   for (const districtId of ['mission_ops', 'research', 'fabricator', 'factions', 'hangar', 'navigation']) {
-    const facilityId = fullQueue.ship.districts[districtId].commissioned ? Object.values(CONSTRUCTION_FACILITY_CATALOG).find(entry => entry.districtId === districtId && entry.tier === 2)?.id : null;
-    fullQueue = enqueueConstruction(fullQueue, districtId, facilityId);
+    fullQueue = enqueueConstruction(fullQueue, districtId);
+    fullQueue = finishConstruction(fullQueue, 2);
   }
-  assert.equal(fullQueue.ship.constructionQueue.length, 6);
+  /* Headroom for six queued slots before the pile-on below: a plain
+     engineering level-up raises generation without any facility draw. */
+  fullQueue = enqueueConstruction(fullQueue, 'engineering');
+  fullQueue = finishConstruction(fullQueue, 2);
+  fullQueue = enqueueConstruction(fullQueue, 'engineering');
+  fullQueue = finishConstruction(fullQueue, 3);
+  assert.equal(fullQueue.ship.constructionQueue.length, 0);
+  for (let queued = 0; queued < 6; queued += 1) {
+    fullQueue = enqueueConstruction(fullQueue, ['mission_ops', 'research', 'fabricator', 'factions', 'hangar', 'navigation'][queued]);
+    assert.equal(fullQueue.ship.constructionQueue.length, queued + 1);
+  }
   assert.equal(getConstructionQuote(fullQueue, 'survey', 'survey_t2_probe_telemetry').issues[0].code, 'CONSTRUCTION_QUEUE_FULL');
 
   // Every authored specialization must survive the same authoritative quote,
@@ -767,6 +835,15 @@ function verifyConstructionSystem() {
     choiceState.resources.alloys = 9999;
     choiceState.resources.components = 9999;
     choiceState.resources.bioSamples = 9999;
+    /* Headroom: engineering L3 before the run under test, so any facility's
+       draw keeps the projected grid positive. Engineering's own facilities
+       are exempt — their level-ups raise generation as they complete. */
+    if (facility.districtId !== 'engineering') {
+      choiceState = enqueueConstruction(choiceState, 'engineering');
+      choiceState = finishConstruction(choiceState, 2);
+      choiceState = enqueueConstruction(choiceState, 'engineering');
+      choiceState = finishConstruction(choiceState, 3);
+    }
     if (!choiceState.ship.districts[facility.districtId].commissioned) {
       choiceState = enqueueConstruction(choiceState, facility.districtId);
       choiceState = finishConstruction(choiceState, 2);

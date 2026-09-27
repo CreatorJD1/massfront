@@ -131,6 +131,20 @@ function mfCreateWebGL2(canvas, extra){
   if(mfGL2IsSoftware(g)) return null;
   return g;
 }
+/* Both the early allocation fallback and the later in-place restorer use the
+   NORMAL command-link archetype. Keep one markup authority so recovery cannot
+   drift back into two player-visible loading screens. */
+function mfGLNormalRecoveryMarkup(title,body,actionId,actionLabel,bodyId){
+  return '<div class="mfNormalRecoveryPanel">'
+    +'<div class="mfNormalRecoveryBrand" role="img" aria-label="MASSFRONT — Command. Conquer. Overwhelm."><span aria-hidden="true">MASSFRONT</span>'
+    +'<img src="assets/brand/massfront-title-command-conquer-overwhelm-v1.webp" alt="" aria-hidden="true" width="1200" height="673" decoding="async" onerror="this.style.display=\'none\'"></div>'
+    +'<div class="mfNormalRecoveryKicker">TACTICAL NETWORK // GRAPHICS LINK</div>'
+    +'<div class="mfNormalRecoveryTitle">'+title+'</div>'
+    +'<div class="mfNormalRecoverySignal" aria-hidden="true"><i></i></div>'
+    +'<div '+(bodyId?'id="'+bodyId+'" ':'')+'class="mfNormalRecoveryBody">'+body+'</div>'
+    +(actionId?'<button id="'+actionId+'" type="button">'+actionLabel+'</button>':'')
+    +'</div>';
+}
 function mfWebGL2Required(){
   window.__MF_GL_BOOT_FAILED=true;
   /* A failed allocation must not retain this page's probe reservation. A
@@ -139,19 +153,18 @@ function mfWebGL2Required(){
   try{ mfProbeLeaseRelease(); }catch(e){}
   if(!document.getElementById('glLostOverlay')){
     const o=document.createElement('div'); o.id='glLostOverlay';
+    o.className='mfNormalRecovery mfNormalLoader';o.dataset.loaderArchetype='normal';
+    o.setAttribute('role','alert');o.setAttribute('aria-busy','false');
     o.style.cssText='position:fixed;inset:0;z-index:2147483000;display:flex;flex-direction:column;'
-      +'align-items:center;justify-content:center;gap:15px;background:#02060c;color:#cfe6ff;text-align:center;padding:26px;'
-      +'font-family:var(--fT,system-ui,sans-serif)';
+      +'align-items:center;justify-content:center;color:#cfe6ff;text-align:center;padding:26px;font-family:var(--fT,system-ui,sans-serif)';
     const local=/^(127\.0\.0\.1|localhost|::1)$/i.test(String(location.hostname||''));
     const probeBlocked=window.__MF_GL_PROBE_BLOCKED===true;
-    o.innerHTML='<div style="font:900 14px/1.4 var(--fT,sans-serif);letter-spacing:.1em;color:#8fd0ff">'
-      +(probeBlocked?'FX PROBE ALREADY ACTIVE':'GRAPHICS SESSION UNAVAILABLE')+'</div>'
-      +'<div style="font-size:12px;max-width:340px;line-height:1.5;color:#9fb8cc">'
-      +(probeBlocked?'Another MASSFRONT FX probe is already using this browser origin. Close that probe, then retry this diagnostic tab. The game itself was not started here.'
+    o.innerHTML=mfGLNormalRecoveryMarkup(
+      probeBlocked?'FX PROBE ALREADY ACTIVE':'GRAPHICS SESSION UNAVAILABLE',
+      probeBlocked?'Another MASSFRONT FX probe is already using this browser origin. Close that probe, then retry this diagnostic tab. The game itself was not started here.'
               :local?'This browser could not create a hardware WebGL2 context. Close other MASSFRONT probe or 3D tabs, then retry. If it repeats, restart the Codex browser panel; the game files are not damaged.'
-             :'MASSFRONT needs a hardware WebGL2 GPU. WebGL1 and software renderers are not used.')+'</div>'
-      +'<button id="mfGLBootRetry" type="button" style="margin-top:6px;padding:13px 30px;border-radius:12px;border:1px solid #48cfff;'
-      +'background:linear-gradient(180deg,#2a6f96,#0d2a42);color:#eaf7ff;font:900 12px var(--fT,sans-serif);letter-spacing:.12em">RETRY GRAPHICS</button>';
+             :'MASSFRONT needs a hardware WebGL2 GPU. WebGL1 and software renderers are not used.',
+      'mfGLBootRetry','RETRY GRAPHICS');
     (document.body||document.documentElement).appendChild(o);
     const retry=document.getElementById('mfGLBootRetry');
     if(retry) retry.onclick=()=>location.reload();
@@ -189,13 +202,13 @@ try{
   function glOverlay(){
     if(document.getElementById('glLostOverlay')) return;
     var o=document.createElement('div'); o.id='glLostOverlay';
+    o.className='mfNormalRecovery mfNormalLoader';o.dataset.loaderArchetype='normal';
+    o.setAttribute('role','alert');o.setAttribute('aria-busy','false');
     o.style.cssText='position:fixed;inset:0;z-index:2147483000;display:flex;flex-direction:column;'
-      +'align-items:center;justify-content:center;gap:15px;background:#02060c;color:#cfe6ff;text-align:center;padding:26px;'
-      +'font-family:var(--fT,system-ui,sans-serif)';
-    o.innerHTML='<div style="font:900 14px/1.4 var(--fT,sans-serif);letter-spacing:.1em;color:#8fd0ff">GRAPHICS INTERRUPTED</div>'
-      +'<div style="font-size:12px;max-width:290px;line-height:1.5;color:#9fb8cc">The device reclaimed graphics memory. Your match has been saved — reload and choose RESUME DROPPED SESSION to pick it up where it stopped.</div>'
-      +'<button id="glLostReload" type="button" style="margin-top:6px;padding:13px 30px;border-radius:12px;border:1px solid #48cfff;'
-      +'background:linear-gradient(180deg,#2a6f96,#0d2a42);color:#eaf7ff;font:900 12px var(--fT,sans-serif);letter-spacing:.12em">RELOAD</button>';
+      +'align-items:center;justify-content:center;color:#cfe6ff;text-align:center;padding:26px;font-family:var(--fT,system-ui,sans-serif)';
+    o.innerHTML=mfGLNormalRecoveryMarkup('GRAPHICS INTERRUPTED',
+      'The device reclaimed graphics memory. Your match has been saved — reload and choose RESUME DROPPED SESSION to pick it up where it stopped.',
+      'glLostReload','RELOAD');
     (document.body||document.documentElement).appendChild(o);
     var b=document.getElementById('glLostReload');
     if(b){ if(typeof mfBindTap==='function') mfBindTap(b,glReload); else b.addEventListener('click',glReload); }

@@ -168,38 +168,45 @@
 
     <section id="ugaMode" class="uga-mode" aria-hidden="true"><div class="uga-scene-controls"><button id="btnExitUga" type="button"><svg><use href="#i-back"/></svg><span>RETURN TO ORBIT</span></button><button id="btnUgaOverview" type="button"><svg><use href="#i-ship"/></svg><span>VESSEL OVERVIEW</span></button></div><div id="ugaCommandMount" class="uga-command-mount"></div></section>
 
-    <section id="operationModal" class="operation-modal" aria-hidden="true"><div class="operation-card"><div class="eyebrow">LOCAL GROUND-OPERATION ADAPTER</div><h2 id="operationTitle">Operation staged</h2><p id="operationSummary"></p><div id="operationPayload" class="operation-payload"></div><div class="operation-sim-actions"><button id="btnSimVictory" class="wide-action" type="button"><svg><use href="#i-check"/></svg><span>SIMULATE VICTORY</span></button><button id="btnSimSetback" type="button"><svg><use href="#i-warning"/></svg><span>SIMULATE SETBACK</span></button><button id="btnCancelOperation" type="button"><svg><use href="#i-close"/></svg><span>LEAVE UNRESOLVED</span></button></div></div></section>
+    <section id="operationModal" class="operation-modal" aria-hidden="true"><div class="operation-card"><div class="eyebrow">LOCAL GROUND-OPERATION ADAPTER</div><h2 id="operationTitle">Operation staged</h2><p id="operationSummary"></p><div id="operationPayload" class="operation-payload"></div><div class="operation-sim-actions"><button id="btnSimVictory" class="wide-action" type="button"><svg><use href="#i-check"/></svg><span>SIMULATE VICTORY</span></button><button id="btnSimSetback" type="button"><svg><use href="#i-warning"/></svg><span>SIMULATE SETBACK</span></button><button id="btnRetryGroundOperation" type="button" hidden><svg><use href="#i-reset"/></svg><span>RETRY MISSION</span></button><button id="btnCancelOperation" type="button"><svg><use href="#i-close"/></svg><span>LEAVE UNRESOLVED</span></button></div></div></section>
 
     <button id="btnResetRoom" class="test-reset" type="button" title="Reset the isolated test-room save"><svg><use href="#i-reset"/></svg><span>RESET TEST ROOM</span></button><div id="toastBanner" class="toast-banner" role="status"></div>
-    <div id="renderVeil" class="render-veil">
-      <div class="render-brand" role="img" aria-label="MASSFRONT — Command. Conquer. Overwhelm.">
-        <span class="render-brand-fallback" aria-hidden="true">MASSFRONT</span>
-        <img src="../../assets/brand/massfront-title-command-conquer-overwhelm-v1.png" alt="" aria-hidden="true" width="1280" height="681" decoding="async" onerror="this.style.display='none'">
-      </div>
-      <div class="loader-mark"><span></span><i></i></div>
-      <b>OPENING UGA EXPEDITION LINK</b>
-      <small id="loadStatus">CALIBRATING EXTERIOR NAVIGATION</small>
-      <div class="load-meter" aria-label="Expedition loading progress">
-        <span id="loadProgressBar"></span>
-      </div>
-      <div class="load-telemetry"><strong id="loadProgressPercent">2%</strong><span id="loadPhase">RUNTIME BOOT</span><time id="loadElapsed">0s</time></div>
-      <div class="render-failure-actions">
-        <button id="renderRetryGpu" data-render-retry type="button" aria-label="Retry GPU initialization" hidden>RETRY GPU INITIALIZATION</button>
-        <button id="renderReturnMassfront" data-render-return type="button" aria-label="Return to the MASSFRONT Classic War Room">RETURN TO MASSFRONT</button>
+    <div id="renderVeil" class="render-veil mfNormalLoader" data-loader-archetype="normal" role="status" aria-live="polite" aria-busy="true">
+      <div class="render-signal" aria-hidden="true"></div><div class="render-grid" aria-hidden="true"></div><div class="render-frame" aria-hidden="true"></div>
+      <div class="render-shell">
+        <div class="render-top" aria-hidden="true"><span>NEXUS-VII // COMMAND CORE</span><strong>EXPEDITION LINK</strong></div>
+        <div class="render-brand" role="img" aria-label="MASSFRONT — Command. Conquer. Overwhelm.">
+          <span class="render-brand-fallback" aria-hidden="true">MASSFRONT</span>
+          <img src="../../assets/brand/massfront-title-command-conquer-overwhelm-v1.webp" alt="" aria-hidden="true" width="1200" height="673" decoding="async" onerror="this.style.display='none'">
+        </div>
+        <section class="render-status">
+          <div class="render-kicker">TACTICAL NETWORK HANDSHAKE</div>
+          <b id="renderLoadTitle">OPENING UGA EXPEDITION LINK</b>
+          <small id="loadStatus">CALIBRATING EXTERIOR NAVIGATION</small>
+          <div class="loader-mark" aria-hidden="true"><span></span><i></i></div>
+          <div class="load-meter" role="progressbar" aria-label="Expedition loading progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="2"><span id="loadProgressBar"></span></div>
+          <div class="load-telemetry"><strong id="loadProgressPercent">2%</strong><span id="loadPhase">RUNTIME BOOT</span><time id="loadElapsed">0s</time></div>
+          <div class="render-failure-actions">
+            <button id="renderRetryGpu" data-render-retry type="button" aria-label="Retry GPU initialization" hidden>RETRY GPU INITIALIZATION</button>
+            <button id="renderReturnMassfront" data-render-return type="button" aria-label="Return to the MASSFRONT Classic War Room">RETURN TO MASSFRONT</button>
+          </div>
+        </section>
+        <div class="render-foot" aria-hidden="true"><span>GLOBAL LOAD PROFILE</span><strong>COMMAND SYSTEMS ONLINE</strong></div>
       </div>
     </div>
   </main>
   <script>
     (() => {
-      const started = performance.now();
+      let progressStarted = performance.now();
       let highest = 2;
       const CLASSIC_FALLBACK_QUERY = 'galacticFallback=classic';
       const returnButton = document.getElementById('renderReturnMassfront');
       function showBootstrapFailure(message) {
         const veil = document.getElementById('renderVeil');
         if (!veil || veil.classList.contains('ready')) return;
-        veil.className = 'render-veil failed';
-        const title = veil.querySelector('b');
+        veil.classList.remove('ready', 'recovering');
+        veil.classList.add('failed');
+        const title = document.getElementById('renderLoadTitle');
         const status = document.getElementById('loadStatus');
         if (title) title.textContent = 'EXPEDITION INTERFACE FAILED TO START';
         if (status) status.textContent = String(message || 'THE UGA MODULE DID NOT INITIALIZE').toUpperCase();
@@ -262,23 +269,31 @@
           showBootstrapFailure('THE UGA MODULE DID NOT INITIALIZE · RETURN TO THE CLASSIC WAR ROOM');
         }
       }, 12000);
-      window.__MASSFRONT_SET_LOAD_PROGRESS__ = progress => {
+      function paintLoadProgress(progress, force = false) {
         const veil = document.getElementById('renderVeil');
-        if (!veil || veil.classList.contains('ready') || veil.classList.contains('failed')) return;
+        if (!veil || (!force && (veil.classList.contains('ready') || veil.classList.contains('failed')))) return;
         highest = Math.max(highest, Math.min(100, Number(progress?.percent) || 0));
         const bar = document.getElementById('loadProgressBar');
+        const meter = bar?.parentElement;
         const percent = document.getElementById('loadProgressPercent');
         const phase = document.getElementById('loadPhase');
         const detail = document.getElementById('loadStatus');
         if (bar) bar.style.width = `${highest}%`;
+        if (meter) meter.setAttribute('aria-valuenow', String(Math.round(highest)));
         if (percent) percent.textContent = `${Math.round(highest)}%`;
         if (phase && progress?.stage) phase.textContent = progress.stage;
         if (detail && progress?.detail) detail.textContent = progress.detail;
+      }
+      window.__MASSFRONT_RESET_LOAD_PROGRESS__ = progress => {
+        highest = Math.max(0, Math.min(100, Number(progress?.percent) || 0));
+        progressStarted = performance.now();
+        paintLoadProgress(progress || { percent: highest }, true);
       };
+      window.__MASSFRONT_SET_LOAD_PROGRESS__ = progress => paintLoadProgress(progress);
       const timer = window.setInterval(() => {
         const veil = document.getElementById('renderVeil');
         const elapsed = document.getElementById('loadElapsed');
-        if (elapsed) elapsed.textContent = `${Math.floor((performance.now() - started) / 1000)}s`;
+        if (elapsed) elapsed.textContent = `${Math.floor((performance.now() - progressStarted) / 1000)}s`;
         if (!veil || veil.classList.contains('ready') || veil.classList.contains('failed')) window.clearInterval(timer);
       }, 500);
     })();

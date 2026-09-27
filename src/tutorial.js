@@ -58,8 +58,16 @@ var GRADUATION='Field orientation complete. Camera, economy, orders, logistics, 
 var BASIC_GRADUATION='Planetary basics complete. Camera, landing, Commander control, economy, production, army selection, orders and extraction are confirmed. '+
                      'Next: choose your faction and receive that faction\'s Commander 1.';
 
-/* Each step tests REAL state. `say` is shown the moment a step becomes
-   current; `done` fires once, the moment its test flips true — but only if
+/* The recorded KEEL takes are keyed to the authored lines below. Keep those
+   lines for voice, but show one compact action at a time on the battlefield.
+   This also gives players with voice disabled the complete control sequence. */
+var GREETING_CUE='Follow the gold marker to your next control. SKIP is always available.';
+var GRADUATION_CUE='Orientation complete. Choose your next operation at the War Table.';
+var BASIC_GRADUATION_CUE='Basics complete. Choose a faction to commission its first Commander.';
+
+/* Each step tests REAL state. `say` retains the authored voice take while
+   STEP_CUES below supplies the concise visible prompt. `done` fires once,
+   the moment its test flips true — but only if
    it was the step on screen when that happened, so a player who does things
    out of order gets fast-forwarded in silence instead of congratulated for
    a step they finished five minutes ago. */
@@ -187,6 +195,40 @@ var STEPS=[
    done:'Career storage confirmed.',
    test:function(){ return MATCH.cloudAck; } }
 ];
+
+/* Each objective is already a gated stage. The visible cue states only the
+   action and the rule needed for that stage; the longer authored narration
+   remains available through the existing voice bank without stale audio. */
+var STEP_CUES={
+  camera:'Drag to pan. Pinch to zoom or twist; VIEW has ROT and TILT.',
+  deploy:'Tap clear ground for a green landing signal, then DEPLOY BASE HERE.',
+  commander:'Tap the Commander bar to select and center your hero. Keep it alive.',
+  pickup:'Select Commander or Constructor, then tap beside the marked ◆ cache.',
+  territory:'Blue grid = build zone. Builders extend it; Factories and Uplinks anchor it. Silos prevent overflow. Tap GOT IT.',
+  mex:'BUILD → ECONOMY → Extractor. Drag it onto a ◆ deposit; tap ✓.',
+  power:'BUILD → ECONOMY → Reactor. Place inside the blue grid; tap ✓.',
+  fac:'BUILD → PRODUCTION → Factory. It trains units and extends territory.',
+  queue:'Tap Factory, then Striker. Watch the queue and population counter (max 500).',
+  train:'Wait for Striker. Tap ARMY to select your field units.',
+  orders:'Single-tap ground: attack-move. Tap an enemy: focus attack. Double-tap open ground: retreat. Try retreat now.',
+  intel:'Long-press any unit for counters. Kinetic beats light; Gauss beats heavy. Damage can swing 0.45–1.85×.',
+  turret:'BUILD → DEFENCE → Sentinel. Place it on the likely approach.',
+  platoon:'Select units. Open PLATOONS; hold P1 to save. Tap P1 to recall, double-tap to center.',
+  formation:'Open ORDERS, tap formation, then drag its hologram onto the map.',
+  fog:'Black fog hides enemies; grey is remembered. Move the marked SCOUT to reveal the signal.',
+  attack:'Select ARMY. Single-tap unexplored ground to attack-move; double-tap to retreat. SPLASH hits grouped enemies.',
+  tech:'BUILD → TECH → Research Complex. It unlocks studies and earns ◆ Data after battle.',
+  ability:'Select Commander, tap BLAST, then a target. Abilities cost energy and have cooldowns.',
+  objective:'Operations vary: destroy, hold, purge, or survive. Training is secure—tap CALL EXTRACTION.',
+  cloud:'Career autosaves locally. ACCOUNT syncs cloud saves; PROFILE exports .mfsave backups. Tap FINISH TRAINING.'
+};
+var STEP_ACKS={
+  queue:'Striker queued. Check mass, energy, and the shared 500-unit cap.',
+  orders:'Retreat confirmed. Stop and Hold keep units firing in place; neither chases.',
+  intel:'Counter card read. Weapon class matters; SONIC bypasses Bulwark shields.',
+  turret:'Perimeter online. Long-range guns also have a minimum range.',
+  attack:'Attack-move confirmed. Tap ground to fight forward; double-tap to disengage.'
+};
 
 /* The first-career course is intentionally super-basic. The existing longer
    certification remains available from Operations/Settings, but a new player
@@ -567,9 +609,9 @@ var MAX_QUEUE=3;
 /* `id` is the AUTHORED voice key for this line (see keenLineId). It travels with
    the line through the queue instead of being reconstructed from the copy on the
    far side — reconstructing it is what let the gate and the player disagree. */
-function speak(text,holdSec,kind,id){
+function speak(text,holdSec,kind,id,display){
   if(!text) return;
-  queue.push({text:text,hold:holdSec||4.4,kind:kind||'bark',id:id||null});
+  queue.push({text:text,display:display||text,hold:holdSec||4.4,kind:kind||'bark',id:id||null});
   while(queue.length>MAX_QUEUE) queue.shift();
 }
 function keelBattleReceiverAvailable(){
@@ -589,7 +631,7 @@ function keelPresentAtBattleMap(message,durationMs){
   var detail={schema:'massfront.keel-hint.v1',hintId:'tutorial-'+(message.id||message.kind||'guidance'),
     context:'protected-training',surface:'battle-minimap',speaker:'KEEL',speakerId:'keel',affiliation:'uga',
     speakerRole:'UGA SHIP LIAISON',channel:'UGA TACTICAL LINK',voiceId:'keen',
-    profileId:'uga-keel-expedition-guide',animationId:'keel-tactical-link',text:message.text,
+    profileId:'uga-keel-expedition-guide',animationId:'keel-tactical-link',text:message.display||message.text,
     durationMs:durationMs,priority:message.kind==='step'?85:70,issuedAt:Date.now(),handled:false};
   try{
     var ev;
@@ -613,7 +655,7 @@ function pump(){
     if(mapResult===2){queue.unshift(m);holdUntil=now+.18;hideWrap();return;}
     holdUntil=now+hold;
     if(mapResult===1){keelMapSpeakingUntil=holdUntil;hideWrap();}
-    else{renderBubble(m.text,restingTag);showWrap(true);}
+    else{renderBubble(m.display,restingTag);showWrap(true);}
     /* Pass the line's identity through, so a rendered take can be found for it
        instead of every line silently falling through to synthesis. */
     speakVoice(m.text,'keen',keenLineId(m.kind,m.id));
@@ -786,7 +828,7 @@ function beginRun(){
   MATCH.cameraBase={yaw:yawTarget,pitch:pitchTarget,span:orthoSpan};
   MATCH.lastAbCool=(typeof abCool!=='undefined')?abCool.slice():[0,0,0,0];
   queue.length=0;keelMapSpeakingUntil=0;
-  speak(GREETING,5.5,'greeting','greeting');
+  speak(GREETING,5.5,'greeting','greeting',GREETING_CUE);
 }
 function evalSteps(){
   if(!TUT.active) return;
@@ -797,7 +839,7 @@ function evalSteps(){
     try{ ok=!!active[i].test(); }catch(e){ ok=false; }
     if(ok){
       TUT.doneFlags[i]=true;
-      if(i===TUT.stepIdx) speak(active[i].done,3.8,'done','done_'+active[i].id);
+      if(i===TUT.stepIdx) speak(active[i].done,3.8,'done','done_'+active[i].id,STEP_ACKS[active[i].id]);
     }
   }
   while(TUT.stepIdx<active.length && TUT.doneFlags[TUT.stepIdx]) TUT.stepIdx++;
@@ -821,7 +863,8 @@ function evalSteps(){
         else{M.done=true;M.basicDone=true;M.progress=STEPS.length;M.basicProgress=BASIC_STEPS.length;}
       }
       restingText=''; restingTag=''; restingId=''; keelMapSpeakingUntil=0;
-      speak(TUT.basicMode?BASIC_GRADUATION:GRADUATION,6.5,'graduation','graduation');
+      speak(TUT.basicMode?BASIC_GRADUATION:GRADUATION,6.5,'graduation','graduation',
+        TUT.basicMode?BASIC_GRADUATION_CUE:GRADUATION_CUE);
       if(typeof sfx==='function'){ try{ sfx('level'); }catch(e){} }
       if(TUT.trainingMode&&!TUT.finishTimer) TUT.finishTimer=setTimeout(finishTrainingMission,1300);
       else if(typeof metaSave==='function') metaSave();
@@ -829,12 +872,12 @@ function evalSteps(){
     return;
   }
   var cur=active[TUT.stepIdx];
-  restingText=cur.say;
+  restingText=STEP_CUES[cur.id]||cur.say;
   restingId='step_'+cur.id;
   restingTag=(cur.icon||'◇')+'  STEP '+(TUT.stepIdx+1)+' / '+active.length;
   if(TUT.shownStepIdx!==TUT.stepIdx){
     TUT.shownStepIdx=TUT.stepIdx;
-    speak(cur.say,5.5,'step',restingId);
+    speak(cur.say,5.5,'step',restingId,restingText);
   }
 }
 /* SKIP ends GUIDANCE. In a training MATCH it also ends the match — and it
@@ -1119,6 +1162,10 @@ function startTrainingMission(){
   prevDropping=false;
   if(typeof initAudio==='function') initAudio();
   if(typeof hideFrontScreens==='function') hideFrontScreens();
+  /* Training uses the same selected-map deployment dossier as every other
+     battle route. Previously it showed the shell's stale prior battlefield
+     because this one entry point never populated #loadScr. */
+  if(typeof mfLoadScreenFill==='function') mfLoadScreenFill();
   var load=document.getElementById('loadScr'); if(load) load.style.display='flex';
   requestAnimationFrame(function(){requestAnimationFrame(function(){
     applyTheme(); newSkirmish();fogOn=true;updateFog();trainingLaunched=true;
@@ -1229,7 +1276,7 @@ function openTrainingBrief(){
   if(typeof renderOps==='function') renderOps();
   if(typeof showFrontScreen==='function') showFrontScreen('opsScr');
   var ops=document.getElementById('opsScr');
-  if(ops&&typeof mfSetTabs==='function') mfSetTabs(ops,'threat',false);
+  if(ops&&typeof mfSetTabs==='function') mfSetTabs(ops,'weekly',false);
   var sc=ops&&ops.querySelector('.opsScroll'); if(sc) sc.scrollTop=0;
   if(typeof sfx==='function'){ try{ sfx('ui'); }catch(e){} }
 }
@@ -1257,7 +1304,11 @@ function ensureTrainingEntry(){
   updateTrainingEntry();
 }
 function appendTrainingOperation(){
-  var pane=document.getElementById('opsPane-threat'); if(!pane) return;
+  /* Operations was deliberately consolidated to one deployable-operation pane.
+     The old Threat pane no longer exists; targeting it silently removed KEEL's
+     unique Training entry from both orientations. Keep an old-shell fallback
+     while the current shell inserts Training beside the weekly operation. */
+  var pane=document.getElementById('opsPane-weekly')||document.getElementById('opsPane-threat'); if(!pane) return;
   var old=document.getElementById('keelTrainingOp'); if(old) old.remove();
   var S=trainingUiState(),displayDone=!S.active&&S.done,progressPct=Math.round(S.progress/Math.max(1,S.total)*100),
       topicHtml=S.course==='basic'

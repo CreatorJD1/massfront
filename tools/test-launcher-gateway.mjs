@@ -5,8 +5,8 @@ import {resolve} from 'node:path';
 
 const root=resolve(import.meta.dirname,'..');
 const read=file=>readFileSync(resolve(root,file),'utf8');
-const titleArt='assets/brand/massfront-title-command-conquer-overwhelm-v1.png';
-const titleArtHash='e11a316658c34d30a9b4aced6f2bdfb7ae7a47f967f93389acb55d8db67fb279';
+const titleArt='assets/brand/massfront-title-command-conquer-overwhelm-v1.webp';
+const titleArtHash='5a226334b0a3d4693f2fcd4191dc212fd1bb96511fb567c353fdfed9021568ae';
 const html=read('index.html'),css=read('src/styles/ui.css'),launcher=read('src/launcher.js');
 const main=read('src/main.js'),intro=read('src/intro.js'),boot=read('boot.js');
 const manifest=JSON.parse(read('assets/data/manifest.json')).order;
@@ -117,7 +117,7 @@ assert.deepEqual([...new Set(brandRefs)],[titleArt],
 assert.equal(createHash('sha256').update(readFileSync(resolve(root,titleArt))).digest('hex'),titleArtHash,
   'canonical owner-approved title art hash changed');
 const pack=read('tools/pack-www.mjs');
-assert.match(pack,/const KEEP_BRAND = 'assets\/brand\/massfront-title-command-conquer-overwhelm-v1\.png';/,
+assert.match(pack,/const KEEP_BRAND = 'assets\/brand\/massfront-title-command-conquer-overwhelm-v1\.webp';/,
   'pack must narrowly allow the canonical title art');
 assert.match(pack,/if\(rel\.startsWith\('assets\/brand\/'\)&&rel!==KEEP_BRAND\) return false;/,
   'pack must continue excluding every other brand authoring asset');

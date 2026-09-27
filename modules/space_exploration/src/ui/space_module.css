@@ -199,7 +199,12 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .scene-overlay.active { display: block; pointer-events: auto; }
 .overlay-back { position: absolute; z-index: 5; left: max(22px, env(safe-area-inset-left)); top: max(22px, env(safe-area-inset-top)); padding: 0 16px; }
 .survey-overlay {
-  background: radial-gradient(circle at 45% 50%, #061826 0%, #020910 60%, #000305 100%) !important;
+  /* Planetary Survey is operated from the sealed Survey Lab. The globe is a
+     live transparent WebGL instrument over this room, not a planet hanging in
+     another generic black-space modal. */
+  background:
+    radial-gradient(circle at 43% 48%, rgba(3, 18, 28, .16), rgba(1, 7, 12, .88) 78%),
+    url('../../assets/runtime/ui/menu-art-v1/uga-survey-lab-v1.webp') center / cover no-repeat !important;
 }
 
 /* Mass Effect 2 Scanner HUD */
@@ -507,7 +512,14 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 /* Authored button display rules must not resurrect unavailable diagnostics. */
 .operation-sim-actions button[hidden] { display: none !important; }
 .operation-modal[data-operation-state="debrief"] .operation-sim-actions { grid-template-columns: 1fr; }
-.render-veil { position: absolute; inset: 0; z-index: 200; display: grid; place-content: center; justify-items: center; gap: 10px; background: #02070d; transition: opacity .55s, visibility .55s; }.render-veil.ready { opacity: 0; visibility: hidden; pointer-events: none; }
+/* Keep a setback's fresh-ticket retry and ordinary return reachable in the
+   short phone landscape, while the detailed receipt scrolls inside the card. */
+.operation-modal[data-operation-state="debrief"] { box-sizing: border-box; padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)); }
+.operation-modal[data-operation-state="debrief"] .operation-card { box-sizing: border-box; display: flex; flex-direction: column; width: min(720px, 100%); max-height: calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); min-height: 0; padding: clamp(12px, 3vw, 26px); }
+.operation-modal[data-operation-state="debrief"] .operation-payload { flex: 1 1 auto; min-height: 0; max-height: none; overflow-y: auto; }
+.operation-modal[data-operation-state="debrief"] .operation-sim-actions { flex: 0 0 auto; }
+#btnRetryGroundOperation:not([hidden]) { color: #e8fff2; border-color: rgba(101, 230, 168, .58); background: linear-gradient(100deg, rgba(17, 75, 51, .84), rgba(5, 25, 31, .96)); box-shadow: inset 3px 0 #65e6a8; }
+.render-veil { position: absolute; inset: 0; z-index: 200; overflow: hidden; isolation: isolate; color: #d8f7ff; background: radial-gradient(ellipse at 50% 18%, #0c2637 0, #06131f 39%, #02060c 78%); transition: opacity .55s, visibility .55s; }.render-veil.ready { opacity: 0; visibility: hidden; pointer-events: none; }
 /* Drop the loader's CONTENT immediately on ready, and let only the backdrop
    cross-fade. Measured: the hub goes interactive at ~512ms and this veil is
    still at opacity .42 at ~516ms, so for about half a second "OPENING UGA
@@ -516,15 +528,33 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
    docs/UGA_PLAYER_FLOW.md forbids, reporting a percentage that never reached
    100 before it vanished. Fading the words out in 120ms keeps the soft backdrop
    transition without ever showing stale progress over the running interface. */
-.render-veil.ready > * { opacity: 0; transition: opacity .12s linear; }.render-veil b { font-size: 12px; letter-spacing: .22em; }.render-veil small { color: #54717e; font-size: 8px; letter-spacing: .12em; }
-.render-brand { position: relative; display: grid; place-items: center; width: min(72vw, 430px); aspect-ratio: 1280 / 681; margin-bottom: 2px; }
-.render-brand img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 10px 24px rgba(0, 0, 0, .68)); }
-.render-brand-fallback { color: #eefbff; font-size: clamp(34px, 10vw, 58px); font-weight: 900; letter-spacing: .07em; line-height: 1; text-shadow: 0 0 28px rgba(84, 220, 255, .22); white-space: nowrap; }
-.render-veil.recovering { background: radial-gradient(circle at 50% 45%, #071724, #02070d 58%); }
-.render-veil.failed { background: radial-gradient(circle at 50% 45%, #1b0b0d, #02070d 62%); padding: 24px; text-align: center; }
-.render-veil.failed .loader-mark { animation: none; border-color: rgba(255, 92, 92, .36); }
-.render-veil.failed .loader-mark::before, .render-veil.failed .loader-mark::after { border-top-color: var(--red); border-bottom-color: #8a3434; }
-.render-veil.failed .loader-mark span, .render-veil.failed .loader-mark i { background: var(--red); box-shadow: 0 0 18px rgba(255, 77, 87, .65); }
+.render-veil.ready > * { opacity: 0; transition: opacity .12s linear; }
+.render-signal { position: absolute; inset: -8%; opacity: .32; pointer-events: none; background: repeating-linear-gradient(90deg, transparent 0 126px, rgba(114, 223, 241, .07) 127px 128px, transparent 129px 254px), repeating-linear-gradient(0deg, transparent 0 92px, rgba(114, 223, 241, .05) 93px 94px, transparent 95px 186px); animation: renderSignalDrift 32s linear infinite; }
+.render-grid { position: absolute; inset: 22% 0 0; opacity: .55; pointer-events: none; background: linear-gradient(transparent 95%, rgba(94, 203, 222, .04) 95%), linear-gradient(90deg, transparent 95%, rgba(94, 203, 222, .04) 95%); background-size: 64px 64px; }
+.render-frame { position: absolute; inset: max(14px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left)); border: 1px solid rgba(117, 195, 213, .16); pointer-events: none; }
+.render-shell { position: relative; z-index: 2; width: min(1080px, 100%); height: 100%; min-height: 100%; margin: auto; display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: 16px; padding: max(38px, calc(env(safe-area-inset-top) + 22px)) max(30px, calc(env(safe-area-inset-right) + 22px)) max(34px, calc(env(safe-area-inset-bottom) + 20px)) max(30px, calc(env(safe-area-inset-left) + 22px)); }
+.render-top, .render-foot { width: 100%; display: flex; justify-content: space-between; gap: 16px; color: #8fb4c5; font: 600 9px/1.5 ui-monospace, monospace; letter-spacing: .18em; }
+.render-top strong, .render-foot strong { color: #83edff; font-weight: 600; }
+.render-foot { padding-top: 13px; border-top: 1px solid rgba(114, 184, 204, .08); color: #668b9d; letter-spacing: .14em; }
+.render-brand { position: relative; display: grid; place-items: center; width: min(88vw, 600px); aspect-ratio: 1200 / 673; margin: auto 0; overflow: hidden; }
+.render-brand img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 12px 28px rgba(0, 0, 0, .72)); }
+.render-brand-fallback { color: #eefbff; font-size: clamp(42px, 12vw, 78px); font-weight: 900; letter-spacing: .075em; line-height: .94; text-shadow: 0 0 30px rgba(114, 217, 255, .2); white-space: nowrap; }
+.render-status { width: 100%; max-width: 540px; display: grid; gap: 9px; margin: 0 0 auto; padding: 19px 0 0; border-top: 1px solid rgba(113, 204, 225, .2); }
+.render-kicker { color: #6fa8be; font: 650 9px/1.4 ui-monospace, monospace; letter-spacing: .22em; }
+#renderLoadTitle { color: #effbff; font-size: 14px; line-height: 1.4; letter-spacing: .055em; }
+.render-veil small { min-height: 30px; color: #97b7c5; font-size: 10px; line-height: 1.5; letter-spacing: .08em; }
+/* A UGA command-link test is a linear rack diagnostic, not another generic
+   circular hologram. The two rails represent package and GPU channels. */
+.loader-mark { position: relative; width: min(310px, 72vw); height: 34px; overflow: hidden; border: 1px solid rgba(80, 221, 255, .22); background: linear-gradient(90deg, rgba(3, 20, 29, .92), rgba(5, 31, 43, .72)); }
+.loader-mark::before, .loader-mark::after { position: absolute; top: 5px; color: #648a9a; font: 650 6px/1 ui-monospace, monospace; letter-spacing: .14em; }
+.loader-mark::before { content: 'PACKAGE BUS'; left: 8px; }.loader-mark::after { content: 'GPU LINK'; right: 8px; }
+.loader-mark span, .loader-mark i { position: absolute; left: 8px; right: 8px; height: 2px; background: linear-gradient(90deg, #2b96c3, #91f6ff 42%, transparent 43%); background-size: 62px 100%; box-shadow: 0 0 10px rgba(94, 225, 255, .44); animation: renderLink 1.6s linear infinite; }
+.loader-mark span { bottom: 10px; }.loader-mark i { bottom: 5px; opacity: .48; animation-direction: reverse; }
+.render-veil.recovering .render-status { border-top-color: rgba(255, 180, 74, .32); }
+.render-veil.failed { background: radial-gradient(ellipse at 50% 18%, #271014 0, #0e090e 42%, #02060c 78%); text-align: center; }
+.render-veil.failed .render-status { border-top-color: rgba(255, 92, 92, .36); }
+.render-veil.failed .loader-mark { border-color: rgba(255, 92, 92, .36); }
+.render-veil.failed .loader-mark span, .render-veil.failed .loader-mark i { background: linear-gradient(90deg, #8a3434, var(--red) 42%, transparent 43%); box-shadow: 0 0 12px rgba(255, 77, 87, .5); animation: none; }
 .render-failure-actions { display: none; width: min(360px, 86vw); grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .render-veil.failed .render-failure-actions { display: grid; }
 .render-veil [data-render-retry] { min-height: 44px; padding: 0 12px; border: 1px solid rgba(255, 93, 102, .5); background: rgba(61, 12, 18, .78); color: #ffd9dc; cursor: pointer; font-family: inherit; font-size: 8px; font-weight: 700; line-height: 1.2; letter-spacing: .1em; }
@@ -534,12 +564,25 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .render-veil.failed [data-render-return] { display: inline-flex; align-items: center; justify-content: center; }
 .render-veil [data-render-return]:hover, .render-veil [data-render-return]:focus-visible { border-color: var(--cyan); background: rgba(8, 66, 86, .9); outline: 2px solid rgba(84, 220, 255, .24); outline-offset: 2px; }
 .render-veil [data-render-return]:disabled { cursor: wait; opacity: .62; }
-.load-meter { width: min(310px, 72vw); height: 3px; margin-top: 8px; overflow: hidden; border: 1px solid rgba(70, 191, 229, .26); background: rgba(2, 15, 23, .88); }
+.load-meter { width: 100%; height: 4px; margin-top: 3px; overflow: hidden; border: 1px solid rgba(70, 191, 229, .26); background: rgba(2, 15, 23, .88); }
 .load-meter span { display: block; width: 2%; height: 100%; background: linear-gradient(90deg, #087b9e, #6be7ff); box-shadow: 0 0 14px rgba(84, 220, 255, .55); transition: width .32s ease; }
-.load-telemetry { width: min(310px, 72vw); display: grid; grid-template-columns: 45px 1fr 42px; align-items: center; gap: 8px; color: #668693; font-size: 7px; letter-spacing: .13em; }
+.load-telemetry { width: 100%; display: grid; grid-template-columns: 45px 1fr 42px; align-items: center; gap: 8px; color: #668693; font-size: 7px; letter-spacing: .13em; }
 .load-telemetry strong { color: #a9efff; font-size: 9px; }.load-telemetry span { text-align: center; }.load-telemetry time { text-align: right; color: #799aa7; }
-.loader-mark { position: relative; width: 82px; height: 82px; border: 1px solid rgba(80,221,255,.24); border-radius: 50%; animation: spin 3s linear infinite; }.loader-mark::before, .loader-mark::after { content: ""; position: absolute; inset: 9px; border: 1px solid transparent; border-top-color: var(--cyan); border-bottom-color: var(--amber); border-radius: 50%; }.loader-mark::after { inset: 24px; border-left-color: var(--cyan); }.loader-mark span { position: absolute; inset: 37px; background: var(--cyan); box-shadow: 0 0 18px var(--cyan); transform: rotate(45deg); }.loader-mark i { position: absolute; top: -2px; left: 39px; width: 4px; height: 15px; background: var(--cyan); }
-@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes renderSignalDrift { to { transform: translate3d(-20px, 30px, 0); } }
+@keyframes renderLink { to { background-position: 62px 0; } }
+@media (max-height: 650px) and (orientation: landscape) { .render-shell { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 1fr); gap: 10px 42px; padding: 24px 40px; }.render-top { grid-column: 1 / -1; }.render-brand { grid-column: 1; grid-row: 2; width: min(45vw, 520px); margin: auto; }.render-status { grid-column: 2; grid-row: 2; margin: auto 0; padding-top: 12px; }.render-foot { grid-column: 1 / -1; } }
+@media (max-height: 700px) and (orientation: portrait) { .render-shell { gap: 9px; padding-top: max(27px, calc(env(safe-area-inset-top) + 14px)); padding-bottom: max(25px, calc(env(safe-area-inset-bottom) + 14px)); }.render-status { padding-top: 11px; }.render-brand { margin: auto 0; } }
+@media (prefers-reduced-motion: reduce) { .render-veil *, .render-veil *::before, .render-veil *::after { animation: none !important; transition: none !important; } }
+
+/* The on-demand content transfer is an inline state of the NORMAL loader, not
+   a miniature third design. It keeps the same squared command-link rail while
+   staying clear of UGA navigation and deployment controls. */
+.mf-normal-inline-status { position: fixed; left: max(12px, env(safe-area-inset-left)); bottom: max(12px, env(safe-area-inset-bottom)); z-index: 80; width: min(300px, 75vw); box-sizing: border-box; padding: 8px 12px 10px; overflow: auto; border: 1px solid rgba(83, 196, 226, .34); border-radius: 2px; background: linear-gradient(135deg, rgba(3, 17, 27, .97), rgba(5, 31, 43, .93)); color: #d8f4ff; font: 11px/1.5 var(--font); box-shadow: inset 3px 0 #54dcff, 0 12px 28px rgba(0, 0, 0, .52); }
+.mf-normal-inline-status::after { content: ''; display: block; height: 3px; margin-top: 8px; background: linear-gradient(90deg, #2b96c3, #91f6ff 44%, transparent 45%); background-size: 64px 100%; animation: renderLink 1.6s linear infinite; }
+.mf-normal-inline-summary { min-height: 44px; align-content: center; cursor: pointer; color: #bdefff; font-size: 9px; font-weight: 800; letter-spacing: .08em; }
+.mf-normal-inline-status p { margin: 4px 0 8px; color: #8eafbd; font-size: 9px; line-height: 1.45; }
+.mf-normal-inline-action { min-width: 44px; min-height: 44px; padding: 8px 12px; border: 1px solid #48aec8; border-radius: 2px; background: #0b2635; color: #9be9ff; font: 800 9px/1.2 var(--font); letter-spacing: .08em; cursor: pointer; }
+@media (prefers-reduced-motion: reduce) { .mf-normal-inline-status::after { animation: none; background-size: auto; } }
 
 .space-experience[data-scene="uga"] .exploration-topbar,
 .space-experience[data-scene="uga"] .story-rail,
@@ -598,7 +641,11 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
   .helm-readout b { font-size: 9px; }
   .autopilot-actions { display: grid; grid-template-columns: 1fr 1fr; }
   .autopilot-actions button { min-width: 0; min-height: 44px; }
-  .survey-overlay { background: radial-gradient(circle at 50% 35%, #051624 0%, #020910 55%, #000305 100%) !important; }
+  .survey-overlay {
+    background:
+      radial-gradient(circle at 50% 34%, rgba(3, 18, 28, .18), rgba(1, 7, 12, .9) 78%),
+      url('../../assets/runtime/ui/menu-art-v1/uga-survey-lab-v1.webp') center / cover no-repeat !important;
+  }
   .overlay-back { left: 10px; top: max(10px, env(safe-area-inset-top)); height: 44px; min-height: 44px; padding: 0 12px; font-size: 9px; font-weight: 800; border-radius: 4px; z-index: 50; }
   .survey-planet-selector { top: max(10px, env(safe-area-inset-top)); left: auto; right: 10px; transform: none; max-width: 55vw; height: 34px; padding: 2px 4px; z-index: 50; }
   .survey-planet-pill { min-height: 44px; padding: 4px 12px; font-size: 9px; font-weight: 800; }
@@ -1025,4 +1072,30 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
     margin-top: -44px; margin-right: 4px; height: 40px;
   }
   .space-chrome .icon-action { min-width: 40px; min-height: 40px; padding: 5px; }
+}
+
+/* Short landscape phones need one composed instrument bay, not a tall desktop
+   dossier squeezed beside a small globe with empty black below it. */
+@media (orientation: landscape) and (max-height: 520px) {
+  .survey-dossier {
+    top: 62px;
+    right: max(10px, env(safe-area-inset-right));
+    bottom: max(10px, env(safe-area-inset-bottom));
+    width: min(44vw, 390px);
+    max-height: none;
+    padding: 11px 13px;
+    overflow-y: auto;
+    transform: none;
+    border-radius: 8px;
+  }
+  .survey-dossier h2 { margin: 3px 0 5px; font-size: 18px; }
+  .survey-dossier > p { display: -webkit-box; margin: 4px 0; overflow: hidden; font-size: 9px; line-height: 1.35; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+  .survey-progress { margin: 7px 0; }
+  .survey-telemetry span { padding: 5px 6px; }
+  .discovery-list { min-height: 44px; max-height: 82px; margin: 7px 0; overflow-y: auto; }
+  .me2-scanner-side-panel { top: 66px; left: max(10px, env(safe-area-inset-left)); width: min(22vw, 194px); padding: 7px 8px; gap: 5px; }
+  #surveyOscilloscope { height: 42px; }
+  .me2-mineral-readouts { gap: 3px; padding-top: 5px; }
+  .me2-mineral-row { grid-template-columns: 50px 1fr 40px; gap: 4px; font-size: 7px; }
+  .me2-scanner-reticle { left: 43%; top: 51%; width: 104px; height: 104px; }
 }

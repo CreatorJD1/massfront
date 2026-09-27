@@ -17,6 +17,7 @@ export const CAMPAIGN_HUB_ROUTE_STATUS = Object.freeze({
 
 export const CAMPAIGN_HUB_SESSION_STATUS = Object.freeze({
   OFFLINE_READY: 'offline-ready',
+  UPCOMING: 'upcoming',
   NETWORK_UNAVAILABLE: 'network-unavailable'
 });
 
@@ -112,22 +113,22 @@ export const CAMPAIGN_HUB_ROUTES = Object.freeze([
     'Persistent planetary warfront service is not implemented yet.',
     null, 'LONG TERM // LOCKED'),
   route('coop', 'Co-op / Versus', 'factions', CAMPAIGN_HUB_ROUTE_STATUS.HOST_REQUIRED,
-    'Networked co-op and commander-versus-commander sessions are not implemented yet.',
+    'Social Command can stage two-seat lobbies; synchronized co-op and commander-versus-commander matches are not available yet.',
     null, 'NETWORK IN DEVELOPMENT // LOCKED')
 ]);
 
-// These are product-level session families, not speculative game modes. The
-// The first two resolve to existing MASSFRONT routes; the two network families
-// remain separate and have no targets until real session authorities exist.
+// These are product-level session families, not speculative game modes. Only
+// Standard resolves to a playable route; upcoming Campaign and network matches
+// keep no target until their session authorities exist.
 export const CAMPAIGN_HUB_SESSION_TYPES = Object.freeze([
   sessionType('standard-classic', 'Standard Deployment', 'command', CAMPAIGN_HUB_SESSION_STATUS.OFFLINE_READY,
     'Deploy from Galactic Command into an offline battle against AI opponents, with optional AI allies.',
     'standard', 'TACTICAL OPERATION'),
-  sessionType('campaign', 'Campaign', 'mission_ops', CAMPAIGN_HUB_SESSION_STATUS.OFFLINE_READY,
-    'Enter the existing playable Campaign Prologue and authored mission progression.',
-    'campaign', 'STORY MISSIONS'),
+  sessionType('campaign', 'Campaign', 'mission_ops', CAMPAIGN_HUB_SESSION_STATUS.UPCOMING,
+    'In development. The campaign story missions are not available from Galactic Command yet.',
+    null, 'IN DEVELOPMENT // UPCOMING'),
   sessionType('coop-versus', 'Co-op / Versus', 'factions', CAMPAIGN_HUB_SESSION_STATUS.NETWORK_UNAVAILABLE,
-    'Future commanders may cooperate or fight through this strategic layer. No synchronized session service exists in this build.',
+    'Social Command can stage a two-seat lobby; synchronized co-op and versus battles through this strategic layer remain unavailable.',
     null, 'CO-OP VS NETWORK // NOT IMPLEMENTED'),
   sessionType('mmo', 'MMO', 'galaxy', CAMPAIGN_HUB_SESSION_STATUS.NETWORK_UNAVAILABLE,
     'The persistent planetary warfront remains a separate future route. No sector authority or MMO connection exists in this build.',
@@ -213,7 +214,7 @@ export function campaignHubRouteIsReachable(entry, capabilities = {}) {
 
 export function campaignHubSessionIsReachable(entry, capabilities = {}) {
   const sessionEntry = typeof entry === 'string' ? getCampaignHubSessionType(entry) : entry;
-  if (!sessionEntry?.routeId || sessionEntry.status === CAMPAIGN_HUB_SESSION_STATUS.NETWORK_UNAVAILABLE) return false;
+  if (!sessionEntry?.routeId || sessionEntry.status !== CAMPAIGN_HUB_SESSION_STATUS.OFFLINE_READY) return false;
   // Offline play is owned by the base game. A standalone module can explain
   // the product model, but must not pretend it can launch those sessions.
   if (capabilities.hostRoutes !== true) return false;
@@ -230,7 +231,7 @@ export function auditCampaignHubRegistry() {
   const invalidStatuses = CAMPAIGN_HUB_ROUTES.filter(entry => !Object.values(CAMPAIGN_HUB_ROUTE_STATUS).includes(entry.status)).map(entry => entry.id);
   const invalidSessionStatuses = CAMPAIGN_HUB_SESSION_TYPES.filter(entry => !Object.values(CAMPAIGN_HUB_SESSION_STATUS).includes(entry.status)).map(entry => entry.id);
   const falseHostTargets = CAMPAIGN_HUB_ROUTES.filter(entry => entry.status === CAMPAIGN_HUB_ROUTE_STATUS.HOST_REQUIRED && entry.target).map(entry => entry.id);
-  const falseNetworkTargets = CAMPAIGN_HUB_SESSION_TYPES.filter(entry => entry.status === CAMPAIGN_HUB_SESSION_STATUS.NETWORK_UNAVAILABLE && entry.routeId).map(entry => entry.id);
+  const falseUnavailableTargets = CAMPAIGN_HUB_SESSION_TYPES.filter(entry => entry.status !== CAMPAIGN_HUB_SESSION_STATUS.OFFLINE_READY && entry.routeId).map(entry => entry.id);
   const unreachableLocalRoutes = CAMPAIGN_HUB_ROUTES.filter(entry => entry.status !== CAMPAIGN_HUB_ROUTE_STATUS.HOST_REQUIRED && !entry.target).map(entry => entry.id);
   const invalidOfflineSessionRoutes = CAMPAIGN_HUB_SESSION_TYPES.filter(entry => entry.status === CAMPAIGN_HUB_SESSION_STATUS.OFFLINE_READY && !ROUTES_BY_ID.has(entry.routeId)).map(entry => entry.id);
   /* A directory that silently drops a destination is worse than no directory:
@@ -241,7 +242,7 @@ export function auditCampaignHubRegistry() {
   const duplicateGroupedServices = groupedIds.filter((id, index) => groupedIds.indexOf(id) !== index);
   const unknownGroupedServices = groupedIds.filter(id => !serviceIds.includes(id));
   return Object.freeze({
-    ok: ungroupedServices.length === 0 && duplicateGroupedServices.length === 0 && unknownGroupedServices.length === 0 && duplicateIds.length === 0 && duplicateSessionIds.length === 0 && missingIds.length === 0 && missingSessionIds.length === 0 && invalidStatuses.length === 0 && invalidSessionStatuses.length === 0 && falseHostTargets.length === 0 && falseNetworkTargets.length === 0 && unreachableLocalRoutes.length === 0 && invalidOfflineSessionRoutes.length === 0,
+    ok: ungroupedServices.length === 0 && duplicateGroupedServices.length === 0 && unknownGroupedServices.length === 0 && duplicateIds.length === 0 && duplicateSessionIds.length === 0 && missingIds.length === 0 && missingSessionIds.length === 0 && invalidStatuses.length === 0 && invalidSessionStatuses.length === 0 && falseHostTargets.length === 0 && falseUnavailableTargets.length === 0 && unreachableLocalRoutes.length === 0 && invalidOfflineSessionRoutes.length === 0,
     duplicateIds: Object.freeze(duplicateIds),
     duplicateSessionIds: Object.freeze(duplicateSessionIds),
     missingIds: Object.freeze(missingIds),
@@ -249,7 +250,7 @@ export function auditCampaignHubRegistry() {
     invalidStatuses: Object.freeze(invalidStatuses),
     invalidSessionStatuses: Object.freeze(invalidSessionStatuses),
     falseHostTargets: Object.freeze(falseHostTargets),
-    falseNetworkTargets: Object.freeze(falseNetworkTargets),
+    falseUnavailableTargets: Object.freeze(falseUnavailableTargets),
     unreachableLocalRoutes: Object.freeze(unreachableLocalRoutes),
     invalidOfflineSessionRoutes: Object.freeze(invalidOfflineSessionRoutes),
     ungroupedServices: Object.freeze(ungroupedServices),

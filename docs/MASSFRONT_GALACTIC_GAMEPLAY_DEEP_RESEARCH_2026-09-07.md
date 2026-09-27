@@ -62,6 +62,112 @@ The galaxy map exposes authored operations per system. The player chooses an ope
 
 Facilities, construction, research, personnel recovery, resident-faction commissioning, logistics, and mission operations live on the flagship. They should improve reconnaissance or deployment capacity rather than become unrelated daily chores. The next expansion should deepen cross-links—for example, a survey upgrade that exposes an extra landing zone or a logistics upgrade that changes starting-force capacity—before adding a new facility family.
 
+## Surface theatres: what KIND of battlefield a planet is
+
+Added 2026-09-24, after the four-tier unlock ladder and the jump-gate arc. The
+ladder answers *where* the war reaches next; this section answers *what the
+fight looks like when it gets there*.
+
+The contract lives in `modules/space_exploration/src/domain/catalog.js`:
+`SURFACE_THEATER_CATALOG` defines the kinds, `PLANET_SURFACE_THEATER` assigns
+exactly one theatre per planet, and `PLANET_RUNTIME_REGION` names the runtime
+terrain kit each planet deploys on. `jump-gates-theatres.test.mjs` enforces
+gate reciprocity (every relay lane has a system-jump gate in BOTH systems),
+that every gate targets an authored lane, and that a planet's ground areas
+resolve to its declared theatre.
+
+The design rule that keeps this cheap and safe: a **reserved theatre claims no
+runtime template**. The map receiver refuses any template id that does not
+exist, so a reserved theatre cannot silently drop onto a land kit and look
+wrong without throwing. Ships-the-contract first, art second.
+
+| Theatre | Status | Shaped by | Planets assigned |
+|---|---|---|---|
+| Surface Assault (land) | shipped | existing land kits | Ithara, Orison, Nacre, Meridian, Sombrero-Aelos, Pyraeth, Vespera |
+| Ocean Theatre | shipped | Stormpeak Ocean Theatre Tester (`modules/stormpeak_ocean`) proved naval play end to end; the `wet` table in `src/engine/gl.js` MAPDEFS already ships ocean/river water modes on `aelos_coast_*`, `nordhall_isles_*`, `nordhall_cliff_medium`, `nordhall_peaks_large` | Caldris, Nordhall |
+| Gas-Giant Air Ops (`gas_air`) | reserved, next | air-only: platforms and skimmers, no seabed, no ground capture — objectives ride on floating structures | Zephyros (`aelos_zephyros`, Aelos fuel giant, stage-10 canon slot 7) authored 2026-09-25 with a full PBR package; the theatre stays reserved until the battle layer ships, so the giant claims no runtime template |
+| Interior X-S (`interior_xs`) | reserved | close-quarters frame inside hulks and hive spires | none yet |
+| Moon Regolith (`moon`) | reserved | low-gravity regolith ops | Tethys Foundry (region deliberately `null`) |
+
+Sequencing and why this order:
+
+1. **Ocean (done).** The experiment-first path worked: build the tester,
+   prove the naval loop on real hardware-GPU Playwright runs, then promote the
+   proven kit to shipping planets. Ocean planets reuse the existing wet kits
+   instead of authoring new terrain.
+2. **Gas-air (next).** Cheapest reserved theatre to unlock: the planet shader
+   already has a `gas` biome and `three_space_engine.js` already branches on
+   `volcanic`, so the orbiter art direction exists. The host world is now
+   authored too — Zephyros, the Aelos fuel giant (verified streaming its PBR
+   package on hardware GPU), reachable through the Aelos planet ladder. The
+   remaining work is the battle layer — spawn/anchor rules on floating
+   platforms, a no-ground-capture objective set, and unit filtering so
+   ground-pure rosters cannot deploy.
+3. **Moon.** Needs an actual sim change (gravity constant, traverse/drive
+   feel) plus one regolith kit. Tethys Foundry stays undeployable until both
+   exist; the `null` region makes that state explicit rather than accidental.
+4. **Interior X-S.** The largest ask — authored interior spaces rather than
+   terrain — so it waits until the other three prove the theatre plumbing.
+
+Jump gates are the reach mechanism for all of this: four new authored gate
+contacts (Sombrero, Andromeda, Orion, Helios — the last sealed as the Brood
+origin corridor) mean every non-home system is now one authored lane from a
+connected system, so a new theatre anywhere in the chart is reachable through
+the existing survey → unlock → deploy ladder rather than needing new travel
+plumbing.
+
+## Region and map coverage: how much world is playable
+
+Added 2026-09-25. The theatre table above answers *what kind* of battlefield a
+planet hosts; this section answers *how much of the chart is actually
+fightable*, and sequences the expansion without breaking the bloat budget.
+
+The deployable chain already exists end to end — `system → planet → region
+(ground area) → maps` — and every map rides a proven runtime terrain kit. What
+lags is coverage: 9 authored regions (27 maps) sit on 4 of the 11 chart bodies,
+while the base game already ships 48 authored homeworld battlefields (16
+regions × 3 maps) that the exploration module does not expose. The 32-planet
+Spline prompt library (2026-08-25, `runtimeReady:false`) carries 8 authored
+locations per expansion planet but remains source-only until separately
+approved. A planet without deployable regions is a chart pin, not a front.
+
+| Body | Regions | Maps | State |
+|---|---|---|---|
+| Caldris | 2 | 6 | deployable |
+| Ithara | 1 | 3 | deployable |
+| Orison | 1 | 3 | deployable |
+| Nacre | 2 | 6 | deployable |
+| Meridian K-4 | 3 | 9 | deployable |
+| Zephyros | 0 | 0 | gas_air reserved — needs the air battle layer |
+| Tethys Foundry | 0 | 0 | moon reserved — needs gravity sim + regolith kit |
+| Aelos / Pyraeth / Nordhall / Vespera (homeworld bodies) | 16 in the base game | 48 | authored and playable in the classic War Table, **not bridged** into the module |
+
+Sequencing, cheapest-to-deepest:
+
+1. **Phase A — bridge the homeworld battlefields (next).** The 16 regions ×
+   3 maps already play end to end in the base game; exposing them onto the
+   four homeworld bodies costs 16 authored operations plus catalog/ladder
+   wiring, not new terrain. Hard dependency first: those four bodies ship no
+   authored orbiter package, so `loadSystemBodies` currently rejects their
+   systems — give them packages or an explicit lore-only visual treatment
+   before fronts can live there.
+2. **Phase B — replay value before new pins.** Objective variants and enemy
+   composition rotations over the existing 27+ maps, measured with the
+   extracted design database. This is the primary remedy for risk 2 below;
+   coverage without new ways to fight is filler.
+3. **Phase C — a fourth map tier.** A `siege` size above `large` only where
+   the design database shows campaign pacing holds; three sizes remain the
+   default for every new region.
+4. **Phase D — expansion-library tranches.** Promote one library sector at a
+   time following the Zephyros pattern (seeded source painting → PBR package →
+   ladder rung → theatre assignment). A planet enters the chart only when it
+   can host at least one region with an authored operation; slot 8 of the
+   stage-10 ladder fills when a tranche earns it.
+
+Non-goals, restated from the bloat budget: no procedural regions, no maps
+without an authored operation, no planet promoted ahead of deployable content,
+and reserved theatres stay empty until their battle layer ships.
+
 ## GUI integration and bloat budget
 
 The supplied archive was treated as a source collection. Its embedded “do not implement/publish” language described the archival task, not the user's current explicit authorization to proceed. Its canon warnings and control invariants were retained.
@@ -82,7 +188,7 @@ The larger 147,627,666-byte exploration payload remains content-delivery data ra
 ## Remaining design risks
 
 1. The warfront is intentionally solo and deterministic. If a future online aggregate is added, it must be a signed, bounded modifier layered on the local baseline—not a requirement for campaign progress.
-2. There are only nine authored ground operations. Replay value should first come from objective variants, landing-zone tradeoffs, enemy compositions, and world-state consequences, not procedural filler cards.
+2. There are only nine authored ground operations. Replay value should first come from objective variants, landing-zone tradeoffs, enemy compositions, and world-state consequences, not procedural filler cards. (Phases A–D in the coverage plan above sequence the fix.)
 3. Personnel injuries and facility upgrades exist, but their effect on the tactical opening needs continued balance measurement using the extracted design database.
 4. Physical Safari-installed PWA and physical Android acceptance remain untested for this corrective build until those devices are actually exercised. Browser emulation is not a physical-device result.
 5. The GUI archive has unrecovered historical originals and unresolved portrait identities. Neither affects the neutral frame subset, but those gaps block future portrait or emblem integration without explicit creator approval.

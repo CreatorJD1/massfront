@@ -67,7 +67,9 @@ if(typeof window!=='undefined'){
     const d=event&&event.detail,c=d&&d.compatibility;
     if(d&&typeof d.matchId==='string')window.__MF_MATCH_SEED__='network:'+d.matchId+':'+String(c&&c.rulesHash||'');
   });
-  window.addEventListener('massfront-match:start',()=>mfDeterminismReset());
+  /* Prepare constructs and hashes tick-zero gameplay. Resetting on the later
+     start signal would change the RNG after both peers agreed on that state. */
+  window.addEventListener('massfront-match:prepare',()=>mfDeterminismReset());
   window.addEventListener('load',()=>{
     if(typeof resetWorld!=='function'||resetWorld._mfDeterministicTakeover)return;
     const original=resetWorld;

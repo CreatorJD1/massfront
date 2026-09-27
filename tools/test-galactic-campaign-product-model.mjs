@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import {
   CAMPAIGN_HUB_PRIMARY_NAV,
   CAMPAIGN_HUB_QUICK_NAV,
+  CAMPAIGN_HUB_ROUTE_STATUS,
   CAMPAIGN_HUB_SESSION_STATUS,
   CAMPAIGN_HUB_SESSION_TYPES,
   auditCampaignHubRegistry,
@@ -12,7 +13,9 @@ import {
   getCampaignHubSessionType
 } from '../modules/space_exploration/src/ui/campaign_hub_registry.js';
 
-assert.equal(auditCampaignHubRegistry().ok, true, 'campaign hub registry must remain internally valid');
+const sessionAudit = auditCampaignHubRegistry();
+assert.equal(sessionAudit.ok, true, 'campaign hub registry must remain internally valid');
+assert.deepEqual(sessionAudit.falseUnavailableTargets, [], 'upcoming and unavailable sessions must not advertise a route');
 assert.deepEqual(
   CAMPAIGN_HUB_SESSION_TYPES.map(entry => [entry.id, entry.label]),
   [
@@ -34,22 +37,19 @@ assert.equal(classic.routeId, 'standard');
 assert.deepEqual(getCampaignHubRoute(classic.routeId).target,
   { kind: 'host-route', routeId: 'mode-standard' },
   'Standard deployment must open solo setup directly, without the retired War Table');
-assert.equal(campaign.status, CAMPAIGN_HUB_SESSION_STATUS.OFFLINE_READY);
-assert.equal(campaign.routeId, 'campaign');
+assert.equal(campaign.status, CAMPAIGN_HUB_SESSION_STATUS.UPCOMING);
+assert.equal(campaign.routeId, null, 'an upcoming Campaign session must not advertise a playable target');
+assert.equal(getCampaignHubRoute('campaign').status, CAMPAIGN_HUB_ROUTE_STATUS.HOST_REQUIRED);
+assert.equal(getCampaignHubRoute('campaign').target, null);
 assert.equal(network.status, CAMPAIGN_HUB_SESSION_STATUS.NETWORK_UNAVAILABLE);
 assert.equal(network.routeId, null, 'unsupported networking must never gain a fake target');
+assert.match(network.description, /Social Command.*two-seat lobby.*synchronized co-op and versus battles.*unavailable/i);
 assert.equal(mmo.status, CAMPAIGN_HUB_SESSION_STATUS.NETWORK_UNAVAILABLE);
 assert.equal(mmo.routeId, null, 'unsupported MMO must never gain a fake target');
 assert.equal(campaignHubSessionIsReachable(classic), false, 'standalone module cannot pretend it owns base-game offline play');
 assert.equal(campaignHubSessionIsReachable(classic, { hostRoutes: true }), true);
-/* TEMPORARY, paired with campaign_hub_registry.js: the Campaign route is held at
-   HOST_REQUIRED while the UGA command loop is finished, so its session is
-   unreachable even inside the base game. The Prologue itself is built and
-   unchanged. Restore this to `true` in the same commit that returns the route to
-   HOST_ROUTE - if this line is still asserting false once Campaign is unlocked,
-   the assertion is wrong, not the product. */
 assert.equal(campaignHubSessionIsReachable(campaign, { hostRoutes: true }), false,
-  'Campaign is deliberately held while the UGA command loop is completed');
+  'Campaign stays unavailable while its route is in development');
 assert.equal(campaignHubSessionIsReachable(network, { hostRoutes: true }), false, 'future persistent networking stays unavailable');
 assert.equal(campaignHubSessionIsReachable(mmo, { hostRoutes: true }), false, 'future MMO authority stays unavailable');
 

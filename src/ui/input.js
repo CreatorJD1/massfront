@@ -294,7 +294,8 @@ function formationSpacing(sel){
   }
   if(sel.length){ cx2/=sel.length; cy2/=sel.length; }
   let near=false;
-  forUnitsIn(cx2,cy2,FORM_TIGHT_R,j=>{ if(!near&&ualive[j]&&uteam[j]!==0) near=true; });
+  const localTeam=typeof mfLocalTeam==='function'?mfLocalTeam():0;
+  forUnitsIn(cx2,cy2,FORM_TIGHT_R,j=>{ if(!near&&ualive[j]&&uteam[j]!==localTeam) near=true; });
   if(near) sp*=FORM_TIGHT_MUL;
   return clamp(sp,near?24:31,92);
 }
@@ -498,6 +499,12 @@ function patrolButtonState(){
   const l=b.querySelector('span:nth-child(2)');
   if(l)l.textContent=armPatrol&&patrolDraft&&patrolDraft.pts.length>1?'START':'PATROL';
 }
+function mfNetworkPlanBlocked(label){
+  const C=window.MFMatchCommandConsumer;
+  if(!C||!C.requiresLockstep())return false;
+  toast(label+' UNAVAILABLE IN NETWORK MATCH — multi-step orders are not synchronized yet');
+  sfx('reject');return true;
+}
 function beginPatrolDraft(){
   const sel=formationMembers();
   if(!sel.length){toast('Select units first');return false;}
@@ -607,6 +614,7 @@ function tickPatrolRoutes(dt){
   }
 }
 function commitPatrolDraft(){
+  if(mfNetworkPlanBlocked('PATROL')){cancelPatrolDraft(true);return false;}
   if(!patrolDraft||patrolDraft.pts.length<2){cancelPatrolDraft(false);return false;}
   const sel=[],refs=[];
   for(const e of patrolDraft.members){
@@ -630,6 +638,7 @@ function commitPatrolDraft(){
   return true;
 }
 function togglePatrolPlanner(){
+  if(mfNetworkPlanBlocked('PATROL')){if(armPatrol)cancelPatrolDraft(true);return;}
   if(!armPatrol){beginPatrolDraft();return;}
   if(patrolDraft&&patrolDraft.pts.length>1)commitPatrolDraft();else cancelPatrolDraft(false);
 }
@@ -847,7 +856,7 @@ function queueAddStep(wx,wy,pk,quiet){
   } else if(pk&&pk.own>=0&&!inDraft(pk.own)){
     step={t:2,x:ux[pk.own],y:uy[pk.own],h:pk.own,g:ugen[pk.own],mv:0};
     what='GUARD '+TYPES[utype[pk.own]].name;
-  } else if(b>=0&&blds[b].team!==0){
+  } else if(b>=0&&blds[b].team!==(typeof mfLocalTeam==='function'?mfLocalTeam():0)){
     const B=blds[b]; step={t:1,x:B.x,y:B.y,h:-2-b,g:-1,mv:0};
     what='ATTACK '+guardLabel(-2-b);
   } else if(b>=0&&!quiet){
@@ -868,6 +877,7 @@ function queueAddStep(wx,wy,pk,quiet){
   sfx('confirm');
 }
 function commitQueueDraft(){
+  if(mfNetworkPlanBlocked('ORDER QUEUE')){cancelQueueDraft(true);return false;}
   const D=queueDraft;
   if(!D||!D.steps.length){ cancelQueueDraft(false); return false; }
   const sel=[];
@@ -904,6 +914,7 @@ function commitQueueDraft(){
   return true;
 }
 function toggleQueuePlanner(){
+  if(mfNetworkPlanBlocked('ORDER QUEUE')){if(armQueue)cancelQueueDraft(true);return;}
   if(!armQueue){ beginQueueDraft(); return; }
   if(queueDraft&&queueDraft.steps.length) commitQueueDraft(); else cancelQueueDraft(false);
 }
@@ -938,7 +949,7 @@ function tickOrderPlanning(dt){
      capped: this is a read-out, not a per-unit effect. */
   const seen=[];
   for(let i=0;i<unitHigh&&seen.length<6;i++){
-    if(!ualive[i]||uteam[i]!==0||ustate[i]!==7) continue;
+    if(!ualive[i]||!(typeof mfLocalOwnsUnit==='function'?mfLocalOwnsUnit(i):uteam[i]===0)||ustate[i]!==7) continue;
     const h=uGuard[i];
     if(h===-1||seen.indexOf(h)>=0||!guardEntityLive(h,uGuardG[i])) continue;
     seen.push(h);
@@ -946,7 +957,14 @@ function tickOrderPlanning(dt){
     addParticle(3,P[0],P[1],0,0,.75,Math.max(30,P[2]*2.2), 110,235,190);
   }
 }
+function mfLocalStackMember(lead){
+  if(lead<0) return -1;
+  const members=typeof mfIconStackMembers==='function'?mfIconStackMembers(lead):[lead];
+  for(const i of members) if(typeof mfLocalOwnsUnit==='function'?mfLocalOwnsUnit(i):uteam[i]===0) return i;
+  return -1;
+}
 function pickUnit(wx,wy){
+  const localTeam=typeof mfLocalTeam==='function'?mfLocalTeam():0;
   const pickR=Math.max(16,orthoSpan*0.012,
     (typeof mfIconStackOn==='function'&&mfIconStackOn()&&typeof mfIconStackCell==='function')
       ?mfIconStackCell()*0.55:0);
@@ -954,13 +972,13 @@ function pickUnit(wx,wy){
   forUnitsIn(wx,wy,pickR,j=>{
     const d=dist2(wx,wy,ux[j],uy[j]);
     if(typeof mfLocalOwnsUnit==='function'?mfLocalOwnsUnit(j):uteam[j]===0){ if(d<bd){bd=d;best=j;} }
-    else if(fogEntityVisible(uteam[j],ux[j],uy[j])){ if(d<bde){bde=d;bestEnemy=j;} }
+    else if(uteam[j]!==localTeam&&fogEntityVisible(uteam[j],ux[j],uy[j])){ if(d<bde){bde=d;bestEnemy=j;} }
   });
   if(typeof mfIconStackPick==='function'){
-    const ownSt=mfIconStackPick(wx,wy,0);
+    const ownSt=mfLocalStackMember(mfIconStackPick(wx,wy,localTeam));
     if(ownSt>=0) best=ownSt;
-    const enSt=mfIconStackPick(wx,wy,1);
-    if(enSt>=0&&bestEnemy<0) bestEnemy=enSt;
+    const enSt=mfIconStackPick(wx,wy,localTeam===1?0:1);
+    if(enSt>=0&&bestEnemy<0&&fogEntityVisible(uteam[enSt],ux[enSt],uy[enSt])) bestEnemy=enSt;
   }
   return {own:best, enemy:bestEnemy};
 }
@@ -1056,7 +1074,7 @@ function pickUnitPointer(wx,wy,sx,sy,pointerType){
   /* Broad only: the result cannot be accepted until its projected hull hits. */
   const broad=mfPointerMaxSpan()+allow*wp+48;
   let own=-1,enemy=-1,om=Infinity,em=Infinity,ownStack=false;
-  const stackTeams=[typeof mfLocalTeam==='function'?mfLocalTeam():0];
+  const localTeam=typeof mfLocalTeam==='function'?mfLocalTeam():0,stackTeams=[localTeam];
   /* viaStack records HOW the winning own-pick was made. A finite metric from
      the unit loop means the pointer landed inside that unit's projected hull
      or its icon plate -- it is on the thing. A metric from the stack loop is a
@@ -1069,7 +1087,7 @@ function pickUnitPointer(wx,wy,sx,sy,pointerType){
     if(typeof mfLocalOwnsUnit==='function'?mfLocalOwnsUnit(j):uteam[j]===0){
       if(m<om-1e-9||(Math.abs(m-om)<=1e-9&&(own<0||j<own))){om=m;own=j;ownStack=!!viaStack;}
     }
-    else if(fogEntityVisible(uteam[j],ux[j],uy[j])&&(m<em-1e-9||(Math.abs(m-em)<=1e-9&&(enemy<0||j<enemy)))){em=m;enemy=j;}
+    else if(uteam[j]!==localTeam&&fogEntityVisible(uteam[j],ux[j],uy[j])&&(m<em-1e-9||(Math.abs(m-em)<=1e-9&&(enemy<0||j<enemy)))){em=m;enemy=j;}
   };
   forUnitsIn(wx,wy,broad,j=>{
     if(stackTeams.indexOf(uteam[j])<0)stackTeams.push(uteam[j]);
@@ -1080,7 +1098,8 @@ function pickUnitPointer(wx,wy,sx,sy,pointerType){
   if(typeof mfIconStackPick==='function'){
     for(const team of stackTeams){
       const lead=mfIconStackPick(wx,wy,team);
-      if(lead>=0) take(lead,mfPointerStackMetric(lead,sx,sy,allow),true);
+      if(lead>=0)take(team===localTeam?mfLocalStackMember(lead):lead,
+        mfPointerStackMetric(lead,sx,sy,allow),true);
     }
   }
   return {own:own,enemy:enemy,ownStack:ownStack,ownDirect:own>=0&&!ownStack};
@@ -1230,6 +1249,11 @@ function onTap(sx,sy,pointerType){
   if(aiming===2){                               // NOVA strike targeting
     aiming=-1;
     const b3=novaSrc; novaSrc=-1;
+    const C=window.MFMatchCommandConsumer;
+    if(C&&C.requiresLockstep()){
+      toast('NETWORK NOVA STRIKE UNAVAILABLE — this order is not synchronized yet');
+      return;
+    }
     if(!novaFire(b3,wx,wy)) toast('NOVA is not ready');
     return;
   }

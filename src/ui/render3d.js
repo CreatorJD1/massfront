@@ -611,7 +611,15 @@ function addBeam3D(mesh,x0,h0,y0,x1,h1,y1,rad,r,g,b,a,opt){
      authored shaft. This prevents missiles from inheriting the laser language. */
   if(opt&&opt.projectile){
     const pw=Math.max(0.88,rad*(q>=.95?0.93:.80));
-    addBeamRibbon(sprites.glow,x0,h0,y0,x1,h1,y1,pw*1.45,r,g,b,Math.min(112,aBeam*.50),190);
+    /* One soft faction sheath plus a narrow warm-white core makes ordinary
+       rounds legible at phone overview zoom. A single dim atlas ribbon used to
+       collapse below a pixel there, so impacts were the only visible proof of
+       attacks. Width follows the current world-per-pixel scale, not gameplay. */
+    const worldPerPixel=Math.max(0.01,orthoSpan/Math.max(1,VH));
+    const sheathW=Math.max(pw*2.2,worldPerPixel*6.0);
+    const coreW=Math.max(pw*1.05,worldPerPixel*2.4);
+    addBeamRibbon(sprites.glow,x0,h0,y0,x1,h1,y1,sheathW,r,g,b,Math.min(175,aBeam*.9),190);
+    addBeamRibbon(sprites.glow,x0,h0,y0,x1,h1,y1,coreW,255,246,220,Math.min(225,aBeam*1.25),210);
     if(opt.noMuzzle)return;
     bbAdd.add(sprites.glow,x0,y0,h0,pw*0.98,0,245,238,226,Math.min(78,aBeam*.44));
     return;
@@ -673,6 +681,19 @@ function addMuzzleFlash(x,y,h,dx,dy,size,r,g,b,a){
   bbAdd.add(sprites.glow,x,y,h,size,0,255,248,228,a);
   addBeamRibbon(sprites.glow,x,h,y,x+nx*cone,h,y+ny*cone,
     Math.max(1.35,size*.68),255,248,228,a*.78,80);
+}
+function mfProjectileVisualAdmission(slot,essential,overview,drawn){
+  /* A fixed slot sample permanently hid seven of eight recycled rifle slots.
+     Always show the first 32 actually visible rounds in a small engagement;
+     retain the old sparse sample only after the battlefield is already busy. */
+  return !overview||essential||drawn<32||(slot&7)===0;
+}
+function mfCombatFlashSize(type,size){
+  const authored=Math.min(12,size);
+  /* Low's billboard gate rejects sub-3.4px quads. At maximum command zoom a
+     12-world-unit rifle flash is only 1.5-3px, so the whole shot disappears.
+     Type 0 is the primary flash; preserve a six-pixel read across orientation. */
+  return type===0?Math.max(authored,orthoSpan/Math.max(1,VH)*6):authored;
 }
 function addWreckEmbers(x,y,h,size,heat,seed){
   /* Static coal bed + local flicker. Upright flame quads were the licking
@@ -2704,6 +2725,7 @@ function render(dtDraw){
   // round to its head, plus a small spark at the tip. Rings, faction orbs and
   // GPU ember sprays around the body made volleys read as orbiting sparks.
   let projectileDrawn=0;
+  if(typeof mfIconFireCueBegin==='function')mfIconFireCueBegin();
   const projectileLimit=overviewVfx?520:1800;
   for(let i=0;i<pHigh;i++){
     if(!palive[i]) continue;
@@ -2712,11 +2734,19 @@ function render(dtDraw){
        and must never disappear. The former 1-in-16 blanket sample combined
        with a 14 fps phone to make whole battles look completely inert. */
     const essential=pBarrage[i]||pCannon[i]||pdmg[i]>=28||ptype[i]===2||ptype[i]===3||ptype[i]===4||ptype[i]===7||ptype[i]===9;
-    if(overviewVfx&&!essential&&(i&7)!==0) continue;
-    if(projectileDrawn++>=projectileLimit&&!essential) continue;
     const X=px[i], Y=py[i];
     if(!vis(X,Y,60)) continue;
     if(!fogFxVisible(X,Y,pteam[i])) continue;
+    if(!mfProjectileVisualAdmission(i,essential,overviewVfx,projectileDrawn)) continue;
+    if(projectileDrawn>=projectileLimit&&!essential) continue;
+    projectileDrawn++;
+    /* Tactical icons intentionally render after ordinary additive fire. Only
+       a genuine live shot from a still-live shooter earns a top-layer cue; a
+       recycled projectile slot cannot light the wrong unit or reveal fog. */
+    const shooter=pSrcUnit[i];
+    if(overviewVfx&&shooter>=0&&ualive[shooter]&&ugen[shooter]===pSrcGen[i]&&
+       vis(ux[shooter],uy[shooter],50)&&mfRenderUnitFogVisible(shooter)&&
+       typeof mfIconFireCueUnit==='function')mfIconFireCueUnit(shooter);
     const fac=typeof mfCombatFactionTeam==='function'?mfCombatFactionTeam(pteam[i]):(pteam[i]===2?'horde':pteam[i]===0?'nova':'legion');
     const c=TEAMB[pteam[i]], wk=pwk[i]||'p', bio=!!pBio[i], nova=fac==='nova'&&!pCannon[i]&&!pBarrage[i];
     const fp=typeof mfFactionFxPalette==='function'?mfFactionFxPalette(pteam[i]):{a:c,b:[255,250,240]};
@@ -3244,7 +3274,8 @@ function render(dtDraw){
       bbAlpha.add(sSmokeB,X,Y,H+3+age*2,fsize[i]*(0.85+Math.sin(t*2.5+i)*0.18),
         t*0.12+i, fcr[i],fcg[i],fcb[i], 150*lf);
     } else if(ty!==9){                        // flash
-      bbAdd.add(sGlowB,X,Y,Hfx+1.4,Math.min(12,fsize[i]),0, fcr[i],fcg[i],fcb[i], 220*lf);
+      bbAdd.add(sGlowB,X,Y,Hfx+1.4,mfCombatFlashSize(ty,fsize[i]),0,
+        fcr[i],fcg[i],fcb[i],220*lf);
     }
   }
   // muzzle / engine / stance glows as small shells

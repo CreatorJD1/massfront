@@ -25,7 +25,9 @@
   var RT_BRANCHES=['FABRICATION','DOCTRINE','XENOLOGY'];
   /* Navigation uses stable public IDs. Node data retains shipped fac keys so
      existing research ownership and prerequisites remain compatible. */
-  var RT_FACTIONS=['nova','dominion','syndicate','brood'];
+  /* Development is player progression. Brood capability data belongs in
+     enemy Intel and must never appear as a fourth selectable research tree. */
+  var RT_FACTIONS=['nova','dominion','syndicate'];
   var RT_QUEUE_SLOTS=5;
   var RT_NODE_W=126,RT_NODE_H=76,RT_COL=154,RT_GAP_Y=94;
   var RT={sel:null,scrollX:0,scrollY:0,branch:'FABRICATION',faction:'nova',factionPicked:false,inspect:false,focus:null,renderCount:0};
@@ -124,7 +126,7 @@
   function rtQueueAdd(id,path){
     var n=rtNode(id); if(!n||devHas(id)) return;
     if(typeof mfFactionTechPurchasable==='function'&&!mfFactionTechPurchasable(id)){
-      if(typeof toast==='function') toast('AI DOSSIER — reserved until Brood becomes playable');
+      if(typeof toast==='function') toast('BROOD THREAT DATA — enemy capabilities are not player research');
       return;
     }
     var q=rtQueue(false).slice();
@@ -266,8 +268,7 @@
         return '<button type="button" data-rtfaction="'+f+'" class="'+(RT.faction===f?'on':'')+'" aria-label="'+rtEsc(a?a.nm:f)+' research tree">'
           +(a&&typeof facIcon==='function'?facIcon(f,24,'rt3d-facIcon'):'<span>FACTION</span>')+'<b>'+rtEsc(a?a.nm:f)+'</b></button>';
       }).join('')+'</nav>'
-      +'<div class="rt3d-factionCaption">'+rtEsc(RT.faction==='brood'?'AI OPPONENT DOSSIER — Brood evolution unlocks are reserved until the faction becomes playable':
-        (faction?faction.motto:'FACTION DOCTRINE')+' — '+(faction?faction.bonus:'Dedicated faction unlocks'))+'</div>'
+      +'<div class="rt3d-factionCaption">'+rtEsc((faction?faction.motto:'FACTION DOCTRINE')+' — '+(faction?faction.bonus:'Dedicated faction unlocks'))+'</div>'
       /* No branch sub-tabs. Every branch of this faction is laid out together in
          one canvas below, and the player drags around it freely. */
        +'<div class="rt3d-navHint"><span>✥</span> Drag to explore the whole tree · tap a node to inspect</div>';

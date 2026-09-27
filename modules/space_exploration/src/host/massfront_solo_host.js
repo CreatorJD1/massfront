@@ -81,7 +81,7 @@ const GROUND_OPERATION_V3_FIELDS = Object.freeze([
   'commanderId', 'specialistIds', 'doctrineId', 'supportId', 'landingZoneId',
   'configuration', 'objective', 'difficulty', 'intelligence', 'battlefield',
   'scanTierAtLaunch', 'threatAtLaunch', 'factionSnapshot', 'personnelSnapshot',
-  'deploymentManifest', 'deploymentCost', 'rewardPlan', 'returnRoute',
+  'deploymentManifest', 'deploymentCost', 'rewardModifiers', 'rewardPlan', 'returnRoute',
   'commanderRosterFingerprint', 'commanderIdentity', 'operationId', 'resultSeed',
   'returnToken'
 ]);

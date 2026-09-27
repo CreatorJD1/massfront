@@ -336,7 +336,6 @@ ITEMS = {
     'res_relictech': ('crystal', 'xeno'), 'res_ability': ('bolt', 'xeno'),
     'res_asc_siege_foundry': ('tower', 'danger'),
     'res_syn_quantum_grid': ('lattice', 'xeno'),
-    'res_hor_gene_splice': ('beast', 'alien'),
     # modules
     'mod_plate': ('shield', 'mod'), 'mod_optic': ('crosshair', 'mod'),
     'mod_range': ('dish', 'mod'), 'mod_tempo': ('gear', 'mod'),

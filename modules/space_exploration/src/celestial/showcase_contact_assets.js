@@ -7,20 +7,14 @@
    or another contact that happens to use the same material atlas.
    -------------------------------------------------------------------------- */
 import { createRuntimeGltfLoader } from '../core/gltf_runtime_loader.js';
+import {
+  AUTHORED_CONTACT_ROOT_IDS,
+  SHOWCASE_CONTACT_ALIASES,
+  resolveShowcaseContactRootId as resolveContactRootId
+} from './showcase_contact_ids.js';
 
 const PACK_URL = new URL('../../assets/runtime/models/massfront-showcase-contacts.glb?v=20260830-draco1', import.meta.url).href;
-const CONTACT_IDS = Object.freeze([
-  'aelos_embassy_spindle',
-  'aelos_logistics_array',
-  'aelos_veyra_gate',
-  'veyra_archive_hulk',
-  'veyra_aelos_gate',
-  'veyra_karak_gate',
-  'karak_colony_spine',
-  'karak_lifeboat_field',
-  'karak_veyra_gate'
-]);
-const CONTACT_ID_SET = new Set(CONTACT_IDS);
+const CONTACT_IDS = AUTHORED_CONTACT_ROOT_IDS;
 
 let cachedMasterPromise = null;
 
@@ -165,15 +159,15 @@ function disposeMaster(root) {
 }
 
 export function isAuthoredShowcaseContact(contactId) {
-  return CONTACT_ID_SET.has(contactId);
+  return resolveContactRootId(contactId) !== null;
 }
 
 export async function loadShowcaseContactSet(contactIds) {
   const requested = Array.from(new Set(contactIds || []));
-  const invalid = requested.filter(id => !CONTACT_ID_SET.has(id));
+  const invalid = requested.filter(id => resolveContactRootId(id) === null);
   if (invalid.length) throw new Error(`No authored showcase contact exists for: ${invalid.join(', ')}`);
   const master = await loadMaster();
-  return cloneOwnedRoots(new Map(requested.map(id => [id, master.roots.get(id)])));
+  return cloneOwnedRoots(new Map(requested.map(id => [id, master.roots.get(resolveContactRootId(id))])));
 }
 
 // LOD switching is based on projected size, not camera distance, so portrait
