@@ -148,6 +148,19 @@ export const NUKE_TUNING = {
   tsunamiCapR: 280,
   tsunamiLandMul: 0.35,
 
+  /**
+   * Tsunami damage falls off over a FIXED reach from ground zero:
+   * fall = max(0, 1 - d / tsunamiReach); damage = (unit 90 | building 40) * power * fall.
+   * (It used to scale against the ring radius, so every hit past ~100 units got
+   * the same 0.167 fall -- a flat 66 HP -- out to the ring's full extent.)
+   */
+  tsunamiReach: 240,
+  /**
+   * Mobile units (never buildings or Cores) hit with fall above this are killed
+   * outright. 0.725 at reach 240 = inside 66 units, today's instant-kill radius.
+   */
+  tsunamiKillFall: 0.725,
+
   /** Suction window (s); water blasts only. Profile is sin(pi * phase) over the window. */
   suctionStartS: 1.4,
   suctionEndS: 6.5,
@@ -237,6 +250,19 @@ export function nukeRadii(age: number, surface: NukeSurface = "water"): NukeRadi
     ? Math.max(T.fireballKillMinR, fireR)
     : Math.max(T.groundZeroMinR, fireR);
   return { fireR, machR, tsunamiR, suction, fireballOn, groundZeroR };
+}
+
+/**
+ * Tsunami hit at distance d from ground zero (one hit per ent per blast).
+ * kill = instant kill; units only, buildings and Cores just take dmg.
+ */
+export function nukeTsunamiHit(d: number, building: boolean) {
+  const T = NUKE_TUNING;
+  const p = Math.max(0.8, T.power);
+  const fall = Math.max(0, Math.min(1, 1 - d / T.tsunamiReach));
+  const dmg = (building ? 40 : 90) * p * fall;
+  const kill = !building && fall > T.tsunamiKillFall;
+  return { fall, dmg, kill };
 }
 
 /** Read-only view of the live blast for visuals / HUD. */
@@ -926,17 +952,17 @@ export function createMatch(
 
       if (r.tsunamiR > 6 && d <= r.tsunamiR && d > tsunamiR0 - 6 && !b.tsunamiHit.has(e.id)) {
         b.tsunamiHit.add(e.id);
-        const fall = clamp(1 - d / Math.max(120, r.tsunamiR * 1.2), 0, 1);
-        const dmg = (e.building ? 40 : 90) * p * fall;
-        e.hp -= dmg;
+        const hit = nukeTsunamiHit(d, e.building);
+        const fall = hit.fall;
+        e.hp -= hit.dmg;
         if (!e.building) {
           e.x += ox * (14 + p * 6) * fall;
           e.z += oz * (14 + p * 6) * fall;
         }
-        if (fall > 0.45) {
+        if (hit.kill) {
           e.hp = 0;
           if (e.team === PLAYER) notice("TSUNAMI — ASHED");
-        } else if (e.team === PLAYER) notice("BASE SURGE");
+        } else if (fall > 0 && e.team === PLAYER) notice("BASE SURGE");
         if (e.hp <= 0) killEnt(e);
       }
     }
