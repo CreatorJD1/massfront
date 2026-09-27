@@ -69,6 +69,8 @@ type Props = {
   onToggleDive: () => void;
   onFaction: (id: FactionId) => void;
   onNuke: () => void;
+  /** Called with the arm state so the scene can draw the aim ring. */
+  onNukeAim?: (on: boolean) => void;
   lightId: string;
   onLight: (id: string) => void;
 };
@@ -237,6 +239,7 @@ export function CommandHud({
   onNudge,
   onFaction,
   onNuke,
+  onNukeAim,
   lightId,
   onLight,
 }: Props) {
@@ -270,6 +273,9 @@ export function CommandHud({
   useEffect(() => {
     if (!nukeReady) setNukeArmed(false);
   }, [nukeReady]);
+  useEffect(() => {
+    onNukeAim?.(nukeArmed);
+  }, [nukeArmed, onNukeAim]);
   const pressNuke = () => {
     if (!nukeReady) return;
     if (!nukeArmed) {
