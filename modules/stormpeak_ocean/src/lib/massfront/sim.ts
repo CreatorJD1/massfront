@@ -149,17 +149,17 @@ export const NUKE_TUNING = {
   tsunamiLandMul: 0.35,
 
   /**
-   * Tsunami damage falls off over a FIXED reach from ground zero:
-   * fall = max(0, 1 - d / tsunamiReach); damage = (unit 90 | building 40) * power * fall.
-   * (It used to scale against the ring radius, so every hit past ~100 units got
-   * the same 0.167 fall -- a flat 66 HP -- out to the ring's full extent.)
+   * Tsunami damage falls off (squared) over a FIXED reach from ground zero:
+   * fall = max(0, 1 - d / tsunamiReach) ** 2; damage = (unit 90 | building 40) * power * fall.
+   * Nothing takes tsunami damage (or knockback) at d >= tsunamiReach, however far
+   * the ring itself travels. Exposed in nukeState() so visuals can fade the ring.
    */
-  tsunamiReach: 240,
+  tsunamiReach: 200,
   /**
-   * Mobile units (never buildings or Cores) hit with fall above this are killed
-   * outright. 0.725 at reach 240 = inside 66 units, today's instant-kill radius.
+   * Mobile units (never buildings or Cores) hit by the tsunami at d <= this are
+   * killed outright. Buildings and Cores always just take the scaled damage.
    */
-  tsunamiKillFall: 0.725,
+  tsunamiKillR: 45,
 
   /** Suction window (s); water blasts only. Profile is sin(pi * phase) over the window. */
   suctionStartS: 1.4,
@@ -259,9 +259,10 @@ export function nukeRadii(age: number, surface: NukeSurface = "water"): NukeRadi
 export function nukeTsunamiHit(d: number, building: boolean) {
   const T = NUKE_TUNING;
   const p = Math.max(0.8, T.power);
-  const fall = Math.max(0, Math.min(1, 1 - d / T.tsunamiReach));
+  const lin = Math.max(0, Math.min(1, 1 - d / T.tsunamiReach));
+  const fall = lin * lin;
   const dmg = (building ? 40 : 90) * p * fall;
-  const kill = !building && fall > T.tsunamiKillFall;
+  const kill = !building && d <= T.tsunamiKillR;
   return { fall, dmg, kill };
 }
 
@@ -282,6 +283,10 @@ export type NukeView = NukeRadii & {
   startTick: number;
   startTime: number;
   durationS: number;
+  /** NUKE_TUNING.tsunamiReach: tsunami damage is (1 - d / tsunamiReach) ** 2, zero at and beyond it. */
+  tsunamiReach: number;
+  /** NUKE_TUNING.tsunamiKillR: the tsunami instantly kills units (not buildings / Cores) at d <= this. */
+  tsunamiKillR: number;
 };
 
 type NukeBlast = {
@@ -1018,6 +1023,8 @@ export function createMatch(
       startTick: nuke.startTick,
       startTime: nuke.startTime,
       durationS: NUKE_TUNING.durationS,
+      tsunamiReach: NUKE_TUNING.tsunamiReach,
+      tsunamiKillR: NUKE_TUNING.tsunamiKillR,
     };
   }
 
