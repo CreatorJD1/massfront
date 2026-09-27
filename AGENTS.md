@@ -63,6 +63,12 @@ decoder at all**, so every asset fails there. Effects ship `.ogg` + `.m4a` and
 the engine asks `canPlayType`. Music is AAC-only for size, with a fallback that
 abandons the playlist after three consecutive decode failures.
 
+**Two ocean systems — do not conflate them.** Production lockstep sea is
+`src/sea.js` (War Table ocean tester, Claude / Codex, ships). Tessendorf
+theatre is branch `stormpeak/ocean` → `modules/stormpeak/` ([PR #6](https://github.com/CreatorJD1/massfront/pull/6)). Isolated ES-module. Never
+register it in `boot.js` / `manifest.json`. Do not reimplement it on `main`.
+The sidecar `CreatorJD1/Stormpeak-MASSFRONT` is a redirect only.
+
 ## Apple support decision
 
 Apple remains a fully supported platform through the Safari-installed PWA
@@ -142,8 +148,6 @@ this project's history rendered without throwing: hollow buildings from reversed
 triangle winding, an atlas filling the screen, cards overflowing their
 container. A clean console proves nothing about a renderer.
 
----
-
 ## Conventions
 
 - Comments explain **why**, and especially why an obvious alternative was wrong.
@@ -163,6 +167,9 @@ container. A clean console proves nothing about a renderer.
 ## Do not
 
 - Add an `import`/`export` to anything under `src/`.
+- Reimplement the Stormpeak Tessendorf theatre on `main`. It already lives on
+  branch `stormpeak/ocean` (`modules/stormpeak/`, PR #6). Do not paste it into
+  the concatenated bundle. Do not open another dump repo.
 - Bundle new large media into the installer without checking APK size.
 - Commit credentials. The Cloudflare workers are deployed; deploying again needs
   a scoped API token that is **not** in this repo.

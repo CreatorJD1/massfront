@@ -1,0 +1,31 @@
+---
+description: Two ocean systems — vendored Stormpeak theatre on main, parallel branch stays apart
+alwaysApply: true
+---
+
+# Two ocean systems
+
+Claude / Codex own the **War Table ocean tester** on production `src/sea.js`
+(deterministic Douglas sea, lockstep). Keep that work on `main`.
+
+The **Tessendorf FFT theatre** (100ft Gerstner, hydrophone, Snell, sonar)
+ships on `main` as the vendored isolated ES-module **`modules/stormpeak_ocean/`**,
+surfaced through `src/stormpeak-tester.js` at `index.html?from=stormpeak`.
+This is the owner's 2026-09-27 placement override of the earlier
+"stormpeak/ocean only" rule; it is source-placement authority, not acceptance
+of the Ocean gameplay or a player-release gate.
+
+The older parallel copy still exists and stays intact:
+
+- Branch: `stormpeak/ocean`
+- Path: `modules/stormpeak/`
+- PR: https://github.com/CreatorJD1/massfront/pull/6
+
+The two module trees have different code. **Never merge them blindly.** Do
+**not** register the theatre's ES-module files in `boot.js` or
+`manifest.json` — the host registers them like `space_exploration`. Do **not**
+concatenate three.js into the WebGL2 bundle. The sidecar repo
+`CreatorJD1/Stormpeak-MASSFRONT` is a redirect only.
+
+If the War Table tester should *look* like Stormpeak, drive `src/sea.js` from
+that spectrum — do not paste theatre code into the production sea.
