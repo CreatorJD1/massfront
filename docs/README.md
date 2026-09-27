@@ -36,6 +36,7 @@ may provide evidence, but it never overrides those two files.
 - Cloudflare updates: [CLOUDFLARE-UPDATES.md](CLOUDFLARE-UPDATES.md)
 - Tutorial design: [TUTORIAL.md](TUTORIAL.md)
 - Galactic Exploration: [SPACE_EXPLORATION_MODULE_DESIGN.md](SPACE_EXPLORATION_MODULE_DESIGN.md)
+- Current game / UX / progression audit: [GAME_AUDIT.md](GAME_AUDIT.md)
 - Lore-aware visual editor and image/motion-first UI: post-Stage 18 handoff (pass-down removed 2026-09-12 — see docs/CODEX_HANDOFF.md)
 - Performance architecture: [performance/](performance/)
 
