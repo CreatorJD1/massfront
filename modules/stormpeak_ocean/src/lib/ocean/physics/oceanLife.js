@@ -302,7 +302,7 @@ export function createOceanLife(scene, camera) {
     trauma = Math.min(1, trauma + n);
   }
 
-  function emitFromSnap(snap, seaY) {
+  function emitFromSnap(snap, seaY, heightAt = null) {
     if (!snap?.ents) return;
     for (let i = 0; i < snap.ents.length; i++) {
       const e = snap.ents[i];
@@ -330,14 +330,16 @@ export function createOceanLife(scene, camera) {
           const cz = Math.cos(e.yaw);
           const bowX = e.x + sx * e.radius * 1.1;
           const bowZ = e.z + cz * e.radius * 1.1;
-          emitPuff(bowX + nrand() * 0.8, seaY + 0.15, bowZ + nrand() * 0.8, 0.8 + rnd() * 1.4);
+          const px = bowX + nrand() * 0.8;
+          const pz = bowZ + nrand() * 0.8;
+          emitPuff(px, (heightAt ? heightAt(px, pz) : seaY) + 0.15, pz, 0.8 + rnd() * 1.4);
           if (rnd() < 0.5) emitBubble(e.x - sx * e.radius, seaY - 0.4, e.z - cz * e.radius, true);
         }
       }
     }
   }
 
-  function update({ t, dt, seaY, under, metres, beaufort, cam }) {
+  function update({ t, dt, seaY, under, metres, beaufort, cam, heightAt = null }) {
     const cx = cam.x;
     const cy = cam.y;
     const cz = cam.z;
@@ -384,7 +386,7 @@ export function createOceanLife(scene, camera) {
         const d = drops[i];
         d.y -= d.v * dt * (0.85 + beaufort * 0.04);
         if (d.y < seaY + 0.2) {
-          emitPuff(d.x, seaY + 0.05, d.z, 0.45 + rnd() * 0.55);
+          emitPuff(d.x, (heightAt ? heightAt(d.x, d.z) : seaY) + 0.05, d.z, 0.45 + rnd() * 0.55);
           d.x = cx + nrand() * spread;
           d.y = cy + 14 + rnd() * 22;
           d.z = cz + nrand() * spread;
@@ -473,7 +475,9 @@ export function createOceanLife(scene, camera) {
     plMat.color.setHex(under && metres > 140 ? 0x8a5cff : 0x3dffc4);
     plMat.opacity = under ? 0.12 + Math.min(0.1, metres / 800) : 0.09;
 
-    const showFoam = !under && beaufort >= 5;
+    /* Flat foam discs at one height were sliced by every swell (flicker);
+       the ocean shader already paints whitecaps on the real crests. */
+    const showFoam = false;
     foam.visible = showFoam;
     if (showFoam) {
       for (let i = 0; i < FP; i++) {

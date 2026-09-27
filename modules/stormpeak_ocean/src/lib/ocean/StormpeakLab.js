@@ -320,6 +320,9 @@ export function bootStormpeakLab(canvas, opts = {}) {
 
   const wetKit = createWetKit();
   const sea = createSeaSampler();
+  /* Local surface height for spray and puffs, so they start on the wave at
+     their own position rather than the sea height under the camera. */
+  const seaHeightAt = (x, z) => sea.height(x, z);
   const waves = createWaveField(scene);
   const islands = createIslands(scene);
   const nukeFx = createNukeFx(scene);
@@ -349,6 +352,11 @@ export function bootStormpeakLab(canvas, opts = {}) {
   const sonarView = createSonarView(scene);
   const underFx = createUnderwaterFx(scene, camera);
   const seabed = createSeabed(scene);
+  /* Nuke marks live in the ocean and terrain shaders: share one set of
+     uniform objects so nukeFx writes them once per frame. */
+  for (const mat of [...oceanMats, seabed.material]) {
+    for (const k in nukeFx.markUniforms) mat.uniforms[k] = nukeFx.markUniforms[k];
+  }
   const life = createOceanLife(scene, camera);
   let targetDive = controls.dive;
 
@@ -399,6 +407,9 @@ export function bootStormpeakLab(canvas, opts = {}) {
   for (let a = 0; a < NUKE_TUNING.fireballLethalS; a += 0.05) {
     NUKE_KILL_R = Math.max(NUKE_KILL_R, nukeRadii(a).groundZeroR);
   }
+  /* The tsunami's fixed instant-kill radius (units only) can be the larger
+     of the two; when the sim exposes it, the aim ring shows whichever is. */
+  NUKE_KILL_R = Math.max(NUKE_KILL_R, NUKE_TUNING.tsunamiKillR || 0);
   let hudNukeArmed = false;
 
   controls.onDiveIntent = (d) => {
@@ -852,7 +863,7 @@ export function bootStormpeakLab(canvas, opts = {}) {
        sim ticks, and only while the match is live. */
     match.queueWaveHits(hits);
 
-    life.emitFromSnap(snap, focalSea.h);
+    life.emitFromSnap(snap, focalSea.h, seaHeightAt);
     const weather = life.update({
       t,
       dt,
@@ -861,6 +872,7 @@ export function bootStormpeakLab(canvas, opts = {}) {
       metres,
       beaufort: beaufortForce,
       cam: camera.position,
+      heightAt: seaHeightAt,
     });
     const flashAmt = weather?.flash || 0;
     /* Visual only: blast damage runs inside match.step() on the sim clock. */
@@ -873,7 +885,6 @@ export function bootStormpeakLab(canvas, opts = {}) {
     nukeFx.setAim(
       nukeAimOn ? { x: controls.focal.x, z: controls.focal.z, y: focalSea.h, r: NUKE_KILL_R } : null,
       t,
-      camera.position,
     );
     const prevNukeAge = lastNukeAge;
     lastNukeAge = nukeWx.live ? nukeWx.age : -1;

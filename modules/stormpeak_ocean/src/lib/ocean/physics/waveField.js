@@ -138,44 +138,11 @@ export function createWaveField(scene) {
   const gpuAux = Array.from({ length: MAX }, () => new THREE.Vector4());
   const jets = [];
   const wakePts = [];
-  const dummy = new THREE.Object3D();
 
-  const ringGeo = new THREE.RingGeometry(0.74, 1.0, 48);
-  ringGeo.rotateX(-Math.PI / 2);
-  const ringMat = new THREE.MeshBasicMaterial({
-    color: 0xd7e4de,
-    transparent: true,
-    opacity: 0.42,
-    depthWrite: false,
-    fog: true,
-    side: THREE.DoubleSide,
-  });
-  const rings = scene
-    ? new THREE.InstancedMesh(ringGeo, ringMat, MAX)
-    : null;
-  if (rings) {
-    rings.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    rings.frustumCulled = false;
-    rings.renderOrder = 5;
-    scene.add(rings);
-  }
-  const scarGeo = new THREE.CircleGeometry(1, 24);
-  scarGeo.rotateX(-Math.PI / 2);
-  const scarMat = new THREE.MeshBasicMaterial({
-    color: 0xcfdcd6,
-    transparent: true,
-    opacity: 0.28,
-    depthWrite: false,
-    fog: true,
-    side: THREE.DoubleSide,
-  });
-  const scars = scene ? new THREE.InstancedMesh(scarGeo, scarMat, MAX) : null;
-  if (scars) {
-    scars.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    scars.frustumCulled = false;
-    scars.renderOrder = 4;
-    scene.add(scars);
-  }
+  /* No flat ring/scar meshes: they sat at the sea height under the camera,
+     so swells sliced through them and they cut across land. The ocean
+     shader draws impact foam and churned water from packGpu() on the real
+     displaced surface (oceanMaterial.js). */
 
   function detonate(x, z, power, kind = "shell", surface = "water") {
     const p = kind === "nuke" ? clamp(power, 2.6, 4.5) : clamp(power, 0.12, 1.45);
@@ -323,7 +290,7 @@ export function createWaveField(scene) {
     return { count: n, pos: gpuPos, data: gpuData, aux: gpuAux };
   }
 
-  function update(now, seaY = 0) {
+  function update(now) {
     t = now;
     jets.length = 0;
     wakePts.length = 0;
@@ -355,46 +322,6 @@ export function createWaveField(scene) {
         }
       }
     }
-    if (rings) {
-      for (let i = 0; i < MAX; i++) {
-        if (i >= events.length) {
-          dummy.scale.set(0, 0, 0);
-          dummy.position.set(0, -400, 0);
-          dummy.updateMatrix();
-          rings.setMatrixAt(i, dummy.matrix);
-          if (scars) scars.setMatrixAt(i, dummy.matrix);
-          continue;
-        }
-        const e = events[i];
-        const v = evalBlast(e, e.x, e.z, t);
-        if (!v || v.crestH < 0.25) {
-          dummy.scale.set(0, 0, 0);
-          dummy.position.set(0, -400, 0);
-          dummy.updateMatrix();
-          rings.setMatrixAt(i, dummy.matrix);
-          if (scars) scars.setMatrixAt(i, dummy.matrix);
-          continue;
-        }
-        dummy.position.set(e.x, seaY + 0.45, e.z);
-        dummy.scale.set(Math.max(6, v.crestR), 1, Math.max(6, v.crestR));
-        dummy.rotation.set(0, 0, 0);
-        dummy.updateMatrix();
-        rings.setMatrixAt(i, dummy.matrix);
-        if (scars) {
-          const scarR = Math.max(3, v.cavR * 0.85);
-          dummy.scale.set(scarR, 1, scarR);
-          dummy.position.set(e.x, seaY + 0.22, e.z);
-          dummy.updateMatrix();
-          scars.setMatrixAt(i, dummy.matrix);
-        }
-      }
-      rings.instanceMatrix.needsUpdate = true;
-      ringMat.opacity = 0.28 + Math.min(0.28, events.length * 0.05);
-      if (scars) {
-        scars.instanceMatrix.needsUpdate = true;
-        scarMat.opacity = 0.16 + Math.min(0.18, events.length * 0.04);
-      }
-    }
     return { pack: packGpu(), jets, wakePts };
   }
 
@@ -402,20 +329,7 @@ export function createWaveField(scene) {
     return events.length;
   }
 
-  function dispose() {
-    if (rings && scene) {
-      scene.remove(rings);
-      ringGeo.dispose();
-      ringMat.dispose();
-      rings.dispose();
-    }
-    if (scars && scene) {
-      scene.remove(scars);
-      scarGeo.dispose();
-      scarMat.dispose();
-      scars.dispose();
-    }
-  }
+  function dispose() {}
 
   return { detonate, sample, sensorAt, impulseAt, update, packGpu, live, events, get t() { return t; }, dispose };
 }

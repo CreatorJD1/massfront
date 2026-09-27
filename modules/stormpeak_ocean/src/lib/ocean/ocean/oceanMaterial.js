@@ -1,5 +1,6 @@
 // @ts-nocheck
 /** @ts-nocheck */
+import { createSurfaceMarkUniforms, surfaceMarksGLSL } from "../physics/surfaceMarks.js";
 import * as THREE from "three";
 import { config } from "../config.js";
 import { skyGLSL } from "../glsl/sky.glsl.js";
@@ -74,6 +75,7 @@ export function createOceanMaterial(sky, opts = {}) {
     uBlastData: { value: Array.from({ length: 8 }, () => new THREE.Vector4()) },
     uBlastAux: { value: Array.from({ length: 8 }, () => new THREE.Vector4()) },
     uBlastCount: { value: 0 },
+    ...createSurfaceMarkUniforms(),
     uNuke: { value: new THREE.Vector4(0, 0, 0, 1) },
     uNukeOrigin: { value: new THREE.Vector3() },
     uNukeCloud: { value: 0 },
@@ -320,6 +322,11 @@ export function createOceanMaterial(sky, opts = {}) {
       uniform float uUnderwater;
       uniform float uUnderDepth;
       uniform vec4 uNuke;
+      uniform vec2 uBlastPos[8];
+      uniform vec4 uBlastData[8];
+      uniform vec4 uBlastAux[8];
+      uniform float uBlastCount;
+      ${surfaceMarksGLSL}
       varying vec3 vWorldPos;
       varying vec2 vFlatXZ;
       varying float vFoam;
@@ -521,6 +528,29 @@ export function createOceanMaterial(sky, opts = {}) {
         float breaking = jacTip * mix(0.08, 1.0, crest) * uFoamAmount;
         float foamMask = smoothstep(0.48, 0.88, breaking) * streaks;
         foamMask = max(foamMask, sat(vBlastLip) * (0.45 + 0.55 * foamNoise));
+        /* Impact foam, per pixel on the displaced surface. The flat ring and
+           scar meshes in waveField used to sit at the sea height under the
+           camera, so swells sliced through them. This follows the crest the
+           vertex shader actually raised, and churned (aerated) water fills
+           the collapsed cavity. */
+        float impFoam = 0.0;
+        float churn = 0.0;
+        for (int i = 0; i < 8; i++) {
+          if (float(i) >= uBlastCount) break;
+          float rr = length(vWorldPos.xz - uBlastPos[i]);
+          vec4 bd = uBlastData[i];
+          vec4 ba = uBlastAux[i];
+          float energy = sat(bd.z * 0.3);
+          float wid = max(2.2, ba.z);
+          float rd = (rr - bd.x) / wid;
+          /* Foam hugs the crest and trails off its back face. */
+          float ring = exp(-rd * rd * (rd > 0.0 ? 2.6 : 0.9));
+          impFoam = max(impFoam, smoothstep(0.18, 0.62, ring * energy * (0.35 + 0.95 * foamNoise)));
+          float cavR = max(bd.y, 0.8);
+          float inner = 1.0 - smoothstep(cavR * 0.35, cavR * 1.1, rr);
+          churn = max(churn, inner * sat(bd.z * 0.35 + ba.y * 0.12));
+        }
+        churn *= 1.0 - sat(vBlastHole) * 0.85;
         vec3 foamCol = mix(uFoamColor * 0.48, uFoamColor, foamMask);
         float foamW = foamMask * mix(0.66, 0.92, sat((fftDist - 70.0) / 380.0));
 
@@ -530,6 +560,9 @@ export function createOceanMaterial(sky, opts = {}) {
           foamW = max(foamW, smoothstep(0.14, 0.56, wake) * 0.58);
         }
         output_ = mix(output_, foamCol, sat(foamW) * 0.74 * detailFade);
+        vec3 churnCol = mix(uBubbleColor * uSunIrradiance * 0.9 + uScatterColor * 0.25, uFoamColor * 0.8, 0.35 + 0.4 * foamNoise);
+        output_ = mix(output_, churnCol, sat(churn) * (0.28 + 0.34 * foamNoise));
+        output_ = mix(output_, uFoamColor * (0.62 + 0.38 * wrapN), sat(impFoam) * 0.82);
         float bio = trough * (1.0 - sat(foamW)) * (1.0 - jacTip * 0.7);
         bio *= 0.22 + 0.28 * sat(sin(uTime * 0.65 + vFlatXZ.x * 0.07 + vFlatXZ.y * 0.05));
         output_ += vec3(0.025, 0.18, 0.14) * bio * mix(0.25, 0.85, uCloudCover);
@@ -548,6 +581,10 @@ export function createOceanMaterial(sky, opts = {}) {
           outCol += vec3(0.04, 0.16, 0.15);
           float subFog = smoothstep(14.0, 210.0, fftDist);
           outCol = mix(outCol, vec3(0.03, 0.13, 0.15), subFog * 0.75);
+        }
+        if (uUnderwater < 0.5) {
+          vec4 mk = nukeMarks(vWorldPos.xz, fftDist, 0.0);
+          outCol = outCol * (1.0 - mk.a) + mk.rgb;
         }
         gl_FragColor = vec4(outCol, 1.0);
       }`,

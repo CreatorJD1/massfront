@@ -11,6 +11,7 @@ import {
   seabedMetres,
   seabedHeightGLSL,
 } from "../world/abyss.js";
+import { createSurfaceMarkUniforms, surfaceMarksGLSL } from "../physics/surfaceMarks.js";
 
 const VERT = /* glsl */ `
   varying vec3 vWorld;
@@ -45,6 +46,7 @@ const FRAG = /* glsl */ `
   uniform float uFogNear;
   uniform float uFogFar;
   uniform vec3 uSun;
+  ${surfaceMarksGLSL}
   float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
   float cau(vec2 p, float t) {
     float c = 0.0;
@@ -91,9 +93,18 @@ const FRAG = /* glsl */ `
     float cauAmt = mix(photic * 0.55, beach * 0.7 + (1.0 - dry) * 0.25, 1.0 - smoothstep(0.0, 10.0, vDepthM));
     col += vec3(0.18, 0.62, 0.48) * c * cauAmt * (0.35 + 0.65 * ndl);
     col += vec3(0.45, 0.85, 0.72) * pow(c, 2.4) * cauAmt * 0.35;
+    /* Nuke marks on dry ground and the beach, drawn on the terrain itself so
+       they follow hills instead of floating at sea level. Below the
+       waterline the ocean surface carries them. */
+    float dryMask = 1.0 - smoothstep(-0.4, 1.2, vDepthM);
+    float sc = nukeScorch(vWorld.xz) * dryMask;
+    col = mix(col, vec3(0.045, 0.035, 0.03), sc * 0.82);
+    col += vec3(1.0, 0.32, 0.06) * sc * pow(mkNoise(vWorld.xz * 0.45), 6.0) * uMarkFx.w * 0.9;
     float dist = length(uCam - vWorld);
     float fogF = smoothstep(uFogNear, uFogFar, dist);
     col = mix(col, uFogCol, fogF);
+    vec4 mk = nukeMarks(vWorld.xz, dist, 1.0);
+    col = col * (1.0 - mk.a * dryMask) + mk.rgb * dryMask;
     gl_FragColor = vec4(col, 1.0);
   }`;
 
@@ -115,6 +126,7 @@ export function createSeabed(scene) {
       uFogNear: { value: 12 },
       uFogFar: { value: 90 },
       uSun: { value: new THREE.Vector3(0.2, 0.9, 0.2) },
+      ...createSurfaceMarkUniforms(),
     },
     vertexShader: VERT,
     fragmentShader: FRAG,
@@ -319,5 +331,5 @@ export function createSeabed(scene) {
     tendrils.dispose();
   }
 
-  return { root, update, dispose };
+  return { root, update, dispose, material: mat };
 }
