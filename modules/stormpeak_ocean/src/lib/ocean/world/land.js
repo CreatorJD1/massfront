@@ -70,13 +70,60 @@ function oneLift(x, z, is) {
   return SHELF + inland * is.peak * (0.5 + n * 0.7) + inland * (ridge - 0.42) * 14;
 }
 
+/* Nuke craters: permanent bowls with a raised lip (the nuke lab's terrain
+   shape) cut into the island lift, so every reader of the ground sees them:
+   seabedMetres, islandHeight (rings, HP bars, build preview) and both shader
+   copies. The crater list itself belongs to the match; setLandCraters() takes
+   it as { x, z, radius, depth } (metres) and the shader gets the same list as
+   uCraters[i] = (x, z, radius, depth). Overlapping bowls add up, capped at
+   CRATER_MAX_CUT_M. A bowl never lowers land below SHELF + CRATER_FLOOR_M of
+   lift, which is above the deepest base seafloor around the islands, so a
+   crater never floods land (coastal breaching is a separate, later change).
+   Keep landLiftGLSL's craterCut in step with this. */
+export const MAX_CRATERS = 16;
+export const CRATER_LIP = 0.36;
+export const CRATER_MAX_CUT_M = 30;
+export const CRATER_FLOOR_M = 30;
+const CRATERS = Array.from({ length: MAX_CRATERS }, () => ({ x: 0, z: 0, r: 0, d: 0 }));
+let craterCount = 0;
+export function setLandCraters(list) {
+  craterCount = Math.min(MAX_CRATERS, list ? list.length : 0);
+  for (let i = 0; i < MAX_CRATERS; i++) {
+    const c = CRATERS[i];
+    const src = i < craterCount ? list[i] : null;
+    c.x = src ? src.x : 0;
+    c.z = src ? src.z : 0;
+    c.r = src ? src.radius : 0;
+    c.d = src ? src.depth : 0;
+  }
+}
+function craterCut(x, z, lift) {
+  let bowl = 0;
+  let lip = 0;
+  for (let i = 0; i < craterCount; i++) {
+    const c = CRATERS[i];
+    if (c.d < 0.001) continue;
+    const R = Math.max(1, c.r);
+    const r = Math.hypot(x - c.x, z - c.z);
+    const lipW = Math.max(6, R * 0.22);
+    if (r > R + lipW * 3) continue;
+    const t = Math.min(1, r / R);
+    const q = (r - R) / lipW;
+    bowl += c.d * (1 - t * t * (3 - 2 * t));
+    lip += c.d * Math.exp(-q * q) * CRATER_LIP;
+  }
+  if (bowl === 0 && lip === 0) return lift;
+  const cut = Math.min(CRATER_MAX_CUT_M, bowl) - lip;
+  return Math.max(lift - cut, Math.min(lift, SHELF + CRATER_FLOOR_M));
+}
+
 export function landLiftM(x, z) {
   let lift = 0;
   for (let i = 0; i < ISLANDS.length; i++) {
     const v = oneLift(x, z, ISLANDS[i]);
     if (v > lift) lift = v;
   }
-  return lift;
+  return lift > 0 ? craterCut(x, z, lift) : 0;
 }
 
 export function islandHeight(x, z) {
@@ -102,12 +149,31 @@ export const landLiftGLSL = /* glsl */ `
     inland = inland * inland * (3.0 - 2.0 * inland);
     return 94.0 + inland * peak * (0.5 + n * 0.7) + inland * (ridge - 0.42) * 14.0;
   }
+  uniform vec4 uCraters[${MAX_CRATERS}];
+  float craterCut(vec2 xz, float lift) {
+    float bowl = 0.0;
+    float lip = 0.0;
+    for (int i = 0; i < ${MAX_CRATERS}; i++) {
+      vec4 c = uCraters[i];
+      if (c.w < 0.001) continue;
+      float R = max(1.0, c.z);
+      float r = length(xz - c.xy);
+      float lipW = max(6.0, R * 0.22);
+      if (r > R + lipW * 3.0) continue;
+      float q = (r - R) / lipW;
+      bowl += c.w * (1.0 - smoothstep(0.0, R, r));
+      lip += c.w * exp(-q * q) * ${CRATER_LIP.toFixed(2)};
+    }
+    if (bowl == 0.0 && lip == 0.0) return lift;
+    float cut = min(${CRATER_MAX_CUT_M.toFixed(1)}, bowl) - lip;
+    return max(lift - cut, min(lift, ${(SHELF + CRATER_FLOOR_M).toFixed(1)}));
+  }
   float landLiftM(vec2 xz) {
     float lift = 0.0;
     if (length(xz - vec2(-340.0, 240.0)) < 280.0)
       lift = max(lift, landOne(xz, vec2(-340.0, 240.0), 96.0, 72.0, 11.7));
     if (length(xz - vec2(-440.0, -250.0)) < 340.0)
       lift = max(lift, landOne(xz, vec2(-440.0, -250.0), 118.0, 88.0, 29.3));
-    return lift;
+    return lift > 0.0 ? craterCut(xz, lift) : 0.0;
   }
 `;

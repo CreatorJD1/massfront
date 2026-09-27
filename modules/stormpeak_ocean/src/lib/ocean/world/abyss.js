@@ -70,33 +70,6 @@ function fbm(x, z) {
   return v;
 }
 
-/* Nuke crater on land (from the nuke-lab terrain shader, which bent a flat
-   plane hard-centred at the origin). Here it is a bowl with a raised lip cut
-   into the real island surface at the blast's ground zero. Metres, positive =
-   deeper. Presentation only: the match sim never reads terrain height, and the
-   crater is clamped so dry land stays dry (probeSurface is unchanged). The
-   same curve is in craterGLSL (physics/surfaceMarks.js); keep them in step. */
-const crater = { x: 0, z: 0, r: 0, d: 0 };
-export function setNukeCrater(x, z, r, depthM) {
-  crater.x = x;
-  crater.z = z;
-  crater.r = r;
-  crater.d = depthM;
-}
-export function nukeCraterM(x, z) {
-  if (crater.d < 0.001) return 0;
-  const R = Math.max(1, crater.r);
-  const r = Math.hypot(x - crater.x, z - crater.z);
-  const lipW = Math.max(6, R * 0.22);
-  if (r > R + lipW * 3) return 0;
-  const t = Math.min(1, r / R);
-  const bowl = 1 - t * t * (3 - 2 * t);
-  const q = (r - R) / lipW;
-  const lip = Math.exp(-q * q);
-  return crater.d * (bowl - lip * CRATER_LIP);
-}
-export const CRATER_LIP = 0.36;
-
 /** Seafloor depth in metres below the mean surface. */
 export function seabedMetres(x, z) {
   const nx = x * 0.0024;
@@ -108,9 +81,7 @@ export function seabedMetres(x, z) {
   h += trench * (TRENCH_M - SHELF_M);
   h += Math.sin(nx * 9.2 + nz * 4.1) * (3 + trench * 18);
   h -= landLiftM(x, z);
-  h = clamp(h, LAND_CEILING_M, BOTTOM_M);
-  if (crater.d > 0 && h < -0.9) h = Math.min(-1, h + nukeCraterM(x, z));
-  return h;
+  return clamp(h, LAND_CEILING_M, BOTTOM_M);
 }
 
 /* One authored bottom in both terrain and water shaders. The previous water
