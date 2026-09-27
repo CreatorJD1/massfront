@@ -608,7 +608,7 @@ export function createMatch(
     return false;
   }
 
-  /** False on a crater floor (within any crater's radius). Only the crater rule. */
+  /** False on a crater floor (within any crater's radius). Only the crater rule; extractors are exempt in canPlace(). */
   function canBuildAt(x: number, z: number) {
     for (const c of craters) {
       if ((c.x - x) ** 2 + (c.z - z) ** 2 <= c.radius * c.radius) return false;
@@ -618,11 +618,13 @@ export function createMatch(
 
   function canPlace(kind: BuildingId, x: number, z: number) {
     const d = DEFS[kind];
-    if (!canBuildAt(x, z)) return false;
+    /* Extractors sit on mass nodes and are exempt from the crater rule (designer
+       call); every other building is refused on a crater floor. */
     if (kind === "extractor") {
       const node = nearestFreeNode(x, z, 18, "mass");
       return !!node;
     }
+    if (!canBuildAt(x, z)) return false;
     if (overlaps(x, z, d.radius)) return false;
     return true;
   }
@@ -1219,8 +1221,7 @@ export function createMatch(
       const node = nodes.find(
         (n) =>
           n.kind !== "energy" &&
-          (n.taken < 0 || !ents.find((e) => e.id === n.taken && e.alive)) &&
-          canBuildAt(n.x, n.z),
+          (n.taken < 0 || !ents.find((e) => e.id === n.taken && e.alive)),
       );
       if (node) tryPlace(team, "extractor", node.x, node.z);
     } else if (reactors.length < 2) {
@@ -1488,7 +1489,7 @@ export function createMatch(
     craters(): Crater[] {
       return craters.map((c) => ({ x: c.x, z: c.z, radius: c.radius, depth: c.depth }));
     },
-    /** False on a crater floor. The sim's own placement check (canPlace) enforces the same rule. */
+    /** False on a crater floor. canPlace() enforces it for every building except extractors. */
     canBuildAt,
     pointerDown,
     pointerMove,
