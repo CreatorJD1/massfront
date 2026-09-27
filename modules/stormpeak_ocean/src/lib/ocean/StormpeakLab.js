@@ -452,6 +452,7 @@ export function bootStormpeakLab(canvas, opts = {}) {
     down = null;
   });
 
+  let nukeKeyArmedAt = -Infinity;
   const onKey = (e) => {
     if (e.code === "Escape") match.setBuildKind(null);
     if (e.code === "Space") {
@@ -464,8 +465,15 @@ export function bootStormpeakLab(canvas, opts = {}) {
       match.detonate(controls.focal.x, controls.focal.z, 1.2, "super");
     }
     if (e.code === "KeyN") {
+      /* Same two-step as the HUD button: N arms, N again within 3 s fires. */
       e.preventDefault();
-      fireNuke();
+      const now = performance.now();
+      if (match.phase === "live" && now - nukeKeyArmedAt < 3000) {
+        nukeKeyArmedAt = -Infinity;
+        fireNuke();
+      } else {
+        nukeKeyArmedAt = match.phase === "live" ? now : -Infinity;
+      }
     }
     if (e.code === "Digit1") match.produce("constructor");
     if (e.code === "Digit2") match.produce("corvette");
