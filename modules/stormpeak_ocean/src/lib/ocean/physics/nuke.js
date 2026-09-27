@@ -1,11 +1,13 @@
 // @ts-nocheck
 /** @ts-nocheck */
 import * as THREE from "three";
+import { createSurfaceMarkUniforms } from "./surfaceMarks.js";
 
 /**
  * Game-VFX nuke (Hovl / cinematic VDB anatomy):
  * flash → fireball → dark smoke stem → fire-lit cauliflower cap →
- * dust ring + shock shell. Water still gets a spray disc at the surface.
+ * dust ring + shock shell. The spray/dust wash, ground-zero hazard, tsunami
+ * front and aim ring are drawn by the ocean and terrain shaders (surfaceMarks.js).
  *
  * Visual only. The blast clock (age) and the gameplay radius curves (fireball,
  * shockwave, tsunami, suction) live in massfront/sim.ts (NUKE_TUNING /
@@ -182,24 +184,6 @@ const discVert = /* glsl */ `
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   }`;
 
-const discFrag = /* glsl */ `
-  precision mediump float;
-  uniform float uAmt, uTime, uLand;
-  varying vec2 vUv;
-  float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-  void main() {
-    vec2 p = vUv * 2.0 - 1.0;
-    float r = length(p);
-    float n = hash(floor(p * 16.0 + uTime));
-    float ring = smoothstep(0.12, 0.32, r) * (1.0 - smoothstep(0.72, 1.0, r));
-    ring *= 0.5 + 0.5 * n;
-    vec3 dust = mix(vec3(0.35, 0.32, 0.28), vec3(0.22, 0.16, 0.10), uLand);
-    vec3 spray = vec3(0.85, 0.90, 0.94);
-    vec3 col = mix(spray, dust, 0.35 + 0.65 * uLand);
-    float a = ring * uAmt;
-    if (a < 0.02) discard;
-    gl_FragColor = vec4(col, a);
-  }`;
 
 const puffFrag = /* glsl */ `
   precision mediump float;
@@ -248,6 +232,7 @@ const shockFrag = /* glsl */ `
     gl_FragColor = vec4(vec3(0.85, 0.9, 1.0), rim * uAmt);
   }`;
 
+
 function volMat(frag) {
   return new THREE.ShaderMaterial({
     transparent: true,
@@ -286,23 +271,6 @@ export function createNukeFx(scene) {
   anvil.renderOrder = 14;
   root.add(anvil);
 
-  const discMat = new THREE.ShaderMaterial({
-    transparent: true,
-    depthWrite: false,
-    depthTest: true,
-    fog: false,
-    toneMapped: false,
-    blending: THREE.AdditiveBlending,
-    side: THREE.DoubleSide,
-    uniforms: { uAmt: { value: 1 }, uTime: { value: 0 }, uLand: { value: 0 } },
-    vertexShader: discVert,
-    fragmentShader: discFrag,
-  });
-  const disc = new THREE.Mesh(new THREE.CircleGeometry(1, 28), discMat);
-  disc.rotation.x = -Math.PI / 2;
-  disc.frustumCulled = false;
-  disc.renderOrder = 11;
-  root.add(disc);
 
   const puffMat = new THREE.ShaderMaterial({
     transparent: true,
@@ -367,6 +335,31 @@ export function createNukeFx(scene) {
   fireball.renderOrder = 16;
   root.add(fireball);
 
+  /* Gameplay-readable layer (ground-zero hazard, tsunami damage front, aim
+     ring) plus the spray/dust wash and land scorch. These used to be flat
+     planes at the camera's sea height with the depth test off, so they
+     floated over swells like stickers and showed through hills. They are now
+     uniforms the ocean and terrain shaders read, drawn on the real surface.
+     Sized from the sim's radii so what players see is where damage lands. */
+  const markUniforms = createSurfaceMarkUniforms();
+  const mGz = markUniforms.uMarkGz.value;
+  const mGz2 = markUniforms.uMarkGz2.value;
+  const mFx = markUniforms.uMarkFx.value;
+  const mAim = markUniforms.uMarkAim.value;
+  let scorchR = 0;
+  let scorchPeak = 0;
+  let scorchEnd = -1;
+  const wallS = () => performance.now() / 1000;
+  function decayScorch() {
+    if (scorchEnd < 0) return;
+    const k = Math.exp(-(wallS() - scorchEnd) / 9);
+    mFx.w = k > 0.01 ? scorchPeak * k : 0;
+    if (mFx.w === 0) {
+      scorchPeak = 0;
+      scorchEnd = -1;
+    }
+  }
+
   const dummy = new THREE.Object3D();
   const camLoc = new THREE.Vector3();
 
@@ -391,16 +384,19 @@ export function createNukeFx(scene) {
     anvil.visible = false;
     puffs.visible = false;
     embers.visible = false;
-    disc.visible = false;
     fireball.visible = false;
     shock.visible = false;
+    /* Scorch outlives the blast and fades out instead of popping. */
+    if (scorchPeak > 0 && scorchEnd < 0) scorchEnd = wallS();
+    mGz2.set(0, 0, 0, 0);
+    mFx.x = 0;
+    mFx.y = 0;
   }
 
   function setLand(v) {
     columnMat.uniforms.uLand.value = v;
     anvilMat.uniforms.uLand.value = v;
     puffMat.uniforms.uLand.value = v;
-    discMat.uniforms.uLand.value = v;
   }
 
   function ignite(nx, nz, _p, surf) {
@@ -427,12 +423,13 @@ export function createNukeFx(scene) {
 
   /**
    * @param blast match.nukeState(): { id, x, z, surface, power, age, fireR,
-   *   machR, tsunamiR, suction, fireballOn } or null when no blast is running.
+   *   machR, tsunamiR, suction, fireballOn, groundZeroR, durationS } or null when no blast is running.
    */
   function update(blast, seaY, cam) {
     if (!blast) {
       if (live) rest();
       blastId = -1;
+      decayScorch();
       return {
         live: false, flash: 0, trauma: 0, exposure: 0, fireR: 0, machR: 0, machR0: 0,
         tsunamiR: 0, suction: 0, x, z, power: 0, light: 0, glowR: 40,
@@ -481,14 +478,13 @@ export function createNukeFx(scene) {
     pushCam(anvil, anvilMat, cam);
 
     const discR = 20 + 150 * (1 - Math.exp(-age / 1.1));
-    disc.visible = age < 11;
-    disc.scale.setScalar(discR);
-    disc.position.y = 0.5;
-    discMat.uniforms.uAmt.value = (land ? 0.55 : 0.8) * Math.exp(-age / 6.5);
-    discMat.uniforms.uTime.value = age;
+    mFx.x = discR;
+    mFx.y = age < 11 ? (land ? 0.55 : 0.8) * Math.exp(-age / 6.5) : 0;
 
     shock.visible = age < 6.5;
-    shock.scale.setScalar(Math.max(4, blast.machR * 0.55));
+    /* The shell sits on the sim's actual shock front (it used to be drawn at
+       0.55x, so the damage front ran well ahead of what players saw). */
+    shock.scale.setScalar(Math.max(4, blast.machR));
     shock.position.y = 8;
     shockMat.uniforms.uAmt.value = 0.45 * Math.exp(-age / 2.8);
 
@@ -507,6 +503,33 @@ export function createNukeFx(scene) {
       puffs.setMatrixAt(i, dummy.matrix);
     }
     puffs.instanceMatrix.needsUpdate = true;
+
+    /* Ground zero: visible for exactly as long as the sim hurts there. */
+    const gzR = blast.groundZeroR || 0;
+    const gzLeft = (blast.durationS || 24) - age;
+    mGz.set(x, z, gzR, blast.fireballOn ? 1 : 0);
+    const gzAmt = gzR > 0 && gzLeft > 0 ? (blast.fireballOn ? 1 : Math.min(1, gzLeft / 1.5)) : 0;
+
+    /* Tsunami damage front, at the sim's tsunamiR (the tall visible wave
+       crest in waveField travels ~2.5x faster and is not the damage ring).
+       Damage falls off as (1 - r/reach)^2, so the ring fades the same way
+       and is gone where the sim stops hurting. */
+    const tsR = blast.tsunamiR || 0;
+    const reach = blast.tsunamiReach || 0;
+    const reachFade = reach > 0 ? Math.max(0, 1 - tsR / reach) ** 2 : 1;
+    const tsAmt = tsR > 6 ? 0.85 * Math.exp(-Math.max(0, age - 1.8) / 9) * reachFade : 0;
+    mGz2.set(gzAmt, tsR, tsAmt, age);
+
+    /* Land blasts char the ground out past ground zero. */
+    if (land) {
+      scorchR = Math.max(40, gzR * 1.5);
+      scorchPeak = Math.min(1, age / 0.6);
+      scorchEnd = -1;
+      mFx.z = scorchR;
+      mFx.w = scorchPeak;
+    } else {
+      decayScorch();
+    }
 
     embers.visible = age < 7;
     emberMat.uniforms.uAmt.value = 0.9 * Math.exp(-age / 3.2);
@@ -547,14 +570,28 @@ export function createNukeFx(scene) {
     };
   }
 
+  /**
+   * Ground-zero preview while a detonation is armed. Pass { x, z, y, r } in
+   * world units (r = the sim's instant-kill radius), or null to hide.
+   */
+  function setAim(a, now = 0) {
+    markUniforms.uMarkTime.value = now;
+    if (!a) {
+      mAim.w = 0;
+      return;
+    }
+    mAim.set(a.x, a.z, Math.max(4, a.r), 1);
+  }
+
   function dispose() {
     scene.remove(root);
+    mAim.w = 0;
+    mGz2.set(0, 0, 0, 0);
+    mFx.set(0, 0, 0, 0);
     column.geometry.dispose();
     columnMat.dispose();
     anvil.geometry.dispose();
     anvilMat.dispose();
-    disc.geometry.dispose();
-    discMat.dispose();
     puffs.geometry.dispose();
     puffMat.dispose();
     puffs.dispose();
@@ -567,5 +604,5 @@ export function createNukeFx(scene) {
     fireMat.dispose();
   }
 
-  return { ignite, update, dispose, warm, rest, get live() { return live; } };
+  return { ignite, update, setAim, dispose, warm, rest, markUniforms, get live() { return live; } };
 }
