@@ -5,7 +5,9 @@ import * as THREE from "three";
 /**
  * One raymarched mushroom. No point sprites, no discs, no orbs, no beams.
  * Land: dirt stem, hot cap, low ragged dust.
- * Water: white spray column, pale crown, low white base.
+ * Water: white spray column, pale crown, low white base. The column tops out
+ * around 6s then collapses back into a spreading base surge; a Wilson
+ * condensation disc rides the shock in the first seconds.
  */
 const YIELD_KT = 100;
 
@@ -60,7 +62,7 @@ const volVert = /* glsl */ `
 
 const volFrag = /* glsl */ `
   precision mediump float;
-  uniform float uAmt, uLand, uTime, uHot, uAge, uMode;
+  uniform float uAmt, uLand, uTime, uHot, uAge, uMode, uCol;
   uniform mat4 uProjView;
   uniform mat4 uModel;
   uniform vec3 uCam;
@@ -120,7 +122,19 @@ const volFrag = /* glsl */ `
     skirt *= smoothstep(0.15, 0.6, age);
     if (uMode > 0.5) skirt = 0.0;
 
+    float cond = 0.0;
+    if (water > 0.5 && uMode < 0.5) {
+      float condAge = smoothstep(0.5, 1.8, age) * (1.0 - smoothstep(6.0, 11.0, age));
+      if (condAge > 0.001) {
+        float condR = 0.16 + age * 0.045;
+        cond = 1.0 - smoothstep(condR * 0.55, condR, xz);
+        cond *= smoothstep(0.06, 0.14, y) * (1.0 - smoothstep(0.26, 0.4, y));
+        cond *= 0.55 * condAge;
+      }
+    }
     float d = max(max(max(stem, cap), veil), max(ball, skirt));
+    d = max(d, cond);
+    if (water > 0.5) d *= 1.0 - uCol * 0.4;
     float side = length(p.xz);
     d *= 1.0 - smoothstep(0.40, 0.48, side);
     d *= 1.0 - smoothstep(0.30, 0.46, p.y);
@@ -165,6 +179,7 @@ const volFrag = /* glsl */ `
           L = vec3(0.9, 0.95, 0.98);
           L = mix(L, vec3(1.0), 1.0 - smoothstep(0.0, 0.12, y));
           L = mix(L, vec3(1.0), fire);
+          L = mix(L, vec3(0.78, 0.84, 0.88), uCol * (0.3 + 0.45 * smoothstep(0.05, 0.35, y)));
         }
         float absorb = 1.0 - exp(-d * dt * 40.0);
         acc += L * absorb * T;
@@ -203,6 +218,7 @@ export function createNukeFx(scene) {
       uHot: { value: 1 },
       uAge: { value: 0 },
       uMode: { value: 0 },
+      uCol: { value: 0 },
       uCam: { value: new THREE.Vector3() },
       uNoise: { value: noise },
     },
@@ -352,6 +368,10 @@ export function createNukeFx(scene) {
     const hold = Math.exp(-Math.max(0, age - 3.0) / 4.0);
     return 12 + 30 * grow * hold;
   }
+  function sstep(a, b, x) {
+    const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+    return t * t * (3 - 2 * t);
+  }
 
   function warm() {
     root.visible = true;
@@ -412,7 +432,9 @@ export function createNukeFx(scene) {
     const land = surface === "land";
     const rise = 1 - Math.exp(-age / 0.18);
     const late = 1 - Math.exp(-Math.max(0, age) / 9);
-    const stemH = land ? 52 + rise * 62 + late * 12 : 56 + rise * 27 + late * 8;
+    const collapse = land ? 0 : sstep(6, 20, age);
+    const endFade = 1 - sstep(19.5, 22, age);
+    const stemH = land ? 52 + rise * 62 + late * 12 : (56 + rise * 27 + late * 8) * (1 - collapse * 0.7);
     const width = land ? 93 + rise * 42 + late * 11 : 103 + rise * 25 + late * 9;
     root.position.set(x, seaY, z);
     mesh.scale.set(width, stemH, width);
@@ -421,20 +443,22 @@ export function createNukeFx(scene) {
     stemMesh.scale.set(stemW, stemH + 24, stemW);
     stemMesh.position.y = (stemH + 24) * 0.5 - 16.0;
     root.updateMatrixWorld(true);
-    mat.uniforms.uAmt.value = 1;
+    mat.uniforms.uAmt.value = endFade;
     mat.uniforms.uTime.value = now;
     mat.uniforms.uAge.value = age;
     mat.uniforms.uHot.value = land ? Math.max(0.35, Math.exp(-age / 8)) : Math.exp(-age / 0.7);
-    stemMat.uniforms.uAmt.value = 1;
+    mat.uniforms.uCol.value = collapse;
+    stemMat.uniforms.uAmt.value = endFade;
     stemMat.uniforms.uTime.value = now;
     stemMat.uniforms.uAge.value = age;
     stemMat.uniforms.uLand.value = mat.uniforms.uLand.value;
     stemMat.uniforms.uHot.value = mat.uniforms.uHot.value;
+    stemMat.uniforms.uCol.value = collapse;
     const shock = machRadius(age);
     dust.visible = land && age > 0.35;
     dustMat.uniforms.uAge.value = age;
     dustMat.uniforms.uTime.value = now;
-    dustMat.uniforms.uAmt.value = land ? Math.min(0.7, age / 1.2) : 0;
+    dustMat.uniforms.uAmt.value = (land ? Math.min(0.7, age / 1.2) : 0) * endFade;
     dust.scale.set(shock * 2.2, 14, shock * 2.2);
     dust.position.set(0, 4, 0);
     if (cam) {
