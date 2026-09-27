@@ -72,7 +72,7 @@ const volVert = /* glsl */ `
 
 const volFrag = /* glsl */ `
   precision mediump float;
-  uniform float uAmt, uLand, uTime, uHot, uAge, uMode;
+  uniform float uAmt, uLand, uTime, uHot, uAge, uMode, uStemCut;
   uniform mat4 uProjView;
   uniform mat4 uModel;
   uniform vec3 uCam;
@@ -108,6 +108,10 @@ const volFrag = /* glsl */ `
     float stem = 1.0 - smoothstep(stemR * 0.8, stemR, xz);
     float capY = mix(0.32, mix(0.58, 0.62, water), rise);
     stem *= 1.0 - smoothstep(capY, capY + 0.14, y);
+    /* The stem has its own taller box, so its capY above lands higher in the
+       world than the cap's. End it at the cap's centre (uStemCut, set from JS
+       in stem-box units) so it can't poke out of the cap top as a knob. */
+    if (uMode > 0.5) stem *= 1.0 - smoothstep(uStemCut - 0.03, uStemCut + 0.02, y);
     if (uMode < 0.5) stem = 0.0;
 
     float capW = mix(0.16, mix(0.28, 0.3, water), rise);
@@ -116,6 +120,9 @@ const volFrag = /* glsl */ `
     vec3 c = vec3(p.x, y - capY, p.z);
     float e = length(c / vec3(capW, capH, capW));
     float lobe = sin(ang * 5.0 - age * 1.6 + n * 4.0) * 0.14 * smoothstep(0.25, 0.85, e);
+    /* The angle has no fixed value on the axis, so the five billows pinch
+       into one point at the top centre. Fade them out near the axis. */
+    lobe *= smoothstep(0.0, capW * 0.5, xz);
     float cap = 1.0 - smoothstep(0.62, 0.92, e + lobe);
     cap *= smoothstep(0.2, 0.34, y);
 
@@ -211,6 +218,7 @@ function marchMat(frag, noise, extra) {
       uHot: { value: 1 },
       uAge: { value: 0 },
       uMode: { value: 0 },
+      uStemCut: { value: 1 },
       uCam: { value: new THREE.Vector3() },
       uNoise: { value: noise },
       uProjView: { value: new THREE.Matrix4() },
@@ -451,6 +459,13 @@ export function createNukeFx(scene) {
     const stemW = land ? Math.max(36, width * 0.34) : Math.max(48, width * 0.62);
     stemMesh.scale.set(stemW, stemH + 24, stemW);
     stemMesh.position.y = (stemH + 24) * 0.5 - 16.0;
+    {
+      /* Same capY as shape(): cap box spans -8..stemH-8, stem box -16..stemH+8. */
+      const sa = Math.min(1, Math.max(0, (age - 0.05) / 0.85));
+      const riseS = sa * sa * (3 - 2 * sa);
+      const capY = 0.32 + ((land ? 0.58 : 0.62) - 0.32) * riseS;
+      stemMat.uniforms.uStemCut.value = (capY * stemH - 8 + 16) / (stemH + 24);
+    }
     const hot = land ? Math.max(0.35, Math.exp(-age / 8)) : Math.exp(-age / 0.7);
     for (const m of [mat, stemMat]) {
       m.uniforms.uAmt.value = fade;
