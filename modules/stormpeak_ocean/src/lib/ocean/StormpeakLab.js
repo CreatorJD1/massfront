@@ -877,6 +877,7 @@ export function bootStormpeakLab(canvas, opts = {}) {
     const flashAmt = weather?.flash || 0;
     /* Visual only: blast damage runs inside match.step() on the sim clock. */
     const nukeState = match.nukeState();
+    nukeFx.setCraters(match.craters());
     const nukeWx = nukeFx.update(nukeState, focalSea.h, camera.position);
     const nukeAimOn =
       match.phase === "live" &&

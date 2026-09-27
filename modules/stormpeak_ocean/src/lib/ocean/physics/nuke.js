@@ -1,7 +1,8 @@
 // @ts-nocheck
 /** @ts-nocheck */
 import * as THREE from "three";
-import { seabedWorldY } from "../world/abyss.js";
+import { DEPTH_VIS, seabedWorldY } from "../world/abyss.js";
+import { MAX_CRATERS, setLandCraters } from "../world/land.js";
 import { createSurfaceMarkUniforms } from "./surfaceMarks.js";
 
 /**
@@ -330,8 +331,67 @@ export function createNukeFx(scene) {
   const mGz2 = markUniforms.uMarkGz2.value;
   const mFx = markUniforms.uMarkFx.value;
   const mAim = markUniforms.uMarkAim.value;
+  const mCraters = markUniforms.uCraters.value;
   let scorchPeak = 0;
   let scorchEnd = -1;
+  /* Land craters are permanent terrain. The match owns the list
+     (match.craters(): { x, z, radius, depth }, made at detonation at full
+     size); StormpeakLab hands it to setCraters() every frame, and world/land.js
+     cuts it into the island lift. The only thing added here is the dig: while
+     a land blast runs, the crater it made or deepened grows from its size
+     before the blast to the sim's size on the nuke lab's 18 + 36*age curve,
+     so the ground opens with the fireball instead of popping in. */
+  let simCraters = [];
+  let prevSim = [];
+  let digging = null;
+  const shown = Array.from({ length: MAX_CRATERS }, () => ({ x: 0, z: 0, radius: 0, depth: 0 }));
+  function applyCraters() {
+    const n = Math.min(MAX_CRATERS, simCraters.length);
+    let dig = -1;
+    if (digging && digging.grow < 1) {
+      let best = Infinity;
+      for (let i = 0; i < n; i++) {
+        const c = simCraters[i];
+        const d = Math.hypot(c.x - digging.x, c.z - digging.z);
+        if (d <= c.radius && d < best) {
+          best = d;
+          dig = i;
+        }
+      }
+    }
+    for (let i = 0; i < n; i++) {
+      const c = simCraters[i];
+      const o = shown[i];
+      o.x = c.x;
+      o.z = c.z;
+      o.radius = c.radius;
+      o.depth = c.depth;
+      if (i === dig) {
+        const was = digging.before.find((k) => k.x === c.x && k.z === c.z);
+        const r0 = was ? was.radius : 0;
+        const d0 = was ? was.depth : 0;
+        o.radius = r0 + (c.radius - r0) * digging.grow;
+        o.depth = d0 + (c.depth - d0) * digging.grow;
+      }
+      mCraters[i].set(o.x, o.z, o.radius, o.depth);
+    }
+    for (let i = n; i < MAX_CRATERS; i++) mCraters[i].set(0, 0, 0, 0);
+    setLandCraters(shown.slice(0, n));
+  }
+  function setCraters(list) {
+    prevSim = simCraters;
+    simCraters = list || [];
+    applyCraters();
+  }
+  function startDig(x, z) {
+    digging = { x, z, grow: 0, before: prevSim };
+    applyCraters();
+  }
+  function growDig(age) {
+    if (!digging) return;
+    digging.grow = Math.min(1, (18 + 36 * age) / 78);
+    applyCraters();
+  }
   const wallS = () => performance.now() / 1000;
   function decayScorch() {
     if (scorchEnd < 0) return;
@@ -383,6 +443,8 @@ export function createNukeFx(scene) {
     lastAge = -1;
     boomed = false;
     surface = surf === "land" ? "land" : "water";
+    if (surface === "land") startDig(nx, nz);
+    else digging = null;
     const l = surface === "land" ? 1 : 0;
     mat.uniforms.uLand.value = l;
     stemMat.uniforms.uLand.value = l;
@@ -503,6 +565,7 @@ export function createNukeFx(scene) {
       scorchEnd = -1;
       mFx.z = Math.max(40, gzR * 1.5);
       mFx.w = scorchPeak;
+      growDig(age);
     } else {
       decayScorch();
     }
@@ -554,6 +617,10 @@ export function createNukeFx(scene) {
     mAim.w = 0;
     mGz2.set(0, 0, 0, 0);
     mFx.set(0, 0, 0, 0);
+    scorchPeak = 0;
+    digging = null;
+    prevSim = [];
+    setCraters([]);
     for (const m of [mesh, stemMesh, dust, flashQuad]) {
       m.geometry.dispose();
       m.material.dispose();
@@ -561,5 +628,5 @@ export function createNukeFx(scene) {
     noise.dispose();
   }
 
-  return { ignite, update, setAim, dispose, warm, rest, markUniforms, get live() { return live; } };
+  return { ignite, update, setAim, dispose, warm, rest, markUniforms, setCraters, get live() { return live; } };
 }

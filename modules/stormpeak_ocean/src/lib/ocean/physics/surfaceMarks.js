@@ -1,6 +1,7 @@
 // @ts-nocheck
 /** @ts-nocheck */
 import * as THREE from "three";
+import { MAX_CRATERS } from "../world/land.js";
 
 /*
  * Nuke marks drawn inside the ocean and terrain shaders instead of as flat
@@ -14,6 +15,7 @@ import * as THREE from "three";
  * uMarkFx   = (sprayR, sprayAmt, scorchR, scorchAmt)   spray/dust wash + land scorch
  * uMarkAim  = (aimX, aimZ, aimR, on 0|1)
  * uMarkTime = wall-clock seconds (aim dash crawl)
+ * uCraters[i] = (x, z, radius, depthM)  permanent land craters (world/land.js)
  */
 export function createSurfaceMarkUniforms() {
   return {
@@ -22,6 +24,7 @@ export function createSurfaceMarkUniforms() {
     uMarkFx: { value: new THREE.Vector4() },
     uMarkAim: { value: new THREE.Vector4() },
     uMarkTime: { value: 0 },
+    uCraters: { value: Array.from({ length: MAX_CRATERS }, () => new THREE.Vector4()) },
   };
 }
 
@@ -102,3 +105,4 @@ export const surfaceMarksGLSL = /* glsl */ `
     return vec4(col, a);
   }
 `;
+
