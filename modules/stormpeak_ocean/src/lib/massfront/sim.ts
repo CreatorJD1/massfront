@@ -103,7 +103,7 @@ export const NUKE_TUNING = {
   /** Whole blast lifetime (s). A new detonation is rejected until it ends. */
   durationS: 24,
 
-  /** Instant-kill window: the fireball's lethal lifetime (s). */
+  /** Instant-kill window for UNITS: the fireball's lethal lifetime (s). Buildings / Cores burn instead. */
   fireballLethalS: 3.0,
   /** Minimum instant-kill radius while the fireball is up. */
   fireballKillMinR: 18,
@@ -152,8 +152,12 @@ export const NUKE_TUNING = {
    * suction window. Frame-rate independent.
    */
   suctionTotalPull: 150,
-  /** Suction reaches out to machR * suctionReach. */
-  suctionReach: 0.92,
+  /**
+   * Suction pulls units within machR * suctionReach, i.e. this fraction of the CURRENT
+   * shock-front radius (it grows with the blast: ~275 at the end of the window on the
+   * tester curves, so 0.67 reaches ~184 at most).
+   */
+  suctionReach: 0.67,
   /** Suction stops pulling inside this distance from ground zero. */
   suctionMinD: 45,
 } as const;
@@ -884,9 +888,9 @@ export function createMatch(
       const oz = (e.z - z) * inv;
 
       if (d < r.groundZeroR) {
-        if (r.fireballOn) {
+        if (r.fireballOn && !e.building) {
           e.hp = 0;
-          if (e.team === PLAYER) notice(e.building ? "VAPORIZED" : "ASHED");
+          if (e.team === PLAYER) notice("ASHED");
           killEnt(e);
           continue;
         }
