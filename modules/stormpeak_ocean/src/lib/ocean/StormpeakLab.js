@@ -865,7 +865,7 @@ export function bootStormpeakLab(canvas, opts = {}) {
     const flashAmt = weather?.flash || 0;
     /* Visual only: blast damage runs inside match.step() on the sim clock. */
     const nukeState = match.nukeState();
-    const nukeWx = nukeFx.update(nukeState, focalSea.h, camera.position);
+    const nukeWx = nukeFx.update(nukeState, focalSea.h, camera);
     const nukeAimOn =
       match.phase === "live" &&
       !nukeState &&
@@ -900,7 +900,9 @@ export function bootStormpeakLab(canvas, opts = {}) {
       }
       if (mat.uniforms.uNukeOrigin) {
         mat.uniforms.uNukeOrigin.value.set(nukeWx.x || 0, focalSea.h + (nukeWx.stemH || 80), nukeWx.z || 0);
-        mat.uniforms.uNukeCloud.value = nukeWx.live ? nukeWx.cloud : 0;
+        /* The lab mushroom is a real volume now; the sky's old fake steam
+           cone would paint a second, 60-degree-wide cloud behind it. */
+        mat.uniforms.uNukeCloud.value = 0;
         mat.uniforms.uNukeAge.value = nukeWx.age || 0;
       }
     });
@@ -913,7 +915,7 @@ export function bootStormpeakLab(canvas, opts = {}) {
     domeMat.uniforms.uWindDir.value.set(sea.wind.x, sea.wind.z);
     if (domeMat.uniforms.uNukeOrigin) {
       domeMat.uniforms.uNukeOrigin.value.set(nukeWx.x || 0, focalSea.h + (nukeWx.stemH || 80), nukeWx.z || 0);
-      domeMat.uniforms.uNukeCloud.value = nukeWx.live ? nukeWx.cloud : 0;
+      domeMat.uniforms.uNukeCloud.value = 0;
       domeMat.uniforms.uNukeAge.value = nukeWx.age || 0;
     }
     atmo.group.visible = false;
