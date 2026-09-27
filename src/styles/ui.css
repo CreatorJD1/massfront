@@ -633,6 +633,72 @@ html.cmdIcons .em[data-icon="options"]   {background-position:100% 42.8571%}
 .bcard.locked .lockOv.navalX{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;
   color:#ff5c55;background:rgba(49,8,12,.94);border:1px solid rgba(255,92,85,.8);
   font:900 19px/1 var(--fT);box-shadow:0 0 13px rgba(255,54,45,.42)}
+/* ---- COMMANDER CLEARANCE TRACK ---------------------------------------------
+   The grid says LOCKED; this says WHEN, and with what. Deliberately the same
+   planner language as the account research tree (src/styles/restree.css
+   .rt3d-queue / .rt3d-qslot / .rt3d-next): numbered slots, a state colour per
+   slot, one progress CTA underneath. A player who has read one screen should
+   not have to learn a second vocabulary for the same idea.
+   Sits directly under the sticky .tabRow so it is the first thing the build
+   panel says, and folds to its header on a tap for players who know it. */
+.mfClear{margin:0 0 8px;padding:8px;border-radius:11px;border:1px solid rgba(110,166,205,.25);
+  background:linear-gradient(180deg,rgba(14,32,50,.92),rgba(6,14,24,.96));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+.mfClear>header{display:flex;align-items:flex-start;gap:6px}
+.mfClear>header>div{flex:1 1 auto;min-width:0}
+.mfClear>header b{display:block;font:900 9px var(--fT);letter-spacing:.15em;color:#a7e8ff}
+.mfClear>header span{display:block;margin-top:2px;font:700 9px var(--fT);letter-spacing:.05em;color:#7799b1;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mfClear>header strong{flex:0 0 auto;margin-top:1px;font:900 10px var(--fT);letter-spacing:.06em;color:var(--gold)}
+/* 44px target, negative margins so a full-size tap area does not add height. */
+.mfClearFold{flex:0 0 auto;display:grid;place-items:center;width:44px;height:44px;margin:-10px -8px -12px 0;
+  border:0;background:transparent;color:#8be8ff;font:400 15px/1 var(--fU);pointer-events:auto}
+.mfClearFold:active{color:#fff;transform:scale(.92)}
+.mfClear.folded .mfClearSlots,.mfClear.folded .mfClearOpens,
+.mfClear.folded .mfClearMore,.mfClear.folded .mfClearNext{display:none}
+.mfClearSlots{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;margin-top:7px}
+.mfClearSlot{position:relative;min-width:0;height:58px;border-radius:9px;
+  border:1px dashed rgba(111,151,181,.28);background:rgba(3,9,17,.64)}
+.mfClearSlot.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#47647a}
+.mfClearSlot.empty small{font:900 9px var(--fT)}
+.mfClearSlot.empty span{font:800 8px var(--fT);letter-spacing:.08em}
+.mfClearSlot.filled{border-style:solid;border-color:#637d92;
+  background:linear-gradient(180deg,rgba(21,38,55,.95),rgba(7,16,27,.98))}
+/* One colour per kind, matching what the rest of the HUD already means by it:
+   cyan is a structure, gold a commander ability, amber an upgrade. */
+.mfClearSlot.filled.bld{border-color:#43cfff;box-shadow:inset 0 0 12px rgba(67,207,255,.12)}
+.mfClearSlot.filled.ab{border-color:#ffd257;box-shadow:inset 0 0 12px rgba(255,210,87,.13)}
+.mfClearSlot.filled.up{border-color:#9a783b}
+.mfClearSlot.filled.res{border-color:#6f8fa8}
+.mfClearSlot.filled.cap{border-color:#5c7d68}
+.mfClearInspect{position:absolute;inset:0;width:100%;height:100%;padding:3px 2px 4px;border:0;background:transparent;
+  display:flex;flex-direction:column;align-items:center;gap:1px;pointer-events:auto}
+.mfClearInspect>small{align-self:flex-start;margin-left:2px;font:900 8px var(--fT);color:#6f93ab}
+.mfClearIc{height:26px;display:grid;place-items:center}
+.mfClearIc .mfRuntimeThumb{width:26px;height:26px}
+.mfClearEm{font:400 19px/1 var(--fU)}
+.mfClearInspect>.mfClearNm{width:100%;margin-top:1px;text-align:center;color:#dff2ff;
+  font:800 8px/1.12 var(--fT);letter-spacing:.02em;word-break:break-word;
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+.mfClearInspect:active{background:rgba(65,200,255,.15)}
+.mfClearOpens{margin-top:6px;color:#9fd8f4;font:800 8.5px/1.35 var(--fT);letter-spacing:.045em;
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:1;overflow:hidden}
+.mfClearOpens>span{margin-right:5px;color:#6f9bb6}
+.mfClearMore{margin-top:4px;color:#7c9bb0;font:800 8.5px var(--fT);letter-spacing:.06em}
+/* The .rt3d-next analogue. Commander levels are earned, not bought, so this is
+   a readout rather than a button: the fill is the XP bar behind the words. */
+.mfClearNext{position:relative;overflow:hidden;width:100%;min-height:30px;margin-top:7px;padding:8px 9px;
+  border-radius:9px;border:1px solid rgba(110,150,180,.25);background:rgba(7,16,27,.8);
+  color:#9fd0e6;font:900 9px var(--fT);letter-spacing:.06em;text-align:center}
+.mfClearNext.done{color:#8effc0;border-color:rgba(93,255,154,.3)}
+.mfClearFill{position:absolute;left:0;top:0;bottom:0;width:0;pointer-events:none;
+  background:linear-gradient(90deg,rgba(35,110,152,.85),rgba(64,202,255,.3));transition:width .35s linear}
+.mfClearNextTxt{position:relative;z-index:1}
+@media (max-width:359px){
+  .mfClearSlots{gap:3px}.mfClearSlot{height:54px}
+  .mfClearInspect>.mfClearNm{font-size:7.5px}.mfClearIc,.mfClearIc .mfRuntimeThumb{height:22px}
+  .mfClearIc .mfRuntimeThumb{width:22px}
+}
 #bp_ic.intelTap{position:relative;min-width:52px;min-height:52px;pointer-events:auto;cursor:pointer}
 #bp_ic.intelTap::after{content:'i';position:absolute;right:-3px;bottom:-3px;width:21px;height:21px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;color:#8be8ff;background:#0a1a29;border:1px solid rgba(100,190,235,.62);

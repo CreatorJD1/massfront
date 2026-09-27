@@ -1924,6 +1924,10 @@ function updateHUD(fps){
     const xpEl=$('xpFill'); if(xpEl&&xpEl._mfW!==xpW){ xpEl._mfW=xpW; xpEl.style.width=xpW; }
     hudTxt($('heroLvlBadge'), String(heroLvl));
   } else hudDisp($('heroBar'),'none');
+  /* The clearance track follows the ladder live: XP ticks and level-ups land
+     in the open panel instead of waiting for a close/reopen. Its signature
+     diff makes every call but the changed one a string compare. */
+  { const bmEl=$('buildMenu'); if(bmEl&&bmEl.style.display==='block') mfClearRender(); }
   /* Length-driven, not a hardcoded 4. The EMP module added a fifth ability and
      the old literal silently left it out of the cooldown/lock rendering. */
   const btns=[$('abOver'),$('abHeal'),$('abRage'),$('abLance'),$('abEmp')].filter(Boolean);
@@ -3091,7 +3095,7 @@ function bldIconEl(key,size,kit){
     if(el){d.appendChild(el);
       if(key==='geo') el.style.filter='hue-rotate(150deg) saturate(1.6) drop-shadow(0 3px 3px rgba(0,0,0,.55))';}
     if(!el){
-      const uv=sprites[BT[key]&&BT[key].spr];
+      const uv=(typeof sprites!=='undefined')?sprites[BT[key]&&BT[key].spr]:null;
       if(uv&&typeof atlasCanvas!=='undefined'&&atlasCanvas){
         const cv3=document.createElement('canvas'); cv3.width=cv3.height=64;
         cv3.getContext('2d').drawImage(atlasCanvas,
@@ -3160,11 +3164,10 @@ function renderProdMenu(){
   const B=blds[openBld];
   renderProdNav(B);
   let list;
-  if(B.type==='tgate') list=[8,26];
-  else if(B.type==='harbor') list=[14,15];
-  else if(B.type==='airfield') list=[5,17,25];
-  else list = B.tier===2? [0,1,9,18,10,2,3,6,7,11,16,19,20,21,22,23,24,27,32]
-                        : [0,1,9,10,19,24,32];
+  if(B.type==='tgate') list=MF_PROD_ROSTER.tgate.slice();
+  else if(B.type==='harbor') list=MF_PROD_ROSTER.harbor.slice();
+  else if(B.type==='airfield') list=MF_PROD_ROSTER.airfield.slice();
+  else list = B.tier===2? MF_FAC_T2.slice() : MF_FAC_T1.slice();
   if(typeof factionDoctrineRoster==='function') list=factionDoctrineRoster(list,B.type,0);
   /* ROLE TABS. A flat grid of eighteen cards is a wall; one tap per role lets
      the player find the answer to whatever is killing them without reading
@@ -3341,6 +3344,244 @@ function renderQueue(){
     bar.style.width=T?((clamp(B.prodT/T.bt,0,1)*100)+'%'):'0';
   }
 }
+/* ============================================================
+   COMMANDER CLEARANCE TRACK — the forward view for CDR-LEVEL gates.
+
+   renderBuildMenu already says a structure is LOCKED: greyscale, a padlock,
+   "CDR LV 6" where the cost line goes, and a toast on tap. What nothing said
+   is what the NEXT level actually buys, so a padlock read as "not for you"
+   rather than "two skirmishes away". The account research planner in
+   src/restree3d.js had already solved this presentation for the meta layer —
+   numbered slots, a state class per slot, one NEXT call-to-action underneath
+   — so this is that language brought in-match, not a second one invented
+   beside it.
+
+   Nothing here is authored twice. BT[key].clvl gates structures, BUP[t][i].clvl
+   the Mk tiers, RESEARCH[i].clvl the field studies, and heroLvl / heroXp /
+   heroXpNext (src/game/commander.js) are the position on the ladder. Add a clvl
+   to any of those tables and it shows up here with no edit to this file.
+   ============================================================ */
+const MF_CLEAR_SLOTS=5;      // the research planner's five slots, deliberately
+const MF_CLEAR_MAXLVL=24;    // a search bound past every clvl in the tables, not a cap
+let mfClearOpen=true;
+
+/* The build grid's roster and the two factory rosters, hoisted out of the
+   render functions that held them as literals. The clearance track has to
+   answer "what opens next" from the SAME lists the menus draw from, and a
+   second copy drifts the first time a structure or a unit is added. */
+const MF_BUILD_KEYS=['mex','pgen','geo','silo','fab','fac','turret','bunker','wall','gate','aatower',
+            'sgen','techlab','uplink','hellstorm','arc','rail','minelaser','missilebastion','plasma',
+            'stormcaller','airfield','harbor','seafort','bastion','nova','tgate'];
+const MF_FAC_T1=[0,1,9,10,19,24,32];
+const MF_FAC_T2=[0,1,9,18,10,2,3,6,7,11,16,19,20,21,22,23,24,27,32];
+const MF_PROD_ROSTER={tgate:[8,26],harbor:[14,15],airfield:[5,17,25]};
+
+function mfClearKindTag(k){
+  return k==='bld'?'STRUCTURE':k==='up'?'UPGRADE':k==='ab'?'COMMANDER ABILITY'
+        :k==='res'?'FIELD STUDY':'SUPPORT CAP';
+}
+function mfClearBldName(key){
+  if(typeof intelBldName==='function') return intelBldName(key);
+  return (typeof BT!=='undefined'&&BT[key])?BT[key].name:String(key);
+}
+function mfClearUnitName(t){
+  if(typeof intelUnitName==='function') return intelUnitName(t);
+  return (typeof TYPES!=='undefined'&&TYPES[t])?TYPES[t].name:('#'+t);
+}
+/* Everything the commander ladder opens at exactly level L, ordered the way a
+   player cares about it: things you can place, then things you can do, then
+   things that make what you already own better. */
+function mfClearUnlocksAt(L){
+  const out=[];
+  if(typeof BT==='undefined') return out;
+  for(const key of MF_BUILD_KEYS){
+    const T=BT[key]; if(!T||(T.clvl|0)!==L) continue;
+    out.push({rk:0,k:'bld',id:key,bld:key,em:T.em||'▣',nm:mfClearBldName(key),
+      sub:(typeof intelBldMini==='function')?intelBldMini(key):(T.desc||''),
+      opens:MF_PROD_ROSTER[key]||null});
+  }
+  /* heroXP() in src/game/commander.js flips abUnlock[1] at 2 and abUnlock[2]
+     at 3. Those are the only two hardcoded level unlocks in the game. */
+  if(L===2) out.push({rk:1,k:'ab',id:'ab1',bld:null,em:'🛠',nm:'Repair Pulse',
+    sub:'Commander field-repair pulse',opens:null});
+  if(L===3) out.push({rk:1,k:'ab',id:'ab2',bld:null,em:'⚡',nm:'Combat Surge',
+    sub:'Temporary commander combat surge',opens:null});
+  if(typeof BUP!=='undefined') for(const t in BUP){
+    if(!BT[t]) continue;
+    const path=BUP[t];
+    for(let i=0;i<path.length;i++){
+      if((path[i].clvl|0)!==L) continue;
+      const fac2=(t==='fac');
+      out.push({rk:fac2?2:3,k:'up',id:t+':'+i,bld:t,em:'⬆',
+        nm:mfClearBldName(t)+(fac2?' TECH 2':' MK'+(i+2)),
+        sub:path[i].desc||'Structure upgrade',
+        opens:fac2?MF_FAC_T2.filter(x=>MF_FAC_T1.indexOf(x)<0):null});
+    }
+  }
+  if(typeof RESEARCH!=='undefined') for(let i=0;i<RESEARCH.length;i++){
+    const R=RESEARCH[i]; if((R.clvl|0)!==L) continue;
+    out.push({rk:4,k:'res',id:R.id,bld:null,em:R.em||'⌬',nm:R.nm,
+      sub:R.ds||'Field study',opens:null});
+  }
+  /* supportUnitCap() is 3 + floor((heroLvl-1)/2) capped at 12, so it steps on
+     the odd levels and stops being news once the cap is reachable. */
+  if(L>=3&&(L%2)===1&&3+((L-1)>>1)<=12)
+    out.push({rk:5,k:'cap',id:String(L),bld:null,em:'⚙',nm:'+1 Support Cap',
+      sub:'One more Constructor / Prospector slot',opens:null});
+  out.sort((a,b)=>a.rk-b.rk);
+  return out;
+}
+/* The next level that gates ANYTHING, which is not always heroLvl+1 — nothing
+   is gated at some levels, and an empty preview is worse than no preview.
+   Cached on level + faction kit because the scan walks every table. */
+let mfClearKey='', mfClearLvl=0, mfClearItems=[];
+function mfClearPlan(){
+  const lvl=(typeof heroLvl==='number')?heroLvl:-1;
+  const key=lvl+'|'+((typeof mfIntelKit==='function')?mfIntelKit():'');
+  if(key!==mfClearKey){
+    mfClearKey=key; mfClearLvl=0; mfClearItems=[];
+    for(let L=lvl+1;L<=MF_CLEAR_MAXLVL;L++){
+      const u=mfClearUnlocksAt(L);
+      if(u.length){ mfClearLvl=L; mfClearItems=u; break; }
+    }
+  }
+  return {lvl:mfClearLvl,items:mfClearItems};
+}
+function mfClearHost(){
+  const menu=$('buildMenu'),tabs=$('buildTabs');
+  if(!menu||!tabs) return null;
+  let host=menu.querySelector('.mfClear');
+  if(!host){
+    host=document.createElement('section');
+    host.className='mfClear';
+    host.id='mfClearTrack';
+    host.setAttribute('data-test','unlock-track');
+    tabs.insertAdjacentElement('afterend',host);      // under the sticky tab strip, above the cards
+  }
+  return host;
+}
+function mfClearSlotEl(u,i,L){
+  const slot=document.createElement('div');
+  slot.className='mfClearSlot '+(u?('filled '+u.k):'empty');
+  slot.setAttribute('data-clear-slot',String(i));
+  if(!u){
+    const n=document.createElement('small'); n.textContent=String(i+1);
+    const s=document.createElement('span'); s.textContent='EMPTY';
+    slot.appendChild(n); slot.appendChild(s);
+    return slot;
+  }
+  slot.setAttribute('data-clear-kind',u.k);
+  const b=document.createElement('button');
+  b.type='button'; b.className='mfClearInspect';
+  b.setAttribute('data-clear-id',u.id);
+  b.setAttribute('aria-label',u.nm+', '+mfClearKindTag(u.k)+', unlocks at Commander level '+L+'. '+u.sub);
+  const n=document.createElement('small'); n.textContent=String(i+1);
+  const ic=document.createElement('div'); ic.className='mfClearIc';
+  if(u.bld&&typeof bldIconEl==='function') ic.appendChild(bldIconEl(u.bld,26));
+  else { const em=document.createElement('span'); em.className='mfClearEm'; em.textContent=u.em; ic.appendChild(em); }
+  const nm=document.createElement('span'); nm.className='mfClearNm'; nm.textContent=u.nm;
+  b.appendChild(n); b.appendChild(ic); b.appendChild(nm);
+  b.addEventListener('pointerdown',ev=>{
+    ev.preventDefault(); ev.stopPropagation();
+    /* Same inspection route the role brief's INSPECT button takes, so a locked
+       preview and an available card are the same screen. */
+    if(u.bld&&typeof showBuildingTypeCard==='function'){
+      showBuildingTypeCard(u.bld,-1,true,(typeof mfIntelKit==='function')?mfIntelKit():undefined);
+      if(typeof sfx==='function') sfx('ui');
+      return;
+    }
+    if(typeof toast==='function')
+      toast('🔒 '+u.em+' '+u.nm+' — unlocks at Commander level '+L+' · '+u.sub);
+    if(typeof sfx==='function') sfx('ui');
+  });
+  slot.appendChild(b);
+  return slot;
+}
+/* A Harbor is not just a Harbor: it is the only door to two hulls. Structures
+   and the Tech 2 upgrade that open a production roster say so by name. */
+function mfClearOpensEl(shown){
+  const ids=[];
+  for(const u of shown) if(u&&u.opens) for(const t of u.opens) if(ids.indexOf(t)<0) ids.push(t);
+  if(!ids.length) return null;
+  const d=document.createElement('div'); d.className='mfClearOpens';
+  const tag=document.createElement('span'); tag.textContent='OPENS';
+  const names=ids.slice(0,4).map(mfClearUnitName).join(' · ')
+    +(ids.length>4?(' +'+(ids.length-4)+' more'):'');
+  d.appendChild(tag); d.appendChild(document.createTextNode(names));
+  return d;
+}
+/* Signature diff, same contract as renderQueue's el._mfQ: this is called from
+   updateHUD as well as from renderBuildMenu, so it runs several times a second
+   while the panel is open and must be a string compare on every call but the
+   one where the ladder actually moved. The XP readout below the diff is a
+   guarded textContent / width write, which is what hudTxt already does. */
+function mfClearRender(){
+  const host=mfClearHost(); if(!host) return;
+  if(typeof heroLvl!=='number'){ if(host.style.display!=='none') host.style.display='none'; return; }
+  if(host.style.display==='none') host.style.display='';
+  const plan=mfClearPlan(),L=plan.lvl,items=plan.items;
+  const shown=items.slice(0,MF_CLEAR_SLOTS);
+  const sig=heroLvl+'|'+L+'|'+items.length+'|'+shown.map(u=>u.k+':'+u.id).join(',');
+  if(host._mfQ!==sig){
+    host._mfQ=sig;
+    host.innerHTML='';
+    const head=document.createElement('header');
+    const box=document.createElement('div');
+    const b=document.createElement('b'); b.textContent='NEXT CLEARANCE';
+    const sp=document.createElement('span');
+    sp.textContent=L?('COMMANDER LV '+heroLvl+' → LV '+L):('COMMANDER LV '+heroLvl);
+    box.appendChild(b); box.appendChild(sp);
+    const st=document.createElement('strong');
+    st.textContent=L?(items.length+' UNLOCK'+(items.length===1?'':'S')):'ALL OPEN';
+    const fold=document.createElement('button');
+    fold.type='button'; fold.className='mfClearFold';
+    fold.addEventListener('pointerdown',ev=>{
+      ev.preventDefault(); ev.stopPropagation();
+      mfClearOpen=!mfClearOpen;
+      mfClearRender();
+      if(typeof sfx==='function') sfx('ui');   // last: a throw out of audio must not strand the fold
+    });
+    head.appendChild(box); head.appendChild(st); head.appendChild(fold);
+    host.appendChild(head);
+    if(L){
+      const slots=document.createElement('div'); slots.className='mfClearSlots';
+      for(let i=0;i<MF_CLEAR_SLOTS;i++) slots.appendChild(mfClearSlotEl(shown[i],i,L));
+      host.appendChild(slots);
+      const op=mfClearOpensEl(shown); if(op) host.appendChild(op);
+      if(items.length>MF_CLEAR_SLOTS){
+        const more=document.createElement('div'); more.className='mfClearMore';
+        more.textContent='+'+(items.length-MF_CLEAR_SLOTS)+' more at Commander level '+L;
+        host.appendChild(more);
+      }
+    }
+    const cta=document.createElement('div');
+    cta.className='mfClearNext'+(L?'':' done');
+    const fill=document.createElement('i'); fill.className='mfClearFill';
+    const txt=document.createElement('span'); txt.className='mfClearNextTxt';
+    cta.appendChild(fill); cta.appendChild(txt);
+    host.appendChild(cta);
+  }
+  host.classList.toggle('folded',!mfClearOpen);
+  const fb=host.querySelector('.mfClearFold');
+  if(fb){
+    hudTxt(fb,mfClearOpen?'▾':'▸');
+    const lab=(mfClearOpen?'Collapse':'Expand')+' the next-unlock preview';
+    if(fb.getAttribute('aria-label')!==lab) fb.setAttribute('aria-label',lab);
+  }
+  const txt=host.querySelector('.mfClearNextTxt'),fill=host.querySelector('.mfClearFill');
+  if(txt){
+    const need=Math.max(0,Math.ceil((typeof heroXpNext==='number'?heroXpNext:0)
+                                   -(typeof heroXp==='number'?heroXp:0)));
+    hudTxt(txt,!L?'EVERY COMMANDER GATE IS OPEN'
+      :(L===heroLvl+1)?('LV '+L+' IN '+need+' XP')
+      :('LV '+(heroLvl+1)+' IN '+need+' XP · GATE AT LV '+L));
+  }
+  if(fill){
+    const p=(typeof heroXpNext==='number'&&heroXpNext>0)?clamp(heroXp/heroXpNext,0,1):0;
+    const w=(L?(p*100).toFixed(1):'0')+'%';
+    if(fill._mfW!==w){ fill._mfW=w; fill.style.width=w; }
+  }
+}
 function renderBuildMenu(){
   const g=$('buildGrid'); g.innerHTML='';
   /* Grouped by what a structure is FOR, and presented as TABS. Twenty cards in
@@ -3349,9 +3590,7 @@ function renderBuildMenu(){
      scrolling past everything you did not want. One tap per role, and the panel
      keeps a constant height, which matters when it is anchored to the bottom of
      a phone. */
-  const keys=['mex','pgen','geo','silo','fab','fac','turret','bunker','wall','gate','aatower',
-              'sgen','techlab','uplink','hellstorm','arc','rail','minelaser','missilebastion','plasma',
-              'stormcaller','airfield','harbor','seafort','bastion','nova','tgate'];
+  const keys=MF_BUILD_KEYS;
   const order=['eco','prod','nav','def','wall','tech','sup','sup2'];
   const grp={};
   for(const k of keys){ const c=BT[k].bcat||'sup'; (grp[c]||(grp[c]=[])).push(k); }
@@ -3367,6 +3606,7 @@ function renderBuildMenu(){
     tr.appendChild(b);
   }
   renderMenuRoleBrief('building',bldTab,grp[bldTab]||[]);
+  mfClearRender();          // forward view of the next commander-level gate
   for(const key of (grp[bldTab]||[])){
     const T=BT[key];
     const d=document.createElement('div');
