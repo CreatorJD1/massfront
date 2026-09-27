@@ -275,6 +275,81 @@ export function nukeTsunamiHit(d: number, building: boolean) {
   return { fall, dmg, kill };
 }
 
+/**
+ * Permanent nuke craters (phase 1). Only LAND bursts make one; water bursts
+ * make none. Presentation reads the list (world/land.js setLandCraters,
+ * nukeFx.setCraters); the sim itself only uses it to forbid building on a
+ * crater floor. Craters do not touch movement, pathing, damage or water.
+ */
+export const CRATER_TUNING = {
+  /** Depth (m) cut by one land burst, and added again when a burst lands in an existing crater. */
+  depthM: 15,
+  /** Stacked craters stop deepening here (m). */
+  maxDepthM: 30,
+  /** Max craters kept per match; past this the oldest crater is dropped for a new one. */
+  maxCount: 16,
+} as const;
+
+/**
+ * One permanent crater. Same shape and units as world/land.js setLandCraters():
+ * x / z / radius on the sim's ground plane (world XZ, same axes as Ent.x / Ent.z),
+ * depth in terrain metres (positive = deeper).
+ */
+export type Crater = { x: number; z: number; radius: number; depth: number };
+
+const fullGroundZeroCache = new Map<NukeSurface, number>();
+/**
+ * Full-size ground-zero radius of a blast: the largest groundZeroR that
+ * nukeRadii() reaches on any sim tick of the blast (so it respects
+ * groundZeroMinR and fireballKillMinR). On the lab curves that is the fireball's
+ * peak at fireHoldS: max(40, 12 + 30 * (1 - e^(-3/0.7))) ~ 41.59.
+ */
+export function nukeFullGroundZeroR(surface: NukeSurface = "land"): number {
+  const hit = fullGroundZeroCache.get(surface);
+  if (hit !== undefined) return hit;
+  let best = 0;
+  for (let i = 0; i * TICK <= NUKE_TUNING.durationS; i++) {
+    best = Math.max(best, nukeRadii(i * TICK, surface).groundZeroR);
+  }
+  fullGroundZeroCache.set(surface, best);
+  return best;
+}
+
+/**
+ * Add a land burst at (x, z) with full-size radius r to a crater list (mutates it).
+ * - Centre inside an existing crater (distance <= its radius): merge into that
+ *   crater (the nearest such one if several). depth = min(maxDepthM, depth + depthM),
+ *   radius = max(old, new); the centre stays where the OLD crater was, so a
+ *   stack of bursts never drifts the bowl.
+ * - Otherwise append { x, z, radius: r, depth: depthM }. The list is kept in
+ *   creation order (a merge grows a crater in place and does not move it).
+ * - List full (maxCount) and no crater hit: drop the OLDEST crater (index 0)
+ *   and append the new one.
+ * Returns the index of the crater that was created or grown.
+ */
+export function addCrater(list: Crater[], x: number, z: number, r: number): number {
+  const C = CRATER_TUNING;
+  let inside = -1;
+  let insideD = Infinity;
+  for (let i = 0; i < list.length; i++) {
+    const c = list[i];
+    const d = Math.hypot(x - c.x, z - c.z);
+    if (d <= c.radius && d < insideD) {
+      inside = i;
+      insideD = d;
+    }
+  }
+  if (inside < 0) {
+    while (list.length >= C.maxCount) list.shift();
+    list.push({ x, z, radius: r, depth: C.depthM });
+    return list.length - 1;
+  }
+  const c = list[inside];
+  c.depth = Math.min(C.maxDepthM, c.depth + C.depthM);
+  c.radius = Math.max(c.radius, r);
+  return inside;
+}
+
 /** Read-only view of the live blast for visuals / HUD. */
 export type NukeView = NukeRadii & {
   id: number;
@@ -409,6 +484,8 @@ export function createMatch(
   const blasts: OceanBlast[] = [];
   let nuke: NukeBlast | null = null;
   let nukeId = 1;
+  /** Permanent craters for this match (land bursts only). New match = new list. */
+  const craters: Crater[] = [];
   let simTick = 0;
   let waveLoad = 0;
   let waveForm = 0;
@@ -531,12 +608,23 @@ export function createMatch(
     return false;
   }
 
+  /** False on a crater floor (within any crater's radius). Only the crater rule; extractors are exempt in canPlace(). */
+  function canBuildAt(x: number, z: number) {
+    for (const c of craters) {
+      if ((c.x - x) ** 2 + (c.z - z) ** 2 <= c.radius * c.radius) return false;
+    }
+    return true;
+  }
+
   function canPlace(kind: BuildingId, x: number, z: number) {
     const d = DEFS[kind];
+    /* Extractors sit on mass nodes and are exempt from the crater rule (designer
+       call); every other building is refused on a crater floor. */
     if (kind === "extractor") {
       const node = nearestFreeNode(x, z, 18, "mass");
       return !!node;
     }
+    if (!canBuildAt(x, z)) return false;
     if (overlaps(x, z, d.radius)) return false;
     return true;
   }
@@ -1055,6 +1143,8 @@ export function createMatch(
       shockHit: new Set(),
       tsunamiHit: new Set(),
     };
+    /* Permanent crater, made on the sim clock the tick the blast starts. */
+    if (surface === "land") addCrater(craters, x, z, nukeFullGroundZeroR("land"));
     return true;
   }
 
@@ -1136,7 +1226,10 @@ export function createMatch(
       if (node) tryPlace(team, "extractor", node.x, node.z);
     } else if (reactors.length < 2) {
       const seep = nodes.find(
-        (n) => n.kind === "energy" && (n.taken < 0 || !ents.find((e) => e.id === n.taken && e.alive)),
+        (n) =>
+          n.kind === "energy" &&
+          (n.taken < 0 || !ents.find((e) => e.id === n.taken && e.alive)) &&
+          canBuildAt(n.x, n.z),
       );
       if (seep) tryPlace(team, "reactor", seep.x, seep.z);
       else tryPlace(team, "reactor", hq.x - 28, hq.z + 24);
@@ -1392,6 +1485,12 @@ export function createMatch(
     },
     /** Live nuke blast (age + radii from the sim clock) or null. Read-only. */
     nukeState: nukeView,
+    /** Permanent craters (copies; mutating them does not touch the sim). Feeds setLandCraters(). */
+    craters(): Crater[] {
+      return craters.map((c) => ({ x: c.x, z: c.z, radius: c.radius, depth: c.depth }));
+    },
+    /** False on a crater floor. canPlace() enforces it for every building except extractors. */
+    canBuildAt,
     pointerDown,
     pointerMove,
     pointerUp,
