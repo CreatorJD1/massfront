@@ -6,6 +6,11 @@ import * as THREE from "three";
  * Game-VFX nuke (Hovl / cinematic VDB anatomy):
  * flash → fireball → dark smoke stem → fire-lit cauliflower cap →
  * dust ring + shock shell. Water still gets a spray disc at the surface.
+ *
+ * Visual only. The blast clock (age) and the gameplay radius curves (fireball,
+ * shockwave, tsunami, suction) live in massfront/sim.ts (NUKE_TUNING /
+ * nukeRadii). update() takes match.nukeState(), so the effect pauses with the
+ * match and never drifts from the damage.
  */
 const YIELD_KT = 100;
 const PUFFS = 20;
@@ -366,26 +371,13 @@ export function createNukeFx(scene) {
   const camLoc = new THREE.Vector3();
 
   let live = false;
-  let t0 = -99;
+  let blastId = -1;
   let x = 0;
   let z = 0;
   let lastMach = 0;
-  let lastTsunami = 0;
+  let lastAge = -1;
   let boomed = false;
   let surface = "water";
-
-  function machRadius(age) {
-    return 22 + 70 * age * Math.exp(-age / 2.8) + 32 * age;
-  }
-  function tsunamiRadius(age) {
-    if (age < 1.8) return 0;
-    return 24 + (age - 1.8) * 30;
-  }
-  function fireRadius(age) {
-    const grow = 1 - Math.exp(-age / 0.55);
-    const hold = Math.exp(-Math.max(0, age - 2.4) / 2.2);
-    return 8 + 42 * grow * hold;
-  }
 
   function warm() {
     root.visible = true;
@@ -413,11 +405,10 @@ export function createNukeFx(scene) {
 
   function ignite(nx, nz, _p, surf) {
     live = true;
-    t0 = -1;
     x = nx;
     z = nz;
     lastMach = 0;
-    lastTsunami = 0;
+    lastAge = -1;
     boomed = false;
     surface = surf === "land" ? "land" : "water";
     setLand(surface === "land" ? 1 : 0);
@@ -434,26 +425,35 @@ export function createNukeFx(scene) {
     mat.uniforms.uCamLoc.value.copy(camLoc);
   }
 
-  function update(now, seaY, cam) {
-    const dead = {
-      live: false, flash: 0, trauma: 0, exposure: 0, fireR: 0, machR: 0, machR0: 0,
-      tsunamiR: 0, tsunamiR0: 0, suction: 0, x, z, power: 4.4, light: 0, glowR: 40,
-      sonicBoom: false, age: 0, cloud: 0, stemH: 0, surface,
-    };
-    if (!live) return dead;
-    if (t0 < 0) t0 = now;
-    const age = now - t0;
-    if (age > 24) {
-      rest();
-      return dead;
+  /**
+   * @param blast match.nukeState(): { id, x, z, surface, power, age, fireR,
+   *   machR, tsunamiR, suction, fireballOn } or null when no blast is running.
+   */
+  function update(blast, seaY, cam) {
+    if (!blast) {
+      if (live) rest();
+      blastId = -1;
+      return {
+        live: false, flash: 0, trauma: 0, exposure: 0, fireR: 0, machR: 0, machR0: 0,
+        tsunamiR: 0, suction: 0, x, z, power: 0, light: 0, glowR: 40,
+        sonicBoom: false, age: 0, cloud: 0, stemH: 0, surface,
+      };
     }
+    if (!live || blast.id !== blastId) {
+      blastId = blast.id;
+      ignite(blast.x, blast.z, blast.power, blast.surface);
+    }
+    const age = blast.age;
+    /* Age only moves while the match is live; hold camera trauma while frozen. */
+    const advancing = age > lastAge;
+    lastAge = age;
     root.position.set(x, seaY + 0.2, z);
     const land = surface === "land";
     const grow = 1 - Math.exp(-age / 2.6);
     const hot = Math.exp(-age / 5.8);
 
-    const fireR = fireRadius(age);
-    fireball.visible = age < 3.6 && fireR > 2;
+    const fireR = blast.fireR;
+    fireball.visible = blast.fireballOn && fireR > 2;
     fireball.scale.setScalar(Math.max(0.01, fireR));
     fireball.position.y = fireR * 0.45 + 4;
     fireMat.opacity = 0.65 * Math.exp(-age / 1.8);
@@ -464,7 +464,7 @@ export function createNukeFx(scene) {
     column.scale.set(stemW, stemH, stemW);
     column.position.y = stemH * 0.5;
     columnMat.uniforms.uAmt.value = 1.05 * (1 - Math.max(0, age - 14) / 7);
-    columnMat.uniforms.uTime.value = now;
+    columnMat.uniforms.uTime.value = age;
     columnMat.uniforms.uHot.value = hot;
     pushCam(column, columnMat, cam);
 
@@ -476,7 +476,7 @@ export function createNukeFx(scene) {
     anvil.scale.set(anvilW, anvilH, anvilW);
     anvil.position.y = stemH * 0.88;
     anvilMat.uniforms.uAmt.value = 1.0 * anvilGrow * (1 - Math.max(0, age - 15) / 8);
-    anvilMat.uniforms.uTime.value = now;
+    anvilMat.uniforms.uTime.value = age;
     anvilMat.uniforms.uHot.value = hot * 1.15;
     pushCam(anvil, anvilMat, cam);
 
@@ -485,10 +485,10 @@ export function createNukeFx(scene) {
     disc.scale.setScalar(discR);
     disc.position.y = 0.5;
     discMat.uniforms.uAmt.value = (land ? 0.55 : 0.8) * Math.exp(-age / 6.5);
-    discMat.uniforms.uTime.value = now;
+    discMat.uniforms.uTime.value = age;
 
     shock.visible = age < 6.5;
-    shock.scale.setScalar(Math.max(4, machRadius(age) * 0.55));
+    shock.scale.setScalar(Math.max(4, blast.machR * 0.55));
     shock.position.y = 8;
     shockMat.uniforms.uAmt.value = 0.45 * Math.exp(-age / 2.8);
 
@@ -523,12 +523,10 @@ export function createNukeFx(scene) {
     embers.instanceMatrix.needsUpdate = true;
 
     const machR0 = lastMach;
-    const machR = machRadius(age);
+    const machR = blast.machR;
     lastMach = machR;
-    const tsunamiR0 = lastTsunami;
-    const tsunamiR = land ? tsunamiRadius(age) * 0.35 : tsunamiRadius(age);
-    lastTsunami = tsunamiR;
-    const suction = !land && age > 1.4 && age < 6.5 ? Math.sin(((age - 1.4) / 5.1) * Math.PI) : 0;
+    const tsunamiR = blast.tsunamiR;
+    const suction = blast.suction;
     const flash = age < 0.4 ? 0.95 * (1 - age / 0.4) : 0;
     let sonicBoom = false;
     if (cam && !boomed) {
@@ -538,12 +536,12 @@ export function createNukeFx(scene) {
         boomed = true;
       }
     }
-    const trauma = (age < 0.9 ? 0.35 * Math.exp(-age / 0.5) : 0.03) + (sonicBoom ? 0.4 : 0);
+    const trauma = advancing ? (age < 0.9 ? 0.35 * Math.exp(-age / 0.5) : 0.03) + (sonicBoom ? 0.4 : 0) : 0;
     const cloud = Math.min(0.85, age / 2.6) * (1 - Math.max(0, age - 14) / 10);
 
     return {
-      live: true, age, x, z, power: 4.4, yieldT: YIELD_KT * 1000,
-      fireR: Math.max(18, fireR), machR, machR0, tsunamiR, tsunamiR0, suction,
+      live: true, age, x, z, power: blast.power, yieldT: YIELD_KT * 1000,
+      fireR, machR, machR0, tsunamiR, suction,
       flash, trauma, exposure: flash * 0.55, light: Math.exp(-age / 2.5) * 0.45,
       glowR: 28 + discR * 0.5, sonicBoom, cloud, stemH, surface,
     };
