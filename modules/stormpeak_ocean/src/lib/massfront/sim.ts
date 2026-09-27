@@ -103,8 +103,8 @@ export const NUKE_TUNING = {
   /** Whole blast lifetime (s). A new detonation is rejected until it ends. */
   durationS: 24,
 
-  /** Instant-kill window = the fireball's visible lifetime in nuke.js (s). */
-  fireballLethalS: 3.6,
+  /** Instant-kill window: the fireball's lethal lifetime (s). */
+  fireballLethalS: 3.0,
   /** Minimum instant-kill radius while the fireball is up. */
   fireballKillMinR: 18,
   /** Fireball radius: base + grow * (1 - e^(-age/growTauS)) * e^(-max(0, age - holdS)/fadeTauS). */
@@ -117,7 +117,7 @@ export const NUKE_TUNING = {
   /** After the fireball: ground zero burns (hp per second, all ents) instead of killing outright. */
   groundZeroDps: 80,
   /** Minimum ground-zero burn radius (the fire curve still sets it when larger). */
-  groundZeroMinR: 18,
+  groundZeroMinR: 40,
 
   /** Shockwave (mach front): base + burst * age * e^(-age/burstTauS) + speed * age. */
   machBaseR: 22,
@@ -132,31 +132,30 @@ export const NUKE_TUNING = {
   tsunamiLandMul: 0.35,
 
   /**
-   * Tsunami damage falls off over a FIXED reach from ground zero:
-   * fall = max(0, 1 - d / tsunamiReach); damage = (unit 90 | building 40) * power * fall.
-   * (It used to scale against the ring radius, so every hit past ~100 units got
-   * the same 0.167 fall -- a flat 66 HP -- out to the ring's full extent.)
+   * Tsunami damage falls off (squared) over a FIXED reach from ground zero:
+   * fall = max(0, 1 - d / tsunamiReach) ** 2; damage = (unit 90 | building 40) * power * fall.
+   * Nothing takes tsunami damage (or knockback) at d >= tsunamiReach, however far
+   * the ring itself travels. Exposed in nukeState() so visuals can fade the ring.
    */
-  tsunamiReach: 240,
+  tsunamiReach: 200,
   /**
-   * Mobile units (never buildings or Cores) hit with fall above this are killed
-   * outright. 0.725 at reach 240 = inside 66 units, today's instant-kill radius.
+   * Mobile units (never buildings or Cores) hit by the tsunami at d <= this are
+   * killed outright. Buildings and Cores always just take the scaled damage.
    */
-  tsunamiKillFall: 0.725,
+  tsunamiKillR: 45,
 
   /** Suction window (s); water blasts only. Profile is sin(pi * phase) over the window. */
   suctionStartS: 1.4,
   suctionEndS: 6.5,
   /**
    * TOTAL inward pull (world units) on a unit that stays in range for the whole
-   * suction window. Frame-rate independent. 740 matches the old 60 fps feel
-   * (3.8 units/frame * 60 fps * integral of the sin profile).
+   * suction window. Frame-rate independent.
    */
-  suctionTotalPull: 740,
+  suctionTotalPull: 150,
   /** Suction reaches out to machR * suctionReach. */
   suctionReach: 0.92,
   /** Suction stops pulling inside this distance from ground zero. */
-  suctionMinD: 8,
+  suctionMinD: 45,
 } as const;
 
 /**
@@ -231,9 +230,10 @@ export function nukeRadii(age: number, surface: NukeSurface = "water"): NukeRadi
 export function nukeTsunamiHit(d: number, building: boolean) {
   const T = NUKE_TUNING;
   const p = Math.max(0.8, T.power);
-  const fall = Math.max(0, Math.min(1, 1 - d / T.tsunamiReach));
+  const lin = Math.max(0, Math.min(1, 1 - d / T.tsunamiReach));
+  const fall = lin * lin;
   const dmg = (building ? 40 : 90) * p * fall;
-  const kill = !building && fall > T.tsunamiKillFall;
+  const kill = !building && d <= T.tsunamiKillR;
   return { fall, dmg, kill };
 }
 
@@ -251,6 +251,10 @@ export type NukeView = NukeRadii & {
   startTick: number;
   startTime: number;
   durationS: number;
+  /** NUKE_TUNING.tsunamiReach: tsunami damage is (1 - d / tsunamiReach) ** 2, zero at and beyond it. */
+  tsunamiReach: number;
+  /** NUKE_TUNING.tsunamiKillR: the tsunami instantly kills units (not buildings / Cores) at d <= this. */
+  tsunamiKillR: number;
 };
 
 type NukeBlast = {
@@ -986,6 +990,8 @@ export function createMatch(
       startTick: nuke.startTick,
       startTime: nuke.startTime,
       durationS: NUKE_TUNING.durationS,
+      tsunamiReach: NUKE_TUNING.tsunamiReach,
+      tsunamiKillR: NUKE_TUNING.tsunamiKillR,
     };
   }
 
