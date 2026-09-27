@@ -14,6 +14,7 @@ import * as THREE from "three";
  * uMarkFx   = (sprayR, sprayAmt, scorchR, scorchAmt)   spray/dust wash + land scorch
  * uMarkAim  = (aimX, aimZ, aimR, on 0|1)
  * uMarkTime = wall-clock seconds (aim dash crawl)
+ * uMarkCrater = (x, z, radius, depthM)  land crater, bent into the terrain
  */
 export function createSurfaceMarkUniforms() {
   return {
@@ -22,6 +23,7 @@ export function createSurfaceMarkUniforms() {
     uMarkFx: { value: new THREE.Vector4() },
     uMarkAim: { value: new THREE.Vector4() },
     uMarkTime: { value: 0 },
+    uMarkCrater: { value: new THREE.Vector4() },
   };
 }
 
@@ -100,5 +102,23 @@ export const surfaceMarksGLSL = /* glsl */ `
       a = max(a, k);
     }
     return vec4(col, a);
+  }
+`;
+
+/* Terrain-vertex crater. Mirrors nukeCraterM() in world/abyss.js exactly
+   (bowl = 1 - smoothstep(0, R, r), Gaussian lip, lip height 0.36 of depth,
+   from the nuke lab's -bowl*7 + lip*2.5). Metres, positive = deeper. */
+export const craterGLSL = /* glsl */ `
+  uniform vec4 uMarkCrater;
+  float nukeCraterM(vec2 p) {
+    if (uMarkCrater.w < 0.001) return 0.0;
+    float R = max(1.0, uMarkCrater.z);
+    float r = length(p - uMarkCrater.xy);
+    float lipW = max(6.0, R * 0.22);
+    if (r > R + lipW * 3.0) return 0.0;
+    float bowl = 1.0 - smoothstep(0.0, R, r);
+    float q = (r - R) / lipW;
+    float lip = exp(-q * q);
+    return uMarkCrater.w * (bowl - lip * 0.36);
   }
 `;

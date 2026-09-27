@@ -1,7 +1,7 @@
 // @ts-nocheck
 /** @ts-nocheck */
 import * as THREE from "three";
-import { seabedWorldY } from "../world/abyss.js";
+import { DEPTH_VIS, seabedWorldY, setNukeCrater } from "../world/abyss.js";
 import { createSurfaceMarkUniforms } from "./surfaceMarks.js";
 
 /**
@@ -330,8 +330,20 @@ export function createNukeFx(scene) {
   const mGz2 = markUniforms.uMarkGz2.value;
   const mFx = markUniforms.uMarkFx.value;
   const mAim = markUniforms.uMarkAim.value;
+  const mCrater = markUniforms.uMarkCrater.value;
   let scorchPeak = 0;
   let scorchEnd = -1;
+  /* Land crater: the lab's bowl (7 world units deep, lip 0.36 of that) grows
+     on the lab's 18 + 36*age curve, but its rim is the sim's largest
+     ground-zero radius rather than the lab's fixed 78, so the bowl marks the
+     instant-kill zone the aim ring showed. It fades with the scorch. */
+  const CRATER_DEPTH_M = 7 * DEPTH_VIS;
+  const crater = { x: 0, z: 0, r: 0, gzMax: 0 };
+  function syncCrater() {
+    const d = scorchPeak > 0 ? CRATER_DEPTH_M * Math.min(1, mFx.w) : 0;
+    mCrater.set(crater.x, crater.z, crater.r, d);
+    setNukeCrater(crater.x, crater.z, crater.r, d);
+  }
   const wallS = () => performance.now() / 1000;
   function decayScorch() {
     if (scorchEnd < 0) return;
@@ -341,6 +353,7 @@ export function createNukeFx(scene) {
       scorchPeak = 0;
       scorchEnd = -1;
     }
+    syncCrater();
   }
 
   const proj = new THREE.Matrix4();
@@ -383,6 +396,12 @@ export function createNukeFx(scene) {
     lastAge = -1;
     boomed = false;
     surface = surf === "land" ? "land" : "water";
+    if (surface === "land") {
+      crater.x = nx;
+      crater.z = nz;
+      crater.r = 0;
+      crater.gzMax = 0;
+    }
     const l = surface === "land" ? 1 : 0;
     mat.uniforms.uLand.value = l;
     stemMat.uniforms.uLand.value = l;
@@ -503,6 +522,9 @@ export function createNukeFx(scene) {
       scorchEnd = -1;
       mFx.z = Math.max(40, gzR * 1.5);
       mFx.w = scorchPeak;
+      crater.gzMax = Math.max(crater.gzMax, gzR);
+      crater.r = crater.gzMax * Math.min(1, (18 + 36 * age) / 78);
+      syncCrater();
     } else {
       decayScorch();
     }
@@ -554,6 +576,8 @@ export function createNukeFx(scene) {
     mAim.w = 0;
     mGz2.set(0, 0, 0, 0);
     mFx.set(0, 0, 0, 0);
+    scorchPeak = 0;
+    syncCrater();
     for (const m of [mesh, stemMesh, dust, flashQuad]) {
       m.geometry.dispose();
       m.material.dispose();
