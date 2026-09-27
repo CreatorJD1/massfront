@@ -117,8 +117,13 @@ export const NUKE_TUNING = {
   fireHoldS: 3.0,
   fireFadeTauS: 4.0,
 
-  /** After the fireball: ground zero burns (hp per second, all ents) instead of killing outright. */
+  /** After the fireball: units in the ground-zero zone burn (hp per second) instead of being ashed. */
   groundZeroDps: 80,
+  /**
+   * Buildings and Cores inside groundZeroR burn at this rate instead (hp per second,
+   * dt-scaled), both while the fireball is up (it never ashes them) and afterwards.
+   */
+  groundZeroBuildingDps: 60,
   /** Minimum ground-zero burn radius (the fire curve still sets it when larger). */
   groundZeroMinR: 40,
 
@@ -172,9 +177,9 @@ export const NUKE_TUNING = {
   /**
    * Suction pulls units within machR * suctionReach, i.e. this fraction of the CURRENT
    * shock-front radius (it grows with the blast: ~200 at the end of the window on the
-   * lab curves, so 0.67 reaches ~134 at most).
+   * lab curves, so 0.6 reaches ~120 at most).
    */
-  suctionReach: 0.67,
+  suctionReach: 0.6,
   /** Suction stops pulling inside this distance from ground zero. */
   suctionMinD: 45,
 } as const;
@@ -926,7 +931,7 @@ export function createMatch(
           killEnt(e);
           continue;
         }
-        e.hp -= T.groundZeroDps * dt;
+        e.hp -= (e.building ? T.groundZeroBuildingDps : T.groundZeroDps) * dt;
         if (e.hp <= 0) {
           if (e.team === PLAYER) notice("GROUND ZERO — ASHED");
           killEnt(e);
