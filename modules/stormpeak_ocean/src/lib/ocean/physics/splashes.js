@@ -27,7 +27,30 @@ export function createSplashPool(scene) {
   scene.add(drops);
 
   const mistGeo = new THREE.PlaneGeometry(1.6, 1.6);
+  /* Mist puffs used to be bare squares turned only around Y, so from the
+     command camera they read as pale flat vertical sheets beside ships. Give
+     them a soft round falloff and face them at the camera (see write()). */
+  const puffTex = (() => {
+    const N = 64;
+    const data = new Uint8Array(N * N * 4);
+    for (let y = 0; y < N; y++) {
+      for (let x = 0; x < N; x++) {
+        const dx = (x + 0.5) / N - 0.5;
+        const dy = (y + 0.5) / N - 0.5;
+        const r = Math.min(1, Math.hypot(dx, dy) * 2);
+        const a = Math.pow(1 - r * r, 2.2);
+        const i = (y * N + x) * 4;
+        data[i] = data[i + 1] = data[i + 2] = 255;
+        data[i + 3] = Math.round(a * 255);
+      }
+    }
+    const t = new THREE.DataTexture(data, N, N, THREE.RGBAFormat);
+    t.needsUpdate = true;
+    return t;
+  })();
+  const camQ = new THREE.Quaternion();
   const mistMat = new THREE.MeshBasicMaterial({
+    map: puffTex,
     color: 0xb7cfc8,
     transparent: true,
     opacity: 0.22,
@@ -39,6 +62,7 @@ export function createSplashPool(scene) {
   const mist = new THREE.InstancedMesh(mistGeo, mistMat, MIST_N);
   mist.frustumCulled = false;
   mist.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  mist.onBeforeRender = (_r, _s, cam) => camQ.copy(cam.quaternion);
   scene.add(mist);
 
   const dropPool = new Array(DROP_N);
@@ -118,13 +142,19 @@ export function createSplashPool(scene) {
     for (let i = 0; i < max; i++) emitBurst(impacts[i]);
   }
 
-  function write(mesh, pool) {
+  function write(mesh, pool, billboard = false) {
     for (let i = 0; i < pool.length; i++) {
       const p = pool[i];
       if (!p.live) {
         dummy.position.set(0, -400, 0);
         dummy.scale.set(0, 0, 0);
         dummy.rotation.set(0, 0, 0);
+      } else if (billboard) {
+        dummy.position.set(p.x, p.y, p.z);
+        const k = p.life / p.max;
+        const s = p.size * (0.6 + 0.4 * k) * Math.min(1, k * 3);
+        dummy.quaternion.copy(camQ);
+        dummy.scale.set(s, s, s);
       } else {
         dummy.position.set(p.x, p.y, p.z);
         const s = p.size * (0.35 + 0.65 * (p.life / p.max));
@@ -174,7 +204,7 @@ export function createSplashPool(scene) {
       if (p.life <= 0 || p.y < sea.height(p.x, p.z) - 0.2) p.live = false;
     }
     write(drops, dropPool);
-    write(mist, mistPool);
+    write(mist, mistPool, true);
     return wakePts;
   }
 
@@ -185,6 +215,7 @@ export function createSplashPool(scene) {
     mistGeo.dispose();
     dropMat.dispose();
     mistMat.dispose();
+    puffTex.dispose();
     drops.dispose();
     mist.dispose();
   }
