@@ -42,14 +42,14 @@
    ============================================================================ */
 
 /* Bumped by the release script. Compared against the manifest's `version`. */
-const APP_VERSION = '1.33.97';
+const APP_VERSION = '1.33.98';
 
 /* Release notes for the PACKAGED build, bumped by the release script beside
    APP_VERSION and PACKAGED_REV. A device that has never taken an OTA has no
    download history to read notes from, and an offline device can never fetch
    them, so the build carries its own copy — otherwise a fresh install shows a
    permanently empty first entry in the mailbox. */
-const APP_NOTES = "Stormpeak ocean theatre: land and seabed, caustics, and a 100 kt fire-smoke detonation. The Ocean Theatre Tester takes the upstream Stormpeak update — a real seafloor with a shelf and trench, island land masses, an atmosphere pass, underwater caustics and light shafts, drifting ocean life, and a 100 kt airburst that raises its own wave field, throws spray crowns and jets, and puts genuine stress on the hulls riding it. Fixes carried with it: the tester's CPU sea now reads that wave field, so hulls ride a detonation instead of passing through it; ballast, faction, lighting and ordnance controls in the tester HUD are wired to the lab for the first time, so Dive no longer throws and the detonation control is no longer inert. Galactic transit now settles a course only after the destination's authored scene assets prove usable — a blocked or failed load leaves origin, route and fuel untouched, keeps the strategic hub usable, and asks you to retry from the galaxy map; deep free-camera dives hold clear of the seabed and vent geometry. Known incomplete work: physical Safari PWA and Android-device acceptance, optional Galactic allies, human co-op and Versus, and dropped-session production restoration. These are not completed features.";
+const APP_NOTES = "Sixteen-domain audit, wave one. The ship interior now states each compartment's real condition: uncommissioned cores, offline retrofit tiers and queued repair work surface as DEGRADED / DAMAGE chips on the room list and in the telemetry badge, which also no longer overflows its box on narrow phones. The galaxy view names the conquest front — CONQUEST FRONT n OF 48 with the current map — without overlapping the landscape dock, and the campaign hub gains a dedication ladder showing every planet's charted, survey and gate state in one board. Fallen organic units leave persistent ichor pools that grow, dry and fade, and idle units seen up close breathe instead of freezing. The Ocean Theatre Tester now records its outcomes into the campaign, and the War Room card reports how many sorties held the region. Mission-bearing wording is unified to 'operation' throughout. Known incomplete work: physical Safari PWA and Android-device acceptance, optional Galactic allies, human co-op and Versus, and dropped-session production restoration. These are not completed features.";
 
 /* The channel URL in update-config.json remains publisher-configurable, but a
    production checker also needs one known-good recovery path. More importantly,

@@ -288,11 +288,18 @@ const html=readFileSync(join(root,'index.html'),'utf8');
 const bodyMatch=html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
 if(!bodyMatch) throw new Error('index.html has no body');
 const shellBody=bodyMatch[1].replace(/\s*<script\s+src=["']\.\/boot\.js["']><\/script>\s*$/i,'');
+/* Body markup rides the shell verbatim, and the September launcher added the
+   first body-level binary reference (the hero <img>). Inline it through the
+   same longest-first pass as CSS — a path ref in the body would break on any
+   installed package older than the art. Query-suffixed refs (icon-512.png?v=)
+   are deliberately NOT in the embed list: a substring rewrite would splice a
+   data URI and leave the ?v= dangling after it. */
+const shellBodyInlined=inlineOtaBinaryRefs(shellBody);
 const stylePaths=Array.from(html.matchAll(/<link\s+rel=["']stylesheet["']\s+href=["']([^"']+)["'][^>]*>/gi),m=>m[1].split('?')[0].replace(/^\.\//,''));
-const shell={version,title:(html.match(/<title>([\s\S]*?)<\/title>/i)||[])[1]||'MASSFRONT',body:shellBody,
+const shell={version,title:(html.match(/<title>([\s\S]*?)<\/title>/i)||[])[1]||'MASSFRONT',body:shellBodyInlined,
   styles:stylePaths.map(path=>({path,css:inlineOtaBinaryRefs(readFileSync(join(root,path),'utf8'))}))};
 const shellCss=shell.styles.map(file=>file.css).join('\n');
-if(shellCss.includes('../.data:')) throw new Error('OTA shell contains corrupt ../.data: asset URL');
+if((shellCss+shellBodyInlined).includes('../.data:')) throw new Error('OTA shell contains corrupt ../.data: asset URL');
 const panelAsset=otaBinaryAssets.find(row=>row.path==='assets/textures/ui/mf-hud-panel-material-v1.webp');
 if(!panelAsset||!shellCss.includes(panelAsset.uri)) throw new Error('OTA shell did not inline cinematic HUD panel material');
 const menuPlate=otaBinaryAssets.find(row=>row.path==='assets/textures/ui/mf-ui-v3/deploy_normal.png');
