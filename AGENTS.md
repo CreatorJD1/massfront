@@ -64,10 +64,14 @@ the engine asks `canPlayType`. Music is AAC-only for size, with a fallback that
 abandons the playlist after three consecutive decode failures.
 
 **Two ocean systems — do not conflate them.** Production lockstep sea is
-`src/sea.js` (War Table ocean tester, Claude / Codex, ships). Tessendorf
-theatre is branch `stormpeak/ocean` → `modules/stormpeak/` ([PR #6](https://github.com/CreatorJD1/massfront/pull/6)). Isolated ES-module. Never
-register it in `boot.js` / `manifest.json`. Do not reimplement it on `main`.
-The sidecar `CreatorJD1/Stormpeak-MASSFRONT` is a redirect only.
+`src/sea.js` (War Table ocean tester, Claude / Codex, ships). The Tessendorf
+theatre also ships on `main`, vendored as the isolated ES-module
+`modules/stormpeak_ocean/`, surfaced through `src/stormpeak-tester.js` at
+`index.html?from=stormpeak` — owner override 2026-09-27. The older parallel
+copy on branch `stormpeak/ocean` → `modules/stormpeak/`
+([PR #6](https://github.com/CreatorJD1/massfront/pull/6)) has different code and stays untouched; never merge the two
+module trees blindly. Do not register the theatre's ES-module files in
+`boot.js` / `manifest.json`.
 
 ## Apple support decision
 
@@ -167,9 +171,10 @@ container. A clean console proves nothing about a renderer.
 ## Do not
 
 - Add an `import`/`export` to anything under `src/`.
-- Reimplement the Stormpeak Tessendorf theatre on `main`. It already lives on
-  branch `stormpeak/ocean` (`modules/stormpeak/`, PR #6). Do not paste it into
-  the concatenated bundle. Do not open another dump repo.
+- Merge the two Stormpeak module trees. `modules/stormpeak_ocean/` (vendored
+  on `main`, owner override 2026-09-27) and branch `stormpeak/ocean`
+  (`modules/stormpeak/`, PR #6) are different code. Do not paste the ES-module
+  into the concatenated bundle. Do not open another dump repo.
 - Bundle new large media into the installer without checking APK size.
 - Commit credentials. The Cloudflare workers are deployed; deploying again needs
   a scoped API token that is **not** in this repo.

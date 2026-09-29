@@ -30,6 +30,8 @@ Read in this order:
    stage records.
 6. [`FIVE_CHANNEL_UPDATE.md`](FIVE_CHANNEL_UPDATE.md) — mandatory release
    synchronization procedure.
+7. [`GAME_AUDIT.md`](GAME_AUDIT.md) — the current sixteen-domain game audit
+   (verdicts, findings, and the checks run), rewritten in place each pass.
 
 The canonical local checkout is `C:\Users\Jason\Documents\Codex\MASSFRONT-main-source`.
 It resolves to the one physical Git checkout under `2026-08-01`; it is not a
@@ -38,9 +40,12 @@ second repository.
 ## Current boundaries
 
 - **Two ocean systems.** Production lockstep sea + War Table ocean tester is
-  `src/sea.js` on `main` (Claude / Codex). The Tessendorf theatre is branch
-  `stormpeak/ocean` → `modules/stormpeak/` ([PR #6](https://github.com/CreatorJD1/massfront/pull/6)).
-  Do not reimplement Stormpeak on `main`. Do not register it in `boot.js`.
+  `src/sea.js` on `main` (Claude / Codex). The Tessendorf theatre ships on
+  `main` as the vendored `modules/stormpeak_ocean/` ES-module (owner override
+  2026-09-27), surfaced through `src/stormpeak-tester.js`. Branch
+  `stormpeak/ocean` → `modules/stormpeak/` ([PR #6](https://github.com/CreatorJD1/massfront/pull/6)) is the older parallel copy — do not
+  merge the two trees. Do not register the theatre's ES-module files in
+  `boot.js`.
 - Stage 10 model repair remains Cursor-owned and in progress. Do not rewrite,
   archive, or reinterpret its active ledgers.
 - Stage 15 has verified local backend and compatibility-foundation work, but is
