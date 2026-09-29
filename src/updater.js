@@ -42,14 +42,14 @@
    ============================================================================ */
 
 /* Bumped by the release script. Compared against the manifest's `version`. */
-const APP_VERSION = '1.33.88';
+const APP_VERSION = '1.33.97';
 
 /* Release notes for the PACKAGED build, bumped by the release script beside
    APP_VERSION and PACKAGED_REV. A device that has never taken an OTA has no
    download history to read notes from, and an offline device can never fetch
    them, so the build carries its own copy — otherwise a fresh install shows a
    permanently empty first entry in the mailbox. */
-const APP_NOTES = "Main menu rebuild on the authored production GUI pack — Features: the command slices, the primary deploy action and the dock destinations are now drawn from authored art rather than gradients, with real pressed and selected states; tapping a command slice reveals what it does before you enter it; a compact commander banner carries name, rank, experience, cores and record in one bar; the game-update surface floats over the live menu and minimises to a status pill so a download no longer takes the screen. Fixes: the primary action label no longer claims the war table it does not open; both hazard ends of that action stay put instead of one sweeping across it; the longest navigation label no longer truncates on a narrow phone; the bottom dock no longer sits under the home indicator in short landscape, where the menu is now two columns and fits without scrolling. Known incomplete work: guided practical space onboarding, optional Galactic allies, human co-op and Versus, dropped-session production restoration, and physical Safari and Android device acceptance. These are not completed features.";
+const APP_NOTES = "Stormpeak ocean theatre: land and seabed, caustics, and a 100 kt fire-smoke detonation. The Ocean Theatre Tester takes the upstream Stormpeak update — a real seafloor with a shelf and trench, island land masses, an atmosphere pass, underwater caustics and light shafts, drifting ocean life, and a 100 kt airburst that raises its own wave field, throws spray crowns and jets, and puts genuine stress on the hulls riding it. Fixes carried with it: the tester's CPU sea now reads that wave field, so hulls ride a detonation instead of passing through it; ballast, faction, lighting and ordnance controls in the tester HUD are wired to the lab for the first time, so Dive no longer throws and the detonation control is no longer inert. Galactic transit now settles a course only after the destination's authored scene assets prove usable — a blocked or failed load leaves origin, route and fuel untouched, keeps the strategic hub usable, and asks you to retry from the galaxy map; deep free-camera dives hold clear of the seabed and vent geometry. Known incomplete work: physical Safari PWA and Android-device acceptance, optional Galactic allies, human co-op and Versus, and dropped-session production restoration. These are not completed features.";
 
 /* The channel URL in update-config.json remains publisher-configurable, but a
    production checker also needs one known-good recovery path. More importantly,

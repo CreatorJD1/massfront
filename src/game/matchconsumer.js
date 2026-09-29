@@ -21,7 +21,7 @@
   const MC_UNIT_COMMAND_MAX=64,MC_BATCH_COMMAND_MAX=8,MC_COMMAND_BYTES_MAX=2048,
     MC_LOGICAL_UNIT_MAX=MC_UNIT_COMMAND_MAX*MC_BATCH_COMMAND_MAX,
     MC_FORM_IDS=Object.freeze(['spread','line','wedge','box','column','arc']);
-  let mcRules=null,mcWelcome=null,mcStart=null,mcLaunchStarted=false,mcSubmitFailure='',mcApplyFailure='';
+  let mcRules=null,mcWelcome=null,mcPrepare=null,mcPrepareEpoch=0,mcStart=null,mcLaunchStarted=false,mcNetworkSession=false,mcPriorSetup=null,mcSubmitFailure='',mcApplyFailure='';
   let mcUpgradePendingTick=-1,mcUpgradePendingSeq=-1;
   const mcRepeatPending=new Map();
   const mcCancelPending=new Map();
@@ -41,6 +41,9 @@
          simulation epoch. Resetting here used to discard an admitted fixed-step
          packet and the pending service receipt before replay could reconcile it. */
       if(mcWelcome.resumed!==true){
+        /* A new credential is a new simulation epoch. A prior lobby's bootstrap
+           must not swallow the next match in the same browser tab. */
+        mcLaunchStarted=false;mcPrepare=null;mcPrepareEpoch++;mcStart=null;mcNetworkSession=false;
         mcUpgradePendingTick=mcUpgradePendingSeq=-1;
         mcRepeatPending.clear();
         mcCancelPending.clear();
@@ -48,12 +51,16 @@
         if(mcQueuedTick){const Q=mcQueuedTick;mcQueuedTick=null;Q.resolve(false);}
       }
     }
-    if(e&&e.type==='massfront-match:start'){
-      mcStart=e.detail||null;mcLastCommittedTick=0;mcAppliedTicks.clear();mcRepeatPending.clear();mcCancelPending.clear();
-      if(typeof queueMicrotask==='function')queueMicrotask(mcBootstrapMatch);else setTimeout(mcBootstrapMatch,0);
+    if(e&&e.type==='massfront-match:prepare'){
+       mcNetworkSession=true;
+       mcPrepare=e.detail||null;mcPrepareEpoch++;mcStart=null;mcLaunchStarted=false;
+       mcLastCommittedTick=0;mcAppliedTicks.clear();mcRepeatPending.clear();mcCancelPending.clear();
+       if(typeof queueMicrotask==='function')queueMicrotask(mcBootstrapMatch);else setTimeout(mcBootstrapMatch,0);
     }
+    if(e&&e.type==='massfront-match:start')mcStart=e.detail||null;
   }
   window.addEventListener('massfront-match:welcome',mcCaptureRules);
+  window.addEventListener('massfront-match:prepare',mcCaptureRules);
   window.addEventListener('massfront-match:start',mcCaptureRules);
 
   /* The existing simulation has one player seat, optional same-team ally AI
@@ -89,26 +96,94 @@
     if(R.mode==='skirmish'&&R.slots===2&&Array.isArray(AI.bases)&&AI.bases.length===1){AI.bases[0].human=true;return true;}
     return false;
   }
-  function mcBootstrapMatch(){
-    if(mcLaunchStarted)return;
-    const R=mcLobbyRules(),S=mcStart;
-    if(!R||!S||!Array.isArray(S.seats)||S.seats.length!==R.slots||typeof newSkirmish!=='function'||typeof aiSlots==='undefined')return;
-    if(R.mode==='skirmish'&&R.slots!==2)return;
-    const humans=R.mode==='coop'?R.slots-1:0,total=1+humans+1;
-    if(typeof battlefieldPreset!=='undefined')battlefieldPreset=total>=4?'large':total===2?'compact':'standard';
-    if(R.map&&R.map!=='auto'&&typeof MAPDEFS!=='undefined'&&MAPDEFS[R.map])curMap=R.map;
-    for(const A of aiSlots)A.on=false;
-    if(R.mode==='coop'){
-      for(let i=0;i<humans&&i<aiSlots.length;i++){aiSlots[i].on=true;aiSlots[i].ally=true;aiSlots[i].diff=1;}
-      const enemy=aiSlots[humans];if(!enemy)return;enemy.on=true;enemy.ally=false;enemy.diff=typeof difficulty==='number'?difficulty:1;
-    }else{aiSlots[0].on=true;aiSlots[0].ally=false;aiSlots[0].diff=typeof difficulty==='number'?difficulty:1;}
-    mcLaunchStarted=true;
-    newSkirmish();
-    if(!mcMarkHumanSeats())throw new Error('Network seat bootstrap failed');
-    if(typeof carrier!=='undefined'&&carrier&&carrier.active&&typeof deployCarrier==='function'){
-      carrier.phase=1;carrier.alt=0;carrier.clearance=0;deployCarrier();
+  function mcFocusLocalSeat(){
+    const seat=mcWelcome&&mcWelcome.seat;
+    if(seat===1)return true;
+    const authority=mcSeatAuthority(seat),R=mcLobbyRules();
+    if(!authority||!R||typeof AI==='undefined'||typeof cam==='undefined')return false;
+    const rows=R.mode==='coop'?AI.allies:AI.bases;
+    const base=Array.isArray(rows)&&rows.find(B=>B&&B.slot===authority.slot);
+    if(!base||!Number.isFinite(base.x)||!Number.isFinite(base.y))return false;
+    /* newSkirmish frames the team-0 carrier on every peer. Under seat-relative
+       fog that leaves a remote seat looking at a black, unexplored corner. */
+    cam.x=base.x;cam.y=base.y;
+    if(typeof camFollow!=='undefined')camFollow=-1;
+    if(typeof clampCam==='function')clampCam();
+    if(typeof camUpdateMatrices==='function')camUpdateMatrices();
+    return true;
+  }
+  function mcAbortBootstrap(code){
+    /* A bad local setup cannot keep a room ticking while this peer sits on a
+       menu or a half-built battlefield. Closing forfeits the seat; the session
+       latch remains until the player explicitly returns to Main Menu. */
+    mcApplyFailure=code;
+    if(window.MFMatchRuntime&&typeof MFMatchRuntime.close==='function')MFMatchRuntime.close();
+    if(typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
+      window.dispatchEvent(new CustomEvent('massfront-match:protocolError',{detail:{code}}));
+    else if(typeof toast==='function')toast('NETWORK MATCH COULD NOT START — '+code);
+  }
+  function mcApplyCanonicalSetup(S){
+    if(!S||typeof MAPDEFS==='undefined'||!MAPDEFS[S.map]||typeof aiSlots==='undefined')return false;
+    if(!mcPriorSetup)mcPriorSetup={curMap,curTheme,curRegionId,battlefieldPreset,difficulty,defenseFocus,infestationOn,
+      deploymentPackage,playerFaction,playerCommanderId,aiFactionSel,goalSel,timeLimit,resPace,crateRate,crateRateBase,
+      wcChoice,playerStartZone,spawnPick,matchSetupArmed,aiSlots:aiSlots.map(A=>({...A}))};
+    window.__MF_NETWORK_SETUP__=Object.freeze({...S});window.__MF_MATCH_SEED__=S.seed;
+    /* The ready setup belongs to the server, not whichever Operations buttons
+       happened to be armed in this browser before the lobby opened. */
+    matchSetupArmed=false;curMap=S.map;curTheme=MAPDEFS[S.map].theme||'verdant';
+    if(MAPDEFS[S.map].region)curRegionId=MAPDEFS[S.map].region;
+    battlefieldPreset=S.preset;difficulty=S.difficulty;defenseFocus=S.defenseFocus;
+    infestationOn=S.infestationOn;deploymentPackage=S.deploymentPackage;
+    playerFaction=S.playerFaction;playerCommanderId=S.commander;aiFactionSel=S.enemyFaction;
+    goalSel=S.goal;timeLimit=S.timeLimit;resPace=S.resPace;crateRateBase=S.crateRate;crateRate=S.crateRate;
+    wcChoice=S.wildcards;playerStartZone='sw';spawnPick='player';
+    for(let i=0;i<aiSlots.length;i++){
+      const A=aiSlots[i];A.on=false;A.ally=false;A.diff=S.difficulty;
+      A.zone=['ne','nw','se','c'][i]||'c';A.behavior='balanced';
     }
-    if(typeof closeMenus==='function')closeMenus();
+    return true;
+  }
+  function mcCanonicalSetupMatches(S){
+    return matchSetupArmed===false&&curMap===S.map&&battlefieldPreset===S.preset&&difficulty===S.difficulty&&
+      playerFaction===S.playerFaction&&playerCommanderId===S.commander&&aiFactionSel===S.enemyFaction&&
+      goalSel===S.goal&&timeLimit===S.timeLimit&&resPace===S.resPace&&crateRate===S.crateRate&&
+      infestationOn===S.infestationOn&&defenseFocus===S.defenseFocus&&deploymentPackage===S.deploymentPackage;
+  }
+  async function mcBootstrapMatch(){
+    if(mcLaunchStarted)return;
+    const R=mcLobbyRules(),P=mcPrepare,S=P&&P.setup,epoch=mcPrepareEpoch;
+    if(!R||!P||!S||!Array.isArray(P.seats)||P.seats.length!==R.slots||typeof newSkirmish!=='function'||typeof aiSlots==='undefined')
+      return mcAbortBootstrap('bootstrap_setup_unavailable');
+    if(R.slots!==2||S.mode!==R.mode||S.slots!==R.slots||!['auto',S.map].includes(R.map))
+      return mcAbortBootstrap('bootstrap_unsupported_setup');
+    const humans=R.mode==='coop'?R.slots-1:0,total=1+humans+1;
+    try{
+      if(!mcApplyCanonicalSetup(S))return mcAbortBootstrap('bootstrap_setup_unavailable');
+      if(R.mode==='coop'){
+        for(let i=0;i<humans&&i<aiSlots.length;i++){aiSlots[i].on=true;aiSlots[i].ally=true;}
+        const enemy=aiSlots[humans];if(!enemy)return mcAbortBootstrap('bootstrap_setup_unavailable');enemy.on=true;enemy.ally=false;
+      }else{aiSlots[0].on=true;aiSlots[0].ally=false;}
+      mcLaunchStarted=true;
+      /* A lobby launch is not the setup button. It must perform that button's
+         front-screen/terrain handoff or Social stays over a live battlefield
+         and a selected map can retain the previous heightfield. */
+      if(typeof hideFrontScreens==='function')hideFrontScreens();
+      if(typeof applyTheme==='function')applyTheme();
+      newSkirmish();
+      if(!mcMarkHumanSeats())return mcAbortBootstrap('bootstrap_seat_failed');
+      if(typeof carrier!=='undefined'&&carrier&&carrier.active&&typeof deployCarrier==='function'){
+        carrier.phase=1;carrier.alt=0;carrier.clearance=0;deployCarrier();
+      }
+      if(!mcFocusLocalSeat())return mcAbortBootstrap('bootstrap_seat_focus_failed');
+      if(typeof closeMenus==='function')closeMenus();
+      if(typeof mfFlowLayout==='function')mfFlowLayout();
+      if(!mcCanonicalSetupMatches(S))return mcAbortBootstrap('bootstrap_setup_drift');
+      if(!window.MFMatchRuntime||typeof MFMatchRuntime.bootstrapReady!=='function'||
+          await MFMatchRuntime.bootstrapReady(P.setupHash)!==true){
+        const state=window.MFMatchRuntime&&MFMatchRuntime.status&&MFMatchRuntime.status().state;
+        if(epoch===mcPrepareEpoch&&state==='preparing')mcAbortBootstrap('bootstrap_ready_failed');
+      }
+    }catch(e){mcAbortBootstrap('bootstrap_failed');}
   }
   function mcUnitRef(v,authority){
     if(!MC_KEYS(v,['id','generation'])||!MC_INT(v.id,0,typeof MAXU==='number'?MAXU-1:9999)||
@@ -594,7 +669,25 @@
     /* A dropped socket is transport state, not permission to mutate the shared
        simulation offline. Keep the match closed to local-only commands through
        its reconnect grace period (and any non-terminal error state). */
-    return !!(s&&s.started===true&&s.ended!==true&&s.state!=='idle'&&s.state!=='closed'&&s.state!=='ended');
+    /* A terminal/error/closed transport is not an offline match. Keep local
+       simulation and orders blocked until the explicit Main Menu exit. */
+    return mcNetworkSession||!!(s&&s.started===true&&s.ended!==true&&s.state!=='idle'&&s.state!=='closed'&&s.state!=='ended');
+  }
+  function mcLeaveSession(){
+    mcNetworkSession=false;mcLaunchStarted=false;mcWelcome=null;mcPrepare=null;mcPrepareEpoch++;mcStart=null;mcRules=null;
+    mcUpgradePendingTick=mcUpgradePendingSeq=-1;mcRepeatPending.clear();mcCancelPending.clear();
+    if(mcQueuedTick){const Q=mcQueuedTick;mcQueuedTick=null;Q.resolve(false);}
+    window.__MF_NETWORK_SETUP__=null;delete window.__MF_MATCH_SEED__;
+    if(mcPriorSetup){
+      const P=mcPriorSetup;mcPriorSetup=null;
+      curMap=P.curMap;curTheme=P.curTheme;curRegionId=P.curRegionId;battlefieldPreset=P.battlefieldPreset;
+      difficulty=P.difficulty;defenseFocus=P.defenseFocus;infestationOn=P.infestationOn;
+      deploymentPackage=P.deploymentPackage;playerFaction=P.playerFaction;playerCommanderId=P.playerCommanderId;
+      aiFactionSel=P.aiFactionSel;goalSel=P.goalSel;timeLimit=P.timeLimit;resPace=P.resPace;
+      crateRate=P.crateRate;crateRateBase=P.crateRateBase;wcChoice=P.wcChoice;
+      playerStartZone=P.playerStartZone;spawnPick=P.spawnPick;matchSetupArmed=P.matchSetupArmed;
+      for(let i=0;i<Math.min(aiSlots.length,P.aiSlots.length);i++)Object.assign(aiSlots[i],P.aiSlots[i]);
+    }
   }
   function mcRequiresLockstep(){return mcSessionLockstep();}
   function mcCanAdvance(nextTick){return !mcRequiresLockstep()||!!(mcQueuedTick&&mcQueuedTick.tick===nextTick&&!mcQueuedTick.applied);}
@@ -629,7 +722,9 @@
     return s&&s.state==='running'&&MC_INT(s.seat,1,4)?s:null;
   }
   function mcLocalAuthority(){
-    const s=mcRuntimeActive();return s?mcSeatAuthority(s.seat):null;
+    /* Results and teardown still need the local seat's view after the socket
+       closes; command submission alone requires a running transport. */
+    const s=mcNetworkSession?mcRuntimeStatus():mcRuntimeActive();return s?mcSeatAuthority(s.seat):null;
   }
   function mcLocalOwnsUnit(i){
     if(typeof ualive==='undefined'||!ualive[i])return false;
@@ -718,7 +813,7 @@
     return receipt;
   }
   function mcTakeover(command,delay){
-    if(!mcRuntimeActive())return false;
+    if(!mcSessionLockstep())return false;
     const receipt=mcSubmit(command,delay);
     if(!receipt&&typeof toast==='function')toast(mcSubmitFailure||'NETWORK COMMAND REJECTED — simulation unchanged');
     return true;
@@ -734,11 +829,11 @@
      consumed here and explained by mcTakeover instead of falling through to a
      local-only mutation that would desynchronise the other clients. */
   function mcSubmitRepair(target,active,delay){
-    if(!mcRuntimeActive())return false;
+    if(!mcSessionLockstep())return false;
     return mcTakeover({type:'repair',building:mcBuildingHandle(target),active},delay);
   }
   function mcSubmitRecycle(target,delay){
-    if(!mcRuntimeActive())return false;
+    if(!mcSessionLockstep())return false;
     return mcTakeover({type:'recycle',building:mcBuildingHandle(target)},delay);
   }
   function mcSubmitUpgrade(target,all,delay){
@@ -779,7 +874,13 @@
   function mcSelected(){const out=[];for(let i=0;i<unitHigh;i++)if(ualive[i]&&usel[i])out.push(i);return out;}
   function mcWrap(name,make){
     const base=window[name];if(typeof base!=='function'||base._mfNetworkTakeover)return;
-    const wrapped=function(){const c=make.apply(this,arguments);if(c&&mcTakeover(c))return c.type==='stop'?undefined:true;return base.apply(this,arguments);};
+    const wrapped=function(){
+      if(mcSessionLockstep()){
+        const c=make.apply(this,arguments);if(c)mcTakeover(c);
+        return c&&c.type==='stop'?undefined:true;
+      }
+      return base.apply(this,arguments);
+    };
     wrapped._mfNetworkTakeover=true;window[name]=wrapped;
   }
   mcWrap('stopSelected',()=>{const u=mcSelected();return u.length?{type:'stop',units:mcUnitRefs(u)}:null;});
@@ -834,6 +935,7 @@
   window.mfLocalTeam=mcLocalTeam;window.mfLocalCommander=mcLocalCommander;window.mfLocalBank=mcLocalBank;
   const api=Object.freeze({schemaVersion:1,supported:MC_TYPES.slice(),applyTick:mcApplyTick,enqueueTick:mcEnqueueTick,
     requiresLockstep:mcRequiresLockstep,canAdvance:mcCanAdvance,beginTick:mcBeginTick,commitTick:mcCommitTick,
+    sessionActive:()=>mcNetworkSession,leaveSession:mcLeaveSession,
     lastAppliedTick:()=>mcLastCommittedTick,resumeState:mcResumeState,
     submit:mcSubmit,takeover:mcTakeover,
     submitRepair:mcSubmitRepair,submitRecycle:mcSubmitRecycle,submitUpgrade:mcSubmitUpgrade,
@@ -841,7 +943,8 @@
     submitCancelProduction:mcSubmitCancelProduction,
     upgradePending:()=>mcSessionLockstep()&&mcUpgradePendingTick>=0,buildingRef:mcBuildingHandle,
     lastFailure:()=>mcApplyFailure||mcSubmitFailure,
-    bootstrap:()=>Object.freeze({localSeat:mcWelcome&&mcWelcome.seat||0,seats:mcStart&&Array.isArray(mcStart.seats)?mcStart.seats.slice():[],rules:mcLobbyRules()}),seatAuthority:seat=>{
+    bootstrap:()=>Object.freeze({localSeat:mcWelcome&&mcWelcome.seat||0,seats:mcPrepare&&Array.isArray(mcPrepare.seats)?mcPrepare.seats.slice():[],
+      rules:mcLobbyRules(),setup:mcPrepare&&mcPrepare.setup||null,ready:!!mcStart}),seatAuthority:seat=>{
     const a=mcSeatAuthority(seat);return a?Object.freeze({seat:a.seat,team:a.team,slot:a.slot}):null;
   }});
   try{Object.defineProperty(window,'MFMatchCommandConsumer',{value:api,writable:false,configurable:false});}

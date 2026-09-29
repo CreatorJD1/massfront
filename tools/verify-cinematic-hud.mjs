@@ -330,11 +330,18 @@ async function pressVisible(page,selector,label,route,timeout=30000){
 }
 
 async function leaveGatewayOffline(page,route){
-  await page.waitForFunction(()=>document.body&&document.getElementById('startBtn'),null,{timeout:180000});
+  await page.waitForFunction(()=>document.body&&typeof mfLauncherSnapshot==='function'&&!document.getElementById('mfBootCover'),null,{timeout:180000});
   for(let step=0;step<36;step++){
+    /* Offline launch now opens the persistent UGA home before Classic. A
+       verifier waiting only for the legacy main-menu button falsely stalls. */
+    if(page.url().includes('/modules/space_exploration/')){
+      await page.waitForFunction(()=>window.__MASSFRONT_SPACE__?.scene==='uga'&&
+        document.querySelector('.uga-command-shell'),null,{timeout:90000});
+      return 'uga';
+    }
     /* The optional tutorial choice intentionally overlays the now-visible
        main-menu button. Visibility alone is therefore not route readiness. */
-    if(await visibleLocator(page,'#startBtn')&&!(await visibleLocator(page,'#mfOnboardingChoice')))return;
+    if(await visibleLocator(page,'#startBtn')&&!(await visibleLocator(page,'#mfOnboardingChoice')))return 'menu';
     const actions=[
       ['#mfIntroStart','intro'],['#apOfflineBtn','account-offline'],['#mfOnboardingSkip','skip-tutorial'],
       ['#mfLaunchOffline','launcher-offline'],['#apCloseBtn','close-account-gate']
@@ -345,17 +352,21 @@ async function leaveGatewayOffline(page,route){
     }
     if(!acted&&await visibleLocator(page,'#mfLaunchPlay')){
       const text=await page.locator('#mfLaunchPlay').textContent().catch(()=>null);
-      if(/OFFLINE/i.test(String(text||''))){await clickVisible(page,'#mfLaunchPlay','launcher-primary-offline',route);acted=true;}
+      if(/OFFLINE|CONTINUE TO INTRO/i.test(String(text||''))){await clickVisible(page,'#mfLaunchPlay','launcher-primary-offline',route);acted=true;}
     }
     if(!acted)await page.waitForTimeout(750);
   }
-  throw new Error('OFFLINE_GATE_STALLED: START MASSFRONT never became visible');
+  throw new Error('OFFLINE_GATE_STALLED: neither UGA nor main menu became ready');
 }
 
 async function enterRealOfflineBattle(page){
   const route=[];
-  await leaveGatewayOffline(page,route);
-  await clickVisible(page,'#startBtn','war-room',route,60000);
+  const entry=await leaveGatewayOffline(page,route);
+  if(entry==='uga'){
+    await clickVisible(page,'.uga-command-nav [data-nav="classic"]','classic-access',route,60000);
+    await clickVisible(page,'[data-host-route="war-room"]','war-room',route,60000);
+    await page.waitForURL(/galacticRoute=/,{timeout:30000});
+  }else await clickVisible(page,'#startBtn','war-room',route,60000);
   await clickVisible(page,'.warCard[data-mode="standard"]','standard',route,60000);
   const signature=()=>page.evaluate(()=>{
     const vis=el=>{if(!el)return false;const s=getComputedStyle(el),r=el.getBoundingClientRect();

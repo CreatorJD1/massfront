@@ -6,6 +6,8 @@ import {
   FACTION_CATALOG,
   MISSION_CATALOG,
   OPERATION_MOD_CATALOG,
+  UGA_GROUND_AREA_CATALOG,
+  UGA_GROUND_AREA_LADDER,
   RESIDENT_FACTION_IDS,
   SITE_CATALOG,
   SPECIALIST_CATALOG,
@@ -16,6 +18,8 @@ import {
 import { deepClone, deepFreeze, deterministicId, hash32, stableStringify } from './deterministic.js';
 import { DomainValidationError, issue } from './errors.js';
 import { calculateFacilityCapabilities } from './construction.js';
+import { SOLO_FRONT_PRESSURE_CAP } from './progression.js';
+import { deriveGroundControl, isGroundAreaUnlocked, isGroundMapUnlocked } from './ground_control.js';
 import {
   COMMANDER1_BY_CAMPAIGN_FACTION,
   COMMANDER_ROSTER_IDS,
@@ -190,6 +194,28 @@ function resolveRequest(state, mission, request) {
   return { requestedFactionId, expectedFactionId, proxyFactionId, commanderId, specialistIds, doctrineId, supportId, landingZoneId, deploymentManifest, mapId, groundLocation, groundArea };
 }
 
+function postClearBroodMaps(state, mission) {
+  if (!mission || mission.missionType !== 'uga_brood_purge' || mission.systemId !== 'karak') return null;
+  const infestation = state.world?.systems?.karak?.infestation;
+  if (infestation?.active || !infestation?.confirmed || !infestation?.hiveTargetsConfirmed) return null;
+  // Older careers ended the system infestation on the first Hive Heart map.
+  // Its settled result is the evidence that this is cleanup, not an inactive
+  // or unconfirmed world granting a new Brood contract.
+  const clearedBySettledHeart = state.operations?.history?.some(entry =>
+    entry?.operation?.missionId === 'uga_hive_heart'
+    && entry?.result?.missionId === 'uga_hive_heart'
+    && entry?.result?.outcome === 'victory'
+    && entry?.result?.worldDelta?.infestationCleared === true
+    && state.operations.appliedResultIds?.includes(entry.result.resultId)
+  );
+  if (!clearedBySettledHeart) return null;
+  const area = getUgaGroundAreaOptions(mission.id);
+  const control = deriveGroundControl(state).areas[mission.groundAreaId];
+  if (!area || !control || control.controlled) return null;
+  const remaining = area.maps.map(map => map.id).filter(mapId => !control.clearedMapIds.includes(mapId));
+  return remaining.length ? remaining : null;
+}
+
 function pushEligibilityLocks(state, mission, resolved, locks) {
   const commissioning = state.commissioning;
   if (!commissioning?.completed
@@ -206,6 +232,15 @@ function pushEligibilityLocks(state, mission, resolved, locks) {
   if (!state.world?.systems?.[mission.systemId]?.discovered) locks.push(issue('SYSTEM_UNDISCOVERED', 'The mission system has not been discovered.', `world.systems.${mission.systemId}.discovered`));
   if (state.ship?.districts?.hangar?.level < mission.requiredHangarLevel) locks.push(issue('HANGAR_LEVEL_REQUIRED', `Deployment Hangar level ${mission.requiredHangarLevel} is required.`, 'ship.districts.hangar.level'));
   if ((state.intelligence?.bySystem?.[mission.systemId] || 0) < mission.requirements.intelligence) locks.push(issue('INTELLIGENCE_REQUIRED', `Mission requires intelligence level ${mission.requirements.intelligence}.`, `intelligence.bySystem.${mission.systemId}`));
+  /* Frontier ladder, tier 3 — regions open in authored sequence. The prior
+     region's mission must have been won; recruit its faction (Coalition
+     Quarters) when the chain crosses a faction you do not hold yet. */
+  if (!isGroundAreaUnlocked(state, mission.groundAreaId)) {
+    const ladderLine = Object.values(UGA_GROUND_AREA_LADDER).find(ids => ids.includes(mission.groundAreaId));
+    const priorMissionId = UGA_GROUND_AREA_CATALOG[ladderLine?.[ladderLine.indexOf(mission.groundAreaId) - 1]]?.missionId;
+    const priorTitle = priorMissionId ? MISSION_CATALOG[priorMissionId]?.title : null;
+    locks.push(issue('REGION_LADDER_REQUIRED', priorTitle ? `Secure ${priorTitle} first.` : 'Secure the previous region first.', `missions.${priorMissionId || ''}.completions`));
+  }
   for (const discoveryId of mission.requirements.discoveryIds || []) {
     if (!state.discoveries?.foundIds?.includes(discoveryId)) locks.push(issue('DISCOVERY_REQUIRED', `Required discovery has not been found: ${discoveryId}.`, 'discoveries.foundIds'));
   }
@@ -248,6 +283,15 @@ function pushEligibilityLocks(state, mission, resolved, locks) {
     if (specialist?.status !== 'ready' || specialist.injury || specialist.readiness < 50) locks.push(issue('SPECIALIST_NOT_READY', `${definition.name} is not ready to deploy.`, `personnel.specialists.${specialistId}`));
   }
 
+  /* Frontier ladder, tier 4 — battlefield sizes open in sequence per region;
+     the compact drop is always available. The post-infestation cleanup
+     re-grant overrides the ladder on purpose: a legacy career whose hive fell
+     early must be able to finish any remaining authored map. */
+  if (resolved.mapId && resolved.groundArea?.maps?.some(map => map.id === resolved.mapId)
+    && !isGroundMapUnlocked(state, mission.groundAreaId, resolved.mapId)
+    && !postClearBroodMaps(state, mission)?.includes(resolved.mapId)) {
+    locks.push(issue('BATTLEFIELD_MAP_LOCKED', 'Clear the previous battlefield size in this region first.', 'mapId'));
+  }
   if (!mission.doctrineIds.includes(resolved.doctrineId) || !DOCTRINE_CATALOG[resolved.doctrineId]) locks.push(issue('DOCTRINE_INVALID', 'Selected operational doctrine is not allowed.', 'doctrineId'));
   const support = SUPPORT_CATALOG[resolved.supportId];
   if (!mission.supportIds.includes(resolved.supportId) || !support) locks.push(issue('SUPPORT_INVALID', 'Selected support package is not allowed.', 'supportId'));
@@ -258,7 +302,11 @@ function pushEligibilityLocks(state, mission, resolved, locks) {
   if (mission.missionType === 'uga_brood_purge') {
     const infestation = state.world?.systems?.[mission.systemId]?.infestation;
     const site = SITE_CATALOG[mission.siteId];
-    if (!infestation?.active || !infestation.confirmed) locks.push(issue('ACTIVE_INFESTATION_REQUIRED', 'UGA Brood operation requires a confirmed active infestation.', `world.systems.${mission.systemId}.infestation`));
+    const cleanupMaps = postClearBroodMaps(state, mission);
+    if ((!infestation?.active && !cleanupMaps) || !infestation?.confirmed) locks.push(issue('ACTIVE_INFESTATION_REQUIRED', 'UGA Brood operation requires a confirmed active infestation.', `world.systems.${mission.systemId}.infestation`));
+    if (cleanupMaps && resolved.mapId && resolved.groundArea?.maps?.some(map => map.id === resolved.mapId) && !cleanupMaps.includes(resolved.mapId)) {
+      locks.push(issue('BATTLEFIELD_MAP_ALREADY_CLEARED', 'Select an uncleared battlefield for post-infestation cleanup.', 'mapId'));
+    }
     if (!infestation?.hiveTargetsConfirmed) locks.push(issue('HIVE_INTELLIGENCE_REQUIRED', 'Confirmed hive target geometry is required.', `world.systems.${mission.systemId}.infestation.hiveTargetsConfirmed`));
     if (mission.opponentFactionId !== 'brood' || !FACTION_CATALOG.brood.hostile || mission.objective?.type !== 'purge_brood' || !mission.objective?.infestation) locks.push(issue('BROOD_PURGE_CATALOG_INVALID', 'UGA Brood contract violates purge invariants.', 'missionId'));
     if (!mission.objective.hiveTargetIds.length || mission.objective.hiveTargetIds.some(targetId => !site?.hiveTargetIds.includes(targetId))) locks.push(issue('HIVE_TARGET_INVALID', 'UGA Brood operation requires valid hive targets.', 'missionId'));
@@ -317,7 +365,9 @@ export function validateGroundOperationRequest(state, request = {}, options = {}
 }
 
 function createGroundOperationForSchema(state, request, schemaVersion) {
-  const validation = validateGroundOperationRequest(state, request, { requireGroundLocation: schemaVersion === GROUND_OPERATION_SCHEMA_VERSION });
+  const missionForRequest = MISSION_CATALOG[request.missionId];
+  const postClearCleanup = postClearBroodMaps(state, missionForRequest);
+  const validation = validateGroundOperationRequest(state, request, { requireGroundLocation: schemaVersion === GROUND_OPERATION_SCHEMA_VERSION || Boolean(postClearCleanup) });
   if (!validation.ok) throw new DomainValidationError('Ground operation request is invalid.', validation.issues, 'GROUND_OPERATION_REQUEST_INVALID');
   const { mission, proxyFactionId, commanderId, specialistIds, doctrineId, supportId, landingZoneId, deploymentManifest, groundLocation } = validation.resolved;
   const site = SITE_CATALOG[mission.siteId];
@@ -342,6 +392,18 @@ function createGroundOperationForSchema(state, request, schemaVersion) {
       loyalty: state.personnel.specialists[id].loyalty
     }))
   };
+  /* LOOP (reward alignment): the reward plan is no longer a flat copy of the
+     mission table.
+     - FRONT BOUNTY: a hot front pays a salvage bounty on credits, alloys and
+       components (up to +40% at pressure 100), so "which operation" is a real
+       choice driven by the front map instead of mission order.
+     - REPLAY DECAY: a re-run decays toward a 35% floor (72% per completion),
+       so re-farming one authored map can never out-earn exploring the frontier.
+     Both travel as explicit integer modifiers on the operation: the validator
+     recomputes the plan from the mission table plus these two numbers, so a
+     host can reject a tampered plan without access to campaign state. */
+  const rewardModifiers = rewardModifiersFor(state, mission);
+  const rewardPlan = scaledRewardPlan(mission.rewards, rewardModifiers);
   const operation = {
     schemaVersion,
     kind: schemaVersion === GROUND_OPERATION_SCHEMA_VERSION ? GROUND_OPERATION_KIND_V3 : 'GroundOperation',
@@ -382,7 +444,9 @@ function createGroundOperationForSchema(state, request, schemaVersion) {
       terrain: site.biome,
       hazards: [...site.hazards],
       threat: mission.missionType === 'uga_brood_purge' ? infestation.severity : mission.difficulty * 14,
-      infestationActive: mission.missionType === 'uga_brood_purge' ? infestation.active : false,
+      // A legacy-cleared system can still hold a live nest on an uncleared
+      // authored map. Operation validation describes the local battlefield.
+      infestationActive: mission.missionType === 'uga_brood_purge' ? infestation.active || Boolean(postClearCleanup?.includes(groundLocation?.mapId)) : false,
       hiveTargetIds: mission.missionType === 'uga_brood_purge' ? [...mission.objective.hiveTargetIds] : [],
       landingZoneId,
       ...(groundLocation ? { location: deepClone(groundLocation) } : {})
@@ -398,7 +462,8 @@ function createGroundOperationForSchema(state, request, schemaVersion) {
     personnelSnapshot,
     deploymentManifest: deepClone(deploymentManifest),
     deploymentCost: mergeCosts(mission.baseDeploymentCost, SUPPORT_CATALOG[supportId].cost),
-    rewardPlan: deepClone(mission.rewards),
+    rewardModifiers,
+    rewardPlan,
     returnRoute: deepClone(state.route)
   };
   if (schemaVersion === GROUND_OPERATION_SCHEMA_VERSION) {
@@ -419,6 +484,35 @@ export function createGroundOperation(state, request = {}) {
 
 export function createGroundOperationV2(state, request = {}) {
   return createGroundOperationForSchema(state, request, LEGACY_GROUND_OPERATION_SCHEMA_VERSION);
+}
+
+export const FRONT_BOUNTY_MAX_PCT = 40;
+export const REPLAY_REWARD_FLOOR_PCT = 35;
+const REPLAY_REWARD_DECAY = 0.72;
+const BOUNTY_RESOURCE_KEYS = new Set(['credits', 'alloys', 'components']);
+const REWARD_MODIFIER_DEFAULTS = Object.freeze({ frontBountyPct: 0, replayScalePct: 100 });
+
+export function rewardModifiersFor(state, mission) {
+  const pressure = Math.max(0, Math.min(SOLO_FRONT_PRESSURE_CAP, state.world?.systems?.[mission.systemId]?.soloFront?.pressure || 0));
+  const completions = Math.max(0, state.missions?.[mission.id]?.completions || 0);
+  return {
+    frontBountyPct: Math.round(pressure * FRONT_BOUNTY_MAX_PCT / SOLO_FRONT_PRESSURE_CAP),
+    replayScalePct: completions === 0 ? 100 : Math.max(REPLAY_REWARD_FLOOR_PCT, Math.round(100 * REPLAY_REWARD_DECAY ** completions))
+  };
+}
+
+function scaledRewardPlan(missionRewards, modifiers) {
+  const plan = {};
+  // Iterate the table's own keys (reputation included: it is a reward too and
+  // decays like the rest) so the plan keeps the catalog's key order the
+  // validator's stableStringify comparison relies on.
+  for (const [key, raw] of Object.entries(missionRewards)) {
+    let value = Math.max(0, Math.round(Number(raw) || 0));
+    if (BOUNTY_RESOURCE_KEYS.has(key)) value = Math.round(value * (100 + modifiers.frontBountyPct) / 100);
+    value = Math.round(value * modifiers.replayScalePct / 100);
+    plan[key] = value;
+  }
+  return plan;
 }
 
 export function validateGroundOperation(operation) {
@@ -442,7 +536,13 @@ export function validateGroundOperation(operation) {
       if (operation[field] !== mission[field]) issues.push(issue('MISSION_CONTRACT_MISMATCH', `${field} does not match the mission catalog.`, field));
     }
     if (stableStringify(operation.objective) !== stableStringify(mission.objective)) issues.push(issue('OBJECTIVE_MISMATCH', 'Operation objective does not match its mission.', 'objective'));
-    if (stableStringify(operation.rewardPlan) !== stableStringify(mission.rewards)) issues.push(issue('REWARD_PLAN_MISMATCH', 'Operation rewards do not match its mission.', 'rewardPlan'));
+    const modifiers = operation.rewardModifiers || REWARD_MODIFIER_DEFAULTS;
+    const modifiersValid = Number.isInteger(modifiers.frontBountyPct) && modifiers.frontBountyPct >= 0 && modifiers.frontBountyPct <= FRONT_BOUNTY_MAX_PCT
+      && Number.isInteger(modifiers.replayScalePct) && modifiers.replayScalePct >= REPLAY_REWARD_FLOOR_PCT && modifiers.replayScalePct <= 100;
+    if (!modifiersValid) issues.push(issue('REWARD_MODIFIERS_INVALID', 'Operation reward modifiers are out of range.', 'rewardModifiers'));
+    // Legacy operations carry no modifiers and must still equal the mission
+    // table: the default pair scales every value by 100%, which round-trips.
+    if (stableStringify(operation.rewardPlan) !== stableStringify(scaledRewardPlan(mission.rewards, modifiers))) issues.push(issue('REWARD_PLAN_MISMATCH', 'Operation rewards do not match its mission and reward modifiers.', 'rewardPlan'));
     if (!mission.doctrineIds.includes(operation.doctrineId) || operation.configuration?.doctrineId !== operation.doctrineId || operation.configuration?.approach !== operation.doctrineId) issues.push(issue('DOCTRINE_INVALID', 'Operation doctrine is not allowed.', 'doctrineId'));
     if (!mission.supportIds.includes(operation.supportId) || operation.configuration?.supportId !== operation.supportId || operation.configuration?.support !== operation.supportId) issues.push(issue('SUPPORT_INVALID', 'Operation support is not allowed.', 'supportId'));
     if (!mission.landingZoneIds.includes(operation.landingZoneId) || operation.configuration?.landingZoneId !== operation.landingZoneId) issues.push(issue('LANDING_ZONE_INVALID', 'Operation landing zone is not allowed.', 'landingZoneId'));

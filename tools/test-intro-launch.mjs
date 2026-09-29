@@ -8,7 +8,7 @@ import {fileURLToPath} from 'node:url';
 const root=resolve(fileURLToPath(new URL('..',import.meta.url)));
 const url=process.argv.find(a=>/^https?:\/\//.test(a))||'http://127.0.0.1:8911/';
 const out=join(root,'releases','title-fit-360-mobile.png');
-const titleAsset='assets/brand/massfront-title-command-conquer-overwhelm-v1.png';
+const titleAssetPrefix='data:image/webp;base64,';
 await mkdir(join(root,'releases'),{recursive:true});
 
 const browser=await launchPwBrowser({
@@ -26,7 +26,7 @@ try{
   async function waitForIntro(){
     await page.waitForFunction(()=>typeof APP_VERSION!=='undefined'&&
       document.querySelector('.mfTitleReveal.open')&&
-      document.querySelector('img[src*="massfront-title-command-conquer-overwhelm-v1.png"]'),{timeout:60000});
+      document.querySelector('#mfTitleWordmark[src^="data:image/webp;base64,"]'),{timeout:60000});
   }
   await page.goto(url,{waitUntil:'domcontentloaded',timeout:60000});
   await waitForIntro();
@@ -34,7 +34,7 @@ try{
      visual asset players see, rather than the old text-only wordmark. */
   await page.waitForTimeout(1650);
   const first=await page.evaluate(()=>{
-    const title=document.querySelector('img[src*="massfront-title-command-conquer-overwhelm-v1.png"]');
+    const title=document.querySelector('#mfTitleWordmark');
     const logo=title&&title.getBoundingClientRect();
     return {
       version:document.querySelector('.mfTitleBuild')?.textContent.trim(),
@@ -55,7 +55,7 @@ try{
   const relaunch=await page.evaluate(()=>document.querySelector('.mfTitleReveal.open')?.id||'');
   if(errors.length) throw new Error('page errors: '+errors.join('; '));
   if(first.replay) throw new Error('obsolete replay card is still present');
-  if(!first.asset.endsWith(titleAsset)||!first.loaded||first.width<1||first.height<1) throw new Error('supplied title asset is not visible '+JSON.stringify(first));
+  if(!first.asset.startsWith(titleAssetPrefix)||!first.loaded||first.width<1||first.height<1) throw new Error('supplied title asset is not visible '+JSON.stringify(first));
   if(!/^v1\.32\.2\s+\u00b7\s+PRE-ALPHA$/.test(first.version||'')) throw new Error('bad v1.32.2 build label '+first.version);
   /* Retired text-wordmark build-label assertion retained only as a record of
      the prior test shape; the v1.32.2 launch-art assertion above is authoritative.

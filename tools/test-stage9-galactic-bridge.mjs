@@ -63,7 +63,7 @@ const { operation } = beginGroundOperation(state, {
   missionId: 'uga_pale_bloom',
   factionId: 'nova',
   commanderId: 'nova_holt',
-  mapId: 'karak_meridian_quarantine_standard',
+  mapId: 'karak_meridian_quarantine_compact',
   deploymentManifest: {
     units: [{ id: 'recon_team', count: 1 }, { id: 'line_section', count: 1 }, { id: 'armored_element', count: 1 }],
     structures: [{ id: 'field_relay', count: 1 }],
@@ -83,13 +83,13 @@ assert.equal(requestValidation.ok, true, requestValidation.issues.join(','));
 assert.equal(api.validateDeploymentContract(operation).ok, true);
 const operationLoadScreen = api.describeOperationLoadScreen(operation, operation.battlefield.location);
 assert.deepEqual(JSON.parse(JSON.stringify(operationLoadScreen)), {
-  title: 'Transit Court',
+  title: 'Clinic Roof',
   eyebrow: 'DEPLOYING TO  ·  Meridian K-4',
   poi: 'Meridian Quarantine',
   hook: 'UGA CONTAINMENT OPERATION',
   chips: [
     { key: 'SYSTEM', value: 'Karak' },
-    { key: 'SCALE', value: 'standard' },
+    { key: 'SCALE', value: 'compact' },
     { key: 'THREAT', value: 'T3' }
   ]
 });
@@ -99,14 +99,15 @@ assert.doesNotMatch(JSON.stringify(operationLoadScreen), /Vespera|Nordhall|Pyrae
 // The classic receiver is an independent trust boundary. Lock its compact
 // mission authority to every authored module mission so the two documents
 // cannot drift back to a one-mission/one-side-only release.
-state.missions.uga_pale_bloom.completions = 1;
-state.missions.uga_silent_spine.completions = 1;
+// The parity sweep tests every authored receiver row, including later regions
+// whose prior mission must already be won under the current region ladder.
+for (const missionId of Object.keys(MISSION_CATALOG)) state.missions[missionId].completions = 1;
 let parityIndex = 0;
 for (const mission of Object.values(MISSION_CATALOG)) {
   const parityOperation = createGroundOperation(state, {
     missionId: mission.id,
     factionId: mission.contractFactionId || 'nova',
-    mapId: getUgaGroundAreaForMission(mission.id).recommendedMapId
+    mapId: getUgaGroundAreaForMission(mission.id).maps.find(map => map.size === 'compact').id
   });
   const parityNonce = `stage9_parity_${String(parityIndex).padStart(4, '0')}`;
   const parityRequest = createGroundOperationRequestV2(parityOperation, {
@@ -160,6 +161,12 @@ relabeledBattlefield.checksum = api.checksum(relabeledBattlefield);
 const relabeledValidation = api.validateRequest(relabeledBattlefield, nonce, profileId, now + 1, ticket);
 assert.equal(relabeledValidation.ok, false);
 assert.ok(relabeledValidation.issues.includes('OPERATION_BATTLEFIELD_INVALID'));
+const invalidRewardModifiers = structuredClone(request);
+invalidRewardModifiers.operation.rewardModifiers.frontBountyPct = 400;
+invalidRewardModifiers.checksum = api.checksum(invalidRewardModifiers);
+const invalidRewardValidation = api.validateRequest(invalidRewardModifiers, nonce, profileId, now + 1, ticket);
+assert.equal(invalidRewardValidation.ok, false);
+assert.ok(invalidRewardValidation.issues.includes('OPERATION_REWARD_MODIFIERS_INVALID'));
 const legacyRequest = structuredClone(request);
 legacyRequest.contentVersion = 'catalog-7';
 delete legacyRequest.operation.battlefield.location;
@@ -314,7 +321,7 @@ const runtime = {
   META: { settings: { experimentalExploration: false }, marker: 'live-career' },
   metaFresh: () => ({ settings: {} }),
   metaSave: () => true,
-  MAPDEFS: { vespera_plateau_medium: { region: 'vespera_plateau', theme: 'ashland', size: 'standard' } },
+  MAPDEFS: { vespera_plateau_small: { region: 'vespera_plateau', theme: 'ashland', size: 'compact' } },
   AI: { fac: 'nova' },
   aiSlots: Array.from({ length: 3 }, () => ({ on: false, diff: 0, ally: false, zone: '', behavior: '' })),
   normalizeAiSlotsForBattlefield: () => {},
@@ -391,8 +398,8 @@ assert.equal(runtime.META.marker, 'live-career', 'temporary META must be restore
 }
 assert.equal(runtime.activeWarMode, 'galactic');
 assert.equal(runtime.goalSel, 'purge');
-assert.equal(runtime.battlefieldPreset, 'standard');
-assert.equal(liveApi.runtimeMapId, 'vespera_plateau_medium');
+assert.equal(runtime.battlefieldPreset, 'compact');
+assert.equal(liveApi.runtimeMapId, 'vespera_plateau_small');
 assert.deepEqual(JSON.parse(JSON.stringify(liveApi.playerLocation)), operation.battlefield.location);
 assert.deepEqual({
   title: loadNodes.get('loadTitle').textContent,
@@ -404,17 +411,17 @@ assert.deepEqual({
     value: chip.children[1].textContent
   }))
 }, {
-  title: 'Transit Court',
+  title: 'Clinic Roof',
   eyebrow: 'DEPLOYING TO  ·  Meridian K-4',
   poi: 'Meridian Quarantine',
   hook: 'UGA CONTAINMENT OPERATION',
   chips: [
     { key: 'SYSTEM', value: 'KARAK' },
-    { key: 'SCALE', value: 'STANDARD' },
+    { key: 'SCALE', value: 'COMPACT' },
     { key: 'THREAT', value: 'T3' }
   ]
 }, 'the selected UGA identity must overwrite the internal MAPDEF loading copy');
-assert.ok(toasts.some(message => message.includes('Transit Court')), 'tactical copy must use the selected UGA map name');
+assert.ok(toasts.some(message => message.includes('Clinic Roof')), 'tactical copy must use the selected UGA map name');
 assert.equal(toasts.some(message => /Gloam|Vespera|Nordhall/i.test(message)), false,
   'internal terrain-template lore must not leak into tactical copy');
 assert.deepEqual(JSON.parse(JSON.stringify(runtime.goalDef())), {

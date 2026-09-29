@@ -29,7 +29,7 @@
      stage, while authored operations use the separate battlefield authority
      below after the player explicitly chooses a UGA map. */
   const GALACTIC_EXPEDITION_LOCATION_CONTRACT={
-    aelos:new Set(['nexus_vii','aelos_caldris','aelos_ithara','aelos_embassy_spindle','aelos_logistics_array','aelos_veyra_gate','aelos_heliograph','aelos_freeport']),
+    aelos:new Set(['nexus_vii','aelos_caldris','aelos_ithara','aelos_zephyros','aelos_embassy_spindle','aelos_logistics_array','aelos_veyra_gate','aelos_heliograph','aelos_freeport']),
     veyra:new Set(['nexus_vii','veyra_orison','veyra_nacre','veyra_archive_hulk','veyra_aelos_gate','veyra_karak_gate','veyra_lens','veyra_ossuary']),
     karak:new Set(['nexus_vii','karak_meridian','karak_tethys','karak_colony_spine','karak_lifeboat_field','karak_veyra_gate','karak_spine','karak_hive'])
   };
@@ -199,7 +199,7 @@
     if(!rule)throw new Error('GALACTIC_OPERATION_OBJECTIVE_UNMAPPED');
     return Object.freeze({id:rule.id,em:rule.em,hud:rule.hud,nm:rule.nm,ds:rule.ds,objectiveType:objective.type});
   }
-  const GROUND_OPERATION_V3_FIELDS=['schemaVersion','kind','profileId','sequence','launchRevision','missionId','missionType','systemId','siteId','sponsorId','contractFactionId','proxyFactionId','playerFactionId','opponentFactionId','commanderId','specialistIds','doctrineId','supportId','landingZoneId','configuration','objective','difficulty','intelligence','battlefield','scanTierAtLaunch','threatAtLaunch','factionSnapshot','personnelSnapshot','deploymentManifest','deploymentCost','rewardPlan','returnRoute','commanderRosterFingerprint','commanderIdentity','operationId','resultSeed','returnToken'];
+  const GROUND_OPERATION_V3_FIELDS=['schemaVersion','kind','profileId','sequence','launchRevision','missionId','missionType','systemId','siteId','sponsorId','contractFactionId','proxyFactionId','playerFactionId','opponentFactionId','commanderId','specialistIds','doctrineId','supportId','landingZoneId','configuration','objective','difficulty','intelligence','battlefield','scanTierAtLaunch','threatAtLaunch','factionSnapshot','personnelSnapshot','deploymentManifest','deploymentCost','rewardModifiers','rewardPlan','returnRoute','commanderRosterFingerprint','commanderIdentity','operationId','resultSeed','returnToken'];
   const OPERATION_MOD_IDS=new Set(['survey_link','repair_nanites','medical_cache']);
   const DOCTRINE_SCORE_DELTA={containment:8,methodical:7,rapid:2,covert:5};
   const SUPPORT_SCORE_DELTA={survey_drones:4,field_lab:2,medevac:1,heavy_lift:5};
@@ -425,6 +425,11 @@
     if(!operation||typeof operation!=='object'||Array.isArray(operation))issue(issues,'OPERATION_NOT_OBJECT');
     else {
       if(!exactKeys(operation,GROUND_OPERATION_V3_FIELDS))issue(issues,'OPERATION_FIELDS_INVALID');
+      const modifiers=operation.rewardModifiers;
+      if(!exactKeys(modifiers,['frontBountyPct','replayScalePct'])
+         ||!Number.isInteger(modifiers.frontBountyPct)||modifiers.frontBountyPct<0||modifiers.frontBountyPct>40
+         ||!Number.isInteger(modifiers.replayScalePct)||modifiers.replayScalePct<35||modifiers.replayScalePct>100)
+        issue(issues,'OPERATION_REWARD_MODIFIERS_INVALID');
       if(operation.schemaVersion!==3||operation.kind!=='GroundOperationV3')issue(issues,'OPERATION_SCHEMA_INVALID');
       if(operation.commanderRosterFingerprint!==COMMANDER_ROSTER_FINGERPRINT
          ||operation.commanderRosterFingerprint!==envelope.commanderRosterFingerprint)issue(issues,'OPERATION_COMMANDER_ROSTER_INVALID');
@@ -968,7 +973,7 @@
   function paintReturnControls(){
     if(!bridge.active||(!bridge.report&&bridge.status!=='result-expired'))return;
     const menu=document.getElementById('restartBtn'),cont=document.getElementById('goContinueBtn');
-    if(menu)menu.textContent='←  RETURN TO NEXUS-VII';
+    if(menu)menu.textContent=bridge.report?.report.outcome==='setback'?'↻  RETURN TO RETRY':'←  RETURN TO NEXUS-VII';
     if(cont){cont.textContent='▶  RETURN TO NEXUS-VII';cont.style.display='none';cont.disabled=false;}
     const rewards=document.getElementById('goRewards');
     if(rewards&&!rewards.querySelector('.mfGalacticReport')){

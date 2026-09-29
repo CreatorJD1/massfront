@@ -1110,6 +1110,8 @@ function packPanel(){
   if(el) return el;
   el = document.createElement('div');
   el.id = 'packPanel';
+  el.className = 'mfNormalInlineStatus';
+  el.dataset.loaderArchetype = 'normal';
   el.innerHTML = '<div class="packRow"><div><div id="packTxt"></div><div id="packSub"></div></div>'
                + '<button id="packBtn"></button></div>'
                + '<div id="packBarO"><div id="packBarF"></div></div>';

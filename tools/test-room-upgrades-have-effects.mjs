@@ -28,7 +28,7 @@ const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const domain = join(root, 'modules', 'space_exploration', 'src', 'domain');
 const load = name => import(pathToFileURL(join(domain, name)).href);
 
-const { MODULE_CATALOG, DISTRICT_CATALOG } = await load('catalog.js');
+const { MODULE_CATALOG, DISTRICT_CATALOG, SPECIALIST_CATALOG, COMMANDER_CATALOG } = await load('catalog.js');
 const { calculateFacilityCapabilities } = await load('construction.js');
 const { CONSTRUCTION_FACILITY_CATALOG } = await load('construction_catalog.js');
 
@@ -110,12 +110,17 @@ function lift(name) {
   const next = blanked.indexOf('\nfunction ', at + 10);
   return blanked.slice(at, next < 0 ? blanked.length : next);
 }
-const personnelDelta = new Function(`
+/* injuryCycles became faction-aware: the patient's own faction decides which
+   medic perk applies, so the lifted functions now read the personnel catalogs
+   through personFactionId. The eval scope is a blank world — hand it the real
+   catalogs rather than stubs, or the perk math under test would be fiction. */
+const personnelDelta = new Function('SPECIALIST_CATALOG', 'COMMANDER_CATALOG', `
   const INJURY_BAND_ORDER = ['none', 'light', 'moderate', 'severe'];
+  ${lift('personFactionId')}
   ${lift('effectiveInjuryBand')}
   ${lift('injuryCycles')}
   ${lift('buildPersonnelDelta')}
-  return buildPersonnelDelta;`)();
+  return buildPersonnelDelta;`)(SPECIALIST_CATALOG, COMMANDER_CATALOG);
 
 const operationWith = commanderXpPct => ({
   commanderId: 'cmdr', specialistIds: ['spec'], missionType: 'uga_contract',

@@ -141,6 +141,9 @@ const karakLocation = context.__MF_GALACTIC_BRIDGE.resolveExpeditionLocation({ s
 assert.deepEqual(JSON.parse(JSON.stringify(karakLocation)), { systemId: 'karak', targetId: 'karak_tethys' },
   'the secured route may carry UGA origin identity but no hidden RTS map choice');
 assert.equal(context.__MF_GALACTIC_BRIDGE.resolveExpeditionLocation({ systemId: 'karak', targetId: 'unknown' }), null);
+const zephyrosLocation = context.__MF_GALACTIC_BRIDGE.resolveExpeditionLocation({ systemId: 'aelos', targetId: 'aelos_zephyros' });
+assert.deepEqual(JSON.parse(JSON.stringify(zephyrosLocation)), { systemId: 'aelos', targetId: 'aelos_zephyros' },
+  'the authored gas_air host world is a valid secured-route location');
 
 context.showFrontScreen('startScreen');
 await new Promise(resolve => setTimeout(resolve, 0));
@@ -408,33 +411,27 @@ assert.deepEqual(fallbackReturns, ['campaign_hub'], 'an explicit UGA retry must 
 const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const main = fs.readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
 const hudflow = fs.readFileSync(new URL('../src/ui/hudflow.js', import.meta.url), 'utf8');
+const galaxyUi = fs.readFileSync(new URL('../src/galaxyui.js', import.meta.url), 'utf8');
 const intro = fs.readFileSync(new URL('../src/intro.js', import.meta.url), 'utf8');
 const launcher = fs.readFileSync(new URL('../src/launcher.js', import.meta.url), 'utf8');
 const meta = fs.readFileSync(new URL('../src/game/meta.js', import.meta.url), 'utf8');
 const responsiveVerifier = fs.readFileSync(new URL('../modules/space_exploration/tools/verify-responsive-interface.mjs', import.meta.url), 'utf8');
-/* The primary action is DEPLOY MASSFRONT, the label the owner concept uses.
-   What this guards is not the wording but the claim: galaxyui.js writes this
-   button first and said it opened the war table, which is not where it goes.
-   hudflow.js runs later and therefore owns both the label and an accurate
-   aria-label. Pinning the exact words is what made a legitimate copy change
-   fail here before, so the semantic guard is its own assertion. */
-assert.match(html, /id="startBtn"[^>]*>DEPLOY MASSFRONT <i class="ctaChev"/);
-assert.match(hudflow, /start\.innerHTML='DEPLOY MASSFRONT <i class="ctaChev"/,
-  'the late home-chrome takeover must own the label, not leave galaxyui to win');
-assert.match(hudflow, /start\.setAttribute\('aria-label','Deploy: open the Galactic command shell'\)/);
+/* The launcher has one visible game entry. galaxyui still rewrites its old
+   label during boot, so hudflow's later takeover must restore the final copy. */
+assert.match(html, /id="startBtn"[^>]*>ENTER MASSFRONT <i class="ctaChev"/);
+assert.doesNotMatch(html, /id="ugaBtn"/, 'the duplicate Explore Space tile must not be in the main menu');
+assert.match(galaxyUi, /start\.innerHTML='ENTER MASSFRONT <i class="ctaChev"/,
+  'the early galaxyui writer must name the same primary action');
+assert.doesNotMatch(galaxyUi, /ugaBtn:\['EXPLORE SPACE'/,
+  'the galaxyui redraw must not restore the retired tile');
+assert.match(hudflow, /start\.innerHTML='ENTER MASSFRONT <i class="ctaChev"/);
+assert.match(hudflow, /start\.setAttribute\('aria-label','Enter MASSFRONT command home'\)/);
+assert.match(hudflow, /mfRenameFrontNav=function\(\)\{ _rn\.apply\(this,arguments\); mfPatchHomeChrome\(\); \}/,
+  'the late home-chrome takeover must win over the old galaxyui label');
 assert.doesNotMatch(hudflow, /aria-label','[^']*war table/i,
-  'the primary action enters the Galactic command shell; it must not promise the war table');
+  'the primary action enters Galactic Command, not the Classic War Table');
 assert.match(main, /mfOpenExploration\('campaign_hub',\{explicitRetry:true,launchButtonId:'startBtn'\}\)/,
   'START must enter the stable Galactic home; orbital travel requires deliberate Depart');
-/* UGA COMMAND NOW OPENS ON THE SHIP IN SPACE.
-   This pinned the whole call, including 'campaign_hub' — which meant both menu
-   doors led to the same War Table panel and the button named after the ship
-   never showed the ship. The property this assertion exists to protect is the
-   explicit retry, so that the control can still climb out of Classic fallback;
-   the destination is a separate, deliberate decision, covered by
-   tools/test-uga-command-opens-in-space.mjs. */
-assert.match(main, /mfOpenExploration\('system',\{explicitRetry:true,launchButtonId:'ugaBtn'\}\)/,
-  'the visible UGA Command control must be an explicit retry that can leave Classic fallback, and must open in space');
 assert.match(main, /options&&options\.explicitRetry===true[\s\S]*?clearClassicFallback\(\);[\s\S]*?location\.href=packUrl/,
   'the Classic latch must clear only after UGA ticket and mount preparation succeed');
 assert.match(main, /if\(!opened\)openLegacyWarRoom\(\)/, 'packaged build must keep the installed War Room fallback');
@@ -492,8 +489,14 @@ for (const [script, functionName] of [[intro, 'galacticMenuRouteLaunch'], [launc
     location: { search: '' }, sessionStorage: { getItem: () => null }
   }), false, `${functionName}: an ordinary clean launch must retain its normal startup`);
 }
-assert.match(launcher, /L\.bypass=isGalacticReturn\(\);if\(L\.bypass\)\{L\.gate=false;L\.passed=true;return;\}/,
+/* The guard is what matters, not which predicate names it. Sibling documents
+   that re-navigate index.html each need the same bypass, so the Stormpeak
+   ocean tester joined Galactic under isModuleReturn(); pinning the old literal
+   made this gate fail on a rename while the property it guards was intact. */
+assert.match(launcher, /L\.bypass=isModuleReturn\(\);if\(L\.bypass\)\{L\.gate=false;L\.passed=true;return;\}/,
   'internal menu and battle handoffs must leave startup before login/update phases can redirect them');
+assert.match(launcher, /function isModuleReturn\(\)\{return isGalacticReturn\(\)\|\|isStormpeakReturn\(\);\}/,
+  'every sibling-document return must bypass startup, not just the Galactic one');
 assert.match(intro, /if\(galacticMenuRouteLaunch\(\)\)\{ revealFront\(\); return; \}/,
   'a Galactic submenu return must reveal the base UI without replaying the launch title');
 assert.match(intro, /window\.mfDismissIntroForGalacticRoute=dismissIntroForGalacticRoute/);

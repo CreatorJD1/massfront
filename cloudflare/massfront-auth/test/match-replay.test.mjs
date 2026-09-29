@@ -24,8 +24,13 @@ class Socket{
 globalThis.WebSocketPair=class{
   constructor(){this[0]=new Socket();this[1]=new Socket();this[0].peer=this[1];this[1].peer=this[0];}
 };
-const frame=(type,extra={})=>({protocol:'massfront-match',v:1,type,...extra});
+const frame=(type,extra={})=>({protocol:'massfront-match',v:2,type,...extra});
 const hex=n=>String(n).repeat(64);
+const setup=(mode='skirmish')=>({schema:1,mode,slots:2,map:'aelos_north_medium',
+  seed:'network:'+'a'.repeat(32)+':'+hex(3),preset:mode==='skirmish'?'compact':'standard',
+  difficulty:1,playerFaction:'nova',commander:'nova_kai',enemyFaction:'horde',
+  goal:'annihilate',timeLimit:600,resPace:1,crateRate:1,infestationOn:false,
+  defenseFocus:0,deploymentPackage:'prepared',wildcards:0});
 async function make(saved=null,sockets=[]){
   const writes=[],alarms=[],state={storage:{sql:{exec(){}},get:async()=>saved,
     put:async(k,v)=>{writes.push(structuredClone(v));},setAlarm:async at=>{alarms.push(at);}},
@@ -35,15 +40,29 @@ async function make(saved=null,sockets=[]){
 }
 async function admit(H,seat,rosterSize=2,buildVersion='1.33.74'){
   const metadata={matchId:'a'.repeat(32),lobbyId:'b'.repeat(32),userId:seat,seat,rosterSize,
-    buildVersion,manifestHash:hex(1),balanceHash:hex(2),rulesHash:hex(3)};
+    buildVersion,manifestHash:hex(1),balanceHash:hex(2),rulesHash:hex(3),setup:setup()};
   const response=await H.room.fetch(new Request('https://room.invalid/socket',{headers:{upgrade:'websocket',
     'x-mf-seat-verification':JSON.stringify(metadata)}}));
   assert.equal(response.status,101);const socket=response.webSocket.peer;
   return {socket,welcome:socket.frames().find(f=>f.type==='welcome')};
 }
-async function pair(roster=2){
-  const H=await make();H.a=await admit(H,1,roster);H.b=await admit(H,2,roster);
-  if(roster===3)H.c=await admit(H,3,roster);return H;
+async function bootstrap(H,hash=hex('c')){
+  const prepare=H.a.socket.frames().find(f=>f.type==='prepare');assert(prepare);
+  await send(H,H.a.socket,frame('bootstrapReady',{tick:0,setupHash:prepare.setupHash,hash}));
+  await send(H,H.b.socket,frame('bootstrapReady',{tick:0,setupHash:prepare.setupHash,hash}));
+  assert.equal(H.room.startPending,true);assert.equal(H.room.started,false);
+  return prepare;
+}
+async function finishStart(H,prepare){
+  await send(H,H.a.socket,frame('startReady',{tick:0,setupHash:prepare.setupHash}));
+  await send(H,H.b.socket,frame('startReady',{tick:0,setupHash:prepare.setupHash}));
+  assert.equal(H.room.started,true);
+}
+async function ready(H,hash=hex('c')){await finishStart(H,await bootstrap(H,hash));}
+async function pair(autoReady=true){
+  const H=await make();H.a=await admit(H,1);H.b=await admit(H,2);
+  if(autoReady)await ready(H);
+  return H;
 }
 async function step(H){
   assert(H.room.nextTickAt>0);now=Math.ceil(H.room.nextTickAt);
@@ -53,12 +72,129 @@ async function disconnect(H,client){client.socket.close();await H.room.webSocket
 async function resume(H,client,cursor,token=client.welcome.resumeToken){
   const suffix=cursor===undefined?'':'.'+cursor;
   return H.room.fetch(new Request('https://room.invalid/socket',{headers:{upgrade:'websocket',
-    'x-mf-resume-forwarded':'1','sec-websocket-protocol':`massfront.v1, mf-resume.${client.welcome.seat}.${token}${suffix}`}}));
+    'x-mf-resume-forwarded':'1','sec-websocket-protocol':`massfront.v2, mf-resume.${client.welcome.seat}.${token}${suffix}`}}));
 }
 async function send(H,socket,value){await H.room.webSocketMessage(socket,JSON.stringify(value));}
 const upgrade=frame('commands',{seq:1,targetTick:2,commands:[{type:'upgrade',building:{id:0,type:'pgen'},scope:'same-type'}]});
 const test=async(name,fn)=>{await fn();checks.push(name);console.log('PASS '+name);};
 try{
+  await test('v2 prepare and start each hold tick zero until both seats acknowledge',async()=>{
+    const H=await pair(false),P=H.a.socket.frames().find(f=>f.type==='prepare');
+    assert(P);assert.deepEqual(P.setup,setup());assert.deepEqual(P.seats,[1,2]);
+    assert.equal(P.setupHash,Buffer.from(await crypto.subtle.digest('SHA-256',
+      new TextEncoder().encode(JSON.stringify(P.setup)))).toString('hex'));
+    assert.equal(H.room.started,false);assert.equal(H.room.tickTimer,null);
+    assert(H.alarms.includes(H.room.prepareDeadline));
+    now+=1000;await H.room._runTicks();assert.equal(H.room.tick,0);
+    await send(H,H.a.socket,frame('commands',{seq:1,targetTick:2,commands:[{type:'move',x:1,y:2}]}));
+    assert.equal(H.a.socket.frames().at(-1).code,'match_not_running');
+    await send(H,H.a.socket,frame('stateHash',{tick:0,hash:hex('a')}));
+    assert.equal(H.a.socket.frames().at(-1).code,'invalid_state_hash');
+    const start=await bootstrap(H);assert.equal(H.room.tickTimer,null);assert.equal(H.room.nextTickAt,0);
+    assert.equal(H.room.readyHashes.size,2);assert.deepEqual(H.a.socket.frames().at(-1),frame('start',{tick:0,seats:[1,2]}));
+    await send(H,H.a.socket,frame('startReady',{tick:0,setupHash:start.setupHash}));
+    now+=1000;await H.room._runTicks();assert.equal(H.room.tick,0);assert.equal(H.room.tickTimer,null);
+    await send(H,H.a.socket,frame('commands',{seq:1,targetTick:2,commands:[{type:'move',x:1,y:2}]}));
+    assert.equal(H.a.socket.frames().at(-1).code,'match_not_running');
+    await send(H,H.b.socket,frame('startReady',{tick:0,setupHash:start.setupHash}));
+    assert.equal(H.room.started,true);assert(H.room.nextTickAt>now);
+  });
+  await test('room rejects an unsupported roster and old wire frames',async()=>{
+    const H=await make(),bad={matchId:'a'.repeat(32),lobbyId:'b'.repeat(32),userId:1,seat:1,
+      rosterSize:3,buildVersion:'1.33.74',manifestHash:hex(1),balanceHash:hex(2),rulesHash:hex(3),setup:setup()};
+    const rejected=await H.room.fetch(new Request('https://room.invalid/socket',{headers:{upgrade:'websocket',
+      'x-mf-seat-verification':JSON.stringify(bad)}}));
+    assert.equal(rejected.status,401);assert.equal(H.room.seats.size,0);
+    const P=await pair(false);await send(P,P.a.socket,{...frame('bootstrapReady'),v:1,tick:0,setupHash:hex('c'),hash:hex('c')});
+    assert.equal(P.a.socket.frames().at(-1).code,'protocol_mismatch');assert.equal(P.room.started,false);
+  });
+  await test('bootstrap setup or state mismatch ends without issuing tick one',async()=>{
+    const A=await pair(false),P=A.a.socket.frames().find(f=>f.type==='prepare');
+    await send(A,A.a.socket,frame('bootstrapReady',{tick:0,setupHash:hex('f'),hash:hex('c')}));
+    assert.equal(A.room.endReason,'bootstrap_setup_mismatch');assert.equal(A.room.started,false);
+    assert.equal(A.b.socket.frames().find(f=>f.type==='matchEnd').winnerSeat,null);
+    const B=await pair(false),Q=B.a.socket.frames().find(f=>f.type==='prepare');
+    await send(B,B.a.socket,frame('bootstrapReady',{tick:0,setupHash:Q.setupHash,hash:hex('c')}));
+    await send(B,B.b.socket,frame('bootstrapReady',{tick:0,setupHash:Q.setupHash,hash:hex('d')}));
+    assert.equal(B.room.endReason,'bootstrap_state_mismatch');assert.equal(B.room.tick,0);
+    assert.equal(B.room.tickTimer,null);assert.equal(B.a.socket.frames().find(f=>f.type==='matchEnd').winnerSeat,null);
+    assert.equal(P.setupHash,Q.setupHash);
+  });
+  await test('start-ready malformed frame, wrong setup and timeout fail closed without a winner',async()=>{
+    const H=await pair(false),P=await bootstrap(H);
+    await send(H,H.a.socket,frame('startReady',{tick:0,setupHash:P.setupHash,extra:true}));
+    assert.equal(H.a.socket.frames().at(-1).code,'invalid_start_ready');
+    assert.equal(H.room.startReadySeats.size,0);
+    await send(H,H.a.socket,frame('startReady',{tick:0,setupHash:P.setupHash}));
+    now=H.room.prepareDeadline+1;await H.room.alarm();
+    assert.equal(H.room.endReason,'start_ready_timeout');assert.equal(H.room.started,false);
+    assert.equal(H.room.tick,0);assert.equal(H.room.tickTimer,null);
+    assert.equal(H.b.socket.frames().find(f=>f.type==='matchEnd').winnerSeat,null);
+    const M=await pair(false);await bootstrap(M);
+    await send(M,M.a.socket,frame('startReady',{tick:0,setupHash:hex('f')}));
+    assert.equal(M.room.endReason,'start_setup_mismatch');assert.equal(M.room.tick,0);
+    assert.equal(M.b.socket.frames().find(f=>f.type==='matchEnd').winnerSeat,null);
+  });
+  await test('bootstrap deadline and prestart reconnect require a fresh ready hash',async()=>{
+    const T=await pair(false);now=T.room.prepareDeadline+1;await T.room.alarm();
+    assert.equal(T.room.endReason,'bootstrap_timeout');assert.equal(T.room.tick,0);
+    const H=await pair(false),P=H.a.socket.frames().find(f=>f.type==='prepare');
+    await send(H,H.b.socket,frame('bootstrapReady',{tick:0,setupHash:P.setupHash,hash:hex('c')}));
+    assert.equal(H.room.readyHashes.has(2),true);await disconnect(H,H.a);
+    assert.equal(H.room.readyHashes.size,0);
+    const response=await resume(H,H.a,0),socket=response.webSocket.peer;
+    assert.equal(response.status,101);assert.equal(socket.frames().some(f=>f.type==='prepare'),false);
+    await send(H,socket,frame('resumeReady',{tick:0}));
+    assert.deepEqual(socket.frames().slice(-2).map(f=>f.type),['resumeReadyAck','prepare']);
+    assert.equal(H.b.socket.frames().at(-1).type,'prepare');
+    assert.equal(H.room.started,false);
+    await send(H,H.b.socket,frame('bootstrapReady',{tick:0,setupHash:P.setupHash,hash:hex('c')}));
+    await send(H,socket,frame('bootstrapReady',{tick:0,setupHash:P.setupHash,hash:hex('c')}));
+    assert.equal(H.room.startPending,true);assert.equal(H.room.started,false);
+    H.a.socket=socket;await finishStart(H,P);
+  });
+  await test('disconnect during start barrier keeps hash0 but requires fresh start-ready from both seats',async()=>{
+    const H=await pair(false),P=await bootstrap(H);
+    await send(H,H.a.socket,frame('startReady',{tick:0,setupHash:P.setupHash}));
+    assert.equal(H.room.startReadySeats.size,1);await disconnect(H,H.b);
+    assert.equal(H.room.startPending,true);assert.equal(H.room.readyHashes.size,2);
+    assert.equal(H.room.startReadySeats.size,0);assert.equal(H.room.tickTimer,null);
+    const cursorless=await resume(H,H.b,undefined);
+    assert.equal(cursorless.status,409);assert.equal((await cursorless.json()).error,'resume_cursor_required');
+    assert.equal(H.room.seats.get(2).connected,false);
+    const response=await resume(H,H.b,0),socket=response.webSocket.peer;
+    assert.equal(response.status,101);assert.equal(socket.frames().some(f=>f.type==='start'),false);
+    await send(H,socket,frame('resumeReady',{tick:0}));
+    assert.deepEqual(socket.frames().slice(-2).map(f=>f.type),['resumeReadyAck','start']);
+    assert.equal(H.a.socket.frames().at(-1).type,'start');
+    H.b.socket=socket;
+    await send(H,H.b.socket,frame('startReady',{tick:0,setupHash:P.setupHash}));
+    assert.equal(H.room.started,false);assert.equal(H.room.tickTimer,null);
+    await send(H,H.a.socket,frame('startReady',{tick:0,setupHash:P.setupHash}));
+    assert.equal(H.room.started,true);assert(H.room.nextTickAt>now);
+  });
+  await test('prepared room restore re-challenges all seats and legacy snapshot fails closed',async()=>{
+    const H=await pair(false),P=H.a.socket.frames().find(f=>f.type==='prepare');
+    await send(H,H.a.socket,frame('bootstrapReady',{tick:0,setupHash:P.setupHash,hash:hex('c')}));
+    const restored=await make(H.room._snapshot(),[H.a.socket,H.b.socket]);
+    assert.equal(restored.room.started,false);assert.equal(restored.room.readyHashes.size,0);
+    assert.equal(H.b.socket.frames().at(-1).type,'prepare');
+    const R={room:restored.room,a:H.a,b:H.b};await ready(R);assert.equal(restored.room.started,true);
+    const legacy=H.room._snapshot();legacy.schema=1;
+    const old=await make(legacy,[H.a.socket,H.b.socket]);
+    assert.equal(old.room.endReason,'legacy_protocol_unavailable');assert.equal(old.room.tickTimer,null);
+  });
+  await test('restored start barrier re-challenges hash0 instead of trusting pre-eviction readiness',async()=>{
+    const H=await pair(false),P=await bootstrap(H);
+    await send(H,H.a.socket,frame('startReady',{tick:0,setupHash:P.setupHash}));
+    const saved=H.room._snapshot();assert.equal(saved.startPending,true);
+    const restored=await make(saved,[H.a.socket,H.b.socket]);
+    assert.equal(restored.room.startPending,false);assert.equal(restored.room.startReadySeats.size,0);
+    assert.equal(restored.room.readyHashes.size,0);assert.equal(restored.room.tickTimer,null);
+    assert.equal(H.a.socket.frames().at(-1).type,'prepare');
+    const R={room:restored.room,a:H.a,b:H.b};await ready(R);
+    assert.equal(restored.room.started,true);
+  });
   await test('1.33.74 mobile window admits 100-150ms delayed commands without rebucketing and preserves legacy bounds',async()=>{
     const H=await pair();assert.deepEqual(H.a.welcome.inputDelay,{min:2,max:18});
     H.room.tick=5;const delayed=frame('commands',{seq:1,targetTick:9,commands:[{type:'move',x:10,y:20}]});
@@ -67,6 +203,7 @@ try{
     await send(H,H.a.socket,{...delayed,seq:2,targetTick:6});assert.equal(H.a.socket.frames().at(-1).code,'stale_target_tick');
     await send(H,H.a.socket,{...delayed,seq:2,targetTick:24});assert.equal(H.a.socket.frames().at(-1).code,'future_target_tick');
     const L=await make();L.a=await admit(L,1,2,'1.33.73');L.b=await admit(L,2,2,'1.33.73');
+    await ready(L);
     assert.deepEqual(L.a.welcome.inputDelay,{min:2,max:3});
     await send(L,L.a.socket,frame('commands',{seq:1,targetTick:4,commands:[{type:'move',x:1,y:2}]}));
     assert.equal(L.a.socket.frames().at(-1).code,'future_target_tick');
@@ -159,13 +296,13 @@ try{
       assert.equal(H.room.seats.get(1).connected,false);
     }
   });
-  await test('sync timeout preserves original grace and forfeits without hanging other seats',async()=>{
-    const H=await pair(3);await disconnect(H,H.a);const deadline=H.room.seats.get(1).disconnectDeadline;
+  await test('prestart sync timeout preserves original grace and ends without a winner',async()=>{
+    const H=await pair(false);await disconnect(H,H.a);const deadline=H.room.seats.get(1).disconnectDeadline;
     now+=9000;const response=await resume(H,H.a,0),socket=response.webSocket.peer;
     assert.equal(H.room.seats.get(1).disconnectDeadline,deadline);await disconnect(H,{socket});
     assert.equal(H.room.seats.get(1).disconnectDeadline,deadline);now=deadline+1;
-    await H.room.alarm();assert.equal(H.room.seats.get(1).forfeited,true);assert.equal(H.room.ended,false);
-    assert(H.room.nextTickAt>now);await step(H);assert.equal(H.room.tick,1);
+    await H.room.alarm();assert.equal(H.room.seats.get(1).forfeited,true);assert.equal(H.room.ended,true);
+    assert.equal(H.room.tick,0);assert.equal(H.b.socket.frames().at(-1).winnerSeat,null);
   });
   await test('normal two-seat reconnect expiry ends the room with deterministic winner',async()=>{
     const H=await pair();await disconnect(H,H.a);now+=10001;await H.room.alarm();
@@ -186,6 +323,8 @@ try{
     const H=await make();H.a=await admit(H,1);await disconnect(H,H.a);
     const response=await resume(H,H.a,0),socket=response.webSocket.peer;H.b=await admit(H,2);
     assert.equal(H.room.started,false);await send(H,socket,frame('resumeReady',{tick:0}));
+    assert.equal(H.room.started,false);assert.equal(socket.frames().at(-1).type,'prepare');
+    H.a.socket=socket;await ready(H);
     assert.equal(H.room.started,true);assert.equal(socket.frames().filter(f=>f.type==='start').length,1);
   });
   await test('overlapping alarm and timer callbacks cannot emit the same authority twice',async()=>{

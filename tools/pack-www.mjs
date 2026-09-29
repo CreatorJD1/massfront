@@ -39,8 +39,8 @@ if(includeExploration) await syncStartupPackRuntime({check:true});
    Shipping the stub roster was ~17 MB of installer weight that never decoded. */
 const KEEP_MATERIAL = /^(brood-gorger-v2|nova-rhino-v2|nova-factory-v2|nova-heavy-tank-v2|mf-world-structures-v2|mf2-carbon-cracks-v1|mf_mechanical_microdetail_v2|mf-worldkit-v4-(?:baseao|nre|masks)\.png$)/;
 const KEEP_MODIFIER = 'assets/modifiers/modifier-art-atlas-v1.png';
-const KEEP_BRAND = 'assets/brand/massfront-title-command-conquer-overwhelm-v1.png';
-const KEEP_BRAND_SHA256 = 'e11a316658c34d30a9b4aced6f2bdfb7ae7a47f967f93389acb55d8db67fb279';
+const KEEP_BRAND = 'assets/brand/massfront-title-command-conquer-overwhelm-v1.webp';
+const KEEP_BRAND_SHA256 = '5a226334b0a3d4693f2fcd4191dc212fd1bb96511fb567c353fdfed9021568ae';
 
 function dirBytes(p){
   if(!existsSync(p)) return 0;
@@ -71,6 +71,7 @@ function shouldPack(abs){
      loads only their deterministic baked atlases; shipping assets/source would
      duplicate ~4.9 MiB of full-resolution PNGs in every APK. */
   if(rel==='assets/source'||rel.startsWith('assets/source/')) return false;
+  if(rel==='assets/factions/commanders/source'||rel.startsWith('assets/factions/commanders/source/')) return false;
   if(rel==='assets/packs'||rel.startsWith('assets/packs/')) return false;
   if(rel.startsWith('assets/brand/')&&rel!==KEEP_BRAND) return false;
   if(rel.startsWith('assets/modifiers/') && rel!==KEEP_MODIFIER) return false;
@@ -106,6 +107,7 @@ rmSync(join(www,'experimental'), {recursive:true, force:true});
    the APK while no runtime URL ever reads that folder. */
 rmSync(join(www,'assets','packs'), {recursive:true, force:true});
 rmSync(join(www,'assets','factions','cinematic'), {recursive:true, force:true});
+rmSync(join(www,'assets','factions','commanders','source'), {recursive:true, force:true});
 rmSync(join(www,'assets','source'), {recursive:true, force:true});
 
 /* Stage Galactic Exploration from the signed allowlist, never from the 2.6 GiB
@@ -141,8 +143,38 @@ function stageExplorationPack(){
   cpSync(manifestPath,installedManifest);
   console.log('  Galactic Exploration base pack: '+manifest.files.length+' files, '+(total/1048576).toFixed(2)+' MiB');
 }
+function stageStormpeakPack(){
+  const moduleRoot=join(root,'modules','stormpeak_ocean');
+  const manifestPath=join(moduleRoot,'dist','stormpeak-runtime-manifest-v1.json');
+  if(!existsSync(manifestPath)) throw new Error('Stormpeak runtime manifest is missing; run modules/stormpeak_ocean npm run build:tester');
+  const manifest=JSON.parse(readFileSync(manifestPath,'utf8'));
+  const claimed=String(manifest.hash||''),unsigned={...manifest};delete unsigned.hash;
+  const actual='sha256-'+createHash('sha256').update(JSON.stringify(unsigned)).digest('hex');
+  if(manifest.schemaVersion!==1||manifest.kind!=='StormpeakRuntimeManifestV1'||claimed!==actual)
+    throw new Error('Stormpeak runtime manifest identity is invalid or stale.');
+  if(!Array.isArray(manifest.files)||!manifest.files.length) throw new Error('Stormpeak runtime manifest has no files.');
+  let total=0;
+  for(const entry of manifest.files){
+    const rel=String(entry.path||'').replace(/\\/g,'/');
+    if(!rel||rel.startsWith('/')||rel.includes('..')||rel==='stormpeak-runtime-manifest-v1.json')
+      throw new Error('Unsafe stormpeak runtime path: '+rel);
+    const source=join(moduleRoot,'dist',...rel.split('/'));
+    if(!existsSync(source)||!statSync(source).isFile()) throw new Error('Missing stormpeak runtime file: '+rel);
+    const bytes=readFileSync(source),hash='sha256-'+createHash('sha256').update(bytes).digest('hex');
+    if(bytes.length!==entry.bytes||hash!==entry.hash) throw new Error('Stale stormpeak runtime manifest entry: '+rel);
+    const target=join(www,'modules','stormpeak_ocean',...rel.split('/'));
+    mkdirSync(dirname(target),{recursive:true});
+    cpSync(source,target);total+=bytes.length;
+  }
+  if(total!==manifest.totalBytes) throw new Error('Stormpeak runtime manifest total does not match its files.');
+  cpSync(manifestPath,join(www,'modules','stormpeak_ocean','stormpeak-runtime-manifest-v1.json'));
+  console.log('  Stormpeak ocean tester: '+manifest.files.length+' files, '+(total/1048576).toFixed(2)+' MiB');
+}
 if(includeExploration) stageExplorationPack();
 else rmSync(join(www,'modules'), {recursive:true, force:true});
+const includeStormpeak=!diagnosticSlim;
+if(includeStormpeak) stageStormpeakPack();
+else rmSync(join(www,'modules','stormpeak_ocean'), {recursive:true, force:true});
 
 /* `checkGalactic` must never discover content by requesting a path that a
    diagnostic-slim build deliberately omitted. Rewrite only the copied
@@ -154,6 +186,13 @@ else rmSync(join(www,'modules'), {recursive:true, force:true});
   if(!marker.test(source)) throw new Error('boot.js is missing Galactic build capability authority');
   writeFileSync(bootPath,source.replace(marker,
     'window.__MF_BUILD_HAS_GALACTIC_EXPLORATION='+(includeExploration?'true':'false')+';'));
+}
+{
+  const bootPath=join(www,'boot.js'),source=readFileSync(bootPath,'utf8');
+  const marker=/window\.__MF_BUILD_HAS_STORMPEAK_TESTER=(?:true|false);/;
+  if(!marker.test(source)) throw new Error('boot.js is missing Stormpeak tester build capability authority');
+  writeFileSync(bootPath,source.replace(marker,
+    'window.__MF_BUILD_HAS_STORMPEAK_TESTER='+(includeStormpeak?'true':'false')+';'));
 }
 
 /* Every locally curated playlist track ships in a normal player build even if
@@ -203,6 +242,8 @@ else {
 }
 if(existsSync(join(www,'assets','factions','cinematic')))
   missing.push('assets/factions/cinematic/   (must not ship — already inlined in story.js)');
+if(existsSync(join(www,'assets','factions','commanders','source')))
+  missing.push('assets/factions/commanders/source/   (must not ship — authored commander references)');
 if(existsSync(join(www,'assets','source')))
   missing.push('assets/source/   (must not ship — image-generation authoring inputs)');
 if(existsSync(join(www,'node_modules'))||existsSync(join(www,'.tmp')))
@@ -211,7 +252,9 @@ if(existsSync(join(www,'node_modules'))||existsSync(join(www,'.tmp')))
    runtime closure may enter www; never copy the authoring tree. */
 if(includeExploration)
   check('modules/space_exploration/index.html','Galactic Exploration player entry');
-else if(existsSync(join(www,'modules')))
+if(includeStormpeak)
+  check('modules/stormpeak_ocean/index.html','Stormpeak ocean tester player entry');
+else if(existsSync(join(www,'modules'))&&!includeExploration)
   missing.push('modules/   (MASSFRONT_DIAGNOSTIC_SLIM=1 must omit Galactic content)');
 
 const html = readFileSync(join(www,'index.html'),'utf8');

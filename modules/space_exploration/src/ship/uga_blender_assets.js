@@ -8,6 +8,10 @@ const SHIP_URL = new URL('../../assets/runtime/models/nexus-vii-civilization-shi
 // exact-byte resources avoid a second monolithic image-bearing ArrayBuffer; this
 // is lossless transport, not lower-detail art or a claim of lower GPU residency.
 const COMMAND_URL = new URL('../../assets/runtime/models/uga-sections/scene.gltf?v=20260906-sections2', import.meta.url).href;
+// The delivered room graph is v5 while the editable master has pending v6
+// Strike Bay work. Keep this small authored hull layer separate until those
+// room changes receive their own visual acceptance.
+const HULL_OVERLAY_URL = new URL('../../assets/runtime/models/nexus-vii-cutaway-hull-overlay.glb?v=20260927-hull3', import.meta.url).href;
 
 function installCommandImageSharing(loader, manifest) {
   if (manifest.schema !== 'massfront.uga-shared-resource-delivery.v1' || !Array.isArray(manifest.resources)) throw new Error('Invalid UGA resource manifest');
@@ -238,7 +242,61 @@ export function loadUgaCommandCutaway() {
   // Derived from the preserved authored compartment model without decimation.
   // Keep the actual longitudinal rooms, material maps, tier metadata and
   // focus anchors; an empty root silently substituted an unrelated deck map.
-  return loadGlb(COMMAND_URL);
+  return loadGlb(COMMAND_URL).then(root => loadGlb(HULL_OVERLAY_URL).then(overlay => {
+    const carrier = root.getObjectByName('NEXUS_VII_LONGITUDINAL_CUTAWAY');
+    if (!carrier) {
+      disposeCachedScene(overlay);
+      return root;
+    }
+    let armor = null, glazing = null;
+    root.traverse(object => {
+      if (!object.isMesh || !object.material) return;
+      const materials = Array.isArray(object.material) ? object.material : [object.material];
+      for (const material of materials) {
+        if (material.name === 'NEXUS-VII Interior Armor') armor = material;
+        if (material.name === 'NEXUS-VII Authored Window Glazing') glazing = material;
+      }
+    });
+    // Share the already loaded PBR maps instead of adding another set of
+    // texture payloads. The hull is darker than the open, lit rooms, so its
+    // profiled silhouette survives the overview's close-range exposure rig.
+    const shell = armor?.clone();
+    if (shell) {
+      shell.name = 'NEXUS-VII Cutaway Hull Armor';
+      shell.color.multiplyScalar(0.42);
+      shell.emissiveIntensity = Math.min(0.08, Number(shell.emissiveIntensity) || 0);
+      shell.userData.baseEmissiveIntensity = shell.emissiveIntensity;
+    }
+    const seams = armor?.clone();
+    if (seams) {
+      seams.name = 'NEXUS-VII Cutaway Hull Seams';
+      seams.color.multiplyScalar(0.66);
+      seams.emissiveIntensity = Math.min(0.12, Number(seams.emissiveIntensity) || 0);
+      seams.userData.baseEmissiveIntensity = seams.emissiveIntensity;
+    }
+    const replaced = new Set();
+    overlay.traverse(object => {
+      if (!object.isMesh) return;
+      const role = object.userData?.material_role || '';
+      const assigned = role === 'glazing' ? glazing : role === 'accent' ? seams : shell;
+      if (!assigned) return;
+      const oldMaterials = Array.isArray(object.material) ? object.material : [object.material];
+      oldMaterials.forEach(material => { if (material && material !== assigned) replaced.add(material); });
+      object.material = assigned;
+      object.castShadow = false;
+      object.receiveShadow = false;
+    });
+    replaced.forEach(material => material.dispose());
+    carrier.add(overlay);
+    root.userData.hullOverlayLoaded = true;
+    return root;
+  }, error => {
+    // Art delivery may fail offline on an old installed pack. Preserve the
+    // command rooms and gameplay; packed acceptance separately requires the
+    // overlay and reports the missing resource instead of hiding this fallback.
+    root.userData.hullOverlayError = String(error?.message || error);
+    return root;
+  }));
 }
 
 export function clearUgaAssetCache() {

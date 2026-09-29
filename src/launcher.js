@@ -52,6 +52,17 @@
   function byId(id){return document.getElementById(id);}
   function text(id,value){var el=byId(id);if(el)el.textContent=value==null?'':String(value);return el;}
   function safeArray(value){return Array.isArray(value)?value.filter(function(v){return typeof v==='string'&&v.trim();}).slice(0,8):[];}
+  function briefSummary(value){
+    var full=String(value||'').replace(/\s+/g,' ').trim();
+    if(full.length<=126)return full;
+    /* Legacy `notes` can be an entire changelog paragraph. Keep the first
+       player-readable sentence in the launcher; the full copy remains in the
+       explicit briefing below rather than silently clipping inside hero art. */
+    var sentence=full.match(/^.{1,126}?[.!?](?=\s|$)/);
+    if(sentence)return sentence[0];
+    var cut=full.slice(0,122),space=cut.lastIndexOf(' ');
+    return (space>75?cut.slice(0,space):cut).trimEnd()+'…';
+  }
   /* fmtBytes renders 0 as an em-dash, which is right for "unknown" and wrong
      for "an active transfer that has not completed its first chunk yet".
      Progress is reported per completed chunk, and a full payload opens with a
@@ -85,6 +96,16 @@
     }
     catch(e){return false;}
   }
+  /* The Stormpeak ocean tester is a sibling document like Galactic Exploration,
+     so its return re-navigates index.html. Without this bypass the launcher
+     gateway re-gates the boot and buries the Settings/War Room surface the
+     return ticket exists to restore — the player would have to press CONTINUE
+     TO INTRO again to get back to where they left. */
+  function isStormpeakReturn(){
+    try{return /[?&]from=stormpeak(?:&|$)/.test(String(location.search||''));}
+    catch(e){return false;}
+  }
+  function isModuleReturn(){return isGalacticReturn()||isStormpeakReturn();}
   function identitySnapshot(){
     try{if(typeof mfIdentitySnapshot==='function')return mfIdentitySnapshot();}catch(e){}
     return {state:'pending',signedIn:false,verified:false,source:'launcher-wait',revision:0};
@@ -214,8 +235,11 @@
     if(key===L.releaseKey)return;L.releaseKey=key;
     var root=byId('updScr');if(root)root.dataset.category=cat;
     text('mfLaunchReleaseVersion','v'+(release.version||'—'));text('mfLaunchReleaseKind',cat.toUpperCase());
-    text('mfLaunchReleaseName',release.title||'MASSFRONT UPDATE');text('mfLaunchReleaseSummary',release.summary||'Verified release information.');
-    text('mfLaunchCategory',cat.toUpperCase());text('mfLaunchHeroSummary',release.summary||'The battlefield is ready for command.');
+    var fullSummary=release.summary||'Verified release information.',shortSummary=briefSummary(fullSummary);
+    text('mfLaunchReleaseName',release.title||'MASSFRONT UPDATE');text('mfLaunchReleaseSummary',shortSummary);
+    var detail=byId('mfLaunchReleaseDetails');if(detail){detail.hidden=shortSummary===fullSummary;if(detail.hidden)detail.open=false;}
+    text('mfLaunchReleaseFullSummary',fullSummary);
+    text('mfLaunchCategory',cat.toUpperCase());text('mfLaunchHeroSummary',shortSummary);
     renderNotes();renderHistory();
   }
   function renderIdentity(){
@@ -562,7 +586,7 @@
       .observe(document.body,{attributes:true,attributeFilter:['class']});
   }
   function initLauncherGateway(){
-    if(L.inited)return;L.inited=true;L.bypass=isGalacticReturn();if(L.bypass){L.gate=false;L.passed=true;return;}
+    if(L.inited)return;L.inited=true;L.bypass=isModuleReturn();if(L.bypass){L.gate=false;L.passed=true;return;}
     bind();seedPublishedHistory();L.identity=identitySnapshot();L.update=updaterSnapshot();
     if(typeof updOpen!=='undefined')updOpen=true;relocatePackPanel();renderAll();renderPacks();renderGalactic();updateStorage();
     /* Prime the launcher behind the title/auth layers. When those close there is
@@ -595,7 +619,7 @@
   }
 
   window.initLauncherGateway=initLauncherGateway;
-  window.mfLauncherAwaitingUpdateIntro=function(){return !isGalacticReturn()&&L.phase==='updater';};
+  window.mfLauncherAwaitingUpdateIntro=function(){return !isModuleReturn()&&L.phase==='updater';};
   window.mfLauncherOpenDetails=mfLauncherOpenDetails;
   window.mfLauncherHandleBack=mfLauncherHandleBack;
   window.mfLauncherShouldDeferAttract=mfLauncherShouldDeferAttract;

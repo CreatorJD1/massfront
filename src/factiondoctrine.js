@@ -133,37 +133,28 @@ const MF_FACTION_TECH_CONSUMERS=Object.freeze({
   asc_crown_battery:{kind:'stance-rule',consumer:'setMode/unitTick',faction:'legion'},
   syn_quantum_grid:{kind:'economy-rule',consumer:'drawEnergy',faction:'syndicate'},
   syn_drone_mesh:{kind:'target-rule',consumer:'unitTick/dealDamage',faction:'syndicate'},
-  syn_phase_lattice:{kind:'transport-rule',consumer:'mfAirliftPostTick',faction:'syndicate'},
-  /* Brood is not selectable in Pre-Alpha. Selling these as live player buffs
-     would be false, and binding account ownership to enemy strength would be
-     hostile progression. They remain explicit dossier/future gates until the
-     horde enters playableFactions(); the existing AI Tidecaster and Massflesh
-     doctrines continue to run independently of the player's account. */
-  hor_gene_splice:{kind:'future-gate',consumer:'mfFactionTechBroodGate',faction:'horde'},
-  hor_synaptic_tide:{kind:'future-gate',consumer:'mfFactionTechBroodGate',faction:'horde'},
-  hor_living_siege:{kind:'future-gate',consumer:'mfFactionTechBroodGate',faction:'horde'}
+  syn_phase_lattice:{kind:'transport-rule',consumer:'mfAirliftPostTick',faction:'syndicate'}
 });
 
 function mfFactionTechBroodGate(){
-  return false;                         // AI-only until horde is deliberately made playable
+  return false;                         // Permanent boundary: Brood is the AI-only universal threat
 }
 function mfFactionTechPurchasable(id){
   const R=MF_FACTION_TECH_CONSUMERS[id];
-  return !R||R.kind!=='future-gate';
+  return !String(id||'').startsWith('hor_')&&(!R||R.kind!=='future-gate');
 }
 function mfFactionTechActive(id){
   const R=MF_FACTION_TECH_CONSUMERS[id];
   if(!R||R.kind==='future-gate'||!devHas(id)) return false;
   return factionDoctrineKey(0)===R.faction;
 }
-/* Previous UI exposed the future Brood dossier through devBuy(), allowing a
-   player to spend scarce account materials on a deliberately inert enemy-only
-   node. Keep the nodes visible as intelligence, but fail closed here too. */
+/* Fail closed if an old save, mod, or stale OTA tries to submit a removed Brood
+   research id. Enemy intelligence belongs in the dossier, not Development. */
 const mfFactionTechDevBuyBase=devBuy;
 devBuy=function(n,silent){
   if(n&&!mfFactionTechPurchasable(n.id)){
     if(!silent){
-      toast('AI DOSSIER — Brood unlocks become available in Development only when the faction is playable');
+      toast('BROOD THREAT DATA — enemy capabilities cannot be researched or equipped');
       if(typeof sfx==='function')sfx('ui');
     }
     return false;

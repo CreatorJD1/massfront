@@ -125,8 +125,9 @@ const MAX_PASS_LEN = 256;
 const MAX_SAVE_LEN = 500000;          // real save codes run ~hundreds of bytes; generous headroom
 const MATCH_RECORD_TTL_MS = 5 * 60 * 1000;
 const MATCH_TOKEN_TTL_MS = 60 * 1000;
-const MATCH_PROTOCOL_VERSION = 1;
+const MATCH_PROTOCOL_VERSION = 2;
 const MATCH_TICK_HZ = 30;
+const MATCH_BOOTSTRAP_TIMEOUT_MS = 60 * 1000;
 const MATCH_INPUT_DELAY_MIN = 2;
 const MATCH_INPUT_DELAY_MAX = 3;
 const MATCH_INPUT_DELAY_MAX_13374 = 18;
@@ -1451,6 +1452,18 @@ function validateLobbyRules(raw,status) {
     return {res:err(status||400,'unsupported_lobby_tuple','Skirmish supports exactly two human players.')};
   return {value:lobbyRules({mode,slots,map:r.map})};
 }
+/* Realtime is deliberately narrower than staging lobbies. Build the same
+   complete setup on the trusted Worker for every admitted seat; never accept
+   a host-supplied world or profile-dependent match defaults. */
+function frozenMatchSetup(matchId,rulesHash,rules) {
+  if(!rules||rules.slots!==2||!['coop','skirmish'].includes(rules.mode)||
+     !['auto','aelos_north_medium'].includes(rules.map))return null;
+  return {schema:1,mode:rules.mode,slots:2,map:'aelos_north_medium',
+    seed:'network:'+matchId+':'+rulesHash,preset:rules.mode==='skirmish'?'compact':'standard',
+    difficulty:1,playerFaction:'nova',commander:'nova_kai',enemyFaction:'horde',
+    goal:'annihilate',timeLimit:600,resPace:1,crateRate:1,infestationOn:false,
+    defenseFocus:0,deploymentPackage:'prepared',wildcards:0};
+}
 async function lobbyAvailableOrError(env, invites) {
   const ok=invites?await invitesAvailable(env):await lobbiesAvailable(env);
   return ok?null:featureDisabled(invites?'Lobby invitations':'Player lobbies');
@@ -1862,9 +1875,9 @@ export async function consumeMatchLaunchToken(env,rawToken,expected){
 function matchSocketCredential(request){
   const protocols=String(request.headers.get('sec-websocket-protocol')||'')
     .split(',').map(v=>v.trim()).filter(Boolean);
-  if(!protocols.includes('massfront.v1'))return null;
+  if(!protocols.includes('massfront.v2'))return null;
   const credentials=protocols.filter(v=>/^mf-(?:seat|resume)\.[1-4]\.[a-f0-9]{64}(?:\.(?:0|[1-9][0-9]{0,9}))?$/.test(v));
-  if(credentials.length!==1||protocols.some(v=>v!=='massfront.v1'&&!credentials.includes(v)))return null;
+  if(credentials.length!==1||protocols.some(v=>v!=='massfront.v2'&&!credentials.includes(v)))return null;
   const m=credentials[0].match(/^mf-(seat|resume)\.([1-4])\.([a-f0-9]{64})(?:\.(0|[1-9][0-9]{0,9}))?$/);
   if(!m||m[4]!==undefined&&(m[1]!=='resume'||Number(m[4])>2147483647))return null;
   return {kind:m[1],seat:Number(m[2]),token:m[3],protocol:credentials[0],
@@ -1877,24 +1890,38 @@ async function handleMatchSocket(request,env,id){
   if(!(await realtimeMatchAvailable(env)))
     return err(503,'realtime_match_unavailable','Realtime matches are not enabled on this server.');
   const credential=matchSocketCredential(request);
-  if(!credential)return err(401,'invalid_match_credential','Use the versioned match WebSocket subprotocol.');
+  if(!credential){
+    if(String(request.headers.get('sec-websocket-protocol')||'').split(',').some(v=>v.trim()==='massfront.v1'))
+      return err(426,'match_protocol_upgrade_required','This match requires the version 2 game client.');
+    return err(401,'invalid_match_credential','Use the version 2 match WebSocket subprotocol.');
+  }
   const roomId=env.MATCH_ROOMS.idFromName(String(id)),stub=env.MATCH_ROOMS.get(roomId);
   if(credential.kind==='resume'){
     const headers=new Headers({upgrade:'websocket','sec-websocket-protocol':
-      'massfront.v1, '+credential.protocol,'x-mf-resume-forwarded':'1'});
+      'massfront.v2, '+credential.protocol,'x-mf-resume-forwarded':'1'});
     return stub.fetch(new Request(request.url,{method:'GET',headers}));
   }
   const tokenHash=await sha256Hex(credential.token),now=Date.now();
   const seat=await env.DB.prepare(
     'SELECT s.match_id,s.lobby_id,s.user_id,s.seat_number,s.build_version,s.manifest_hash,s.balance_hash,s.rules_hash,'
-    +'s.token_expires_at,s.token_consumed_at,m.roster_size,m.expires_at AS match_expires '
+    +'s.token_expires_at,s.token_consumed_at,m.roster_size,m.expires_at AS match_expires,'
+    +'m.launch_revision,l.rules_json AS lobby_rules_json,l.state AS lobby_state,l.revision AS lobby_revision '
     +'FROM multiplayer_match_seats s JOIN multiplayer_matches m ON m.id=s.match_id '
+    +'JOIN multiplayer_lobbies l ON l.id=m.lobby_id '
     +'WHERE s.match_id=?1 AND s.token_hash=?2'
   ).bind(String(id),tokenHash).first();
   if(!seat||seat.token_consumed_at!=null||Number(seat.token_expires_at)<=now||Number(seat.match_expires)<=now)
     return err(401,'invalid_or_expired_token','That match credential is invalid or expired.');
   if(credential.seat!=null&&credential.seat!==Number(seat.seat_number))
     return err(401,'invalid_or_expired_token','That match credential is invalid or expired.');
+  let rawRules;try{rawRules=JSON.parse(String(seat.lobby_rules_json||''));}catch(e){}
+  const checkedRules=validateLobbyRules(rawRules,409),rules=checkedRules.value;
+  if(seat.lobby_state!=='closed'||Number(seat.lobby_revision)!==Number(seat.launch_revision)+1||
+     !rules||Number(seat.roster_size)!==2||Number(seat.roster_size)!==rules.slots||
+     await canonicalLobbyRulesHash(seat.lobby_rules_json)!==String(seat.rules_hash))
+    return err(409,'match_setup_unavailable','The frozen match setup cannot be verified.');
+  const setup=frozenMatchSetup(String(seat.match_id),String(seat.rules_hash),rules);
+  if(!setup)return err(409,'unsupported_match_setup','This realtime match supports two seats on Aelos North Medium only.');
   const expected={matchId:String(seat.match_id),lobbyId:String(seat.lobby_id),userId:Number(seat.user_id),
     seat:Number(seat.seat_number),buildVersion:String(seat.build_version),manifestHash:String(seat.manifest_hash),
     balanceHash:String(seat.balance_hash),rulesHash:String(seat.rules_hash)};
@@ -1902,8 +1929,8 @@ async function handleMatchSocket(request,env,id){
   if(!consumed.ok)return err(401,'invalid_or_expired_token','That match credential is invalid or expired.');
   const verified={matchId:expected.matchId,lobbyId:expected.lobbyId,userId:expected.userId,
     seat:expected.seat,buildVersion:expected.buildVersion,manifestHash:expected.manifestHash,
-    balanceHash:expected.balanceHash,rulesHash:expected.rulesHash,rosterSize:Number(seat.roster_size)};
-  const headers=new Headers({upgrade:'websocket','sec-websocket-protocol':'massfront.v1',
+    balanceHash:expected.balanceHash,rulesHash:expected.rulesHash,rosterSize:Number(seat.roster_size),setup};
+  const headers=new Headers({upgrade:'websocket','sec-websocket-protocol':'massfront.v2',
     'x-mf-seat-verification':JSON.stringify(verified)});
   return stub.fetch(new Request(request.url,{method:'GET',headers}));
 }
@@ -2485,6 +2512,8 @@ export class MatchRoom {
   constructor(state,env){
     this.state=state;this.env=env;this.match=null;this.tick=0;this.started=false;
     this.ended=false;this.endReason=null;this.nextTickAt=0;this.tickTimer=null;this.runningTicks=false;this.seats=new Map();
+    this.prepared=false;this.prepareDeadline=0;this.readyHashes=new Map();
+    this.startPending=false;this.startReadySeats=new Set();
     this.commands=new Map();this.hashes=new Map();this.rates=new Map();this.strikes=new Map();
     this.replayFrames=new Map();this.replayBytes=0;this.recoveryHistoryLost=false;
     try{
@@ -2494,9 +2523,13 @@ export class MatchRoom {
     }catch(e){}
     state.blockConcurrencyWhile(async()=>{
       let saved=null;try{saved=await state.storage.get('room');}catch(e){}
-      if(saved&&saved.schema===1){
+      const legacy=!!(saved&&saved.schema===1);
+      if(saved&&(saved.schema===1||saved.schema===2)){
         this.match=saved.match||null;this.tick=Number(saved.tick)||0;
         this.started=saved.started===true;this.ended=saved.ended===true;this.endReason=saved.endReason||null;
+        this.prepared=saved.schema===2&&saved.prepared===true;
+        this.prepareDeadline=saved.schema===2?Number(saved.prepareDeadline)||0:0;
+        this.startPending=saved.schema===2&&saved.startPending===true;
         for(const row of saved.seats||[])this.seats.set(Number(row.seat),Object.assign({},row,{connected:false,resuming:false}));
         for(const row of saved.commands||[])this.commands.set(Number(row[0]),row[1]);
         this.recoveryHistoryLost=this.started&&!this.ended;
@@ -2510,12 +2543,30 @@ export class MatchRoom {
       // The periodic snapshot is not an emitted-tick journal. Continuing it
       // after eviction could repeat commands already applied by a live peer.
       // End only this unrecoverable room; accounts and future rooms stay live.
-      if(this.recoveryHistoryLost){
+      if(legacy&&!this.ended){
+        this.ended=true;this.endReason='legacy_protocol_unavailable';
+        this._broadcast({protocol:'massfront-match',v:MATCH_PROTOCOL_VERSION,type:'matchEnd',
+          tick:this.tick,reason:this.endReason,winnerSeat:null});
+        for(const ws of sockets)this._closeAfterReject(ws,1011,'legacy room protocol');
+        this._audit('match_end',null,this.endReason,1);this._persist();
+      }else if(this.recoveryHistoryLost){
         this.ended=true;this.endReason='recovery_history_unavailable';
         this._broadcast({protocol:'massfront-match',v:MATCH_PROTOCOL_VERSION,type:'matchEnd',
           tick:this.tick,reason:this.endReason,winnerSeat:null});
         for(const ws of sockets)this._closeAfterReject(ws,1011,'recovery history unavailable');
         this._audit('match_end',null,this.endReason,1);this._persist();
+      }
+      if(this.prepared&&!this.ended){
+        if(!this.match||!this.match.setup||!HASH_256_RE.test(String(this.match.setupHash||'')))
+          this._endBootstrap('bootstrap_setup_unavailable');
+        else if(this.prepareDeadline<=Date.now())
+          this._endBootstrap(this.startPending?'start_ready_timeout':'bootstrap_timeout');
+        else{
+          /* Neither bootstrap nor start acknowledgements survive hibernation.
+             Re-prove tick zero before any timer can arm. */
+          this.startPending=false;this.startReadySeats.clear();this.readyHashes.clear();
+          this._broadcast(this._prepareFrame());this._persist();await this._scheduleAlarm();
+        }
       }
       if(this.started&&!this.ended)this._startTimer();
     });
@@ -2527,7 +2578,8 @@ export class MatchRoom {
       Date.now(),clean(event),seat==null?null:Number(seat),clean(code),Number(count)||0);}catch(e){}
   }
   _snapshot(){
-    return {schema:1,match:this.match,tick:this.tick,started:this.started,ended:this.ended,endReason:this.endReason,
+    return {schema:2,match:this.match,tick:this.tick,started:this.started,ended:this.ended,endReason:this.endReason,
+      prepared:this.prepared,prepareDeadline:this.prepareDeadline,startPending:this.startPending,
       seats:Array.from(this.seats.values()).map(s=>Object.assign({},s,{connected:false,resuming:false})),
       commands:Array.from(this.commands.entries())};
   }
@@ -2539,6 +2591,20 @@ export class MatchRoom {
   _broadcast(value){
     const sockets=typeof this.state.getWebSockets==='function'?this.state.getWebSockets():[];
     for(const ws of sockets)this._send(ws,value);
+  }
+  _prepareFrame(){return {protocol:'massfront-match',v:MATCH_PROTOCOL_VERSION,type:'prepare',tick:0,
+    seats:Array.from(this.seats.keys()).sort((a,b)=>a-b),setup:this.match.setup,setupHash:this.match.setupHash};}
+  _startFrame(){return {protocol:'massfront-match',v:MATCH_PROTOCOL_VERSION,type:'start',tick:0,
+    seats:Array.from(this.seats.keys()).sort((a,b)=>a-b)};}
+  _endBootstrap(reason){
+    if(this.started||this.ended)return;
+    this.ended=true;this.endReason=reason;this.prepared=false;this.prepareDeadline=0;
+    this.startPending=false;this.startReadySeats.clear();this.readyHashes.clear();
+    this._pauseTicks();this._broadcast({protocol:'massfront-match',v:MATCH_PROTOCOL_VERSION,
+      type:'matchEnd',tick:0,reason,winnerSeat:null});
+    this._audit('match_end',null,reason,1);this._persist();
+    for(const ws of typeof this.state.getWebSockets==='function'?this.state.getWebSockets():[])
+      this._closeAfterReject(ws,1008,'bootstrap ended');
   }
   _recordTick(value){
     const text=JSON.stringify(value),bytes=new TextEncoder().encode(text).byteLength;
@@ -2553,9 +2619,10 @@ export class MatchRoom {
   _resumePlan(from){
     if(this.recoveryHistoryLost)return {code:'resume_history_unavailable'};
     if(from===null){
-      // An old client never reports its last applied tick. Only the unstarted
-      // zero cursor is provably gap-free; a socket welcome is not a state ack.
-      if(this.tick!==0)return {code:'resume_cursor_required'};
+      // A prestart resume must explicitly acknowledge replayEnd(0) before
+      // either prepare or start is repeated; a cursorless socket skips that
+      // handshake and could strand the other seat at the start barrier.
+      if(this.tick!==0||!this.started)return {code:'resume_cursor_required'};
       return {legacy:true,from:0,through:0,frames:[]};
     }
     if(!Number.isSafeInteger(from)||from<0||from>this.tick)return {code:'invalid_resume_cursor'};
@@ -2587,16 +2654,16 @@ export class MatchRoom {
   _validVerified(v){
     return !!(v&&typeof v==='object'&&/^[a-f0-9]{32}$/.test(String(v.matchId||''))&&
       /^[a-f0-9]{32}$/.test(String(v.lobbyId||''))&&parsePositiveInt(v.userId)&&
-      parsePositiveInt(v.seat)&&Number(v.seat)<=LOBBY_MAX_MEMBERS&&
-      parsePositiveInt(v.rosterSize)&&Number(v.rosterSize)<=LOBBY_MAX_MEMBERS&&
+      parsePositiveInt(v.seat)&&Number(v.seat)<=2&&Number(v.rosterSize)===2&&
       BUILD_VERSION_RE.test(String(v.buildVersion||''))&&HASH_256_RE.test(String(v.manifestHash||''))&&
-      HASH_256_RE.test(String(v.balanceHash||''))&&HASH_256_RE.test(String(v.rulesHash||'')));
+      HASH_256_RE.test(String(v.balanceHash||''))&&HASH_256_RE.test(String(v.rulesHash||''))&&
+      JSON.stringify(v.setup)===JSON.stringify(frozenMatchSetup(v.matchId,v.rulesHash,v.setup)));
   }
   _sameMatch(v){
     const m=this.match;
     return !!(m&&m.matchId===v.matchId&&m.lobbyId===v.lobbyId&&m.rosterSize===v.rosterSize&&
       m.buildVersion===v.buildVersion&&m.manifestHash===v.manifestHash&&
-      m.balanceHash===v.balanceHash&&m.rulesHash===v.rulesHash);
+      m.balanceHash===v.balanceHash&&m.rulesHash===v.rulesHash&&m.setupHash===v.setupHash);
   }
   async _newResume(seat){
     const token=randomHex(32);
@@ -2625,15 +2692,17 @@ export class MatchRoom {
       this._send(server,{protocol:'massfront-match',v:MATCH_PROTOCOL_VERSION,type:'replayEnd',tick:replay.through});
       await this._scheduleAlarm();
     }
-    this._startWhenReady();
+    await this._startWhenReady();
   }
-  _startWhenReady(){
+  async _startWhenReady(){
     if(!this.ended&&!this.started&&this.seats.size===this.match.rosterSize&&
        Array.from(this.seats.values()).every(s=>s.connected&&!s.syncing&&!s.forfeited)){
-      this.started=true;this.nextTickAt=Date.now()+1000/MATCH_TICK_HZ;
-      this._broadcast({protocol:'massfront-match',v:MATCH_PROTOCOL_VERSION,type:'start',tick:0,
-        seats:Array.from(this.seats.keys()).sort((a,b)=>a-b)});
-      this._audit('match_start',null,'ready',this.match.rosterSize);this._persist();this._startTimer();
+      if(!this.prepared){
+        this.prepared=true;this.prepareDeadline=Date.now()+MATCH_BOOTSTRAP_TIMEOUT_MS;
+        this.readyHashes.clear();this._broadcast(this._prepareFrame());
+        this._audit('match_prepare',null,'ready',this.match.rosterSize);this._persist();
+        await this._scheduleAlarm();
+      }
     }else if(this.started&&!this.ended)this._startTimer();
   }
   async fetch(request){
@@ -2645,9 +2714,11 @@ export class MatchRoom {
       if(!this._validVerified(v))return err(401,'invalid_match_credential','Verified seat metadata is invalid.');
       v={matchId:String(v.matchId),lobbyId:String(v.lobbyId),userId:Number(v.userId),seat:Number(v.seat),
         rosterSize:Number(v.rosterSize),buildVersion:String(v.buildVersion),manifestHash:String(v.manifestHash).toLowerCase(),
-        balanceHash:String(v.balanceHash).toLowerCase(),rulesHash:String(v.rulesHash).toLowerCase()};
+        balanceHash:String(v.balanceHash).toLowerCase(),rulesHash:String(v.rulesHash).toLowerCase(),setup:v.setup};
+      v.setupHash=await sha256Hex(JSON.stringify(v.setup));
       if(!this.match)this.match={matchId:v.matchId,lobbyId:v.lobbyId,rosterSize:v.rosterSize,
-        buildVersion:v.buildVersion,manifestHash:v.manifestHash,balanceHash:v.balanceHash,rulesHash:v.rulesHash};
+        buildVersion:v.buildVersion,manifestHash:v.manifestHash,balanceHash:v.balanceHash,rulesHash:v.rulesHash,
+        setup:v.setup,setupHash:v.setupHash};
       else if(!this._sameMatch(v))return err(409,'match_compatibility_mismatch','The room compatibility tuple is already fixed.');
       if(this.ended)return err(410,'match_ended','That match has ended.');
       if(this.seats.has(v.seat))return err(409,'seat_already_admitted','That seat already entered this room.');
@@ -2658,7 +2729,7 @@ export class MatchRoom {
       const pair=this._pair();await this._accept(pair.server,seat,resumeToken,false);
       this._audit('seat_admit',seat.seat,'launch',1);
       return new Response(null,{status:101,webSocket:pair.client,
-        headers:{'sec-websocket-protocol':'massfront.v1'}});
+        headers:{'sec-websocket-protocol':'massfront.v2'}});
     }
     if(request.headers.get('x-mf-resume-forwarded')!=='1')
       return err(401,'invalid_match_credential','Missing verified seat admission.');
@@ -2687,7 +2758,7 @@ export class MatchRoom {
       this._broadcast({protocol:'massfront-match',v:MATCH_PROTOCOL_VERSION,type:'reconnected',
         seat:seat.seat,tick:this.tick});
       return new Response(null,{status:101,webSocket:pair.client,
-        headers:{'sec-websocket-protocol':'massfront.v1'}});
+        headers:{'sec-websocket-protocol':'massfront.v2'}});
     }finally{seat.resuming=false;}
   }
   _rateAllowed(seat,bytes,commands){
@@ -2723,7 +2794,7 @@ export class MatchRoom {
   }
   async webSocketMessage(ws,message){
     const seat=this._socketSeat(ws);
-    if(!seat||seat.forfeited||!seat.connected||seat.closing)return;
+    if(this.ended||!seat||seat.forfeited||!seat.connected||seat.closing)return;
     if(typeof message!=='string')return this._strike(ws,seat,'binary_not_allowed',null);
     const bytes=new TextEncoder().encode(message).byteLength;
     if(bytes>MATCH_MAX_MESSAGE_BYTES){
@@ -2744,12 +2815,62 @@ export class MatchRoom {
       if(Object.keys(body).length!==4||!Number.isSafeInteger(body.tick)||body.tick!==seat.resumeThroughTick)
         return this._strike(ws,seat,'invalid_resume_ready',null);
       if(!seat.syncing){
-        this._send(ws,{protocol:'massfront-match',v:MATCH_PROTOCOL_VERSION,type:'resumeReadyAck',tick:body.tick});return;
+        this._send(ws,{protocol:'massfront-match',v:MATCH_PROTOCOL_VERSION,type:'resumeReadyAck',tick:body.tick});
+        if(!this.started&&this.prepared)this._send(ws,this.startPending?this._startFrame():this._prepareFrame());return;
       }
       if(body.tick!==this.tick)return this._strike(ws,seat,'invalid_resume_ready',null);
       seat.syncing=false;seat.disconnectDeadline=null;this._persist();
       this._send(ws,{protocol:'massfront-match',v:MATCH_PROTOCOL_VERSION,type:'resumeReadyAck',tick:body.tick});
-      await this._scheduleAlarm();this._startWhenReady();return;
+      /* A pre-start resume must finish replay acknowledgement before every
+         seat re-proves tick zero. No peer may keep a stale ready hash. */
+      if(!this.started&&this.prepared){
+        if(this.startPending){this.startReadySeats.clear();this._broadcast(this._startFrame());}
+        else{this.readyHashes.clear();this._broadcast(this._prepareFrame());}
+      }
+      await this._scheduleAlarm();await this._startWhenReady();return;
+    }
+    if(body.type==='bootstrapReady'){
+      if(this.started)return this._error(ws,'match_already_started',null);
+      if(this.startPending)return this._error(ws,'bootstrap_already_agreed',null);
+      if(!this.prepared||seat.syncing||!seat.connected)return this._error(ws,'bootstrap_not_prepared',null);
+      if(this.prepareDeadline<=Date.now())return this._endBootstrap('bootstrap_timeout');
+      if(Object.keys(body).length!==6||body.tick!==0||!HASH_256_RE.test(String(body.setupHash||''))||
+         !HASH_256_RE.test(String(body.hash||'')))return this._strike(ws,seat,'invalid_bootstrap_ready',null);
+      if(body.setupHash!==this.match.setupHash)return this._endBootstrap('bootstrap_setup_mismatch');
+      if(this.readyHashes.has(seat.seat))return this._error(ws,'duplicate_bootstrap_ready',null);
+      this.readyHashes.set(seat.seat,body.hash);
+      const active=Array.from(this.seats.values()).filter(s=>!s.forfeited&&s.connected&&!s.syncing)
+        .map(s=>s.seat).sort((a,b)=>a-b);
+      if(active.length===this.match.rosterSize&&active.every(s=>this.readyHashes.has(s))){
+        if(new Set(active.map(s=>this.readyHashes.get(s))).size!==1)return this._endBootstrap('bootstrap_state_mismatch');
+        this.startPending=true;this.startReadySeats.clear();
+        this.prepareDeadline=Date.now()+MATCH_BOOTSTRAP_TIMEOUT_MS;
+        this._broadcast(this._startFrame());
+        this._audit('match_start_barrier',null,'bootstrap_agreed',active.length);
+        this._persist();await this._scheduleAlarm();
+      }
+      return;
+    }
+    if(body.type==='startReady'){
+      if(this.started)return this._error(ws,'match_already_started',null);
+      if(!this.startPending||!this.prepared||seat.syncing||!seat.connected)
+        return this._error(ws,'start_not_pending',null);
+      if(this.prepareDeadline<=Date.now())return this._endBootstrap('start_ready_timeout');
+      if(Object.keys(body).length!==5||body.tick!==0||!HASH_256_RE.test(String(body.setupHash||'')))
+        return this._strike(ws,seat,'invalid_start_ready',null);
+      if(body.setupHash!==this.match.setupHash)return this._endBootstrap('start_setup_mismatch');
+      if(Array.from(this.seats.values()).some(s=>s.forfeited||!s.connected||s.syncing))
+        return this._error(ws,'start_roster_incomplete',null);
+      if(this.startReadySeats.has(seat.seat))return this._error(ws,'duplicate_start_ready',null);
+      this.startReadySeats.add(seat.seat);
+      const active=Array.from(this.seats.values()).map(s=>s.seat).sort((a,b)=>a-b);
+      if(active.length===this.match.rosterSize&&active.every(s=>this.startReadySeats.has(s))){
+        this.started=true;this.prepared=false;this.prepareDeadline=0;this.startPending=false;
+        this.readyHashes.clear();this.startReadySeats.clear();
+        this.nextTickAt=Date.now()+1000/MATCH_TICK_HZ;
+        this._audit('match_start',null,'start_ready',active.length);this._persist();this._startTimer();
+      }
+      return;
     }
     if(body.type==='commands'){
       const seq=Number(body.seq),target=Number(body.targetTick),commands=body.commands;
@@ -2798,6 +2919,10 @@ export class MatchRoom {
     const deadline=seat.syncing&&seat.disconnectDeadline||Date.now()+MATCH_RECONNECT_GRACE_MS;
     seat.connected=false;seat.closing=false;seat.syncing=false;seat.disconnectDeadline=deadline;
     seat.resumeExpiresAt=seat.disconnectDeadline;
+    if(!this.started){
+      if(this.startPending)this.startReadySeats.clear();
+      else this.readyHashes.clear();
+    }
     this._pauseTicks();
     this._audit('seat_disconnect',seat.seat,'close_'+String(Number(code)||0),1);
     this._broadcast({protocol:'massfront-match',v:MATCH_PROTOCOL_VERSION,type:'disconnected',
@@ -2809,9 +2934,11 @@ export class MatchRoom {
   async _scheduleAlarm(){
     const deadlines=Array.from(this.seats.values()).filter(s=>(!s.connected||s.syncing)&&!s.forfeited&&s.disconnectDeadline)
       .map(s=>s.disconnectDeadline);
+    if(this.prepared&&!this.ended&&this.prepareDeadline)deadlines.push(this.prepareDeadline);
     if(deadlines.length)try{await this.state.storage.setAlarm(deadlines.reduce((a,b)=>Math.min(a,b)));}catch(e){}
   }
   async _forfeitExpired(){
+    if(this.ended)return;
     const now=Date.now(),expired=Array.from(this.seats.values()).filter(s=>(!s.connected||s.syncing)&&!s.forfeited&&
       s.disconnectDeadline&&s.disconnectDeadline<=now).sort((a,b)=>a.seat-b.seat);
     for(const seat of expired){
@@ -2822,11 +2949,10 @@ export class MatchRoom {
     }
     const active=Array.from(this.seats.values()).filter(s=>!s.forfeited);
     if(!this.started&&expired.length){
-      this.ended=true;
-      this._broadcast({protocol:'massfront-match',v:MATCH_PROTOCOL_VERSION,type:'matchEnd',
-        tick:this.tick,reason:'admission_forfeit',winnerSeat:null});
-      this._audit('match_end',null,'admission_forfeit',expired.length);
+      this._endBootstrap('admission_forfeit');
     }
+    if(!this.started&&!this.ended&&this.prepared&&this.prepareDeadline<=now)
+      this._endBootstrap(this.startPending?'start_ready_timeout':'bootstrap_timeout');
     if(this.started&&!this.ended&&active.length<=1){
       this.ended=true;
       this._broadcast({protocol:'massfront-match',v:MATCH_PROTOCOL_VERSION,type:'matchEnd',

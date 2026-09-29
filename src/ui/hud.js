@@ -120,6 +120,10 @@ function fogExploredAt(wx,wy){
 function fogPointVisible(wx,wy){
   return !fogGameplayActive()||(typeof demoMode!=='undefined'&&demoMode)||!!covAt(wx,wy);
 }
+/* Fog is a local view, not a simulation authority. Seat 2 owns team 1 in a
+   live duel; leaving this fixed to team 0 hid its own army and revealed its
+   opponent. Offline and allied seats still resolve to team 0. */
+function mfFogViewTeam(){ return typeof mfLocalTeam==='function'?mfLocalTeam():0; }
 /* Large translucent FX cannot use centre-point visibility alone. A blast whose
    origin sat on the last visible fog cell painted half of its billboard into
    unexplored territory, which looked like fog was being drawn underneath the
@@ -137,13 +141,13 @@ function fogFxFootprintVisible(wx,wy,r){
   return true;
 }
 function fogEntityVisible(team,wx,wy){
-  return team===0||fogPointVisible(wx,wy);
+  return team===mfFogViewTeam()||fogPointVisible(wx,wy);
 }
 function fogFxVisible(wx,wy,team){
   /* Friendly ordnance is an issued command and may remain readable at the edge
      of its sensor circle. Hostile fire, smoke and impact flashes never render
      from black map cells — those were the last major spawn-location leak. */
-  return team===0||fogPointVisible(wx,wy);
+  return team===mfFogViewTeam()||fogPointVisible(wx,wy);
 }
 function fogStartScan(wx,wy,seconds,radius){
   fogScans.push({x:wx,y:wy,until:stats.t+Math.max(1,seconds||20),r:Math.max(4,radius||13)});
@@ -177,6 +181,7 @@ function blurFogCov(){
 }
 function updateFog(){
   if(!fogGameplayActive()) return;
+  const localTeam=mfFogViewTeam();
   /* Snapshot previous fogCov to detect transitions for reveal FX. */
   prevFogCov.set(fogCov);
   fogCov.fill(0);
@@ -186,7 +191,7 @@ function updateFog(){
      but at high population it could skip a lone scout and black out the ground
      under the player's own army. This remains bounded by the 64x64 fog grid. */
   for(let i=0;i<unitHigh;i++){
-    if(!ualive[i]||uteam[i]!==0) continue;
+    if(!ualive[i]||uteam[i]!==localTeam) continue;
     const hm=typeof hazVisionMult==='function'?hazVisionMult(ux[i],uy[i],i):1;
     /* Haze shortens how far a unit SEES — never whether it lights the ground
        it stands on. Applied to the whole radius, storm front + Fog Bank
@@ -202,14 +207,17 @@ function updateFog(){
   }
   for(const B of blds){
     if(!B.alive) continue;
-    if(B.team===0){
+    if(B.team===localTeam){
       const hm=typeof hazVisionMult==='function'?hazVisionMult(B.x,B.y,-1):1;
       const br=(typeof intelBldVision==='function')?intelBldVision(B,vis,hm)
         :Math.max(4,Math.round(vis(B.type==='hq'?22:B.type==='turret'?12:10)*hm));
       markCov(B.x,B.y,br);
     }
   }
-  if(carrier.active) markCov(carrier.x,carrier.y, vis(24));   // the carrier lights its own way down
+  /* The landing carrier belongs to team 0, not the seat-2 defender's view. */
+  if(localTeam===0){
+    if(carrier.active) markCov(carrier.x,carrier.y, vis(24));
+  }
   for(let i=fogScans.length-1;i>=0;i--){
     const S=fogScans[i];
     if(stats.t>=S.until){ fogScans.splice(i,1); continue; }
@@ -217,7 +225,7 @@ function updateFog(){
   }
   for(let i=0;i<FN*FN;i++) if(fogCov[i]) fogSeen[i]=1;
   for(const B of blds){
-    if(B.alive&&B.team!==0&&!B.seen&&covAt(B.x,B.y)) B.seen=true;
+    if(B.alive&&B.team!==localTeam&&!B.seen&&covAt(B.x,B.y)) B.seen=true;
   }
   for(const C of crates) if(!C.seen&&covAt(C.x,C.y)) C.seen=true;
   /* Reveal FX: spawn white flash particles where fog lifts this frame. */
@@ -415,6 +423,10 @@ function renderMinimap(){
   }
   if(!mmBg) return;
   mm.drawImage(mmBg,0,0);
+  const localTeam=mfFogViewTeam();
+  /* Team numbers belong to simulation authority. Minimap allegiance belongs to
+     the viewer; only a PvP seat-2 view reverses the two human sides. */
+  const viewTeam=team=>localTeam===1&&team<=1?1-team:team;
   const teamId=typeof mfTeamIdEnabled==='function'&&mfTeamIdEnabled();
   const teamMarks=teamId?mmTeamIdBatch():null;
   mm.fillStyle='#3dd68a';
@@ -427,11 +439,12 @@ function renderMinimap(){
   for(const B of blds){
     if(!B.alive) continue;
     const visB=fogEntityVisible(B.team,B.x,B.y);
-    const radarB=!visB&&B.team!==0&&typeof intelRadarContact==='function'&&intelRadarContact(B.x,B.y);
+    const radarB=!visB&&B.team!==localTeam&&typeof intelRadarContact==='function'&&intelRadarContact(B.x,B.y);
     if(!visB&&!radarB) continue;
-    mm.fillStyle=radarB?'rgba(255,109,94,.42)':(B.team===0?mmPCol:(B.team===1?mmECol:'#ffb13a'));
+    const displayTeam=viewTeam(B.team);
+    mm.fillStyle=radarB?'rgba(255,109,94,.42)':(displayTeam===0?mmPCol:(displayTeam===1?mmECol:'#ffb13a'));
     const s=Math.max(radarB?3:5,B.r*k*(radarB?1.05:1.6));
-    if(teamId) mmTeamIdQueue(teamMarks,B.x*k,B.y*k,s,B.team,radarB);
+    if(teamId) mmTeamIdQueue(teamMarks,B.x*k,B.y*k,s,displayTeam,radarB);
     else mm.fillRect(B.x*k-s/2,B.y*k-s/2,s,s);
   }
   const step=total>3000? Math.ceil(total/1800):1;
@@ -440,11 +453,12 @@ function renderMinimap(){
     const visU=fogEntityVisible(uteam[i],ux[i],uy[i]);
     /* Radar paints a contact without lighting the 3D model. GHOST stays off
        this layer until a detector pierces it — radar is not omni. */
-    const radarU=!visU&&uteam[i]!==0&&umode[i]!==4&&typeof intelRadarContact==='function'&&intelRadarContact(ux[i],uy[i]);
+    const radarU=!visU&&uteam[i]!==localTeam&&umode[i]!==4&&typeof intelRadarContact==='function'&&intelRadarContact(ux[i],uy[i]);
     if(!visU&&!radarU) continue;
-    mm.fillStyle=radarU?'rgba(255,109,94,.55)':(uteam[i]===0?mmPColA:(uteam[i]===1?mmEColA:'rgba(255,177,58,.9)'));
+    const displayTeam=viewTeam(uteam[i]);
+    mm.fillStyle=radarU?'rgba(255,109,94,.55)':(displayTeam===0?mmPColA:(displayTeam===1?mmEColA:'rgba(255,177,58,.9)'));
     const d=radarU?3:4;
-    if(teamId) mmTeamIdQueue(teamMarks,ux[i]*k,uy[i]*k,d,uteam[i],radarU);
+    if(teamId) mmTeamIdQueue(teamMarks,ux[i]*k,uy[i]*k,d,displayTeam,radarU);
     else mm.fillRect(ux[i]*k-d/2,uy[i]*k-d/2,d,d);
   }
   if(teamId) mmTeamIdFlush(teamMarks);
@@ -475,17 +489,31 @@ function renderMinimap(){
   /* Strategic identity markers are deliberately painted after fog. Enemy
      crests still require current vision; friendly HQ/ally starts remain useful
      navigation anchors even when the unit dots merge into a large army. */
-  const ownFac=(typeof playerFaction!=='undefined'&&playerFaction)||'nova';
-  const ownHq=bldLive.find(B=>B.alive&&B.team===0&&B.type==='hq'&&B.allyAI==null);
-  if(ownHq)mmFactionCrest(ownFac,ownHq.x*k,ownHq.y*k,20,'#5de1ff',0);
-  if(typeof AI!=='undefined'){
-    for(const A of AI.allies||[])mmFactionCrest(A.fac||ownFac,A.x*k,A.y*k,20,'#66e5a2',0);
-    for(const A of AI.bases||[]){
-      const h=A.commander,visible=h>=0&&ualive[h]&&fogEntityVisible(uteam[h],ux[h],uy[h]);
-      if(visible)mmFactionCrest(A.fac||AI.fac,ux[h]*k,uy[h]*k,24,'#ff6d5e',1);
+  const playerFac=(typeof playerFaction!=='undefined'&&playerFaction)||'nova';
+  if(localTeam===0){
+    const ownHq=bldLive.find(B=>B.alive&&B.team===0&&B.type==='hq'&&B.allyAI==null);
+    if(ownHq)mmFactionCrest(playerFac,ownHq.x*k,ownHq.y*k,20,'#5de1ff',0);
+    if(typeof AI!=='undefined'){
+      for(const A of AI.allies||[])mmFactionCrest(A.fac||playerFac,A.x*k,A.y*k,20,'#66e5a2',0);
+      for(const A of AI.bases||[]){
+        const h=A.commander,visible=h>=0&&ualive[h]&&fogEntityVisible(uteam[h],ux[h],uy[h]);
+        if(visible)mmFactionCrest(A.fac||AI.fac,ux[h]*k,uy[h]*k,24,'#ff6d5e',1);
+      }
     }
+    if(heroIdx>=0&&ualive[heroIdx])mmFactionCrest(playerFac,ux[heroIdx]*k,uy[heroIdx]*k,26,'#ffd257',0);
+  }else{
+    const ownFac=typeof AI!=='undefined'&&AI.fac||'legion';
+    const ownBase=bldLive.find(B=>B.alive&&B.team===localTeam&&B.type==='fac'&&
+      typeof mfLocalOwnsBuilding==='function'&&mfLocalOwnsBuilding(B));
+    if(ownBase)mmFactionCrest(ownFac,ownBase.x*k,ownBase.y*k,20,'#5de1ff',0);
+    const ownHero=typeof mfLocalCommander==='function'?mfLocalCommander():-1;
+    if(ownHero>=0&&ualive[ownHero])mmFactionCrest(ownFac,ux[ownHero]*k,uy[ownHero]*k,26,'#ffd257',0);
+    const enemyHq=bldLive.find(B=>B.alive&&B.team===0&&B.type==='hq'&&B.allyAI==null);
+    if(enemyHq&&fogEntityVisible(0,enemyHq.x,enemyHq.y))
+      mmFactionCrest(playerFac,enemyHq.x*k,enemyHq.y*k,20,'#ff6d5e',1);
+    if(heroIdx>=0&&ualive[heroIdx]&&fogEntityVisible(0,ux[heroIdx],uy[heroIdx]))
+      mmFactionCrest(playerFac,ux[heroIdx]*k,uy[heroIdx]*k,24,'#ff6d5e',1);
   }
-  if(heroIdx>=0&&ualive[heroIdx])mmFactionCrest(ownFac,ux[heroIdx]*k,uy[heroIdx]*k,26,'#ffd257',0);
   /* Ground quad the ortho camera actually sees — not camBounds(). That AABB
      is a cull pad (+60) and at yaw=0 assigns the pitched along-view span to
      world Y while the eye looks along +X, so a portrait view drew a tall
@@ -636,9 +664,78 @@ function toast(msg){
      arbitrary centre-screen popups over the build and command interfaces. */
   el.classList.add('noticeBox');
   el.classList.remove('pickupReward','radioNotice'); el.style.removeProperty('--pickup-col');
+  /* THAT RAIL IS display:none UNDER body.mfMenuOpen (ui.css). It is a
+     battlefield surface and the front screens own the whole viewport, so the
+     rule is right for combat banners and silently wrong for everything a menu
+     says: every toast() raised from a front screen was written into a hidden
+     box. That took out the UGA Command and Ocean Tester launch lines and, far
+     worse, their FAILURE lines — which is why a tester that could not open
+     read as a button that simply did nothing. Mark menu-time notices so the
+     stylesheet can give them a menu-safe lane instead of swallowing them. */
+  el.classList.toggle('mfMenuNotice',
+    !!(document.body&&document.body.classList.contains('mfMenuOpen')));
   clearTimeout(toastTimer);
   toastTimer=setTimeout(()=>el.style.opacity=0,2600);
 }
+/* ---------- LAUNCH VEIL ----------
+   UGA Command and the Ocean Theatre Tester are separate documents. Tapping
+   either one runs an availability probe, mints a return ticket and then hands
+   the tab to a fresh WebGL document — and a browser keeps painting the OLD
+   page for that entire window. So the player taps, the menu sits there
+   unchanged for seconds, and nothing on screen says the command was taken.
+   A 2px bar inside the pressed button is not enough to read on a phone, and
+   the War Room tester card had no busy state at all. This is the missing
+   affordance: one unmistakable full-screen state, raised in the same task as
+   the tap, that survives until the next document paints over it.
+
+   It must never become a trap. The veil clears on an explicit close from the
+   failure paths, on a bfcache restore, and on its own deadline if a navigation
+   neither completes nor reports back. */
+const MF_LAUNCH_VEIL_MS=20000;
+let mfLaunchVeilTimer=0;
+function mfLaunchVeilEl(){
+  let el=document.getElementById('mfLaunchVeil');
+  if(el) return el;
+  el=document.createElement('div');
+  el.id='mfLaunchVeil';
+  el.setAttribute('role','status');
+  el.setAttribute('aria-live','polite');
+  el.setAttribute('aria-atomic','true');
+  el.innerHTML='<div class="mfLvCard"><div class="mfLvKicker">OPENING</div>'
+    +'<div class="mfLvTitle"></div><div class="mfLvBar"><i></i></div>'
+    +'<div class="mfLvNote"></div></div>';
+  document.body.appendChild(el);
+  return el;
+}
+function mfLaunchVeilOpen(title,note,onDeadline){
+  let el=null;
+  try{ el=mfLaunchVeilEl(); }catch(e){ return false; }
+  el.querySelector('.mfLvTitle').textContent=String(title||'STANDBY');
+  el.querySelector('.mfLvNote').textContent=String(note||'');
+  el.setAttribute('aria-busy','true');
+  el.classList.add('show');
+  clearTimeout(mfLaunchVeilTimer);
+  mfLaunchVeilTimer=setTimeout(()=>{
+    mfLaunchVeilClose();
+    /* The caller owns the recovery, because it is the side holding the
+       one-shot launch latch that would otherwise stay set. */
+    if(typeof onDeadline==='function'){ try{ onDeadline(); }catch(e){} return; }
+    if(typeof toast==='function') toast(String(title||'That surface')+' did not open — tap again to retry');
+  },MF_LAUNCH_VEIL_MS);
+  return true;
+}
+function mfLaunchVeilClose(){
+  clearTimeout(mfLaunchVeilTimer); mfLaunchVeilTimer=0;
+  const el=document.getElementById('mfLaunchVeil');
+  if(!el) return;
+  el.classList.remove('show');
+  el.removeAttribute('aria-busy');
+}
+/* Safari and Android WebView resume this heap from bfcache on Back, so a veil
+   raised before a navigation comes back frozen over the menu — the same hazard
+   as the stuck launch latch in main.js. pageshow with persisted=true is the
+   only event that fires on that restore. */
+window.addEventListener('pageshow',e=>{ if(e&&e.persisted) mfLaunchVeilClose(); });
 /* One fixed notification rail owns every transient line. Command speech uses
    this same box, so radio text cannot stack on top of economy/pickup notices. */
 function radioNotice(title,msg){
@@ -687,7 +784,7 @@ function updateSelInfo(){
   const el=$('selInfo'), tac=$('tacRow');
   const deck=typeof hudDeck==='string'?hudDeck:'orders';
   const counts={},stackSelection={};
-  let n=0,first=-1,modeable=0,curMode=-1,mixed=false,patrolling=0,holding=0,stopped=0,moving=0,reposition=0,guarding=0,
+  let n=0,first=-1,modeable=0,modeType=-1,modeList=null,curMode=-1,mixed=false,patrolling=0,holding=0,stopped=0,moving=0,reposition=0,guarding=0,
       utilityOrder='',utilityCount=0,utilityMixed=false;
   for(let i=0;i<unitHigh;i++) if(ualive[i]&&usel[i]){
     n++; if(first<0) first=i;
@@ -705,9 +802,15 @@ function updateSelInfo(){
     else if(ustate[i]===2)moving++;
     const utility=mfUtilityHudOrder(i);
     if(utility){utilityCount++;if(!utilityOrder)utilityOrder=utility;else if(utilityOrder!==utility)utilityMixed=true;}
-    if(unitModes(utype[i]).length>1){
+    const modes=unitModes(utype[i]);
+    if(modes.length>1){
       modeable++;
-      if(curMode<0) curMode=umode[i]; else if(curMode!==umode[i]) mixed=true;
+      if(modeType<0){ modeType=utype[i]; modeList=modes; curMode=umode[i]; }
+      /* Equal current mode IDs do not mean equal next orders: Striker and
+         Thumper both say MOBILE, then cycle to OVERDRIVE and SIEGE. Only
+         eligible chassis may supply this readout, and different mode lists
+         must be shown as mixed before the player presses the shared button. */
+      else if(curMode!==umode[i]||modeList.length!==modes.length||modeList.some((m,k)=>m!==modes[k])) mixed=true;
     }
   }
   if(window.MFUnitStackHotbar&&typeof window.MFUnitStackHotbar.selection==='function')window.MFUnitStackHotbar.selection(stackSelection);
@@ -720,9 +823,12 @@ function updateSelInfo(){
   if(mr){
     hudDisp(mr,deck==='platoons'&&modeable?'flex':'none');
     if(modeable){
-      const M=unitModeDef(utype[first],mixed?0:Math.max(0,curMode));
-      $('modeEm').textContent=mixed?'⁇':M.em;
+      const M=unitModeDef(modeType,mixed?0:Math.max(0,curMode));
+      $('modeEm').textContent=mixed?'↻':M.em;
       $('modeNm').textContent=mixed?'Mixed':M.nm;
+      const label=mixed?'Cycle stances for '+modeable+' selected units; different stance sets'
+        :'Cycle stance for '+modeable+' selected unit'+(modeable===1?'':'s')+'; current '+M.nm;
+      if(mr.getAttribute('aria-label')!==label)mr.setAttribute('aria-label',label);
     }
   }
   if(!n){ hudDisp(el,'none'); intelPrimaryUnit=-1; return; }
@@ -778,14 +884,20 @@ function cycleSelectedModes(){
   } else toast('Selected units have no alternate stance');
   updateSelInfo();
 }
-function hudPlayerPop(){
-  /* One faction-wide wallet. Allied commander seats contribute to this same
-     count and never multiply the 500-body admission cap. */
-  if(typeof populationLedgerPlayer==='function') return populationLedgerPlayer();
-  const cap=typeof populationCapFor==='function'?populationCapFor(0)
+function hudPlayerPop(B){
+  /* Population admission is commander-scoped in sim.js. The production card
+     must quote the selected factory's seat, not the original player bucket. */
+  const bank=typeof mfLocalBank==='function'?mfLocalBank():null;
+  const team=B&&B.team!=null?B.team:bank&&bank.team!=null?bank.team:0;
+  const slot=B&&typeof commanderSlotForBuilding==='function'?commanderSlotForBuilding(B)
+    :bank&&bank.slot!=null?bank.slot:POP_PLAYER_SLOT;
+  if(typeof populationUsedForCommander==='function'&&typeof populationCapForCommander==='function')
+    return {used:populationUsedForCommander(slot),cap:populationCapForCommander(slot)};
+  if(team===0&&slot===POP_PLAYER_SLOT&&typeof populationLedgerPlayer==='function') return populationLedgerPlayer();
+  const cap=typeof populationCapFor==='function'?populationCapFor(team)
     :(typeof FACTION_POP_CAP==='number'?FACTION_POP_CAP:500);
-  const used=typeof populationUsedFor==='function'?populationUsedFor(0)
-    :(teamCount[0]|0);
+  const used=typeof populationUsedFor==='function'?populationUsedFor(team)
+    :(teamCount[team]|0);
   return {used, cap};
 }
 function hudPopK(n){
@@ -825,36 +937,38 @@ function updateHUD(fps){
   if((hudFrame++)%10){ if(typeof showHazChip==='function') showHazChip(); return; }
   updateWaveWarning();
   const massV=$('massV'), enV=$('enV'), massR=$('massR'), enR=$('enR');
-  const localBank=typeof mfLocalBank==='function'?mfLocalBank():{mass:resM[0],energy:resE[0],massCap:RES_MCAP[0],energyCap:RES_ECAP[0]};
+  const localBank=typeof mfLocalBank==='function'?mfLocalBank():{team:0,slot:POP_PLAYER_SLOT,mass:resM[0],energy:resE[0],massCap:RES_MCAP[0],energyCap:RES_ECAP[0]};
+  const primaryWallet=localBank.team===0&&localBank.slot===POP_PLAYER_SLOT;
   /* The upper rail is a tactical glance surface, so four- and five-digit banks
      use the same compact K notation as population. Full precision remains in
      the inspector title reached by tapping the chip. */
   hudTxt(massV, hudPopK(Math.floor(localBank.mass)));
   hudTxt(enV, hudPopK(Math.floor(localBank.energy)));
-  hudCol(massV, stallM>0?'#ff8d7a':(localBank.mass>=localBank.massCap-1?'#ffd257':''));
-  hudCol(enV, stallE>0?'#ff8d7a':'');
-  // net rate = income − measured spending, so the economy reads honestly
+  hudCol(massV, primaryWallet&&stallM>0?'#ff8d7a':(localBank.mass>=localBank.massCap-1?'#ffd257':''));
+  hudCol(enV, primaryWallet&&stallE>0?'#ff8d7a':'');
+  /* Economy rates are measured only for the original player wallet. Show no
+     rate for another seat instead of presenting seat 1's flow as its own. */
   const mNet=mRate-mSpend, eNet=eRate-eSpend;
   if(localBank.mass>=localBank.massCap-1){ hudTxt(massR,'FULL'); hudCol(massR,'#ffd257'); }
-  else {
+  else if(primaryWallet){
     hudTxt(massR,(mNet>=0?'+':'')+mNet.toFixed(1));
     hudCol(massR,mNet<0?'#ff8d7a':'');
-  }
-  hudTxt(enR,(eNet>=0?'+':'')+eNet.toFixed(0));
-  hudCol(enR,eNet<0?'#ff8d7a':'');
+  } else { hudTxt(massR,'—'); hudCol(massR,''); }
+  hudTxt(enR,primaryWallet?(eNet>=0?'+':'')+eNet.toFixed(0):'—');
+  hudCol(enR,primaryWallet&&eNet<0?'#ff8d7a':'');
   const massBox=massV&&massV.closest('.res'),energyBox=enV&&enV.closest('.res');
-  if(massBox)massBox.title='Mass: '+Math.floor(localBank.mass)+' / '+Math.floor(localBank.massCap)+' · gross '+mRate.toFixed(1)+'/s · spend '+mSpend.toFixed(1)+'/s · tap for forecast';
-  if(energyBox)energyBox.title='Energy: '+Math.floor(localBank.energy)+' / '+Math.floor(localBank.energyCap)+' · gross '+eRate.toFixed(1)+'/s · spend '+eSpend.toFixed(1)+'/s · tap for forecast';
+  if(massBox)massBox.title='Mass: '+Math.floor(localBank.mass)+' / '+Math.floor(localBank.massCap)+(primaryWallet?' · gross '+mRate.toFixed(1)+'/s · spend '+mSpend.toFixed(1)+'/s':' · seat rate unavailable')+' · tap for details';
+  if(energyBox)energyBox.title='Energy: '+Math.floor(localBank.energy)+' / '+Math.floor(localBank.energyCap)+(primaryWallet?' · gross '+eRate.toFixed(1)+'/s · spend '+eSpend.toFixed(1)+'/s':' · seat rate unavailable')+' · tap for details';
   coachTick();
   if(typeof updateSelInfo==='function') updateSelInfo();
   const popL=hudPlayerPop(),popEl=$('unitV'),popBox=$('unitRes');
-  /* Chip is the whole player faction's 500, including allied commanders. */
+  /* Chip follows the local commander's admission bucket. */
   const popNowTxt=hudPopK(popL.used);
   const popCapTxt=popL.cap===1000?'1K':hudPopK(popL.cap);
   hudTxt(popEl, popNowTxt+'/'+popCapTxt);
   popBox.classList.toggle('popWarn',popL.used>=popL.cap*.9);
   popBox.classList.toggle('popFull',popL.used>=popL.cap);
-  const popTitle='Faction population: '+popL.used+' of '+popL.cap+' — allied commanders share this cap';
+  const popTitle='Commander population: '+popL.used+' of '+popL.cap+' — each commander has a separate cap';
   if(popBox.title!==popTitle) popBox.title=popTitle;
   hudTxt($('fps'), fps+' fps');
   const localHero=typeof mfLocalCommander==='function'?mfLocalCommander():heroIdx;
@@ -1293,6 +1407,8 @@ function mfCoachMatchReset(){
 }
 function coachTick(){                              // called ~6x/sec from updateHUD
   if(!running||demoMode) return;
+  const bank=typeof mfLocalBank==='function'?mfLocalBank():null;
+  if(bank&&(bank.team!==0||bank.slot!==POP_PLAYER_SLOT))return;
   coachCd-=0.16;
   stallEAcc = stallE>0? stallEAcc+0.16 : 0;
   stallMAcc = stallM>0? stallMAcc+0.16 : 0;
@@ -1450,7 +1566,7 @@ function mfUnitProductionQuote(tIdx,B){
   const T=TYPES[tIdx],team=B&&B.team!=null?B.team:0;
   if(!T) return null;
   const cost=(typeof factionDoctrineUnitCost==='function')?factionDoctrineUnitCost(T,team):{m:T.cm,e:T.ce};
-  const size=mfUnitSizeBand(T),pop=hudPlayerPop(),q=B&&Array.isArray(B.queue)?B.queue.length:0;
+  const size=mfUnitSizeBand(T),pop=hudPlayerPop(B),q=B&&Array.isArray(B.queue)?B.queue.length:0;
   const queueFull=q>=MF_PRODUCTION_QUEUE_CAP;
   const facility=B&&BT[B.type]?BT[B.type].name:'compatible production facility';
   const tier=B&&B.type==='fac'?' · TECH '+(B.tier||1):'';
@@ -1485,7 +1601,7 @@ function mfStructureEffect(key,T){
 function mfStructureLockReasons(key){
   const T=BT[key],out=[];if(!T)return out;
   if(T.clvl&&typeof heroLvl==='number'&&heroLvl<T.clvl)out.push('Commander level '+T.clvl);
-  if(T.req&&typeof hasBld==='function'&&!hasBld(0,T.req))out.push(BT[T.req].name);
+  if(T.req&&typeof hasBld==='function'&&!hasBld(mfFogViewTeam(),T.req))out.push(BT[T.req].name);
   if(T.placement==='water'&&typeof battlefieldNavalEnabled==='function'&&!battlefieldNavalEnabled())out.push('Connected naval domain');
   return out;
 }
@@ -1511,6 +1627,13 @@ function mfStructureBuildQuote(key){
     escrow:{m:T.cm*escrow,e:T.ce*escrow},streamPercent:Math.round((1-escrow)*100)};
 }
 function mfEconomySnapshot(){
+  const bank=typeof mfLocalBank==='function'?mfLocalBank():null;
+  if(bank&&(bank.team!==0||bank.slot!==POP_PLAYER_SLOT)){
+    /* Only the primary wallet has measured mRate/eRate and spend counters. */
+    return {mass:{stored:Math.floor(bank.mass),cap:Math.floor(bank.massCap),gross:null},
+      energy:{stored:Math.floor(bank.energy),cap:Math.floor(bank.energyCap),gross:null},
+      bottleneck:'Seat income and spending rates are not tracked yet'};
+  }
   const m={stored:Math.floor(resM[0]),cap:Math.floor(RES_MCAP[0]),gross:+mRate||0,spend:+mSpend||0};
   const e={stored:Math.floor(resE[0]),cap:Math.floor(RES_ECAP[0]),gross:+eRate||0,spend:+eSpend||0};
   for(const x of [m,e]){
@@ -1534,6 +1657,8 @@ function mfEconomySnapshot(){
   return {mass:m,energy:e,bottleneck};
 }
 function mfEconomyRow(label,x){
+  if(x.gross===null)return '<div class="econResource"><b>'+label+'</b><span>STORED <strong>'+x.stored+' / '+x.cap+'</strong></span>'
+    +'<span>RATE <strong>UNAVAILABLE FOR THIS SEAT</strong></span></div>';
   const sign=n=>(n>=0?'+':'')+n.toFixed(1);
   return '<div class="econResource"><b>'+label+'</b><span>STORED <strong>'+x.stored+' / '+x.cap+'</strong></span>'
     +'<span>GROSS <strong>'+sign(x.gross)+'/s</strong></span><span>SPEND <strong>-'+x.spend.toFixed(1)+'/s</strong></span>'
@@ -1543,7 +1668,7 @@ function mfEconomyRow(label,x){
 function showEconomyIntel(){
   const E=mfEconomySnapshot();
   const h='<section id="economyIntel"><div class="ucHead"><span class="ucRoleIcon">⌁</span><div><b>RESOURCE FORECAST</b>'
-    +'<small>Live income, committed spending, storage and projected runway.</small></div><button type="button" class="ucClose" aria-label="Close resource forecast">×</button></div>'
+    +'<small>'+(E.mass.gross===null?'Your live wallet; per-seat rates are not available.':'Live income, committed spending, storage and projected runway.')+'</small></div><button type="button" class="ucClose" aria-label="Close resource forecast">×</button></div>'
     +'<div class="econGrid">'+mfEconomyRow('◆ MASS',E.mass)+mfEconomyRow('⚡ ENERGY',E.energy)+'</div>'
     +'<div class="econBottleneck"><span>BOTTLENECK</span><b>'+E.bottleneck+'</b></div></section>';
   showIntelMarkup(h,true);
@@ -2471,11 +2596,13 @@ function renderBldPanel(){ if(openBldGone()) return;
          the button say READY on an ally Nova the ally could not afford, and
          NEEDS ENERGY on one it could. Ask the same wallet the shot will bill. */
       const novaBank=(typeof econBankE==='function'&&typeof commanderSlotForBuilding==='function')
-        ? econBankE(0,commanderSlotForBuilding(B)) : resE[0];
+        ? econBankE(B.team,commanderSlotForBuilding(B)) : resE[B.team];
       const lowE=novaBank<NOVA.e;
+      const C=window.MFMatchCommandConsumer,network=C&&C.requiresLockstep();
       fb.style.display='block';
-      fb.disabled=B.cool>0||lowE;
-      fb.textContent=B.cool>0? ('☄ CHARGING… '+Math.ceil(B.cool)+'s')
+      fb.disabled=network||B.cool>0||lowE;
+      fb.textContent=network?'☄ NETWORK NOVA STRIKE UNAVAILABLE'
+                    : B.cool>0? ('☄ CHARGING… '+Math.ceil(B.cool)+'s')
                     : lowE? ('⚡ NEEDS '+NOVA.e+' ENERGY ('+Math.floor(novaBank)+')')
                           : '☄ FIRE NOVA — then tap any target';
     } else fb.style.display='none';
@@ -2725,10 +2852,10 @@ function renderProdMenu(){ if(openBldGone()) return;
     if(B.tier!==2) lockedTier=T2.filter(t=>T1.indexOf(t)<0);
   }
   if(typeof factionDoctrineRoster==='function'){
-    const kept=factionDoctrineRoster(list,B.type,0);
+    const kept=factionDoctrineRoster(list,B.type,B.team);
     lockedDoc=list.filter(t=>kept.indexOf(t)<0);
     /* A chassis the faction does not field is not unlocked by TECH 2 either. */
-    if(lockedTier.length) lockedTier=factionDoctrineRoster(lockedTier,B.type,0);
+    if(lockedTier.length) lockedTier=factionDoctrineRoster(lockedTier,B.type,B.team);
     list=kept;
   }
   const lockWhy={};
@@ -2797,15 +2924,14 @@ function renderProdMenu(){ if(openBldGone()) return;
       if(openBldGone()) return false;
       const Bb=blds[openBld];
       const popSlot=typeof commanderSlotForBuilding==='function'?commanderSlotForBuilding(Bb):-1;
-      if(!populationCanSpawn(tIdx,0,popSlot)){
-        const used=typeof populationUsedFor==='function'?populationUsedFor(0):(teamCount[0]|0);
-        const cap=typeof populationCapFor==='function'?populationCapFor(0):500;
-        toast('⚠ FACTION CAP '+used+' / '+cap+' — recycle units to free population');
+      if(!populationCanSpawn(tIdx,Bb.team,popSlot)){
+        const pop=hudPlayerPop(Bb);
+        toast('⚠ COMMANDER CAP '+pop.used+' / '+pop.cap+' — recycle units to free population');
         sfx('deny');return false;
       }
-      if(tIdx===8 && titanCount[0]+Bb.queue.filter(q=>q===8).length>=3){ toast('Max 3 TITANs'); return false; }
-      if((tIdx===UT_ENGINEER||tIdx===UT_MINER)&&supportUnitCount(0,true)>=supportUnitCap(0)){
-        toast('⚙ SUPPORT CAP '+supportUnitCap(0)+' — raise Commander level or operate a Research Lab');return false;
+      if(tIdx===8 && titanCount[Bb.team]+Bb.queue.filter(q=>q===8).length>=3){ toast('Max 3 TITANs'); return false; }
+      if((tIdx===UT_ENGINEER||tIdx===UT_MINER)&&supportUnitCount(Bb.team,true)>=supportUnitCap(Bb.team)){
+        toast('⚙ SUPPORT CAP '+supportUnitCap(Bb.team)+' — raise Commander level or operate a Research Lab');return false;
       }
       const room=MF_PRODUCTION_QUEUE_CAP-Bb.queue.length;
       if(room<=0){
@@ -2854,7 +2980,7 @@ function renderProdMenu(){ if(openBldGone()) return;
   const ub=$('upBtn');
   if(B.type==='fac'&&B.tier===1){
     ub.style.display='block';
-    const needLab=!hasBld(0,'techlab');
+    const needLab=!hasBld(B.team,'techlab');
     ub.textContent=B.upT>0?('UPGRADING… '+Math.ceil(B.upT)+'s')
       : needLab? '🔒 TECH 2 — requires Tech Lab'
       : ('⬆ UPGRADE TO TECH 2 ('+BUP.fac[0].cm+'m '+BUP.fac[0].ce+'e)');
@@ -2904,14 +3030,14 @@ function cancelQueuedUnit(B,start,snapshot){
   const last=end-1;
   if(last===0){
     const T=TYPES[type];
-    if(T&&B.prodT>0&&B.team===0){
-      const facCost=(typeof factionDoctrineUnitCost==='function')?factionDoctrineUnitCost(T,0):{m:T.cm,e:T.ce};
+    if(T&&B.prodT>0){
+      const facCost=(typeof factionDoctrineUnitCost==='function')?factionDoctrineUnitCost(T,B.team):{m:T.cm,e:T.ce};
       const frac=Math.min(1,B.prodT/Math.max(0.01,T.bt));
       /* Refund the seat that OWNS the factory. Refunding the human bank
          while an ally seat paid the stream is a wallet-to-wallet theft
          primitive under shared control: queue in an ally factory, cancel,
          pocket the refund. */
-      credit(0,facCost.m*frac,facCost.e*frac,typeof commanderSlotForBuilding==='function'?commanderSlotForBuilding(B):null);
+      credit(B.team,facCost.m*frac,facCost.e*frac,typeof commanderSlotForBuilding==='function'?commanderSlotForBuilding(B):null);
     }
     B.queue.shift();
     B.prodT=0;
@@ -3053,7 +3179,7 @@ function renderBuildMenu(){
     const T=BT[key];
     const d=document.createElement('div');
     const lockLvl=T.clvl&&heroLvl<T.clvl;
-    const lockReq=T.req&&!hasBld(0,T.req);
+    const lockReq=T.req&&!hasBld(mfFogViewTeam(),T.req);
     const lockDomain=T.placement==='water'&&typeof battlefieldNavalEnabled==='function'&&!battlefieldNavalEnabled();
     const Q=mfStructureBuildQuote(key),hardLocks=[];
     if(lockLvl)hardLocks.push('COMMANDER LEVEL '+T.clvl);
@@ -3082,7 +3208,7 @@ function renderBuildMenu(){
     const chooseStructure=ev=>{
       ev.stopPropagation();
       if(T.clvl&&heroLvl<T.clvl){ toast('🔒 '+T.name+' unlocks at Commander level '+T.clvl); return; }
-      if(T.req&&!hasBld(0,T.req)){ toast('🔒 Requires a '+BT[T.req].name); return; }
+      if(T.req&&!hasBld(mfFogViewTeam(),T.req)){ toast('🔒 Requires a '+BT[T.req].name); return; }
       if(lockDomain){ toast('✕ NAVAL UNAVAILABLE — this battlefield has no connected ocean or river domain'); sfx('reject'); return; }
       startPlacing(key); sfx('ui');
     };

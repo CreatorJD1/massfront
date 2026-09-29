@@ -85,11 +85,11 @@ assert.equal(ratioVar(slice, 'capR'), mRight * menuScale / menuHeight,
   'the right cap width drifted from the art proportions');
 assert.ok(/border-width:0 var\(--capR\) 0 var\(--capL\)/.test(slice),
   'the menu border widths must come from the cap variables, or border-image scales the caps');
-/* .gbtn carries min-height:54px. height alone loses to it, the box renders two
-   pixels taller than the caps were sized for, and border-image stretches them. */
-for (const property of ['height', 'min-height', 'max-height'])
-  assert.ok(slice.includes(property + ':var(--sliceH)'),
-    `${property} must be pinned to --sliceH, or an inherited min-height stretches the caps`);
+/* Keep the minimum authored height, but let labels grow instead of ellipsising
+   when phone width or accessibility text size leaves less horizontal room. */
+assert.ok(/min-height:var\(--sliceH\)/.test(slice), 'the menu must preserve the authored minimum height');
+assert.ok(/height:auto;min-height:var\(--sliceH\);max-height:none/.test(slice),
+  'the menu must grow for wrapped labels');
 
 /* Every authored state has to be reachable, or a press or an expand shows the
    resting plate and the pack's state work is wasted. */
@@ -113,7 +113,9 @@ assert.equal(dLeft, dRight, 'the deploy plate is symmetric; one cap variable is 
 assert.ok(/border-image-width:0 var\(--ctaCap\)/.test(cta),
   'the caps must be painted by border-image-width, or the label loses the room the content rect gives it');
 assert.ok(/border-width:0;/.test(cta), 'border-width must stay 0 so the caps do not inset the label box');
-assert.ok(/white-space:nowrap/.test(cta), 'DEPLOY MASSFRONT wrapped to two lines and overflowed the plate');
+assert.ok(/white-space:normal/.test(cta), 'the main entry must wrap instead of clipping at enlarged text sizes');
+assert.ok(/height:auto;min-height:var\(--ctaH\);max-height:none/.test(cta),
+  'the main entry must grow with its wrapped label');
 assert.ok(!/repeating-linear-gradient/.test(cta), 'the hand-drawn hazard gradient must be gone; the art carries it');
 
 /* Dock: a real nine-slice, so the border is one number on every edge. */

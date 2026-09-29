@@ -320,3 +320,44 @@
 @media(max-width:350px){
   .armMarketHero .mfOwnershipBadge,.armIt .mfOwnershipBadge{font-size:6.5px;letter-spacing:.05em}
 }
+
+/* The first Arsenal fold is an actionable illustrated item or the player's
+   five owned slots. Supporting economy notes stay accessible below it. */
+#armTabs .tabBtn{min-height:44px;height:auto;font-size:clamp(10px,.625rem,20px);line-height:1.15;overflow-wrap:anywhere}
+.armMarketHero{width:100%;min-height:96px;cursor:pointer;color:inherit;font:inherit}
+.armMarketHero:disabled{cursor:default;opacity:.72}
+.armMarketHero>span{flex:1}
+.armMarketHero b{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+.armMarketHero strong{display:block;margin-top:5px;color:#ffe19a;font:900 clamp(10px,.625rem,20px)/1.2 var(--fT)}
+.armMarketHero i,.armMarketHero small{font-size:clamp(10px,.625rem,20px);overflow-wrap:anywhere}
+.armFitHead{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 2px;color:#bdeeff;font:900 clamp(10px,.625rem,20px)/1.2 var(--fT)}
+.armFitHead span{color:#80b3c9;text-align:right;font-size:clamp(9px,.5625rem,18px)}
+.armFitStrip{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(132px,38%);gap:6px;max-width:100%;overflow-x:auto;padding:1px 0 5px;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior-x:contain}
+.armFitStrip::-webkit-scrollbar{display:none}
+.armFitChip{display:flex;align-items:center;gap:6px;min-width:0;min-height:52px;padding:5px 7px;border:1px solid color-mix(in srgb,var(--rar) 52%,transparent);border-radius:9px;background:linear-gradient(120deg,color-mix(in srgb,var(--rar) 14%,rgba(8,27,42,.98)),rgba(4,13,23,.98));box-shadow:inset 2px 0 var(--rar);color:#e6f7ff;text-align:left;scroll-snap-align:start}
+.armFitArt{flex:0 0 32px;display:grid;place-items:center;height:32px;color:var(--rar);font-size:23px}
+.armFitArt .itemArt{width:30px!important;height:30px!important;object-fit:contain}
+.armFitChip>span:last-child{min-width:0}.armFitChip i,.armFitChip b{display:block;overflow-wrap:anywhere}
+.armFitChip i{color:var(--rar);font:800 clamp(9px,.5625rem,18px)/1.1 var(--fT);font-style:normal}
+.armFitChip b{margin-top:3px;color:#ebf9ff;font:850 clamp(10px,.625rem,20px)/1.15 var(--fU)}
+.armMore,.armInvDetails{width:100%;border:1px solid rgba(101,181,215,.3);border-radius:10px;background:linear-gradient(140deg,rgba(10,31,48,.94),rgba(4,12,21,.98));overflow:hidden}
+.armMore>summary,.armInvDetails>summary{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;padding:9px 11px;list-style:none;color:#bdeaff;font:900 clamp(10px,.625rem,20px)/1.2 var(--fT);letter-spacing:.05em;cursor:pointer}
+.armMore>summary::-webkit-details-marker,.armInvDetails>summary::-webkit-details-marker{display:none}
+.armMore>summary span,.armInvDetails>summary span{font-size:17px}
+.armMore[open]>summary span,.armInvDetails[open]>summary span{transform:rotate(90deg)}
+.armMore>.mfProgressionGuide,.armMore>.armDeals,.armInvDetails>.armInvLayerHead,.armInvDetails>.armInvMeters,.armInvDetails>.invLegend,.armInvDetails>.armLoadoutRule,.armInvDetails>.armMissionPackage{margin:6px 9px 9px}
+.armInvPreviewInfo b,.armVaultCopy b,.armLoadEquipped b,.armMissionFx div b,.armCartRow span b{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+.armInvPreviewInfo b{font-size:clamp(13px,.8125rem,26px);line-height:1.15}
+.armVaultCopy b,.armLoadEquipped b{font-size:clamp(11px,.6875rem,22px);line-height:1.18}
+.armInvPreviewInfo i,.armInvPreviewInfo span,.armVaultCopy i,.armVaultCopy em{font-size:clamp(9px,.5625rem,18px);overflow-wrap:anywhere}
+.armInvPreview p,.armInvCompare,.armInvPreview small{font-size:clamp(10px,.625rem,20px);overflow-wrap:anywhere}
+.armInvCommit,.armLoadSlot button,.armReturnVault,.armCartCheckout{font-size:clamp(10px,.625rem,20px);line-height:1.2;overflow-wrap:anywhere}
+.armMarketFilter{font-size:clamp(9px,.5625rem,18px);line-height:1.15;overflow-wrap:anywhere}
+.armCartRow{grid-template-columns:32px minmax(0,1fr) auto 44px;min-height:54px}
+.armCartRow>button{width:44px;height:44px}
+.armInvChip{min-height:44px;white-space:normal;overflow-wrap:anywhere;font-size:clamp(9px,.5625rem,18px)}
+.armDeal{min-height:44px}.armDealTx i,.armDealTx em{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+@media(max-width:380px){.armInvPreview{grid-template-columns:50px minmax(0,1fr)}.armInvExact{grid-column:1/-1}.armInvPreviewInfo{grid-column:2}}
+html[data-mf-text-scale="150"] .armMarketFilters,html[data-mf-text-scale="200"] .armMarketFilters{grid-template-columns:repeat(2,minmax(0,1fr))}
+html[data-mf-text-scale="150"] .armInvPreview,html[data-mf-text-scale="200"] .armInvPreview{grid-template-columns:50px minmax(0,1fr)}
+html[data-mf-text-scale="150"] .armInvExact,html[data-mf-text-scale="200"] .armInvExact{grid-column:1/-1}

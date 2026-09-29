@@ -208,7 +208,14 @@ function storyPending(){
   }
   return null;
 }
-function storyMarkSeen(i){ storySeen()['d'+i]=1; metaSave(); storyRefreshBadge(); }
+function storyMarkSeen(i){
+  storySeen()['d'+i]=1; metaSave();
+  /* An open mailbox must move this row into the read group immediately;
+     otherwise its NEW label contradicts the updated badge behind the card. */
+  const inbox=document.getElementById('inboxScr');
+  if(inbox&&getComputedStyle(inbox).display!=='none') renderInbox();
+  else storyRefreshBadge();
+}
 
 /* Dispatches belong in the mailbox, not in a compulsory modal queue. The old
    post-match flow reopened the next unlocked dispatch 260 ms after every
@@ -276,6 +283,8 @@ function storyRefreshBadge(){
     el.textContent=n>99?'99+':String(n); el.classList.toggle('on',n>0); };
   setCount(document.getElementById('inboxTabCount')||inboxSectionCount('inboxDispatches'),storyUnreadCount());
   setCount(inboxUpdTabCount()||inboxSectionCount('inboxUpdates'),inboxUnreadUpdates());
+  inboxQuickNavCount('dispatches',storyUnreadCount());
+  inboxQuickNavCount('friends',inboxUnreadFriends());
 }
 /* Unlocked and not yet read. storyPending() stops at the first LOCKED dispatch
    because the arc is strictly sequential; the badge wants the true unread count
@@ -293,12 +302,58 @@ function storyLockHint(d){
   return 'Reach '+r.em+' '+r.nm+(d.trig&&d.hint? '  ·  '+d.hint : '');
 }
 
+/* The mailbox's static shell predates section navigation, and OTA script
+   updates do not replace index.html. Add one real button per destination in
+   the scrollport, not a second tab system that would hide existing messages. */
+function inboxQuickNavCount(key,count){
+  const b=document.getElementById('inboxJump-'+key); if(!b) return;
+  const badge=b.querySelector('.inboxJumpCount');
+  if(badge){ badge.textContent=count>99?'99+':String(count); badge.hidden=!count; }
+  const label=key==='dispatches'?'transmissions':'friend requests';
+  b.setAttribute('aria-label','Jump to '+label+(count?', '+count+' unread':''));
+}
+function inboxEnsureQuickNav(){
+  const scr=document.querySelector('#inboxScr .inboxScroll'); if(!scr) return;
+  const routes=[['dispatches','inboxDispatches','MAIL'],['friends','inboxFriends','REQUESTS'],
+    ['messages','inboxMessages','MESSAGES']];
+  let nav=document.getElementById('inboxQuickNav');
+  if(!nav){
+    nav=document.createElement('nav'); nav.id='inboxQuickNav';
+    nav.setAttribute('aria-label','Inbox sections');
+    for(const [key,listId,label] of routes){
+      const b=document.createElement('button'); b.type='button'; b.id='inboxJump-'+key;
+      b.className='inboxJump'; b.style.minHeight='44px'; b.textContent=label;
+      if(key!=='messages'){
+        const count=document.createElement('span'); count.className='inboxJumpCount';
+        count.hidden=true; count.setAttribute('aria-hidden','true'); b.appendChild(count);
+      }
+      const go=()=>{
+        const h=inboxSHeadAbove(document.getElementById(listId)); if(!h) return;
+        const top=h.getBoundingClientRect().top-scr.getBoundingClientRect().top
+          +scr.scrollTop-nav.getBoundingClientRect().height-6;
+        scr.scrollTop=Math.max(0,top);
+        h.focus({preventScroll:true});
+      };
+      if(typeof mfBindTap==='function') mfBindTap(b,go); else b.addEventListener('click',go);
+      nav.appendChild(b);
+    }
+    scr.insertBefore(nav,scr.firstElementChild);
+  }
+  for(const [,listId] of routes){
+    const h=inboxSHeadAbove(document.getElementById(listId)); if(!h) continue;
+    h.setAttribute('role','heading'); h.setAttribute('aria-level','2'); h.tabIndex=-1;
+  }
+  inboxQuickNavCount('dispatches',storyUnreadCount());
+  inboxQuickNavCount('friends',inboxUnreadFriends());
+  const messages=document.getElementById('inboxJump-messages');
+  if(messages) messages.setAttribute('aria-label','Jump to messages');
+}
+
 /* ---------- MAILBOX ----------
    Everything addressed to the player, in one place, including the sealed tail
    of the arc. The mailbox owns dispatches outright: the whole 27-entry archive
-   lives here, unread first, then read, then the CLASSIFIED entries the player
-   has not earned yet. Friend requests and messages declare themselves as
-   pending so the screen does not silently change shape when social ships. */
+   lives here, unread first, then read. The CLASSIFIED tail remains available
+   in a native disclosure but cannot bury live requests and messages. */
 function renderInbox(){
   const g=document.getElementById('inboxDispatches');
   if(g){
@@ -314,15 +369,28 @@ function renderInbox(){
        newest-first like any mailbox; the sealed archive keeps canonical order. */
     const bucket=r=>r.locked?2:r.read?1:0;
     rows.sort((a,b)=>bucket(a)-bucket(b) || (bucket(a)===1 ? b.i-a.i : a.i-b.i));
-    g.innerHTML=rows.map(r=>r.locked
-      ? '<div class="inboxItem inboxLog locked">'
-        +'<span class="inboxDot" aria-hidden="true"></span>'
-        +'<span class="inboxTx"><b>CLASSIFIED</b><span>'+storyLockHint(r.d)+'</span></span>'
-        +'<span class="inboxMeta">🔒</span></div>'
-      : '<button type="button" class="inboxItem'+(r.read?'':' unread')+'" data-i="'+r.i+'">'
+    const sealed=rows.filter(r=>r.locked);
+    g.innerHTML=rows.filter(r=>!r.locked).map(r=>
+        '<button type="button" class="inboxItem'+(r.read?'':' unread')+'" data-i="'+r.i+'">'
         +'<span class="inboxDot" aria-hidden="true"></span>'
         +'<span class="inboxTx"><b>'+r.d.ttl+'</b><span>'+r.d.from+'</span></span>'
         +'<span class="inboxMeta">'+(r.read?'READ':'NEW')+'</span></button>').join('');
+    let archive=document.getElementById('inboxArchive');
+    if(sealed.length){
+      if(!archive){
+        archive=document.createElement('details'); archive.id='inboxArchive';
+        g.insertAdjacentElement('afterend',archive);
+      }
+      const wasOpen=archive.open;
+      archive.innerHTML='<summary><span>SEALED ARCHIVE</span><span class="inboxArchiveCount">'
+        +sealed.length+' CLASSIFIED</span></summary><div class="inboxArchiveList" role="list" aria-label="Sealed transmissions">'
+        +sealed.map(r=>'<div class="inboxItem inboxLog locked" role="listitem">'
+          +'<span class="inboxDot" aria-hidden="true"></span>'
+          +'<span class="inboxTx"><b>CLASSIFIED</b><span>'+storyLockHint(r.d)+'</span></span>'
+          +'<span class="inboxMeta" aria-hidden="true">🔒</span></div>').join('')+'</div>';
+      archive.querySelector('summary').style.minHeight='44px';
+      archive.open=wasOpen;
+    }else if(archive) archive.remove();
     /* Locked rows carry no data-i and must not bind — a sealed dispatch is not
        a tap target. */
     g.querySelectorAll('.inboxItem[data-i]').forEach(el=>{
@@ -357,6 +425,7 @@ function renderInbox(){
   else if(m) m.innerHTML='<div class="inboxEmpty">Open Social Command to check direct-chat availability.</div>';
   renderInboxUpdates();
   renderInboxNews();
+  inboxEnsureQuickNav();
   storyRefreshBadge();
   /* mfBindTabs is idempotent — it guards every button with dataset.mfTapBound
      and the root with dataset.mfTabsBound — so re-binding on every open is safe
@@ -367,9 +436,8 @@ function renderInbox(){
    each release starts for the first time. A local log rather than a changelog
    fetched from the server, so it stays truthful offline and after a rollback.
 
-   Every row is a real mail item, not a caption. The notes body runs to ~900
-   characters and .inboxTx span clamps to one ellipsised line, so a row that
-   could not be opened was a release log you could see and not read. */
+   Every row is a real mail item, not a caption. The notes body can run to
+   ~900 characters, so an update row must open the full dispatch card. */
 function updateLogRows(){ return (typeof updLogRead==='function')? updLogRead() : []; }
 /* Strictly `read===false`, never `!read`. Entries written before this feature
    existed carry no read flag at all, and treating those as unread would greet
@@ -737,6 +805,7 @@ function renderInboxFriends(){
       cnt.classList.toggle('on',n>0);
     }
   }
+  inboxQuickNavCount('friends',inboxUnreadFriends());
 }
 /* ---------- END FRIENDS ---------- */
 

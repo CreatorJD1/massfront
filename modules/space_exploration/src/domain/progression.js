@@ -8,11 +8,13 @@ import {
   MODULE_CATALOG,
   RESEARCH_CATALOG,
   RESIDENT_FACTION_IDS,
+  SALVAGE_CATALOG,
   RESOURCE_KEYS,
   SHIP_DECKS,
   SHIP_DISTRICT_IDS,
   SPECIALIST_CATALOG,
   SURVEY_CATALOG,
+  refreshChainedSurveyAvailability,
   SYSTEM_CATALOG,
   getUgaGroundAreaOptions
 } from './catalog.js';
@@ -20,18 +22,53 @@ import { COMMANDER1_BY_CAMPAIGN_FACTION, isSelectableCommanderIdV1 } from './com
 import { clamp, deepClone } from './deterministic.js';
 import { DomainValidationError, issue } from './errors.js';
 import { assertDomainState } from './state_store.js';
+import { isPlanetUnlocked } from './ground_control.js';
 import { CONSTRUCTION_FACILITY_CATALOG, getFacilityChoices } from './construction_catalog.js';
 import {
   advanceExpeditionCycles,
   calculateFacilityCapabilities,
   enqueueConstruction,
+  getCoreCommissionReserve,
   getConstructionQuote,
   getConstructionStatus
 } from './construction.js';
+import { advanceRecoveryCycles } from './recovery.js';
 
 export const SOLO_FRONT_PRESSURE_CAP = 100;
 export const SOLO_FRONT_PRESSURE_PER_CYCLE = 2;
+export const DUTY_WATCH_MAX_CYCLES = 2;
+export const DUTY_WATCH_INTEL_DECAY = 1;
 export const UGA_SCAN_NEXT_ACTION_VERSION = 1;
+export const UGA_REFUEL_TARGET = 30;
+export const UGA_REFUEL_CREDITS_PER_UNIT = 20;
+export const UGA_REFUEL_EMERGENCY_CLEARANCE_CREDITS = 600;
+export const UGA_PROBE_STORES_TARGET = 3;
+export const UGA_PROBE_CREDITS_PER_UNIT = 150;
+
+/* Keep a scanned area first when it is playable, but never send a commander
+   past an uncleared ready operation just because an archived replay was first
+   in catalog order. A locked local area remains visible on the board; another
+   ready area is the actionable selection until its prerequisites are met. */
+export function chooseGalaxyOperationId(missions, eligibleMissionIds = [], controlledAreaIds = [], preferredAreaId = null) {
+  const available = Array.isArray(missions) ? missions.filter(mission => mission?.id) : [];
+  const preferred = preferredAreaId && available.find(mission => mission.groundAreaId === preferredAreaId);
+  const ordered = preferred ? [preferred, ...available.filter(mission => mission !== preferred)] : available;
+  const eligible = new Set(eligibleMissionIds);
+  const controlled = new Set(controlledAreaIds);
+  return ordered.find(mission => eligible.has(mission.id) && !controlled.has(mission.groundAreaId))?.id
+    || ordered.find(mission => !controlled.has(mission.groundAreaId))?.id
+    || ordered.find(mission => eligible.has(mission.id))?.id
+    || ordered[0]?.id || null;
+}
+
+// These finite discoveries gate the authored campaign. Reserve an emergency
+// launch for each rather than granting a probe that could be spent on ore or
+// mission support, and do not silently extend the waiver to optional content.
+const CAMPAIGN_CRITICAL_SURVEY_IDS = new Set([
+  'aelos_traffic_census', 'aelos_phase_trace', 'aelos_capitol_vector',
+  'veyra_photon_ring', 'veyra_derelict_echo', 'veyra_cinder_reach_fix',
+  'karak_silent_beacons', 'karak_hive_scan', 'karak_grid_triangulation'
+]);
 
 function fail(message, code, path = '') {
   throw new DomainValidationError(message, [issue(code, message, path)], code);
@@ -62,7 +99,11 @@ function completeStoryStep(state, stepId) {
 
 function unlockSystemSurveys(state, systemId) {
   for (const survey of Object.values(SURVEY_CATALOG)) {
-    if (survey.systemId === systemId && !state.surveys[survey.id].depleted) state.surveys[survey.id].status = 'available';
+    if (survey.systemId !== systemId || state.surveys[survey.id].depleted) continue;
+    // Chain-gated route surveys stay 'locked' until their prerequisites are
+    // depleted — system unlock and chain rung are independent gates.
+    const chained = (survey.requiredSurveyIds || []).some(id => state.surveys[id]?.depleted !== true && state.surveys[id]?.status !== 'completed');
+    state.surveys[survey.id].status = chained ? 'locked' : 'available';
   }
 }
 
@@ -74,7 +115,10 @@ export function getSurveyNextAction(state, surveyId, rewards = {}) {
     .filter(mission => (mission.requirements.discoveryIds || []).includes(survey.discoveryId))
     .filter(mission => (mission.requirements.discoveryIds || []).every(id => state.discoveries.foundIds.includes(id)))
     .map(mission => mission.id);
-  const areas = missionIds.map(getUgaGroundAreaOptions).filter(Boolean);
+  // One discovery can unlock operations on another planet in this system.
+  // Keep every area, but present the surveyed planet first where it has one.
+  const areas = missionIds.map(getUgaGroundAreaOptions).filter(Boolean)
+    .sort((a, b) => Number(b.planetId === survey.planetId) - Number(a.planetId === survey.planetId));
   const resourceKeys = Object.keys(rewards).filter(key => RESOURCE_KEYS.includes(key) && Number(rewards[key]) > 0).sort();
   const shared = {
     schemaVersion: UGA_SCAN_NEXT_ACTION_VERSION,
@@ -86,10 +130,27 @@ export function getSurveyNextAction(state, surveyId, rewards = {}) {
     areaIds: areas.map(area => area.areaId),
     areas
   };
+  // Meridian's first scan reveals the infested region, not a deployable purge.
+  // Pale Bloom still needs confirmed hive geometry from a second authored scan;
+  // guide the player to the laboratory instead of a locked operation card.
+  if (surveyId === 'karak_silent_beacons'
+    && !state.world.systems.karak.infestation.hiveTargetsConfirmed
+    && !state.surveys.karak_hive_scan?.depleted) {
+    const labReady = state.ship.districts.survey.commissioned !== false
+      && state.ship.districts.survey.level >= SURVEY_CATALOG.karak_hive_scan.requiredSurveyLevel;
+    return {
+      ...shared,
+      action: labReady ? 'continue-survey' : 'prepare-survey-lab',
+      label: labReady ? 'SCAN HIVE TARGETS' : 'UPGRADE SURVEY LAB · LEVEL 3',
+      primaryAreaId: null,
+      targetSystemId: survey.systemId,
+      targetSurveyId: 'karak_hive_scan'
+    };
+  }
   if (areas.length) return {
     ...shared,
     action: 'inspect-ground-area',
-    label: areas.length === 1 ? 'VIEW DISCOVERED AREA' : 'VIEW DISCOVERED AREAS',
+    label: 'CHOOSE PLANET AND AREA',
     primaryAreaId: areas[0].areaId,
     targetSystemId: survey.systemId
   };
@@ -100,10 +161,11 @@ export function getSurveyNextAction(state, surveyId, rewards = {}) {
     primaryAreaId: null,
     targetSystemId: survey.unlockSystemId
   };
+  const localSignalsRemain = Object.values(SURVEY_CATALOG).some(entry => entry.systemId === survey.systemId && !state.surveys[entry.id]?.depleted);
   return {
     ...shared,
-    action: 'continue-survey',
-    label: 'CONTINUE ORBITAL SURVEY',
+    action: localSignalsRemain ? 'continue-survey' : 'review-frontier',
+    label: localSignalsRemain ? 'CONTINUE ORBITAL SURVEY' : 'REVIEW FRONTIER STATUS',
     primaryAreaId: null,
     targetSystemId: survey.systemId
   };
@@ -131,6 +193,57 @@ export function advanceSoloFrontPressure(state, cycles, cause = 'expedition') {
   }
   assertDomainState(next);
   return next;
+}
+
+/* L1 — the strategic clock.
+
+   Before this action the expedition cycle only moved when the player did
+   something: survey (+1), transit (+2), operation (+2). Construction and
+   recovery therefore never progressed on a quiet front, and the REQUIRED
+   CORE commission could deadlock a player with no probe, no fuel and no
+   mission — the exact 0/2 WORK stall seen on device. A "wait" that cannot
+   be repeated also needs a cap: without one, an idle button is an infinite
+   construction cycle generator (L2 pressure made it slightly negative, but
+   a free infinite loop is still not a loop), so one watch costs the same
+   pressure the other cycle sources pay and is capped per event. */
+export function getDutyWatchQuote(state) {
+  assertDomainState(state);
+  if (state.operations.pending) {
+    return { available: false, cycles: 0, maxCycles: DUTY_WATCH_MAX_CYCLES, pressurePerCycle: SOLO_FRONT_PRESSURE_PER_CYCLE, reason: 'OPERATION_PENDING' };
+  }
+  return { available: true, cycles: DUTY_WATCH_MAX_CYCLES, maxCycles: DUTY_WATCH_MAX_CYCLES, pressurePerCycle: SOLO_FRONT_PRESSURE_PER_CYCLE, reason: null };
+}
+
+export function holdDutyWatch(state) {
+  const quote = getDutyWatchQuote(state);
+  if (!quote.available) fail('Resolve the pending ground operation before advancing expedition cycles.', 'OPERATION_PENDING', 'operations.pending');
+  assertDomainState(state);
+  const eventId = `watch:${state.ship.expeditionCycle}:${state.revision}`;
+  const advanced = advanceExpeditionCycles(state, quote.cycles, eventId, 'duty-watch');
+  if (!advanced.advanced) return { state, advanced: false, completedJobs: [], breach: [] };
+  const pressured = advanceSoloFrontPressure(advanced.state, quote.cycles, eventId);
+  // At the cap a front stops being a timer and becomes a battlefield. Clamp
+  // reads at 100 with one band of intel decay (L2 consequence) and a stable
+  // breach marker the UI can act on, instead of silently looping forever.
+  const breached = Object.keys(pressured.world.systems).filter(systemId => {
+    const front = pressured.world.systems[systemId].soloFront;
+    return front.pressure >= SOLO_FRONT_PRESSURE_CAP && Boolean(pressured.world.systems[systemId].discovered);
+  });
+  let next = pressured;
+  if (breached.length) {
+    next = deepClone(pressured);
+    for (const systemId of breached) {
+      const system = next.world.systems[systemId];
+      system.soloFront.pressure = SOLO_FRONT_PRESSURE_CAP;
+      system.soloFront.lastCause = 'breach';
+      const previousIntel = next.intelligence.bySystem[systemId] || 0;
+      next.intelligence.bySystem[systemId] = clamp(previousIntel - DUTY_WATCH_INTEL_DECAY, 0, 5);
+      system.soloFront.lastDelta = -DUTY_WATCH_INTEL_DECAY;
+    }
+    next.revision += 1;
+    assertDomainState(next);
+  }
+  return { state: next, advanced: true, completedJobs: advanced.completedJobs, breach: breached };
 }
 
 export function applySoloFrontPressureDelta(state, systemId, delta, cause = 'mission_result') {
@@ -191,10 +304,25 @@ export function installDistrictModule(state, districtId, socketId, moduleId) {
   if (!module || !socket.compatibleModuleIds.includes(moduleId)) fail('Module is incompatible with this socket.', 'MODULE_INCOMPATIBLE', 'moduleId');
   if (socket.unlockLevel > district.level) fail(`Socket unlocks at level ${socket.unlockLevel}.`, 'MODULE_SOCKET_LOCKED', `ship.districts.${districtId}.level`);
   if (district.modules[socketId] === moduleId) return state;
-  assertCost(state.resources, module.cost);
+  /* Staff perks can discount module components (Harmonic Synthesis). This is
+     the only module purchase path, so scaling the catalog cost HERE keeps the
+     perk's promise true without a parallel quote surface to drift from it. */
+  const moduleCostPct = calculateFacilityCapabilities(state).moduleCostPct || 0;
+  const cost = {};
+  for (const [key, amount] of Object.entries(module.cost || {})) cost[key] = Math.max(0, Math.round(amount * (100 + moduleCostPct) / 100));
+  assertCost(state.resources, cost);
   const next = deepClone(state);
-  spend(next.resources, module.cost);
+  spend(next.resources, cost);
   next.ship.districts[districtId].modules[socketId] = moduleId;
+  const reserve = getCoreCommissionReserve(next);
+  if (reserve.active) {
+    for (const [key, required] of Object.entries(reserve.cost)) {
+      if ((next.resources[key] || 0) < required) fail(`Keep ${required} ${key} for core commissioning and first deployment.`, 'CORE_COMMISSION_RESERVE', `resources.${key}`);
+    }
+    // An affordable module can still strand a queued core by consuming its
+    // last powered construction slot. Check after fitting its actual draw.
+    if (!reserve.powerOk) fail(reserve.powerIssue?.message || 'Keep a powered construction slot for core commissioning.', 'CORE_COMMISSION_POWER_RESERVE', 'ship.power');
+  }
   next.revision += 1;
   assertDomainState(next);
   return next;
@@ -331,14 +459,33 @@ export function getSurveyEligibility(state, surveyId, opts = {}) {
   if (!state.world.systems[survey.systemId].discovered) issues.push(issue('SYSTEM_UNDISCOVERED', 'Survey system has not been discovered.', `world.systems.${survey.systemId}.discovered`));
   if (surveyState.depleted || surveyState.status === 'completed') issues.push(issue('SURVEY_DEPLETED', 'This authored survey has already been exhausted.', `surveys.${surveyId}.depleted`));
   if (surveyState.status === 'locked') issues.push(issue('SURVEY_LOCKED', 'Survey is not yet available.', `surveys.${surveyId}.status`));
+  // Frontier ladder, tier 1 — route surveys chain: a scan with
+  // requiredSurveyIds refuses to run until every listed scan is completed,
+  // so the galaxy chart opens one system at a time in authored order.
+  for (const prerequisiteId of survey.requiredSurveyIds || []) {
+    const prerequisite = state.surveys?.[prerequisiteId];
+    if (prerequisite?.depleted !== true && prerequisite?.status !== 'completed') {
+      issues.push(issue('SURVEY_CHAIN_REQUIRED', `Complete ${SURVEY_CATALOG[prerequisiteId]?.name || 'the previous survey'} first.`, `surveys.${prerequisiteId}.depleted`));
+      break;
+    }
+  }
+  // Frontier ladder, tier 2 — a system's bodies chart in sequence: planet N
+  // opens when planet N-1's primary authored survey has been completed.
+  if (survey.planetId && !isPlanetUnlocked(state, survey.systemId, survey.planetId)) {
+    issues.push(issue('PLANET_LADDER_REQUIRED', 'Chart the previous world in this system first.', `surveys.${survey.planetId}`));
+  }
   if (state.ship.districts.survey.commissioned === false) issues.push(issue('SURVEY_NOT_COMMISSIONED', 'Survey Lab must be commissioned.', 'ship.districts.survey.commissioned'));
   if (state.ship.districts.survey.level < survey.requiredSurveyLevel) issues.push(issue('SURVEY_LEVEL_REQUIRED', `Survey Lab level ${survey.requiredSurveyLevel} is required.`, 'ship.districts.survey.level'));
   if (opts.planetId && survey.planetId && survey.planetId !== opts.planetId) {
     issues.push(issue('SURVEY_WRONG_PLANET', 'This signal is on another body in the system.', 'planetId'));
   }
-  const probeCost = Math.max(1, survey.probeCost - (calculateFacilityCapabilities(state).surveyProbeDiscount || 0));
+  const standardProbeCost = Math.max(1, survey.probeCost - (calculateFacilityCapabilities(state).surveyProbeDiscount || 0));
+  const emergency = state.resources.probes === 0
+    && !surveyState.depleted && surveyState.status !== 'completed'
+    && CAMPAIGN_CRITICAL_SURVEY_IDS.has(surveyId);
+  const probeCost = emergency ? 0 : standardProbeCost;
   if (state.resources.probes < probeCost) issues.push(issue('PROBE_SHORTAGE', `Survey requires ${probeCost} probe.`, 'resources.probes'));
-  return { ok: issues.length === 0, issues, survey, probeCost };
+  return { ok: issues.length === 0, issues, survey, probeCost, standardProbeCost, emergency };
 }
 
 export function spendSurveyProbe(state) {
@@ -368,6 +515,24 @@ export function recoverPlanetFind(state, find) {
   return advanceSoloFrontPressure(advanced.state, 1, `survey:deposit:${depositId}`);
 }
 
+export function recoverContactSalvage(state, contactId) {
+  assertDomainState(state);
+  const salvage = SALVAGE_CATALOG[contactId];
+  if (!salvage) fail('No salvage manifest exists for this contact.', 'SALVAGE_UNKNOWN', 'contactId');
+  if (salvage.systemId !== state.route.systemId) fail('The wreck is not in the current system.', 'SALVAGE_WRONG_SYSTEM', 'contactId');
+  if (state.discoveries.extractedDepositIds.includes(salvage.id)) fail('This wreck has already been stripped.', 'SALVAGE_DEPLETED', 'contactId');
+  const next = deepClone(state);
+  reward(next.resources, deepClone(salvage.rewards));
+  next.discoveries.extractedDepositIds.push(salvage.id);
+  const advanced = advanceExpeditionCycles(next, 1, `salvage:${salvage.id}`, 'salvage');
+  return {
+    state: advanceSoloFrontPressure(advanced.state, 1, `salvage:${salvage.id}`),
+    salvage: deepClone(salvage),
+    rewards: deepClone(salvage.rewards),
+    construction: advanced.completedJobs
+  };
+}
+
 export function deployProbe(state, surveyId) {
   assertDomainState(state);
   const eligibility = getSurveyEligibility(state, surveyId);
@@ -393,6 +558,10 @@ export function deployProbe(state, surveyId) {
     next.world.systems[survey.unlockSystemId].discovered = true;
     unlockSystemSurveys(next, survey.unlockSystemId);
   }
+  // A prerequisite completed in this very deployment must open any chained
+  // rung in an already-unlocked system too (same-system chains like Orion
+  // behind Karak) — unlockSystemSurveys only covers the newly unlocked one.
+  refreshChainedSurveyAvailability(next);
   if (survey.revealsInfestation) {
     next.story.karakInfestationRevealed = true;
     next.world.systems.karak.infestation.active = true;
@@ -416,8 +585,75 @@ export function deployProbe(state, surveyId) {
   };
 }
 
+export function getRefuelQuote(state) {
+  assertDomainState(state);
+  const amount = Math.max(0, UGA_REFUEL_TARGET - state.resources.fuel);
+  const emergencyActive = state.ship.emergencyFuelActive === true;
+  // Clear the full reserve value before normal transit can resume; otherwise
+  // a one-unit paid top-up launders an emergency tank into construction cycles.
+  const clearanceCost = emergencyActive ? UGA_REFUEL_EMERGENCY_CLEARANCE_CREDITS : 0;
+  const creditsCost = amount * UGA_REFUEL_CREDITS_PER_UNIT + clearanceCost;
+  let canPay = state.resources.credits >= creditsCost;
+  if (canPay && creditsCost > 0) {
+    const paidCandidate = deepClone(state);
+    paidCandidate.resources.credits -= creditsCost;
+    const reserve = getCoreCommissionReserve(paidCandidate);
+    if (reserve.active) canPay = Object.entries(reserve.cost).every(([key, required]) => (paidCandidate.resources[key] || 0) >= required);
+  }
+  return {
+    available: amount > 0 || (emergencyActive && canPay),
+    amount,
+    targetFuel: UGA_REFUEL_TARGET,
+    creditsCost,
+    clearanceCost,
+    canPay,
+    mode: canPay ? 'paid' : 'emergency',
+    emergencyActive
+  };
+}
+
+export function getProbeResupplyQuote(state) {
+  assertDomainState(state);
+  const amount = Math.max(0, UGA_PROBE_STORES_TARGET - state.resources.probes);
+  const creditsCost = amount * UGA_PROBE_CREDITS_PER_UNIT;
+  let canPay = amount > 0 && state.resources.credits >= creditsCost;
+  if (canPay) {
+    const paidCandidate = deepClone(state);
+    paidCandidate.resources.credits -= creditsCost;
+    const reserve = getCoreCommissionReserve(paidCandidate);
+    if (reserve.active) canPay = Object.entries(reserve.cost).every(([key, required]) => (paidCandidate.resources[key] || 0) >= required);
+  }
+  return { available: amount > 0, amount, targetProbes: UGA_PROBE_STORES_TARGET, creditsCost, canPay };
+}
+
+export function resupplyProbes(state) {
+  const quote = getProbeResupplyQuote(state);
+  if (!quote.available) return state;
+  if (!quote.canPay) fail('Probe resupply would consume protected commissioning supplies or exceeds available credits.', 'PROBE_RESUPPLY_UNAFFORDABLE', 'resources.credits');
+  const next = deepClone(state);
+  next.resources.credits -= quote.creditsCost;
+  next.resources.probes += quote.amount;
+  next.revision += 1;
+  assertDomainState(next);
+  return next;
+}
+
+export function refuelShip(state) {
+  const quote = getRefuelQuote(state);
+  if (!quote.available) return state;
+  const next = deepClone(state);
+  next.resources.fuel += quote.amount;
+  if (quote.canPay) next.resources.credits -= quote.creditsCost;
+  next.ship.emergencyFuelActive = !quote.canPay;
+  // The bankrupt reserve is a way back into play, not a construction timer.
+  next.revision += 1;
+  assertDomainState(next);
+  return next;
+}
+
 export function plotCourse(state, systemId) {
   assertDomainState(state);
+  if (state.operations.pending) fail('Resolve the pending ground operation before plotting a course.', 'OPERATION_PENDING', 'operations.pending');
   const system = SYSTEM_CATALOG[systemId];
   if (!system) fail('Unknown destination system.', 'SYSTEM_UNKNOWN', 'systemId');
   if (!state.world.systems[systemId].discovered) fail('Destination has not been discovered.', 'SYSTEM_UNDISCOVERED', `world.systems.${systemId}.discovered`);
@@ -434,6 +670,18 @@ export function plotCourse(state, systemId) {
   next.route = { scene: 'system', systemId, targetId: null, returnRoute: null };
   next.revision += 1;
   const eventId = `transit:${state.route.systemId}:${systemId}:${state.revision}`;
+  if (state.ship.emergencyFuelActive === true) {
+    // Free rescue fuel must not become an unlimited construction-cycle button.
+    // The only exception is finite core work needed to regain a playable mission.
+    const essentialCommissionPending = next.ship.constructionQueue.some(job =>
+      job.kind === 'commission' && (job.districtId === 'mission_ops' || job.districtId === 'hangar'));
+    if (essentialCommissionPending && getConstructionStatus(next).active > 0) {
+      const advanced = advanceExpeditionCycles(next, 2, eventId, 'emergency-transit');
+      return advanceSoloFrontPressure(advanced.state, 2, eventId);
+    }
+    // Travel still consumes fuel, heals the crew, and advances the live front.
+    return advanceSoloFrontPressure(advanceRecoveryCycles(next, 2), 2, eventId);
+  }
   const advanced = advanceExpeditionCycles(next, 2, eventId, 'transit');
   return advanceSoloFrontPressure(advanced.state, 2, eventId);
 }
@@ -457,6 +705,7 @@ export function calculatePowerGridStatus(state) {
   const construction = getConstructionStatus(state);
   const facilityCapabilities = calculateFacilityCapabilities(state);
   totalGeneratedMW += facilityCapabilities.powerGenerationMW || 0;
+  totalGeneratedMW += state.ship?.coreCommissionRescuePowerMW || 0;
 
   if (engineeringDistrict?.modules) {
     for (const moduleId of Object.values(engineeringDistrict.modules)) {

@@ -20,19 +20,19 @@
     {
       "sourceId": "theatre-catalog",
       "path": "assets/data/theatreprofiles-stage10.js",
-      "sha256": "sha256-ba9b19e4032c687e3148e35c31d5e1e9e1a67831ce153b03ff9556863ee3d924",
+      "sha256": "sha256-c878b682673cb35310661e91bc96e4950286cf1c8a3b0b3067f9e57d871cf626",
       "role": "STAGE10_TYPED_SCOPE_AUTHORITY"
     },
     {
       "sourceId": "showcase-authority",
       "path": "modules/space_exploration/src/systems/showcase_systems.js",
-      "sha256": "sha256-7f2c06ef7c2e7fa31241de78a1e31bf7da68ff306dda50ed3b697d7c6ebeb8c5",
+      "sha256": "sha256-79b6e8ed1e611f256a74f927cef14a29f440ade531eef2e3e4d029328ed80077",
       "role": "EXACT_EXPLORATION_SYSTEM_AND_PLANET_AUTHORITY"
     },
     {
       "sourceId": "nexus-district-authority",
       "path": "modules/space_exploration/src/domain/catalog.js",
-      "sha256": "sha256-3e70aa69ad3a76fa43fd570230ff9c43dc0bd518b4124a53a66bfb20380b9cd6",
+      "sha256": "sha256-b852737e1a4030d363f93557f1f7c2641b041c52d05397fb382de59f43b5582e",
       "role": "EXACT_SHIP_DISTRICT_AUTHORITY"
     }
   ],

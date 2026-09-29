@@ -142,12 +142,16 @@ function mfVictoryEnsureBtns(){
   if(!cont){
     cont=document.createElement('button');
     cont.className='mbtn'; cont.id='goContinueBtn';
-    cont.textContent='▶  CONTINUE';
+    cont.textContent='▶  NEXT BATTLE';
     foot.appendChild(cont);
     if(cont.dataset.bound!=='1'){
       cont.dataset.bound='1';
-      if(typeof mfBindTap==='function') mfBindTap(cont,mfVictoryContinue);
-      else cont.addEventListener('pointerup',mfVictoryContinue);
+      const activate=()=>{
+        if(cont.dataset.action==='restart')restartCurrentBattle();
+        else if(cont.dataset.action==='continue')mfVictoryContinue();
+      };
+      if(typeof mfBindTap==='function') mfBindTap(cont,activate);
+      else cont.addEventListener('click',activate);
     }
   }
   const menu=document.getElementById('restartBtn');
@@ -156,11 +160,17 @@ function mfVictoryEnsureBtns(){
 }
 function mfVictoryPaintButtons(win){
   const B=mfVictoryEnsureBtns(); if(!B) return;
-  const next=!!(win&&mfVictoryHasNext());
-  B.cont.style.display=next?'':'none';
-  B.cont.disabled=!next;
-  B.cont.textContent=next?'▶  CONTINUE':'▶  CONTINUE';
-  if(B.menu) B.menu.textContent='←  RETURN TO MENU';
+  const bridge=typeof window!=='undefined'&&window.__MF_GALACTIC_BRIDGE,
+    routed=!!(bridge&&(bridge.active||bridge.isolation&&bridge.isolation.active)),
+    C=typeof window!=='undefined'&&window.MFMatchCommandConsumer,
+    online=!!(C&&typeof C.sessionActive==='function'&&C.sessionActive());
+  const next=!!(win&&!routed&&!online&&mfVictoryHasNext());
+  const retry=!!(!win&&!routed&&!online&&mfLastResultCanRestart);
+  B.cont.dataset.action=next?'continue':retry?'restart':'';
+  B.cont.textContent=next?'▶  NEXT BATTLE':'↻  RESTART BATTLE';
+  B.cont.style.display=next||retry?'':'none';
+  B.cont.disabled=!(next||retry);
+  if(B.menu) B.menu.textContent=routed?'←  RETURN TO NEXUS-VII':'←  RETURN TO MENU';
   if(win&&mfDepart.fromVictory){
     const rw=document.getElementById('goRewards');
     if(rw&&!rw.querySelector('.mfDepartNotice')){
@@ -172,9 +182,12 @@ function mfVictoryPaintButtons(win){
   }
 }
 function mfVictoryContinue(){
+  const cont=document.getElementById('goContinueBtn');
+  if(!gameEnded||!cont||cont.dataset.action!=='continue')return false;
   if(typeof sfx==='function') sfx('ui');
   mfDepart.fromVictory=false;
-  if(typeof continueToNextMap==='function') continueToNextMap();
+  if(typeof continueToNextMap==='function')continueToNextMap();
+  return true;
 }
 
 const mfDepartReturn=returnToMainMenu;
@@ -192,7 +205,9 @@ const mfDepartEnd=endGame;
 endGame=function(win,reason){
   mfDepart.fromVictory=false;
   mfDepartEnd(win,reason);
+  const resultEpoch=mfResultPresentationEpoch;
   setTimeout(()=>{
+    if(resultEpoch!==mfResultPresentationEpoch||!gameEnded)return;
     mfDepart.fromVictory=!!(win&&mfDepartureTheatreDone());
     mfVictoryPaintButtons(!!win);
   },1480);

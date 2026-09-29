@@ -6,13 +6,14 @@ const contentPacks=window.MASSFRONT_ASSET_PACKS;
 if(contentPacks){
   const contentStatus=document.createElement('details');
   contentStatus.id='mfGalacticContentStatus';
-  contentStatus.style.cssText='position:fixed;left:max(12px,env(safe-area-inset-left));bottom:max(12px,env(safe-area-inset-bottom));z-index:80;max-width:min(300px,75vw);box-sizing:border-box;padding:8px 12px;border:1px solid #386477;border-radius:8px;background:#07121eeb;color:#d8f4ff;font:12px system-ui;box-shadow:0 2px 16px #0008';
+  contentStatus.className='mf-normal-inline-status';
+  contentStatus.dataset.loaderArchetype='normal';
   const summary=document.createElement('summary');
-  summary.style.cssText='min-height:44px;cursor:pointer;line-height:1.5;align-content:center';
+  summary.className='mf-normal-inline-summary';
   const description=document.createElement('p');
   const retry=document.createElement('button');
   retry.textContent='Retry content download';
-  retry.style.cssText='min-height:44px;min-width:44px;padding:8px 12px;font:inherit;cursor:pointer;background:#0b2635;color:#9be9ff;border:1px solid #48aec8;border-radius:4px';
+  retry.className='mf-normal-inline-action';
   retry.addEventListener('click',()=>contentPacks.retryStartup());
   contentStatus.append(summary,description,retry);
   document.body.append(contentStatus);

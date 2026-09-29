@@ -18,9 +18,9 @@
        card would have to fight the stage stepper, the mode contract row and
        the footer dock for the same narrow phone lane, and lose.
 
-   So the card is inserted INTO the active stage panel as its first child. It
-   scrolls with the content it describes, can never overlap chrome, and needs
-   no z-index or pointer-events rules at all. galaxyui.js rebuilds the system,
+    So the card is inserted INTO the active stage panel near the choice it
+    describes. It scrolls with that content, never overlaps chrome, and needs
+    no z-index or pointer-events rules at all. galaxyui.js rebuilds the system,
    planet and region panels with innerHTML on every stage change, which would
    delete the card — so the poll below re-inserts it whenever it has gone
    missing, the same self-healing pattern tutorial.js uses to keep its card
@@ -41,17 +41,16 @@
 var PRIMER_VERSION=2;
 var STAGES=[
  { id:'galaxy', nm:'GALAXY',
-   tx:'Sombrero-I is the only open star. Andromeda, Orion and Helios stay locked — tap a locked chip and you remain on this galaxy, no warp. Drag the hologram, TAP AN UNLOCKED STAR, then ENTER SOMBRERO-I.' },
+   tx:'Sombrero-I is open. Select it, then tap ENTER. Other stars unlock as you conquer sites.' },
  { id:'system', nm:'SYSTEM',
-   tx:'One playable homeworld; other bodies on the rings are lore, not drops. The dossier reads 4 REGIONS · 12 SITES — clearing them unlocks the next star. Tap the homeworld, then ENTER AELOS.' },
+   tx:'Select the homeworld to reach its regions. Clear its 12 sites to unlock the next star.' },
  { id:'planet', nm:'PLANET',
-   tx:'The planet splits into four regions, each a different battlefield theme and hazard. Drag the globe or use the chips below it, then tap a region. Locked regions open as neighbouring ones are liberated.' },
+   tx:'Choose a region on the globe or in the list. Conquest opens neighboring regions.' },
  { id:'region', nm:'REGION',
-   tx:'Three sites per region, in order: COMPACT (_small, 2.2 km), STANDARD (_medium, 2.6 km), LARGE (_large, 3.2 km). A Standard War Room drop lands on the medium theatre — that is the map the mode is balanced around. Pick STANDARD / medium unless you want the short Compact fight.' },
+   tx:'Choose a site. STANDARD is the balanced medium battlefield; COMPACT is a shorter fight.' },
  { id:'deploy', nm:'DEPLOY',
-   tx:'The deployment plan: commander, objective, threat, modifiers and payout, all editable below. START BATTLE sends the carrier — you still pick landing ground, then DEPLOY BASE HERE. In the drop the HUD pop counter reads n/500; every allied commander shares that faction-wide cap.' }
+   tx:'Review your force, then START BATTLE. Pick landing ground and tap DEPLOY BASE HERE.' }
 ];
-var CLOSER='That is the route. Twelve sites per system, and the next star opens when the last one falls.';
 /* The two facts a first Standard visit must still teach after Training or
    SKIP GUIDE. Optional stages (system / planet / deploy) may be dropped. */
 var MUST_SEE=['galaxy','region'];
@@ -203,10 +202,8 @@ function build(S,idx,last){
   d.dataset.stage=S.id;
   d.setAttribute('aria-label','War table orientation');
   d.innerHTML='<header><span>WAR TABLE ORIENTATION</span><b>'+vis.at+' / '+vis.n+' · '+S.nm+'</b></header>'
-    +'<p>'+S.tx+(last?' '+CLOSER:'')+'</p>'
-    +'<div class="wtpFoot"><i>'+STAGES.map(function(q,n){
-        return '<em class="'+(n===idx?'on':n<idx?'past':'')+'">'+q.nm+'</em>';
-      }).join('<u>›</u>')+'</i>'
+    +'<p>'+S.tx+'</p>'
+    +'<div class="wtpFoot">'
     +'<button type="button" class="wtpDone">'+(last?'GOT IT · FINISH':'GOT IT')+'</button>'
     +(last?'':'<button type="button" class="wtpSkip">SKIP GUIDE</button>')+'</div>';
   var b=d.querySelector('.wtpDone');
@@ -244,7 +241,17 @@ function sync(){
   if(card&&card.dataset.stage===id&&card.parentNode===panel) return;
   if(card) card.remove();
   var vis=visibleCount(id);
-  panel.insertBefore(build(STAGES[idx],idx,vis.last),panel.firstChild);
+  /* The guide must not displace the primary map or battle-plan action from a
+     short phone's first fold. Keep it in flow after that stage's first choice;
+     galaxy and region still show their must-see facts beside the live map. */
+  var anchor=id==='galaxy'?panel.querySelector('#mfConquestContinue'):
+    id==='region'?panel.querySelector('#mfRegionHero'):
+    id==='deploy'?panel.querySelector('#mfQuickSetup'):
+    id==='system'?panel.querySelector('.mfSystemTheatre'):
+    id==='planet'?panel.querySelector('.mfPlanetViewport'):null;
+  var next=build(STAGES[idx],idx,vis.last);
+  if(anchor&&anchor.parentNode===panel) anchor.insertAdjacentElement('afterend',next);
+  else panel.insertBefore(next,panel.firstChild);
 }
 
 /* ---------------------------------------------------------------------------

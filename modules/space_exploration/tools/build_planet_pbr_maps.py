@@ -29,6 +29,7 @@ PLANETS = {
     "nacre": {"emissive": "violet", "metallic": 0.04, "roughness": (0.22, 0.76), "seed": 449},
     "meridian": {"emissive": "colony", "metallic": 0.05, "roughness": (0.34, 0.86), "seed": 557},
     "tethys": {"emissive": "foundry", "metallic": 0.22, "roughness": (0.38, 0.91), "seed": 661},
+    "zephyros": {"emissive": "storm", "metallic": 0.02, "roughness": (0.52, 0.95), "seed": 733},
 }
 
 
@@ -115,6 +116,12 @@ def emissive_map(rgb: np.ndarray, mode: str, fine: np.ndarray) -> np.ndarray:
     elif mode == "jade":
         mask = np.clip((g - r * 0.82 - b * 0.25 - 0.2) * 1.4, 0, 0.2)
         tint = np.dstack((np.full_like(r, 0.08), np.ones_like(r), np.full_like(r, 0.62)))
+    elif mode == "storm":
+        # Gas-giant lightning: only the warm storm cells carry a faint ember
+        # glow. The r-over-g gate keeps the pale weather bands dark — they are
+        # close to the storm cores in red but far apart in saturation.
+        mask = np.clip((r - g * 1.25 - 0.06) * 4.0, 0, 0.5) * np.clip((r - b * 0.9 - 0.25) * 3.0, 0, 1)
+        tint = np.dstack((np.ones_like(r), np.full_like(r, 0.55), np.full_like(r, 0.2)))
     else:
         mask = np.clip((b + r * 0.45 - g * 0.72 - 0.72) * 1.8, 0, 0.28)
         tint = np.dstack((np.full_like(r, 0.42), np.full_like(r, 0.18), np.ones_like(r)))

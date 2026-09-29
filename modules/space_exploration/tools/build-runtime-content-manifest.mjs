@@ -60,10 +60,11 @@ const manifest = {
   sourceArchivePreserved: true,
   allowlistRules: [
     'entrypoint-reachable runtime code excluding src/combat',
-    'two retained GLB models plus the byte-identical restored authored UGA sections',
+    'retained exterior and contact GLBs, the small authored cutaway hull overlay, and byte-identical delivered UGA sections',
     'six aligned runtime PBR maps per authored planet',
     'approved personnel portraits',
     'approved 1x and 2x neutral GUI-material runtime slices',
+    'contextual sealed-interior and service-console menu plates referenced by UGA CSS',
     'creator-accepted Stage 10 world-model catalog and lazy-loaded GLBs',
     'ledgered non-runtime model exclusions with explicit keep decisions',
     'Three.js, Draco, and KTX2/Basis runtime libraries'

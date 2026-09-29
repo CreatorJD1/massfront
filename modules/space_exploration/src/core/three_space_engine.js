@@ -35,6 +35,13 @@ const PARTICLE_POOL_SIZE = 256;
 // bounded and let resolution adapt independently of artwork quality.
 const MOBILE_DPR_CAP = 1.0;
 const DESKTOP_DPR_CAP = 1.25;
+/* Chart-stable orbit clock. Authored catalog speeds (up to 0.0025 rad/s)
+   swept a planet through half its orbit during one survey session, moving
+   contacts relative to the chart the player had memorized. This divider
+   slows EVERY body — including contact station-keeping — so the map breathes
+   without rearranging. One knob, applied in update(), overrides all 7
+   systems' catalog values without touching authored data. */
+const ORBIT_DRIFT_DIVISOR = 6;
 const MAX_RENDER_PIXELS = 1000000;
 const MIN_RESOLUTION_SCALE = 0.68;
 const DPR_STEP = 0.08;
@@ -289,6 +296,8 @@ export class ThreeSpaceEngine {
     this._particleRandom = createSeededRandom(this.seed, 'thruster-particles');
     this.currentSystem = null;
     this.planetOrbits = [];
+    this.contactOrbits = [];
+    this._orbitTapes = [];
     this._disposed = false;
     this._paused = false;
     this._visibilityPaused = typeof document !== 'undefined' && document.hidden;
@@ -457,6 +466,13 @@ export class ThreeSpaceEngine {
     if (!this.onLoadProgress) return;
     try { this.onLoadProgress({ percent: this._loadProgressPercent, stage, detail }); }
     catch (error) { console.warn('ThreeSpaceEngine: load-progress callback failed.', error); }
+  }
+
+  resetLoadProgress(percent = 0) {
+    /* A new system stream is a new measured transfer. Keeping the previous
+       system's 100% high-water mark made every later route claim completion
+       while its PBR channels were still decoding. */
+    this._loadProgressPercent = Math.max(0, Math.min(100, Number(percent) || 0));
   }
 
   _loadAuthoredShip() {
@@ -918,6 +934,57 @@ export class ThreeSpaceEngine {
   }
 
   // -------------------------------------------------------------
+  // ORBIT RIBBONS
+  // -------------------------------------------------------------
+  _createOrbitTape(radius, starColor) {
+    const segs = 128;
+    // Band width scales with radius so outer lanes don't look thinner from
+    // the same altitude; the whole ribbon stays a few pixels wide on screen.
+    const half = (1.4 + radius * 0.005) * 0.5;
+    const pos = new Float32Array((segs + 1) * 2 * 3);
+    let k = 0;
+    for (let s = 0; s <= segs; s++) {
+      const th = (s / segs) * Math.PI * 2;
+      const c = Math.cos(th);
+      const sn = Math.sin(th);
+      pos[k++] = c * (radius - half); pos[k++] = 0; pos[k++] = sn * (radius - half);
+      pos[k++] = c * (radius + half); pos[k++] = 0; pos[k++] = sn * (radius + half);
+    }
+    const indices = [];
+    for (let s = 0; s < segs; s++) {
+      const a = s * 2;
+      indices.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setIndex(indices);
+    /* Mostly the neutral slate chart lane, tinted toward the system's star so
+       the bands read as THIS system's map furniture (magenta Grid Sun, cyan
+       capital) instead of a generic halo around whatever the ship is near. */
+    const tint = new THREE.Color(0x2f6ea8).lerp(new THREE.Color(starColor || '#ffe088'), 0.38);
+    const mat = new THREE.MeshBasicMaterial({
+      color: tint, transparent: true, opacity: 0.4, side: THREE.DoubleSide, depthWrite: false
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.renderOrder = -5;
+    this._orbitTapes.push(mesh);
+    return mesh;
+  }
+
+  _updateOrbitTapeFade() {
+    // Near the deck the ribbons step aside (clean hull approach); at chart
+    // altitude they strengthen into the RTS map grid. The deck is y=0, so the
+    // camera's HEIGHT is the whole story — the earlier distance-from-origin
+    // metric kept the bands bright while flying out near an outer planet's
+    // hull, which read as a halo following the ship instead of a map grid.
+    const altitude = Math.max(0, this.camera.position.y);
+    const strength = Math.min(1, Math.max(0, (altitude - 140) / 260));
+    for (const tape of this._orbitTapes) {
+      tape.material.opacity = 0.1 + strength * 0.32;
+    }
+  }
+
+  // -------------------------------------------------------------
   // LOAD CELESTIAL BODIES (Realistic Stars, Planets, Shaders & Effects)
   // -------------------------------------------------------------
   _clearSystemBodies() {
@@ -933,6 +1000,8 @@ export class ThreeSpaceEngine {
 
     this.customUpdaters = [];
     this.planetOrbits = [];
+    this.contactOrbits = [];
+    this._orbitTapes = [];
     this._planetMeshes.clear();
     this._contactMeshes.clear();
     this._planetHudBodies.clear();
@@ -1003,9 +1072,20 @@ export class ThreeSpaceEngine {
       });
     }
 
-    // Asteroid Field Belts
+    // Asteroid Field Belts. The band is declared per system so it can be
+    // routed between orbits and contacts — the old hard-coded 260±22 band
+    // sliced straight through Orison (orbitDist 255), so Veyra rendered a
+    // ring of rock-lit-teal orbs around the planet (2026-09-25 user report).
     if (system.hasAsteroidBelt) {
-      const astBelt = AsteroidFieldMesh.create(75, 260, 45, systemRandom);
+      const beltBand = system.asteroidBelt || { radius: 260, width: 45 };
+      // Starless systems: no point light at origin, so rock is lit only by the
+      // cool ship fills and warm-grey albedo rendered as glowing teal orbs.
+      // Dark basalt + dimmed ember ore read as silhouetted rock against the
+      // accretion disk instead.
+      const beltStyle = system.isBlackHole
+        ? { rockColor: 0x14151a, oreColor: 0xff5a2a, rockTint: [1, 0.92, 0.82] }
+        : {};
+      const astBelt = AsteroidFieldMesh.create(75, beltBand.radius, beltBand.width, systemRandom, beltStyle);
       this.celestialGroup.add(astBelt.group);
       this.customUpdaters.push((dt) => astBelt.update(dt));
     }
@@ -1089,23 +1169,12 @@ export class ThreeSpaceEngine {
           });
         }
 
-        // Orbital Line Loop (static circle; planet moves along it)
+        // Orbital band (wide, camera-faded). A 1px line vanished at chart
+        // zoom and planets looked like loose beads; a translucent ribbon of
+        // proportional width reads as a rail at every altitude, and fades out
+        // up close so hull approaches keep a clean sky.
         if (p.orbitDist) {
-          const segs = 96;
-          const orbitGeo = new THREE.BufferGeometry();
-          const orbitPos = new Float32Array((segs + 1) * 3);
-          for (let s = 0; s <= segs; s++) {
-            const th = (s / segs) * Math.PI * 2;
-            orbitPos[s * 3 + 0] = Math.cos(th) * p.orbitDist;
-            orbitPos[s * 3 + 1] = 0;
-            orbitPos[s * 3 + 2] = Math.sin(th) * p.orbitDist;
-          }
-          orbitGeo.setAttribute('position', new THREE.BufferAttribute(orbitPos, 3));
-          const orbitMat = new THREE.LineBasicMaterial({
-            color: 0x1f4a72, transparent: true, opacity: 0.45, depthWrite: false
-          });
-          const orbitLine = new THREE.Line(orbitGeo, orbitMat);
-          this.celestialGroup.add(orbitLine);
+          this.celestialGroup.add(this._createOrbitTape(p.orbitDist, system.starColor));
         }
       });
     }
@@ -1142,6 +1211,16 @@ export class ThreeSpaceEngine {
           root.userData.contactIndex = index;
           this.celestialGroup.add(root);
           this._contactMeshes.set(contact, root);
+          // Contacts station-keep on the same slow clock as planets so the
+          // chart the player memorized never rearranges itself mid-session.
+          if (contact.dist) {
+            this.contactOrbits.push({
+              root,
+              dist: contact.dist,
+              angle: contact.angle || 0,
+              speed: contact.orbitSpeed || 0.00018
+            });
+          }
         });
         this._emitLoadProgress(88, 'ORBITAL INFRASTRUCTURE READY', 'STATIONS, RELAYS, TRAFFIC LANDMARKS AND LODS DECODED');
         return roots;
@@ -1259,20 +1338,27 @@ export class ThreeSpaceEngine {
       }
     }
 
-    // 6. Wide, ship-oriented tactical camera. camState.dist is a user-controlled
-    // zoom multiplier. The base of 90 plus dist*170
-    // keeps the camera outside the enlarged civilization-ark hero mesh (the
-    // original `dist * 2.2` put the camera inside the hull and caused the
-    // black-viewport bug).
+    // 6. Top-down tactical system camera (RTS map view). The old chase rig
+    // (yaw anchored to the flagship's heading, low pitch) made the system
+    // unreadable as a map: orbits foreshortened, and dragging spun the view
+    // instead of moving through it. The navigation view is now north-up and
+    // mostly overhead, looking at a pannable target in the system plane;
+    // zooming reaches from hull inspection to the full orbital chart.
+    // camState.dist is a user-controlled zoom multiplier. The base of 90 plus
+    // dist*170 keeps the camera outside the enlarged civilization-ark hero
+    // mesh (the original `dist * 2.2` put the camera inside the hull and
+    // caused the black-viewport bug).
     const cameraInput = camState || {};
     const inputYaw = Number.isFinite(cameraInput.yaw) ? cameraInput.yaw : 0;
-    const inputPitch = Number.isFinite(cameraInput.pitch) ? cameraInput.pitch : 0.3;
+    const inputPitch = Number.isFinite(cameraInput.pitch) ? cameraInput.pitch : 1.08;
     const inputDist = Number.isFinite(cameraInput.dist) ? cameraInput.dist : 1;
-    // Relative yaw keeps screen direction anchored to the flagship's heading.
-    // The old fixed world angle made turning the vessel visually reverse the
-    // relationship between the route, camera, and on-screen controls.
-    const camYaw = shipData.yaw + inputYaw;
-    const camPitch = Math.max(-0.5, Math.min(1.0, inputPitch));
+    const topDown = cameraInput.topDown !== false;
+    // North-up in the RTS view: dragging pans, it never spins the compass.
+    // The low chase view (topDown:false) keeps its ship-relative yaw.
+    const camYaw = topDown ? inputYaw : shipData.yaw + inputYaw;
+    const camPitch = topDown
+      ? Math.max(0.35, Math.min(1.35, inputPitch))
+      : Math.max(-0.5, Math.min(1.0, inputPitch));
     const sinY = Math.sin(camYaw), cosY = Math.cos(camYaw);
     const sinP = Math.sin(camPitch), cosP = Math.cos(camPitch);
 
@@ -1280,12 +1366,20 @@ export class ThreeSpaceEngine {
     // dist=165, which put this camera almost 30,000 units from the system.
     const zoom = Math.max(0.35, Math.min(2.5, inputDist));
     const zoomDist = 90 + zoom * 170;
-    const cx = shipData.x - sinY * cosP * zoomDist;
-    const cy = shipData.y + sinP * zoomDist;
-    const cz = shipData.z - cosY * cosP * zoomDist;
+    // The look-at target pans across the system plane; panX/panZ are offsets
+    // from the flagship so recentring is just a zeroing, not a teleport of a
+    // stored world point that planet drift would leave behind.
+    const panX = Number.isFinite(cameraInput.panX) ? cameraInput.panX : 0;
+    const panZ = Number.isFinite(cameraInput.panZ) ? cameraInput.panZ : 0;
+    const targetX = shipData.x + panX;
+    const targetZ = shipData.z + panZ;
+    const targetY = topDown ? 0 : shipData.y;
+    const cx = targetX - sinY * cosP * zoomDist;
+    const cy = Math.sin(camPitch) * zoomDist;
+    const cz = targetZ - cosY * cosP * zoomDist;
 
     this.camera.position.set(cx, cy, cz);
-    this.camera.lookAt(shipData.x, shipData.y, shipData.z);
+    this.camera.lookAt(targetX, targetY, targetZ);
 
     // Switch authored contact tiers by projected diameter. This keeps the
     // visible silhouette stable across portrait/landscape while preventing a
@@ -1300,12 +1394,15 @@ export class ThreeSpaceEngine {
       updateShowcaseContactLod(root, worldRadius * 2 * focalPixels / distance);
     }
 
-    // 7. Keplerian orbit motion + planet-body self-rotation
-    // Only the planet body (first child of the planet group) rotates, so we
-    // don't drag the ring / atmosphere / orbit-line with it.
+    // 7. Keplerian orbit motion + planet-body self-rotation.
+    // Orbital drift is deliberately slow: at authored speeds a planet crossed
+    // half its orbit during one survey session, which scrambled the mental
+    // map a player builds of where worlds and their contacts sit. Contacts
+    // station-keep on the same slow clock (contactOrbits) so the whole chart
+    // breathes without ever rearranging itself mid-mission.
     for (let i = 0; i < this.planetOrbits.length; i++) {
       const o = this.planetOrbits[i];
-      o.angle += o.orbitSpeed * cdt;
+      o.angle += (o.orbitSpeed / ORBIT_DRIFT_DIVISOR) * cdt;
       o.group.position.set(
         Math.cos(o.angle) * o.dist,
         0,
@@ -1316,11 +1413,21 @@ export class ThreeSpaceEngine {
         o.body.rotation.x = o.spinAxisTilt;
       }
     }
+    for (let i = 0; i < this.contactOrbits.length; i++) {
+      const o = this.contactOrbits[i];
+      o.angle += (o.speed / ORBIT_DRIFT_DIVISOR) * cdt;
+      o.root.position.set(
+        Math.cos(o.angle) * o.dist,
+        0,
+        Math.sin(o.angle) * o.dist
+      );
+    }
 
     // 8. Render Three.js Scene
     // Shared scenes use different authored lighting rigs. Reassert the system
     // grade here so returning from the darker cutaway cannot leave planets and
     // starlight underexposed.
+    this._updateOrbitTapeFade();
     this.renderer.toneMappingExposure = SYSTEM_EXPOSURE;
     this._renderSystemScene();
   }

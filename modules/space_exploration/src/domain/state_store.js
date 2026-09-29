@@ -11,6 +11,7 @@ import {
   SHIP_DISTRICT_IDS,
   SPECIALIST_CATALOG,
   SURVEY_CATALOG,
+  refreshChainedSurveyAvailability,
   SYSTEM_CATALOG
 } from './catalog.js';
 import {
@@ -212,6 +213,44 @@ function createWorldState() {
         populationState: 'unknown',
         infestation: { active: false, confirmed: false, severity: 88, hiveTargetsConfirmed: false },
         soloFront: { pressure: 72, lastCycle: 0, lastDelta: 0, lastCause: 'initial' }
+      },
+      /* The War Table stellar systems are charted space — homeworlds are known
+         even when the frontier beyond them is not, so all four start discovered.
+         Helios Core is the Brood homeland: the infestation there is not a
+         mystery to be confirmed, it is the origin the Karak chain points at. */
+      /* The War Table stellar systems sit at the END of the frontier ladder:
+         each charts from a route survey (aelos_capitol_vector →
+         sombrero_i, veyra_cinder_reach_fix → andromeda_iv,
+         karak_grid_triangulation → orion_arc, karak_hive_scan → helios_core),
+         so a fresh career has them undiscovered. Helios Core keeps its authored
+         Brood-origin infestation for the day the corridor opens. */
+      sombrero_i: {
+        discovered: false,
+        trafficState: 'dense',
+        populationState: 'thriving',
+        infestation: { active: false, confirmed: false, severity: 0, hiveTargetsConfirmed: false },
+        soloFront: { pressure: 12, lastCycle: 0, lastDelta: 0, lastCause: 'initial' }
+      },
+      andromeda_iv: {
+        discovered: false,
+        trafficState: 'dense',
+        populationState: 'thriving',
+        infestation: { active: false, confirmed: false, severity: 0, hiveTargetsConfirmed: false },
+        soloFront: { pressure: 22, lastCycle: 0, lastDelta: 0, lastCause: 'initial' }
+      },
+      orion_arc: {
+        discovered: false,
+        trafficState: 'sparse',
+        populationState: 'thriving',
+        infestation: { active: false, confirmed: false, severity: 0, hiveTargetsConfirmed: false },
+        soloFront: { pressure: 34, lastCycle: 0, lastDelta: 0, lastCause: 'initial' }
+      },
+      helios_core: {
+        discovered: false,
+        trafficState: 'silent',
+        populationState: 'unknown',
+        infestation: { active: true, confirmed: true, severity: 95, hiveTargetsConfirmed: true },
+        soloFront: { pressure: 84, lastCycle: 0, lastDelta: 0, lastCause: 'initial' }
       }
     }
   };
@@ -269,6 +308,9 @@ export function createInitialDomainState(commanderCatalogContext = null) {
       illumination: 'expedition_blue',
       population: 6200,
       expeditionCycle: 0,
+      emergencyFuelActive: false,
+      coreCommissionRescueUsed: false,
+      coreCommissionRescuePowerMW: 0,
       constructionQueue: [],
       constructionHistory: [],
       processedCycleEventIds: [],
@@ -356,7 +398,7 @@ export function createShowcaseReadyDomainState(commanderCatalogContext = null) {
   }
   state.discoveries.foundIds = Object.keys(DISCOVERY_CATALOG);
   state.discoveries.depletedSurveyIds = Object.keys(SURVEY_CATALOG);
-  state.intelligence.bySystem = { aelos: 2, veyra: 2, karak: 4 };
+  state.intelligence.bySystem = { aelos: 2, veyra: 2, karak: 4, sombrero_i: 2, andromeda_iv: 2, orion_arc: 2, helios_core: 2 };
   state.intelligence.evidenceIds = Object.keys(DISCOVERY_CATALOG);
   state.story.currentStep = 'karak_hive_mapped';
   state.story.completedStepIds = ['veyra_route_open', 'karak_route_open', 'karak_infestation_confirmed', 'karak_hive_mapped'];
@@ -537,6 +579,9 @@ export function normalizeDomainState(source, commanderCatalogContext = null) {
   state.ship.illumination = typeof source.ship?.illumination === 'string' ? source.ship.illumination : state.ship.illumination;
   state.ship.population = integer(source.ship?.population, state.ship.population);
   state.ship.expeditionCycle = integer(source.ship?.expeditionCycle, 0);
+  state.ship.emergencyFuelActive = source.ship?.emergencyFuelActive === true;
+  state.ship.coreCommissionRescueUsed = source.ship?.coreCommissionRescueUsed === true;
+  state.ship.coreCommissionRescuePowerMW = integer(source.ship?.coreCommissionRescuePowerMW, 0, 0, 30);
   state.ship.processedCycleEventIds = [...new Set(Array.isArray(source.ship?.processedCycleEventIds) ? source.ship.processedCycleEventIds.filter(id => typeof id === 'string' && id) : [])].slice(-128);
   state.ship.constructionHistory = Array.isArray(source.ship?.constructionHistory) ? deepClone(source.ship.constructionHistory.filter(entry => entry && typeof entry === 'object')).slice(-24) : [];
   for (const districtId of SHIP_DISTRICT_IDS) {
@@ -617,6 +662,11 @@ export function normalizeDomainState(source, commanderCatalogContext = null) {
     survey.depleted = Boolean(incoming.depleted);
     if (survey.depleted) survey.status = 'completed';
   }
+  /* Heal saves written before chained-availability recomputation existed:
+     prerequisites completed under the old code left same-system rungs stuck
+     'locked' (Orion Arc behind Karak) with no path to 'available'. Upgrades
+     only — depleted/completed/available states are never touched. */
+  refreshChainedSurveyAvailability(state);
   state.discoveries.foundIds = uniqueKnown(source.discoveries?.foundIds, DISCOVERY_CATALOG);
   state.discoveries.depletedSurveyIds = uniqueKnown(source.discoveries?.depletedSurveyIds, SURVEY_CATALOG);
   state.discoveries.extractedDepositIds = uniqueStableIds(source.discoveries?.extractedDepositIds);
@@ -694,7 +744,10 @@ function migrateLegacyState(source, commanderCatalogContext = null) {
   const state = createInitialDomainState(commanderCatalogContext);
   const legacySystem = source.location?.systemId || source.currentSystemId || source.systemId;
   const systemMap = { sombrero_i: 'aelos', orion_arc: 'aelos', andromeda_iv: 'veyra', nordhall: 'karak' };
-  const systemId = SYSTEM_CATALOG[legacySystem] ? legacySystem : systemMap[legacySystem];
+  /* The explicit remap wins over a catalog hit: some of these legacy ids now
+     name real systems (sombrero_i, orion_arc, andromeda_iv), but a legacy save
+     used the name for the old locale, which the map redirects on purpose. */
+  const systemId = systemMap[legacySystem] || (SYSTEM_CATALOG[legacySystem] ? legacySystem : null);
   if (systemId) {
     state.route.systemId = systemId;
     state.world.systems[systemId].discovered = true;
@@ -813,6 +866,9 @@ export function validateDomainState(state, commanderCatalogContext = null) {
     }
   }
   if (!Number.isInteger(state.ship?.expeditionCycle) || state.ship.expeditionCycle < 0) issues.push(issue('EXPEDITION_CYCLE_INVALID', 'Expedition cycle must be a non-negative integer.', 'ship.expeditionCycle'));
+  if (state.ship?.emergencyFuelActive !== undefined && typeof state.ship.emergencyFuelActive !== 'boolean') issues.push(issue('EMERGENCY_FUEL_STATE_INVALID', 'Emergency fuel status must be a boolean.', 'ship.emergencyFuelActive'));
+  if (state.ship?.coreCommissionRescueUsed !== undefined && typeof state.ship.coreCommissionRescueUsed !== 'boolean') issues.push(issue('CORE_RESCUE_STATE_INVALID', 'Core rescue status must be a boolean.', 'ship.coreCommissionRescueUsed'));
+  if (!Number.isInteger(state.ship?.coreCommissionRescuePowerMW) || state.ship.coreCommissionRescuePowerMW < 0 || state.ship.coreCommissionRescuePowerMW > 30) issues.push(issue('CORE_RESCUE_POWER_INVALID', 'Core rescue backup must be 0 to 30 MW.', 'ship.coreCommissionRescuePowerMW'));
   if (!Array.isArray(state.ship?.constructionQueue) || state.ship.constructionQueue.length > CONSTRUCTION_QUEUE_LIMIT) issues.push(issue('CONSTRUCTION_QUEUE_INVALID', 'Construction queue is invalid.', 'ship.constructionQueue'));
   else {
     const jobIds = new Set();

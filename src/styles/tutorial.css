@@ -178,7 +178,9 @@ body.mfCombatHot #keelName{font-size:9px}
 body.mfCombatHot #keelStepTag{display:none}
 body.mfCombatHot #keelTxt{margin:0;font-size:10px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 body.mfCombatHot #keelProgress,body.mfCombatHot #keelNext{display:none!important}
-body.mfCombatHot #keelSkip{min-width:40px;min-height:36px;margin:-5px -7px -5px 0;font-size:8px}
+/* Keep the destructive END / SKIP control finger-sized even as the card
+   compacts during combat; shrinking only its visual copy saves the space. */
+body.mfCombatHot #keelSkip{min-width:52px;min-height:44px;margin:-7px -7px -7px 0;font-size:8px}
 
 /* The guided target never receives input. It only makes the existing hit box
    visible, so the button/tab/card keeps its normal mobile interaction path. */
@@ -313,7 +315,7 @@ body.trainingOperation #keelModeBadge,body.trainingOperation #toast{display:none
   white-space:nowrap;
 }
 .wtpCard>p{
-  margin:0 0 9px; font:400 12px/1.48 var(--fT,system-ui); color:rgba(232,240,248,.90);
+  margin:0 0 9px; font:600 12.5px/1.35 var(--fU,system-ui); color:rgba(232,240,248,.90);
 }
 .wtpFoot{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
 /* The route echoes the stage stepper at the top of the screen so the card and
@@ -347,8 +349,7 @@ body.trainingOperation #keelModeBadge,body.trainingOperation #toast{display:none
 }
 @media (max-width:430px){
   .wtpCard{ padding:9px 10px 9px; }
-  .wtpCard>p{ font-size:11.5px; }
-  .wtpFoot{ flex-wrap:wrap; }
-  .wtpFoot>i{ order:2; flex:1 1 100%; }
-  .wtpDone,.wtpSkip{ order:1; width:100%; }
+  .wtpFoot{ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px; }
+  .wtpDone,.wtpSkip{ min-width:0;width:100%;padding:0 6px; }
+  .wtpDone:only-child{ grid-column:1/-1; }
 }

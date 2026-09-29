@@ -52,7 +52,11 @@ const metalUnlocks=api.devNodeUnlocks(node('metallurgy'));
 assert.deepEqual(Array.from(metalUnlocks,x=>x.label),['MODULE · Reactive Plating']);
 assert.equal(api.devNodeScope(node('metallurgy')),'ACCOUNT UNLOCK · ACTIVE IN FUTURE RTS MATCHES');
 assert.equal(api.devNodeScope(node('asc_siege_foundry')),'ACCOUNT UNLOCK · ACTIVE IN DOMINION RTS MATCHES');
-assert.equal(api.devNodeScope(node('hor_gene_splice')),'AI DOSSIER · NO CURRENT PLAYER EFFECT');
+assert.equal(node('hor_gene_splice'),undefined,'Brood threat capabilities must not appear in player Development');
+assert.doesNotMatch(tree,/RT_FACTIONS\s*=\s*\[[^\]]*brood/i,
+  'Brood must not appear as a selectable player Development faction');
+assert.doesNotMatch(tree,/until the faction becomes playable/i,
+  'Brood is permanently enemy-only, never a future player unlock');
 assert.match(api.devNodeUnlocks(node('refit'))[0].label,/50% MATERIAL COST · RESTORES 60% DURABILITY/);
 assert.match(api.devNodeUnlocks(node('slot2'))[0].label,/\+1 MODULE SLOT/);
 

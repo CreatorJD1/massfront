@@ -1,0 +1,6 @@
+Stormpeak full source pin
+repo: https://github.com/CreatorJD1/Stormpeak-MASSFRONT
+commit: c97b76a952c6f2be5cc1dc03d30cd60f3754848c
+included: entire upstream tree except .git and node_modules
+MASSFRONT overlay: src/host-return.ts, CommandHud return controls, slim tester entry
+player runtime: dist/ from `npm run build:tester`

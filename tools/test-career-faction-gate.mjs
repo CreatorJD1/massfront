@@ -21,6 +21,14 @@ assert.match(metaSource,/mfMetaCareerLoadedFromStorage=loadedCareer/,
   'meta load no longer publishes authoritative loaded-career provenance');
 assert.match(metaSource,/needNewCareerGateSeed=!loadedCareer/,
   'a genuinely new career no longer retains inert gate eligibility across reload');
+const characterBlock=metaSource.slice(metaSource.indexOf('const CHARACTERS='),metaSource.indexOf('const TITLES='));
+assert.doesNotMatch(characterBlock,/brood|horde|sovereign/i,
+  'Brood must not appear as a player career identity');
+for(const portrait of ['nova_kai.jpg','syndicate_renn.jpg','legion_vex.jpg'])
+  assert.ok(characterBlock.includes('/commanders/'+portrait),
+    'career identity does not use canonical commander portrait '+portrait);
+assert.match(metaSource,/function charPortrait\(id\)[\s\S]{0,120}return c\.portrait/,
+  'career identity still derives a generic faction portrait');
 assert.doesNotMatch(source,/commandersOwned|unlockedCommanders|commanderUnlocks/,
   'gate invented a second commander ownership ledger');
 assert.match(source,/KEEL · UGA COMMISSIONING GUIDE/,

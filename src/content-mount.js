@@ -228,3 +228,87 @@ if(typeof window!=='undefined'){
     connection.addEventListener('change',()=>mfContentScheduleStartup(250));
   mfContentScheduleStartup();
 }
+
+/* ---------- OCEAN THEATRE TESTER: A DOCUMENT THAT RIDES THE UPDATE ----------
+   modules/ has never been in the OTA payload and cannot be — every artifact in
+   it is JavaScript, because the payload is executed rather than written. So an
+   installed package older than the tester has no document to open, the launch
+   404s, and the card reads as dead. tools/bundle-update.mjs now carries the
+   tester's entire built closure inline in ota/00-runtime.js as
+   window.__MF_OTA_STORMPEAK; this writes it into native DATA storage once per
+   release and returns a same-origin /_capacitor_file_/ URL to open.
+
+   Deliberately simpler than the Galactic mount above, and the difference is
+   principled. Those bytes cross a network and become a 143 MiB tree that the
+   WebView may be pointed at, so they need the prepared/good/failed probation
+   pointer. These bytes arrived inside the payload the updater already verified,
+   every file is re-hashed after it is written, and the result is an isolated
+   DEV document that is never the WebView root — so the worst case is that it
+   does not open, which the launch veil and the notice rail now both report. */
+const MF_STORMPEAK_MOUNT_STATE='massfront.stormpeak.mount.state.v1';
+const MF_STORMPEAK_MOUNT_PREFIX='massfront-content/stormpeak-ocean/';
+const MF_STORMPEAK_MOUNT_ENTRY='/modules/stormpeak_ocean/index.html';
+let mfStormpeakMountBusy=false;
+function mfStormpeakOtaPayload(){
+  let payload=null;
+  try{ payload=window.__MF_OTA_STORMPEAK; }catch(e){ return null; }
+  if(!payload||typeof payload!=='object'||!Array.isArray(payload.files)||!payload.files.length)return null;
+  /* Bound to this exact release, like every other OTA descriptor. A closure
+     left over from a different version must never be mounted. */
+  if(payload.version!==mfContentRunningVersion())return null;
+  for(const file of payload.files){
+    if(typeof file.path!=='string'||!file.path||file.path.startsWith('/')||file.path.includes('..')
+      ||file.path.split('/').some(part=>!/^[A-Za-z0-9][A-Za-z0-9._+-]*$/.test(part)))return null;
+    if(!/^[a-f0-9]{64}$/.test(file.sha256||'')||!Number.isSafeInteger(file.bytes)||file.bytes<=0)return null;
+    if(typeof file.uri!=='string'||file.uri.slice(0,5)!=='data:')return null;
+  }
+  return payload.files.some(file=>file.path==='index.html')?payload:null;
+}
+function mfStormpeakMountGeneration(payload){
+  const entry=payload.files.find(file=>file.path==='index.html');
+  return payload.version+'-'+entry.sha256.slice(0,16);
+}
+function mfStormpeakMountState(){
+  try{
+    const value=JSON.parse(localStorage.getItem(MF_STORMPEAK_MOUNT_STATE)||'null');
+    if(value&&value.schema===1&&typeof value.generation==='string'&&typeof value.moduleUrl==='string')return value;
+  }catch(e){}
+  return null;
+}
+async function mfPrepareStormpeakMount(){
+  const payload=mfStormpeakOtaPayload();
+  if(!payload)return {ok:false,reason:'stormpeak-not-delivered'};
+  const fs=mfContentNativeFs();
+  if(!fs)return {ok:false,reason:'native-content-unavailable'};
+  if(mfStormpeakMountBusy)return {ok:false,reason:'busy'};
+  mfStormpeakMountBusy=true;
+  try{
+    const generation=mfStormpeakMountGeneration(payload);
+    const root=MF_STORMPEAK_MOUNT_PREFIX+generation+'/modules/stormpeak_ocean/';
+    for(const file of payload.files){
+      const path=root+file.path,url=await mfContentNativeUrl(fs,path);
+      const want={size:file.bytes,sha256:file.sha256};
+      /* Re-hash what is already on disk: a previous mount may have been cut
+         short by a crash, and a half-written chunk must not be trusted. */
+      if(await mfContentNativeMatches(url,want))continue;
+      const blob=await (await fetch(file.uri)).blob();
+      if(blob.size!==file.bytes)throw new Error('stormpeak-inline-size');
+      await mfContentWriteFile(fs,path,blob);
+      if(!(await mfContentNativeMatches(url,want)))throw new Error('stormpeak-native-readback');
+    }
+    const moduleUrl=await mfContentNativeUrl(fs,root+'index.html');
+    const entry=new URL(moduleUrl),suffix='/'+MF_STORMPEAK_MOUNT_PREFIX+generation+MF_STORMPEAK_MOUNT_ENTRY;
+    if(entry.origin!==location.origin||entry.search||entry.hash||entry.username||entry.password
+      ||!entry.pathname.startsWith('/_capacitor_file_/')||!entry.pathname.endsWith(suffix))
+      throw new Error('stormpeak-entry-origin');
+    try{ localStorage.setItem(MF_STORMPEAK_MOUNT_STATE,
+      JSON.stringify({schema:1,generation,moduleUrl:entry.href,version:payload.version})); }catch(e){}
+    return {ok:true,openUrl:entry.href,generation};
+  }catch(error){
+    return {ok:false,reason:String(error&&error.message||error)};
+  }finally{ mfStormpeakMountBusy=false; }
+}
+if(typeof window!=='undefined'){
+  window.MFNativeStormpeakContent=Object.freeze({
+    prepare:mfPrepareStormpeakMount,snapshot:mfStormpeakMountState,available:()=>!!mfStormpeakOtaPayload()});
+}

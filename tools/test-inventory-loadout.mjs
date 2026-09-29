@@ -1,6 +1,7 @@
 /* Focused <=2-minute mobile regression for Account Armory -> Session Loadout. */
 import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
 import {assertHardwareGpu} from './chrome-gpu.mjs';
+import {acquireVerificationFreeze} from './evidence-foundation/workspace-guard.mjs';
 import {mkdir} from 'node:fs/promises';
 import {spawn} from 'node:child_process';
 import {join,resolve} from 'node:path';
@@ -10,17 +11,19 @@ const root=resolve(fileURLToPath(new URL('..',import.meta.url)));
 const supplied=process.argv.find(a=>/^https?:\/\//.test(a));
 const url=supplied||'http://127.0.0.1:8146/';
 const chrome='C:/Program Files/Google/Chrome/Application/chrome.exe';
-const out=join(root,'releases','inventory-loadout');
+const out=join(root,'.tmp','inventory-loadout');
 const shot=join(out,'inventory-session-loadout-mobile.png');
 const assert=(ok,msg)=>{if(!ok)throw new Error(msg);};
 let server=null;await mkdir(out,{recursive:true});
 if(!supplied){
-  server=spawn('python',['-m','http.server','8146','--directory',root],{stdio:'ignore',windowsHide:true});
+  server=spawn('python',['-m','http.server','8146','--directory',join(root,'www')],{stdio:'ignore',windowsHide:true});
   for(let i=0;i<40;i++){try{const r=await fetch(url);if(r.ok)break;}catch{}await new Promise(r=>setTimeout(r,150));}
 }
-const browser=await launchPwBrowser({headless:true,executablePath:chrome,
-  args:['--use-gl=angle','--use-angle=d3d11','--ignore-gpu-blocklist','--enable-gpu','--disable-gpu-sandbox','--disable-software-rasterizer']});
+let browser=null,guard=null;
 try{
+  guard=await acquireVerificationFreeze({root,label:'packed-inventory-loadout',quietMs:5000});
+  browser=await launchPwBrowser({headless:true,executablePath:chrome,
+    args:['--use-gl=angle','--use-angle=d3d11','--ignore-gpu-blocklist','--enable-gpu','--disable-gpu-sandbox','--disable-software-rasterizer']});
   const context=await browser.newContext({viewport:{width:393,height:852},deviceScaleFactor:2,
     hasTouch:true,isMobile:true,colorScheme:'dark'});
   await context.addInitScript(()=>{try{if(!localStorage.getItem('mf_inv_test_init')){localStorage.clear();localStorage.setItem('mf_inv_test_init','1');}localStorage.setItem('mf_prealpha_cinematic_v2','test-seen');localStorage.setItem('mf_offline','1');}catch(e){}});
@@ -125,5 +128,6 @@ try{
   assert(persisted.bag.ready.join(',')==='c_supply,c_nanites'&&persisted.raw&&persisted.raw.gear&&persisted.raw.consumables&&persisted.raw.equipped,
     'legacy inventory fields were not preserved: '+JSON.stringify(persisted));
   assert(errors.length===0,'page errors:\n'+errors.join('\n'));
+  await guard.checkpoint('packed inventory loadout');
   console.log(JSON.stringify({ok:true,gpu,initial:{tabs:initial.tabs.length,cards:initial.cards},loaded:{slots:loaded.slots,effects:loaded.effects,capacity:loaded.capacity},persisted:persisted.bag,screenshot:shot},null,2));
-}finally{await browser.close();if(server)server.kill();}
+}finally{if(browser)await browser.close();if(server)server.kill();if(guard)await guard.release({assertStable:true});}

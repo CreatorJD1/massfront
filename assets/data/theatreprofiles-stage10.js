@@ -7,19 +7,19 @@ const Stage10TheatreCatalogV1={
   planetAuthority:'EXPLORATION_MODULE_SHOWCASE_SYSTEMS',
   sourceInventories:{
     surfaceHomeworlds:{count:4,authority:'CURRENT_RTS_RUNTIME',ids:['aelos','pyraeth','nordhall','vespera']},
-    authoredExplorationPlanets:{count:6,authority:'STAGE10_PLANET_AUTHORITY',ids:[
-      'aelos_caldris','aelos_ithara','veyra_orison','veyra_nacre','karak_meridian','karak_tethys'
+    authoredExplorationPlanets:{count:7,authority:'STAGE10_PLANET_AUTHORITY',ids:[
+      'aelos_caldris','aelos_ithara','aelos_zephyros','veyra_orison','veyra_nacre','karak_meridian','karak_tethys'
     ]},
     legacyGalaxyPrototype:{count:8,authority:'REFERENCE_ONLY_NOT_CANON_IDENTITY',source:'modules/space_exploration/src/systems/galaxy_data.js'}
   },
   planetSlots:[
     {slot:1,identityStatus:'SOURCE_MATCHED',sourceId:'aelos_caldris',name:'Caldris'},
     {slot:2,identityStatus:'SOURCE_MATCHED',sourceId:'aelos_ithara',name:'Ithara'},
-    {slot:3,identityStatus:'SOURCE_MATCHED',sourceId:'veyra_orison',name:'Orison'},
-    {slot:4,identityStatus:'SOURCE_MATCHED',sourceId:'veyra_nacre',name:'Nacre'},
-    {slot:5,identityStatus:'SOURCE_MATCHED',sourceId:'karak_meridian',name:'Meridian K-4'},
-    {slot:6,identityStatus:'SOURCE_MATCHED',sourceId:'karak_tethys',name:'Tethys Foundry'},
-    {slot:7,identityStatus:'PENDING_CANON_NAME'},
+    {slot:3,identityStatus:'SOURCE_MATCHED',sourceId:'aelos_zephyros',name:'Zephyros'},
+    {slot:4,identityStatus:'SOURCE_MATCHED',sourceId:'veyra_orison',name:'Orison'},
+    {slot:5,identityStatus:'SOURCE_MATCHED',sourceId:'veyra_nacre',name:'Nacre'},
+    {slot:6,identityStatus:'SOURCE_MATCHED',sourceId:'karak_meridian',name:'Meridian K-4'},
+    {slot:7,identityStatus:'SOURCE_MATCHED',sourceId:'karak_tethys',name:'Tethys Foundry'},
     {slot:8,identityStatus:'PENDING_CANON_NAME'}
   ],
   sizeClasses:{
@@ -103,7 +103,7 @@ function mfPreflightStage10TheatreCatalogV1(){
       return fail('THEATRE_PLANET_PENDING_SLOT_INVALID',{slot:P.slot});
   }
   const authored=C.sourceInventories.authoredExplorationPlanets;
-  if(authored.count!==6||authored.ids.length!==6||authored.ids.some(id=>!sourceIds.has(id))||sourceIds.size!==6)
+  if(authored.count!==7||authored.ids.length!==7||authored.ids.some(id=>!sourceIds.has(id))||sourceIds.size!==7)
     return fail('THEATRE_EXPLORATION_SOURCE_MISMATCH');
   if(C.sourceInventories.surfaceHomeworlds.count!==4||C.sourceInventories.legacyGalaxyPrototype.count!==8)
     return fail('THEATRE_SOURCE_COUNTS_INVALID');

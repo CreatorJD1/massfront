@@ -1,18 +1,8 @@
 /* UGA COMMAND OPENS ON THE SHIP IN SPACE.
  *
- * The main menu has two doors into the strategic layer and they used to lead
- * to the same place: DEPLOY MASSFRONT and UGA COMMAND both entered at
- * 'campaign_hub', the War Table panel. So the button named after the ship
- * never showed the ship, and the orbital scene — the thing the whole
- * exploration module is built around — was reachable only by leaving the panel
- * that opened on top of it.
- *
- * 'system' is the existing, validated entry view for this; the career gate's
- * own 'full-uga-space' continuation already uses it.
- *
- * Two halves have to hold together or the change does nothing:
- *   1. the door asks for the space view, and
- *   2. arriving there is not overridden by a saved ship-interior scene.
+ * The main menu now has one MASSFRONT entry, into the stable UGA home. Its
+ * visible Depart button opens the orbital scene. Saved orbital locations still
+ * restore there without letting a ship-interior UI mode override the route.
  */
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
@@ -39,27 +29,19 @@ function handlerFor(id) {
   return main.slice(start, i + 1);
 }
 
-/* 1. THE UGA COMMAND DOOR ASKS FOR SPACE. */
-const uga = handlerFor('ugaBtn');
-const ugaCall = /mfOpenExploration\(\s*'([a-z_]+)'/.exec(uga);
-assert.ok(ugaCall, 'the UGA COMMAND button no longer opens the exploration module');
-assert.equal(ugaCall[1], 'system',
-  `UGA COMMAND enters at '${ugaCall[1]}' — it must open on the ship in space, not on the War Table, `
-  + 'which is what DEPLOY MASSFRONT is for');
+/* 1. ONE MENU DOOR, THEN THE IN-MODULE DEPART CONTROL. */
+const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
+assert.doesNotMatch(html, /id="ugaBtn"/, 'a second Explore Space tile must not compete with Enter MASSFRONT');
+const entry = handlerFor('startBtn');
+const entryCall = /mfOpenExploration\(\s*'([a-z_]+)'/.exec(entry);
+assert.ok(entryCall, 'the main action no longer opens the exploration module');
+assert.equal(entryCall[1], 'campaign_hub', 'the single door must enter the stable UGA home');
+const commandUi = blank(await readFile(new URL('../modules/space_exploration/src/ui/uga_command.js', import.meta.url), 'utf8'));
+assert.match(commandUi, /uga-campaign-depart[^\n]*data-action="exit"/, 'UGA home must expose orbital Depart');
+assert.match(commandUi, /button\.dataset\.action === 'exit'\) return void call\('onExit'\)/,
+  'the Depart control must invoke the real onExit callback');
 
-/* 2. AND DEPLOY MASSFRONT STILL OPENS THE WAR TABLE. Pointing both doors at
-      the same view is the thing being fixed; pointing them both at the OTHER
-      view would be the same bug wearing different clothes. */
-const deploy = handlerFor('startBtn');
-const deployCall = /mfOpenExploration\(\s*'([a-z_]+)'/.exec(deploy);
-assert.ok(deployCall, 'DEPLOY MASSFRONT no longer opens the exploration module');
-assert.equal(deployCall[1], 'campaign_hub',
-  `DEPLOY MASSFRONT enters at '${deployCall[1]}' — it is the War Table door`);
-assert.notEqual(ugaCall[1], deployCall[1], 'both menu doors lead to the same view again');
-
-/* 3. 'system' IS A VALID TICKET VIEW. The ticket schema is versioned and
-      strictly validated; a door asking for a view the validator rejects would
-      fail at the crossing, not here. */
+/* 2. The orbital view remains a valid ticket for first-career entry. */
 const operations = blank(await readFile(new URL('../src/galactic-operations.js', import.meta.url), 'utf8'));
 assert.match(operations, /ticket\.entryView!=='system'&&ticket\.entryView!=='campaign_hub'/,
   'the entry-ticket validator no longer accepts the system view');
@@ -67,8 +49,10 @@ const host = blank(await readFile(
   new URL('../modules/space_exploration/src/host/massfront_solo_host.js', import.meta.url), 'utf8'));
 assert.match(host, /ALLOWED_ENTRY_VIEWS = new Set\(\[[^\]]*'system'/,
   'the solo host no longer allows the system entry view');
+assert.match(experience, /onExit: \(\) => openSystem\(\)/,
+  'the Depart callback must open the orbital scene');
 
-/* 4. ARRIVING IN SPACE IS NOT UNDONE BY THE SAVE. restoreSavedLocation honours
+/* 3. ARRIVING IN SPACE IS NOT UNDONE BY THE SAVE. restoreSavedLocation honours
       a saved survey or galaxy position — those are places the player navigated
       to. A saved 'uga' scene is not a place, it is a UI mode, and restoring it
       would land the player back inside the ship through a door that asked for
@@ -89,5 +73,4 @@ for (const scene of ['galaxy', 'survey']) {
     `restoreSavedLocation no longer returns the player to a saved ${scene} position`);
 }
 
-console.log("UGA Command opens in space: PASS (door asks for 'system', War Table door unchanged, "
-  + 'ticket view valid, saved interior does not override, saved galaxy/survey still restore)');
+console.log('UGA orbital access: PASS (one menu entry, UGA Depart opens space, saved galaxy/survey still restore)');

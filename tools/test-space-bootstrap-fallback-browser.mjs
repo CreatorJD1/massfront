@@ -190,9 +190,9 @@ try {
   await page.locator('#warBack').click();
   await page.locator('#startScreen').waitFor({ state: 'visible' });
   assert.equal(await page.evaluate(key => sessionStorage.getItem(key), latchKey), '1');
-  const uga = page.locator('#ugaBtn');
-  await uga.waitFor({ state: 'visible' });
-  await uga.click();
+  const entry = page.locator('#startBtn');
+  await entry.waitFor({ state: 'visible' });
+  await entry.click();
   await page.waitForURL(url => url.pathname.endsWith('/modules/space_exploration/index.html'), { timeout: 60_000 });
   await page.locator('#renderVeil.failed').waitFor({ state: 'visible', timeout: 15_000 });
   const retry = await page.evaluate(key => ({

@@ -22,7 +22,9 @@ import {
 const PROFILE_ID = 'profile/stage11:v3';
 const NONCE = '0123456789abcdef0123456789abcdef';
 const NOW = 4_000_000;
-const PALE_BLOOM_MAP_ID = 'karak_meridian_quarantine_standard';
+// Compact: the always-open bottom rung of the linear map ladder (this suite
+// is about operation identity and byte pins, not battlefield size).
+const PALE_BLOOM_MAP_ID = 'karak_meridian_quarantine_compact';
 const REPORT = Object.freeze({
   outcome: 'victory',
   score: 88,
@@ -139,16 +141,18 @@ assert.equal(validateGroundOperationResultV2({ ...resultV2, commanderRosterFinge
 const legacyState = showcase('profile/stage9:alpha');
 const legacyOperation = beginGroundOperationV2(legacyState, { missionId: 'uga_pale_bloom', proxyFactionId: 'nova' }).operation;
 const legacyOperationBytes = JSON.stringify(legacyOperation);
-assert.equal(legacyOperation.operationId, 'gop_0001_d97ed744');
-assert.equal(legacyOperation.returnToken, 'return_dad6ac90');
-assert.equal(Buffer.byteLength(legacyOperationBytes), 2941);
-assert.equal(createHash('sha256').update(legacyOperationBytes).digest('hex'), 'a4942ce6c42c88089c7811ad49c40c45ee46ffeadcd473d23399b05d81169825');
+// Deterministic ID changed with the map rung (compact drop), not with any
+// identity-rule change — battlefield choice participates in the identity hash.
+assert.equal(legacyOperation.operationId, 'gop_0001_63bfd8ce');
+assert.equal(legacyOperation.returnToken, 'return_01452759');
+assert.equal(Buffer.byteLength(legacyOperationBytes), 3147);
+assert.equal(createHash('sha256').update(legacyOperationBytes).digest('hex'), 'd81b455a96c34d5f8b86cc78964543d822db8537b30cfecdbaceefbbdd219252');
 
 const legacyResult = createGroundResult(legacyOperation, reportFor(legacyOperation));
 const legacyResultBytes = JSON.stringify(legacyResult);
-assert.equal(legacyResult.resultId, 'gr_0001_6c413ad2');
-assert.equal(Buffer.byteLength(legacyResultBytes), 1422);
-assert.equal(createHash('sha256').update(legacyResultBytes).digest('hex'), 'e7007ee0af78551bc970dc247bf66ca18cf8428f2e2ed93a34de5d53c5f92dfb');
+assert.equal(legacyResult.resultId, 'gr_0001_187a03e9');
+assert.equal(Buffer.byteLength(legacyResultBytes), 1356);
+assert.equal(createHash('sha256').update(legacyResultBytes).digest('hex'), '6fe9d26aa3e8caeadd64abfee8742e30a866f3fbfc9fae9ac11f24afa1f5df62');
 
 const legacyRequest = createGroundOperationRequestV1(legacyOperation, {
   nonce: NONCE,
@@ -158,9 +162,9 @@ const legacyRequest = createGroundOperationRequestV1(legacyOperation, {
   contentVersion: 'catalog-6'
 });
 const legacyRequestBytes = JSON.stringify(legacyRequest);
-assert.equal(legacyRequest.checksum, '348ac7e6');
-assert.equal(Buffer.byteLength(legacyRequestBytes), 3175);
-assert.equal(createHash('sha256').update(legacyRequestBytes).digest('hex'), '8af13e06dfdad680068d59a72c6fa63ca9b1c97e037880e500f3ccaa14980da8');
+assert.equal(legacyRequest.checksum, '754e2e69');
+assert.equal(Buffer.byteLength(legacyRequestBytes), 3381);
+assert.equal(createHash('sha256').update(legacyRequestBytes).digest('hex'), 'ad842f8c1a10be31af041f8125a9d5fa273bc7a97139437e5b7884766bb181a2');
 
 const legacyEnvelope = createGroundOperationResultV1(legacyResult, {
   nonce: NONCE,
@@ -168,8 +172,8 @@ const legacyEnvelope = createGroundOperationResultV1(legacyResult, {
   issuedAt: NOW + 1_000
 });
 const legacyEnvelopeBytes = JSON.stringify(legacyEnvelope);
-assert.equal(legacyEnvelope.checksum, 'dcaf07b8');
-assert.equal(Buffer.byteLength(legacyEnvelopeBytes), 1667);
-assert.equal(createHash('sha256').update(legacyEnvelopeBytes).digest('hex'), 'a83936ec5de852e95bb404da93ef4c03d79dec2ed0ca18bb60af77bfa5aa863d');
+assert.equal(legacyEnvelope.checksum, '3c8cd454');
+assert.equal(Buffer.byteLength(legacyEnvelopeBytes), 1601);
+assert.equal(createHash('sha256').update(legacyEnvelopeBytes).digest('hex'), '95f5253ba7637d310a8e3324e18db889a78e016405e3548c21aebaf56f06a952');
 
 console.log('GroundOperationV3/GroundResultV3 commander bridge: PASS');

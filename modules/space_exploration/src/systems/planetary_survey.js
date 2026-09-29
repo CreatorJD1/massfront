@@ -153,8 +153,7 @@ export class PlanetarySurvey {
         this.planetGroup.rotation.y += dx * 0.012;
         this.planetGroup.rotation.x = Math.max(-1.1, Math.min(1.1, this.planetGroup.rotation.x + dy * 0.012));
 
-        this.scanLon = Math.round(((this.planetGroup.rotation.y * 180 / Math.PI) % 360 + 360) % 360);
-        this.scanLat = Math.round(this.planetGroup.rotation.x * 180 / Math.PI);
+        this._syncScanCoords();
 
         this.calculateSignalStrength();
       }
@@ -479,15 +478,24 @@ export class PlanetarySurvey {
     d.mesh = bMesh;
   }
 
+  /* The sub-camera point of the globe is what the fixed reticle covers. With
+     _depositPosition's parameterization and three.js' XYZ euler order that
+     point is local direction (-sin(ry)cos(rx), sin(rx), cos(ry)cos(rx)), so a
+     deposit faces the camera at lat = rotation.x and lon = -rotation.y. The
+     previous math compared lat against rotation.y and lon against rotation.x
+     (crosswired dimensions, flipped lon sign), so dragging a peak marker onto
+     the reticle *lowered* the signal and peaks could never reach the 76%
+     threshold — which also starved expedition cycles and stalled the required
+     core commission at 0/2. */
   nearestDeposit() {
     if (!this.planetGroup) return null;
     const curLat = this.planetGroup.rotation.x;
-    const curLon = ((this.planetGroup.rotation.y % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+    const curLon = -this.planetGroup.rotation.y;
     let best = null;
     for (const d of this.deposits) {
       if (d.extracted) continue;
       const dLat = Math.abs(d.lat - curLat);
-      let dLon = Math.abs(d.lon - curLon);
+      let dLon = Math.abs(d.lon - curLon) % (Math.PI * 2);
       dLon = Math.min(dLon, Math.PI * 2 - dLon);
       const dist = Math.hypot(dLat, dLon);
       const sig = Math.max(0, 100 - dist * (120 / this.sensorRange));
@@ -496,11 +504,18 @@ export class PlanetarySurvey {
     return best;
   }
 
+  _syncScanCoords() {
+    if (!this.planetGroup) return;
+    this.scanLat = Math.round(this.planetGroup.rotation.x * 180 / Math.PI);
+    this.scanLon = Math.round(((-this.planetGroup.rotation.y * 180 / Math.PI) % 360 + 360) % 360);
+  }
+
   calculateSignalStrength() {
     if (!this.active || !this.planetGroup) {
       this.signalPct = 0;
       return 0;
     }
+    this._syncScanCoords();
     const nearest = this.nearestDeposit();
     this.signalPct = Math.round(nearest ? nearest.signal : 0);
     return this.signalPct;

@@ -47,7 +47,7 @@ try{
   browser=await launchPwBrowser({ownershipMode:'isolated',headless:true,
     executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe'});
 
-  // ---- 1. main-menu door -------------------------------------------------
+  // ---- 1. single main-menu door -----------------------------------------
   const base=await browser.newPage({viewport:{width:412,height:900},hasTouch:true,colorScheme:'dark'});
   base.on('pageerror',e=>pageErrors.push('base: '+String(e?.message||e)));
   await base.addInitScript(()=>{try{
@@ -59,14 +59,14 @@ try{
   await assertHardwareGpu(base);
   await base.waitForFunction(()=>typeof mfExplorationMenuSync==='function',null,{timeout:180000});
   menu=await base.evaluate(()=>{
-    const btn=document.getElementById('ugaBtn');
+    const btn=document.getElementById('startBtn');
     const before={present:!!btn,display:btn?btn.style.display:null};
     window.__MF_BUILD_HAS_GALACTIC_EXPLORATION=true;
     mfExplorationMenuSync();
     const shown=btn?getComputedStyle(btn).display!=='none':false;
     let opened=null;
     const original=mfOpenExploration;
-    mfOpenExploration=view=>{opened=view;return false;};
+    mfOpenExploration=view=>{opened=view;return Promise.resolve(true);};
     /* mfBindTap ignores a non-primary pointer. A synthetic PointerEvent
        defaults isPrimary to false, which silently swallows the tap. */
     const pev=(type,x,y)=>new PointerEvent(type,{bubbles:true,pointerId:1,isPrimary:true,
@@ -157,4 +157,5 @@ await mkdir(outDir,{recursive:true});
 const out={generatedAt:new Date().toISOString(),fatal,pageErrors,menu,scan};
 await writeFile(resolve(outDir,'evidence.json'),JSON.stringify(out,null,2));
 console.log(JSON.stringify(out,null,2).slice(0,5000));
-if(fatal||pageErrors.length||!scan?.fired?.result?.visible||!scan?.fired?.result?.nextAction)process.exitCode=1;
+if(fatal||pageErrors.length||!menu?.shown||menu?.opened!=='campaign_hub'
+  ||!scan?.fired?.result?.visible||!scan?.fired?.result?.nextAction)process.exitCode=1;

@@ -54,13 +54,15 @@ function mfGalaxyCss(){
   if(document.getElementById('mfGalaxyCss'))return;
   const st=document.createElement('style');st.id='mfGalaxyCss';
   st.textContent=`
-  #setupScr.galaxyFlow{--gx:#79ddff;background:
+  /* The legacy overlay scrolls by default. Galaxy Flow has its own .setupScroll;
+     keeping both scrollports exposes a second scrollbar and shifts the CTA dock. */
+  #setupScr.galaxyFlow{--gx:#79ddff;overflow:hidden;background:
     radial-gradient(circle at 50% 34%,rgba(22,75,112,.18),transparent 36%),
     linear-gradient(180deg,#030914 0%,#06101e 55%,#030812 100%)}
   #setupScr.galaxyFlow .setupTabs{display:none!important}
   #setupScr.galaxyFlow .setupHead{padding-bottom:9px;background:linear-gradient(180deg,rgba(3,8,18,.99) 70%,rgba(3,8,18,.84));
     border-bottom:1px solid rgba(111,205,255,.16)}
-  #setupScr.galaxyFlow .setupHead h2{font-size:clamp(15px,4.5vw,20px);letter-spacing:.12em}
+  #setupScr.galaxyFlow .setupHead h2{min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:clamp(15px,4.5vw,20px);letter-spacing:.12em}
   #setupScr.galaxyFlow .setupContext{color:#8bdfff}
   #setupScr.galaxyFlow .setupScroll{padding:0!important;gap:0!important;overflow-x:hidden;background:transparent}
   #setupScr.galaxyFlow .setupScroll>.setupCard,#setupScr.galaxyFlow .setupScroll>.advWrap{display:none!important}
@@ -157,7 +159,9 @@ function mfGalaxyCss(){
      and the 13px clip shears labels on a 412-wide phone. Equal 1fr columns,
      48px tap row — width 192 on 412 is correct; do not stretch height to 192. */
   #setupScr.galaxyFlow .setupFoot{display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:48px;gap:8px;align-items:stretch;
-    flex:0 0 auto;height:auto;padding:10px calc(var(--sar) + 10px) max(calc(var(--sab) + 12px),24px) calc(var(--sal) + 10px)}
+    /* The overlay extends 8px below the measured visual viewport in Chrome;
+       64px padding preserves at least 54px of visible navigation clearance. */
+    flex:0 0 auto;height:auto;padding:10px calc(var(--sar) + 10px) max(calc(var(--sab) + 12px),64px) calc(var(--sal) + 10px)}
   #setupScr.galaxyFlow .setupFoot .mbtn,#setupScr.galaxyFlow .setupFoot .mbtn.alt{
     flex:none;width:100%;height:48px;min-height:48px;max-height:48px;min-width:0;max-width:none;box-sizing:border-box;text-align:center;
     padding:0 11px!important;font-size:11.5px!important;letter-spacing:.03em!important;line-height:48px;
@@ -202,7 +206,9 @@ function mfGalaxyCss(){
   .mfRegionHero{position:relative;margin:4px 0 10px;padding:14px;border:1px solid rgba(104,190,228,.28);border-radius:14px;overflow:hidden;
     background:radial-gradient(circle at 84% 20%,color-mix(in srgb,var(--rc,#63d9ff) 25%,transparent),transparent 35%),linear-gradient(145deg,rgba(15,35,54,.96),rgba(5,13,23,.98))}
   .mfRegionHero:before{content:'';position:absolute;right:-35px;top:-65px;width:180px;height:180px;border:1px solid color-mix(in srgb,var(--rc,#63d9ff) 35%,transparent);border-radius:50%;box-shadow:0 0 35px color-mix(in srgb,var(--rc,#63d9ff) 17%,transparent)}
-  .mfRegionHero small,.mfRegionHero b,.mfRegionHero span{position:relative;display:block}.mfRegionHero small{color:var(--rc,#63d9ff);font:800 8px/1 var(--fT);letter-spacing:.14em}.mfRegionHero b{margin-top:5px;color:#effaff;font:900 20px/1 var(--fT);letter-spacing:.11em}.mfRegionHero span{max-width:72%;margin-top:7px;color:#91b3c6;font:650 10px/1.35 var(--fU)}
+  /* Only the three hero lines get hero type. Descendant selectors also hit the
+     conquest and four intel values, enlarging them until their chips clipped. */
+  .mfRegionHero>small,.mfRegionHero>b,.mfRegionHero>span{position:relative;display:block}.mfRegionHero>small{color:var(--rc,#63d9ff);font:800 8px/1 var(--fT);letter-spacing:.14em}.mfRegionHero>b{margin-top:5px;color:#effaff;font:900 20px/1 var(--fT);letter-spacing:.11em}.mfRegionHero>span{max-width:72%;margin-top:7px;color:#91b3c6;font:650 10px/1.35 var(--fU)}
   #setupScr.galaxyFlow #mapRow{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px!important;padding:0!important}
   #setupScr.galaxyFlow #mapRow .mapCard{position:relative;border-radius:13px;overflow:hidden;transition:transform .18s ease,border-color .18s ease;min-height:0}
   #setupScr.galaxyFlow #mapRow .mapCard:active{transform:scale(.975)}#setupScr.galaxyFlow #mapRow .mapCard.sel{border-color:#74ddff;box-shadow:0 0 16px rgba(76,204,255,.24)}
@@ -214,6 +220,17 @@ function mfGalaxyCss(){
     color:#d7e9f2;background:rgba(3,9,16,.68);font:900 9px/1.25 var(--fT);letter-spacing:.08em;text-align:center}
   .mConquest{display:flex;justify-content:space-between;gap:5px;margin:6px 8px 0;color:#6f9cb5;font:800 7px/1 var(--fT);letter-spacing:.08em}.mConquest b{color:#ffd676}
   .mReward{display:flex;justify-content:space-between;gap:5px;margin:5px 8px 7px;padding-top:5px;border-top:1px solid rgba(105,180,215,.16);color:#76e7a9;font:800 7px/1.15 var(--fT);letter-spacing:.04em}.mReward b{color:#ffe189;text-align:right}
+  #setupScr.galaxyFlow #mapRow .mConquest b,#setupScr.galaxyFlow #mapRow .mReward b,#setupScr.galaxyFlow #mapRow .mHz b{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;text-align:left}
+  #setupScr.galaxyFlow #mapRow .mDs,#setupScr.galaxyFlow #mapRow .mHz{font-size:10px;line-height:1.28}
+  /* Six information rows sit beside one square preview. A seventh canvas row
+     and auto-stretched grid tracks made the reward and weather copy appear to
+     collide on phones even when their outer boxes passed overflow checks. */
+  #setupScr.galaxyFlow #mfStageRegion #mapRow .mapCard{align-items:start;grid-auto-rows:max-content}
+  #setupScr.galaxyFlow #mfStageRegion #mapRow .mapCard canvas{grid-row:1/span 6;align-self:start}
+  #setupScr.galaxyFlow #mfStageRegion #mapRow .mConquest,#setupScr.galaxyFlow #mfStageRegion #mapRow .mReward{
+    display:grid;grid-template-columns:minmax(0,1fr);gap:3px;align-content:start;line-height:1.3}
+  #setupScr.galaxyFlow #mfStageRegion #mapRow .mReward{margin-top:3px;padding-top:5px}
+  #setupScr.galaxyFlow #mfStageRegion #mapRow .mHz{margin-top:5px}
   /* No aspect-ratio here. This injected 16/10 at runtime, and because it lands
      later in the cascade with higher specificity it silently overrode
      ui.css:1114 - so the site card was never the 4:3 that stylesheet claimed.
@@ -233,7 +250,9 @@ function mfGalaxyCss(){
   .mfQuickSetup{display:flex;flex-direction:column;gap:10px;margin:10px 0 8px}.mfQuickLabel{display:flex;align-items:end;justify-content:space-between;gap:8px;margin:0 2px;color:#dff7ff;font:900 9px/1 var(--fT);letter-spacing:.12em}.mfQuickLabel small{color:#5f8398;font:750 7px/1 var(--fT);letter-spacing:.06em}
   .mfQuickPlans{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.mfQuickPlan{position:relative;min-width:0;min-height:104px;padding:10px 7px 8px;border:1px solid rgba(98,159,195,.24);border-radius:12px;background:linear-gradient(150deg,rgba(15,33,51,.96),rgba(5,13,23,.98));color:#94b4c6;text-align:left;overflow:hidden}.mfQuickPlan:before{content:'';position:absolute;right:-26px;top:-32px;width:78px;height:78px;border:1px solid color-mix(in srgb,var(--qp,#65d9ff) 28%,transparent);border-radius:50%;box-shadow:0 0 24px color-mix(in srgb,var(--qp,#65d9ff) 12%,transparent)}.mfQuickPlan i,.mfQuickPlan b,.mfQuickPlan span,.mfQuickPlan em{position:relative;display:block}.mfQuickPlan i{color:var(--qp,#65d9ff);font:900 17px/1 var(--fT);font-style:normal}.mfQuickPlan b{margin-top:7px;color:#eefaff;font:900 8px/1.15 var(--fT);letter-spacing:.07em}.mfQuickPlan span{margin-top:5px;font:650 8px/1.25 var(--fU)}.mfQuickPlan em{margin-top:7px;color:#6d93a9;font:800 6.5px/1 var(--fT);font-style:normal;letter-spacing:.07em}.mfQuickPlan.on{border-color:var(--qp,#65d9ff);box-shadow:0 0 15px color-mix(in srgb,var(--qp,#65d9ff) 20%,transparent),inset 0 0 18px color-mix(in srgb,var(--qp,#65d9ff) 8%,transparent)}
   .mfQuickTeam{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.mfTeamBtn{min-width:0;min-height:62px;padding:9px 10px;border:1px solid rgba(97,159,194,.22);border-radius:11px;background:rgba(7,18,31,.92);color:#789aaf;text-align:left}.mfTeamBtn b,.mfTeamBtn span{display:block}.mfTeamBtn b{color:#dcedf7;font:900 9px/1 var(--fT);letter-spacing:.08em}.mfTeamBtn span{margin-top:6px;font:650 8px/1.25 var(--fU)}.mfTeamBtn.on{border-color:#63dfff;background:linear-gradient(115deg,rgba(20,85,111,.82),rgba(7,20,34,.96));box-shadow:inset 3px 0 #63dfff}.mfTeamBtn.locked{opacity:.38;filter:saturate(.3)}
-  .mfQuickCommanders{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.mfQuickCommander{min-width:0;padding:5px 5px 8px;border:1px solid rgba(99,160,195,.22);border-radius:11px;background:rgba(6,16,28,.94);color:#7495a9;text-align:left;overflow:hidden}.mfQuickCommander img{display:block;width:100%;aspect-ratio:1.45/1;object-fit:cover;object-position:center 22%;border-radius:7px;filter:saturate(.82) brightness(.82)}.mfQuickCommander b,.mfQuickCommander span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mfQuickCommander b{margin-top:6px;color:#e7f6ff;font:900 7.5px/1 var(--fT);letter-spacing:.04em}.mfQuickCommander span{margin-top:3px;color:#65889e;font:750 6.5px/1 var(--fT)}.mfQuickCommander.on{border-color:#6be1ff;box-shadow:0 0 13px rgba(78,208,255,.2)}.mfQuickCommander.on img{filter:none}
+  .mfCommanderStageShowcase{display:grid;grid-template-columns:minmax(116px,.8fr) minmax(0,1.2fr);min-height:132px;border:1px solid color-mix(in srgb,var(--cmd,#65d9ff) 46%,transparent);border-radius:13px;overflow:hidden;background:linear-gradient(115deg,rgba(4,15,26,.98),color-mix(in srgb,var(--cmd,#65d9ff) 9%,rgba(8,22,35,.96)));box-shadow:inset 3px 0 var(--cmd,#65d9ff),0 8px 20px rgba(0,0,0,.28)}
+  .mfCommanderStageVisual{position:relative;min-height:132px;overflow:hidden;background:linear-gradient(160deg,#d9e2e7,#768591)}.mfCommanderStagePortrait{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 18%;filter:saturate(.92) contrast(1.04)}.mfCommanderStage3D{position:absolute;right:6px;bottom:6px;width:46%;height:48%;min-height:58px;border:1px solid color-mix(in srgb,var(--cmd,#65d9ff) 56%,transparent);border-radius:7px;overflow:hidden;background:radial-gradient(ellipse at 50% 64%,color-mix(in srgb,var(--cmd,#65d9ff) 18%,transparent),transparent 64%),linear-gradient(160deg,#0a1928,#030a11);box-shadow:0 4px 13px rgba(0,0,0,.58)}.mfCommanderStage3D .mfIntelPreview{position:absolute;inset:0;margin:0;border:0;border-radius:0;background:transparent}.mfCommanderStage3D .mfIntelPreview canvas{width:100%;height:100%}.mfCommanderStageInfo{position:relative;padding:13px 12px 11px}.mfCommanderStageInfo>i{display:block;color:var(--cmd,#65d9ff);font:900 9px/1 var(--fT);letter-spacing:.14em;font-style:normal}.mfCommanderStageInfo>h3{margin:6px 0 4px;color:#f2fbff;font:900 16px/1.08 var(--fT);letter-spacing:.04em}.mfCommanderStageInfo>p{margin:0;color:#91b5c7;font:700 9.5px/1.35 var(--fU)}.mfCommanderStageInfo .commanderAbilityFloats{position:static;margin-top:11px}.mfCommanderStageInfo .commanderAbilityFloat{height:34px}.mfCommanderStageInfo .commanderAbilityFloat i{width:23px;height:23px;font-size:14px}.mfCommanderStageInfo .commanderAbilityFloat b{font-size:6.5px}
+  .mfQuickCommanders{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.mfQuickCommander{position:relative;min-width:0;padding:5px 5px 8px;border:1px solid rgba(99,160,195,.22);border-radius:11px;background:rgba(6,16,28,.94);color:#7495a9;text-align:left;overflow:hidden}.mfQuickCommander .commanderPortraitFrame{margin:0 0 8px}.mfQuickCommander img{display:block;width:100%;aspect-ratio:1.22/1;object-fit:cover;object-position:center 22%;border-radius:7px;filter:saturate(.82) brightness(.82)}.mfQuickCommander .commanderAbilityFloat{display:grid;height:25px;grid-template-columns:1fr;padding:2px}.mfQuickCommander .commanderAbilityFloat i{width:100%;height:19px}.mfQuickCommander .commanderAbilityFloat b{display:none}.mfQuickCommander>b,.mfQuickCommander>span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mfQuickCommander>b{margin-top:6px;color:#e7f6ff;font:900 7.5px/1 var(--fT);letter-spacing:.04em}.mfQuickCommander>span{margin-top:3px;color:#65889e;font:750 6.5px/1 var(--fT)}
   .mfQuickSummary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;padding:1px;border:1px solid rgba(98,163,199,.22);border-radius:10px;background:rgba(3,9,16,.8);overflow:hidden}.mfQuickSummary>div{min-width:0;padding:7px 4px;background:rgba(12,27,42,.84);text-align:center}.mfQuickSummary span,.mfQuickSummary b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mfQuickSummary span{color:#567b92;font:800 6px/1 var(--fT);letter-spacing:.08em}.mfQuickSummary b{margin-top:4px;color:#d9f4ff;font:900 8px/1 var(--fT)}
   .mfLoadoutSummary{min-width:0;margin:9px 0 12px;padding:10px;border:1px solid rgba(107,213,255,.32);border-radius:14px;overflow:hidden;
     background:linear-gradient(145deg,rgba(8,24,40,.97),rgba(4,12,22,.98));box-shadow:inset 3px 0 #65d9ff,0 9px 22px rgba(0,0,0,.24)}
@@ -256,6 +275,16 @@ function mfGalaxyCss(){
     .mfWorldStrip,.mfRegionStrip{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.mfWorldChip{min-height:62px}.mfRegionChip{min-height:76px}
     #setupScr.galaxyFlow #mapRow{display:flex!important;gap:8px!important;overflow-x:auto;padding-bottom:7px!important;scroll-snap-type:x mandatory;scrollbar-width:none}
     #setupScr.galaxyFlow #mapRow::-webkit-scrollbar{display:none}#setupScr.galaxyFlow #mapRow .mapCard{flex:0 0 86%;scroll-snap-align:center}
+    /* A battlefield's weather and conditions are decision-critical. Pair them
+       with its survey map before the region dossier on narrow phones. */
+    #mfStageRegion.on{display:flex;flex-direction:column}
+    #mfStageRegion>.mfGalaxyEyebrow{order:0}#mfStageRegion>#mfRegionMapHost{order:1;width:100%}
+    #mfStageRegion>.mfRegionHero{order:2}#mfStageRegion>.wtpCard{order:3}
+    #mfStageRegion #mapRow .mapCard{display:grid;grid-template-columns:minmax(100px,42%) minmax(0,1fr);align-content:start;gap:4px 8px;min-height:200px;padding:8px;text-align:left}
+    #mfStageRegion #mapRow .mapCard canvas{grid-column:1;grid-row:1/8;width:100%;height:auto;aspect-ratio:1/1}
+    #mfStageRegion #mapRow .mapCard .mSize,#mfStageRegion #mapRow .mapCard .mNm,#mfStageRegion #mapRow .mapCard .mDs,#mfStageRegion #mapRow .mapCard .mConquest,#mfStageRegion #mapRow .mapCard .mReward,#mfStageRegion #mapRow .mapCard .mHz{grid-column:2;min-width:0;margin:0;overflow-wrap:anywhere}
+    #mfStageRegion #mapRow .mapCard .mNm{min-height:0;justify-content:flex-start;text-align:left}
+    #mfStageRegion #mapRow .mapCard .mConquest,#mfStageRegion #mapRow .mapCard .mReward{display:block;padding-top:4px}
     .mfWorldChip{font-size:7px}.mfRegionChip{font-size:6.5px}.mfStageTitle{letter-spacing:.12em}.mfQuickPlan{min-height:98px;padding-left:6px;padding-right:6px}.mfQuickPlan span{font-size:7.5px}.mfQuickSummary{grid-template-columns:repeat(2,minmax(0,1fr))}}
   @media(max-width:380px){.mfLoadoutHead{display:block}.mfLoadoutChips{justify-content:flex-start;margin-top:7px}.mfLoadoutCommand,.mfLoadoutGrid{grid-template-columns:1fr}}
   @media(max-width:355px){.mfGalaxyStep{font-size:8.5px;letter-spacing:.03em}.mfWorldStrip,.mfRegionStrip{grid-template-columns:repeat(2,1fr)}.mfPlanetStats{grid-template-columns:1fr 1fr}}
@@ -298,7 +327,7 @@ function mfGalaxyCss(){
   .mfConquestContinue{min-height:58px}
   .mfConquestContinue span{font-size:9px}.mfConquestContinue b{font-size:11px}.mfConquestContinue small{font-size:10.5px}
   .mfPlanetStats span{font-size:9px}.mfPlanetStats b{font-size:11px}
-  .mfRegionHero small{font-size:9.5px}.mfRegionHero span{font-size:11px}
+  .mfRegionHero>small{font-size:9.5px}.mfRegionHero>span{font-size:11px}
   #setupScr.galaxyFlow #mapRow .mapCard.locked:after{font-size:10px}
   .mConquest,.mReward{font-size:9px}
   .mfMissionKicker{font-size:9.5px}.mfMissionHero p{font-size:11px}
@@ -321,6 +350,70 @@ function mfGalaxyCss(){
     .mfWorldChip{font-size:9.5px}.mfRegionChip{font-size:9px}
     .mfQuickPlan{min-height:116px}.mfQuickPlan span{font-size:9px}}
 
+  /* A short mode summary leaves the battle choice visible. Its reward and
+     special rules remain one tap away instead of repeating on every stage. */
+  .mfModeContract{display:block;margin:2px 0 6px;padding:0}
+  .mfModeDetails>summary{display:flex;align-items:center;gap:7px;min-height:44px;padding:6px 10px;list-style:none;cursor:pointer}
+  .mfModeDetails>summary::-webkit-details-marker{display:none}
+  .mfModeDetails>summary:after{content:'⌄';color:var(--mode,#63d9ff);font:900 14px/1 var(--fT)}
+  .mfModeDetails[open]>summary:after{transform:rotate(180deg)}
+  .mfModeDetails span{flex:0 0 auto;color:var(--mode,#63d9ff);font:900 clamp(10px,.6875rem,22px)/1.15 var(--fT)}
+  .mfModeDetails b{flex:1;min-width:0;margin:0;color:#edfaff;font:800 clamp(10px,.625rem,20px)/1.2 var(--fU);letter-spacing:0;overflow-wrap:anywhere}
+  .mfModeDetails strong{flex:0 0 auto;color:#ffe089;font:900 clamp(10px,.625rem,20px)/1 var(--fT)}
+  .mfModeDetails small{display:block;padding:0 10px 9px;color:#a8c8d9;font:700 clamp(10px,.625rem,20px)/1.25 var(--fU)}
+  .mfGalaxyStep{font-size:clamp(9.5px,.625rem,20px);overflow-wrap:anywhere}
+  .mfStageSub{font-size:clamp(11px,.75rem,24px)}
+  .mfStageTitle{letter-spacing:.08em;overflow-wrap:anywhere}
+  .mfConquestContinue{min-height:54px}
+  .mfConquestContinue span{font-size:clamp(9px,.625rem,20px)}
+  .mfConquestContinue b{font-size:clamp(11px,.75rem,24px)}
+  .mfConquestContinue small{font-size:clamp(10px,.625rem,20px)}
+  .mfWorldChip b,.mfWorldChip small,.mfRegionChip b,.mfRegionChip small{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;-webkit-line-clamp:unset}
+  .mfWorldChip,.mfRegionChip{height:auto;font-size:clamp(10px,.6875rem,22px)}
+  .mfWorldChip small,.mfRegionChip small{font-size:clamp(9px,.625rem,20px)}
+  .mfPlanetStats b{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;font-size:clamp(11px,.6875rem,22px)}
+  .mfPlanetStats span{font-size:clamp(9px,.625rem,20px)}
+  /* The system canvas has a 640px bitmap and the dossier has long authored
+     copy. Grid children need zero automatic minimums or the short-landscape
+     915px theatre can expand the entire setup overlay past the viewport. */
+  .mfSystemTheatre{display:grid;min-width:0;max-width:100%;grid-template-columns:minmax(0,1fr) minmax(190px,32%);gap:8px;align-items:start}
+  .mfSystemViewport{grid-column:1;grid-row:1;min-width:0;max-width:100%}
+  .mfSystemDossier,.mfSystemDossier.loreOpen{position:static;grid-column:2;grid-row:1/3;min-width:0;width:auto;max-width:100%;max-height:none;margin:0;overflow:visible;pointer-events:auto;overflow-wrap:anywhere}
+  .mfSystemTheatre>.mfGalaxyHelp{grid-column:1;grid-row:2}
+  .mfSystemDossier small,.mfSystemDossier .mfSysStat span{font-size:clamp(9px,.625rem,20px)}
+  .mfSystemDossier .mfSysStat,.mfSystemDossier p{font-size:clamp(10px,.6875rem,22px);overflow-wrap:anywhere}
+  .mfSysLoreBtn{width:100%;min-height:44px;margin-top:8px;padding:7px 9px;border:1px solid rgba(104,198,234,.42);border-radius:7px;background:rgba(15,55,74,.42);color:#bcecff;font:850 clamp(10px,.625rem,20px)/1.2 var(--fT);text-align:left}
+  .mfDeployBrief{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;margin:3px 0 4px;padding:6px 10px;border:1px solid rgba(99,218,255,.35);border-radius:9px;background:linear-gradient(105deg,rgba(19,71,95,.58),rgba(5,16,30,.94));box-shadow:inset 3px 0 #65d9ff}
+  .mfDeployBrief span{color:#8fc8db;font:800 clamp(10px,.625rem,20px)/1.2 var(--fU);overflow-wrap:anywhere}
+  .mfDeployBrief b{color:#eefaff;font:900 clamp(11px,.75rem,24px)/1.2 var(--fT);text-align:right;overflow-wrap:anywhere}
+  .mfQuickSetup{margin:4px 0 8px;gap:7px}
+  .mfQuickLabel{font-size:clamp(10.5px,.6875rem,22px);overflow-wrap:anywhere}
+  .mfQuickLabel small{font-size:clamp(9px,.625rem,20px);text-align:right;overflow-wrap:anywhere}
+  .mfQuickPlan{min-height:100px}
+  .mfQuickPlan b{font-size:clamp(10px,.6875rem,22px);overflow-wrap:anywhere}
+  .mfQuickPlan span{font-size:clamp(9.5px,.625rem,20px)}
+  .mfQuickPlan em{font-size:clamp(9px,.5625rem,18px)}
+  .mfTeamBtn b{font-size:clamp(10.5px,.6875rem,22px);overflow-wrap:anywhere}
+  .mfTeamBtn span{font-size:clamp(9.5px,.625rem,20px)}
+  .mfDeployIntel{margin:9px 0;border:1px solid rgba(103,207,245,.38);border-radius:10px;background:rgba(5,18,31,.9)}
+  .mfDeployIntel>summary{display:flex;align-items:center;justify-content:space-between;min-height:44px;padding:9px 11px;list-style:none;color:#bcecff;font:900 clamp(10px,.6875rem,22px)/1.2 var(--fT);letter-spacing:.06em;cursor:pointer}
+  .mfDeployIntel>summary::-webkit-details-marker{display:none}
+  .mfDeployIntel>summary span{font-size:17px}.mfDeployIntel[open]>summary span{transform:rotate(90deg)}
+  .mfDeployIntel .mfMissionHero,.mfDeployIntel .mfLoadoutSummary{margin:7px}
+  #setupScr.galaxyFlow .setupFoot{grid-auto-rows:minmax(48px,auto)}
+  #setupScr.galaxyFlow .setupFoot .mbtn,#setupScr.galaxyFlow .setupFoot .mbtn.alt{height:auto;min-height:48px;max-height:none;padding:5px 8px!important;font-size:clamp(11.5px,.75rem,24px)!important;line-height:1.1;white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+  #setupScr.galaxyFlow .wtpCard{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 8px;align-items:center;margin:6px 0 8px;padding:7px 9px}
+  #setupScr.galaxyFlow .wtpCard>header{grid-column:1;margin:0}
+  #setupScr.galaxyFlow .wtpCard>header>span,#setupScr.galaxyFlow .wtpCard>header>b{font-size:clamp(10px,.625rem,20px)}
+  #setupScr.galaxyFlow .wtpCard>p{grid-column:1;margin:0;font-size:clamp(11px,.6875rem,22px);overflow-wrap:anywhere}
+  #setupScr.galaxyFlow .wtpFoot{grid-column:2;grid-row:1/3;display:flex;gap:4px}
+  #setupScr.galaxyFlow .wtpDone,#setupScr.galaxyFlow .wtpSkip{width:auto;min-width:44px;min-height:44px;padding:0 7px;font-size:clamp(10px,.625rem,20px)}
+  @media(max-width:600px){.mfSystemTheatre{grid-template-columns:1fr}.mfSystemViewport{grid-column:1;grid-row:1}.mfSystemTheatre>.mfGalaxyHelp{grid-column:1;grid-row:2}.mfSystemDossier,.mfSystemDossier.loreOpen{grid-column:1;grid-row:3}}
+  @media(max-width:355px){#setupScr.galaxyFlow .wtpCard{grid-template-columns:1fr}#setupScr.galaxyFlow .wtpFoot{grid-column:1;grid-row:auto}}
+  html[data-mf-text-scale="150"] #setupScr.galaxyFlow .mfQuickPlans,html[data-mf-text-scale="200"] #setupScr.galaxyFlow .mfQuickPlans{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(160px,60%);grid-template-columns:none;overflow-x:auto;scroll-snap-type:x mandatory}
+  html[data-mf-text-scale="150"] #setupScr.galaxyFlow .mfQuickPlan,html[data-mf-text-scale="200"] #setupScr.galaxyFlow .mfQuickPlan{scroll-snap-align:start}
+  html[data-mf-text-scale="150"] #setupScr.galaxyFlow .mfPlanetStats,html[data-mf-text-scale="200"] #setupScr.galaxyFlow .mfPlanetStats{grid-template-columns:1fr}
+
   /* ── SHORT VIEWPORT (phone landscape) ────────────────────────────────────
      Every viewport above is clamp(<tall floor>,Ndvh,<cap>). At 915x412 the
      floor wins — 370px of hologram inside a 255px scroll window — and because
@@ -341,11 +434,15 @@ function mfGalaxyCss(){
     #setupScr.galaxyFlow .setupHead{min-height:28px;padding:6px calc(var(--sar) + 14px) 5px calc(var(--sal) + 14px)}
     #setupScr.galaxyFlow .setupHead h2{font-size:15px}.setupContext{font-size:9px}
     #setupScr.galaxyFlow .setupScroll{min-height:0}
-    #setupScr.galaxyFlow .setupFoot{grid-auto-rows:44px;padding:5px calc(var(--sar) + 10px) max(calc(var(--sab) + 6px),10px) calc(var(--sal) + 10px)}
+    #setupScr.galaxyFlow .setupFoot{grid-auto-rows:44px;padding:5px calc(var(--sar) + 10px) max(calc(var(--sab) + 6px),64px) calc(var(--sal) + 10px)}
     #setupScr.galaxyFlow .setupFoot .mbtn,#setupScr.galaxyFlow .setupFoot .mbtn.alt{height:44px;min-height:44px;max-height:44px;line-height:44px}
     .mfGalaxyHost{width:min(100%,880px);padding:0 calc(var(--sar) + 10px) 7px calc(var(--sal) + 10px)}
     .mfGalaxyStepper{padding:3px 2px 4px}.mfGalaxyStep{min-height:44px;padding-top:15px}
     .mfModeContract{margin:0 0 5px;padding:5px 9px}.mfModeContract b{margin-top:2px}.mfModeContract small{display:none}
+    /* The selected region card starts just below this summary. On a 412px-tall
+       phone its weather description otherwise lands behind the fixed dock;
+       reclaim wrapper spacing without shrinking the 44px summary target. */
+    #setupScr.galaxyFlow.galaxyStage-region .mfModeContract{margin-bottom:0;padding-top:0;padding-bottom:0}
     #mfStageGalaxy.on,#mfStagePlanet.on{display:grid;grid-template-columns:minmax(0,3fr) minmax(270px,2fr);grid-template-rows:auto auto auto auto 1fr auto;column-gap:10px;row-gap:3px;align-items:start}
     #mfStageGalaxy>.mfGalaxyViewport,#mfStagePlanet>.mfPlanetViewport{grid-column:1;grid-row:1/6;height:194px;min-height:0}
     /* The right rail already explains the gesture. A second help line below
@@ -360,27 +457,35 @@ function mfGalaxyCss(){
     #mfStagePlanet>.mfPlanetStats{grid-column:2;grid-row:4;gap:3px;margin:0}
     #mfStagePlanet>.mfPlanetStats>div{padding:5px 3px}
     #mfStagePlanet>.mfRegionStrip{grid-column:2;grid-row:5;margin:0}
-    /* Region selection has three square reconnaissance maps. Leaving their
-       portrait cards full-width made each card 449px tall in a 325px scroll
-       lane, and scrollIntoView then hid the region brief behind the sticky
-       stepper. Keep the maps square but use the available landscape width:
-       compact intel rail left, three fully visible site cards right. */
+    /* Region selection has square reconnaissance maps. The old 352px card cap
+       left weather and reward copy in a ~190px column behind the fixed dock.
+       Give the selected site the right lane, with a peek of its neighbors so
+       the carousel still advertises the other battlefield choices. */
     #mfStageRegion.on{display:grid;grid-template-columns:minmax(280px,4fr) minmax(0,6fr);gap:10px;align-items:start}
     #mfStageRegion>.mfGalaxyEyebrow{display:none}
     #mfStageRegion>.mfRegionHero{grid-column:1;height:204px;margin:0;padding:8px 10px;box-sizing:border-box}
-    #mfStageRegion>.mfRegionHero b{margin-top:3px;font-size:16px}
+    #mfStageRegion>.mfRegionHero>b{margin-top:3px;font-size:16px}
     #mfStageRegion>.mfRegionHero>span{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;max-width:100%;margin-top:4px;font-size:9px;line-height:1.2}
     #mfStageRegion .mfConquestBar{margin:4px 0;padding:5px 7px;font-size:8px}
     #mfStageRegion .mfSiteIntelDossier{grid-template-columns:repeat(2,minmax(0,1fr));gap:3px;margin-top:4px;padding:4px}
     #mfStageRegion .mfIntelChip{min-width:0;padding:3px 5px}
     #mfStageRegion .mfIntelChip span{font-size:7px}#mfStageRegion .mfIntelChip b{font-size:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     #mfStageRegion>#mfRegionMapHost{grid-column:2;min-width:0}
-    #mfStageRegion #mapRow{grid-template-columns:repeat(3,minmax(0,1fr));gap:4px!important;margin:0}
-    #mfStageRegion #mapRow .mapCard{height:204px;padding:3px;box-sizing:border-box}
-    #mfStageRegion #mapRow .mapCard canvas{width:100%;height:auto;aspect-ratio:1/1}
-    #mfStageRegion #mapRow .mSize{margin-top:2px;font-size:8px}
-    #mfStageRegion #mapRow .mNm{min-height:22px;margin-top:2px;font-size:9px;line-height:1.1}
-    #mfStageRegion #mapRow .mDs,#mfStageRegion #mapRow .mConquest,#mfStageRegion #mapRow .mReward,#mfStageRegion #mapRow .mHz{display:none}
+    #setupScr.galaxyFlow #mfStageRegion #mapRow{display:flex!important;gap:6px!important;overflow-x:auto;margin:0;scroll-snap-type:x mandatory}
+    #mfStageRegion #mapRow .mapCard{flex:0 0 calc(100% - 28px);display:grid;grid-template-columns:minmax(120px,35%) minmax(0,1fr);align-content:start;gap:3px 8px;min-height:204px;height:auto;padding:6px;box-sizing:border-box;text-align:left;scroll-snap-align:center}
+    #mfStageRegion #mapRow .mapCard canvas{grid-column:1;grid-row:1/8;width:100%;height:auto;aspect-ratio:1/1}
+    #mfStageRegion #mapRow .mSize,#mfStageRegion #mapRow .mNm,#mfStageRegion #mapRow .mDs,#mfStageRegion #mapRow .mConquest,#mfStageRegion #mapRow .mReward,#mfStageRegion #mapRow .mHz{grid-column:2;min-width:0;margin:0;overflow-wrap:anywhere}
+    #mfStageRegion #mapRow .mSize{font-size:9.5px}
+    #mfStageRegion #mapRow .mNm{min-height:0;justify-content:flex-start;font-size:11.5px;line-height:1.1;text-align:left}
+    #mfStageRegion #mapRow .mDs,#mfStageRegion #mapRow .mHz{font-size:10.5px}
+    #mfStageRegion #mapRow .mHz b{font-size:10px}
+    #mfStageRegion #mapRow .mConquest,#mfStageRegion #mapRow .mReward{display:block;padding-top:3px;font-size:10px;line-height:1.2}
+    /* The threat pair fits on one line at this width; keeping it stacked
+       pushed the weather explanation beneath the fixed action dock. */
+    #setupScr.galaxyFlow #mfStageRegion #mapRow .mapCard{gap:2px 8px;padding:3px 6px}
+    #setupScr.galaxyFlow #mfStageRegion #mapRow .mConquest{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+    #setupScr.galaxyFlow #mfStageRegion #mapRow .mReward{margin-top:1px}
+    #setupScr.galaxyFlow #mfStageRegion #mapRow .mHz{margin-top:0}
     .mfGalaxyViewport,.mfPlanetViewport{height:194px}
     .mfSystemViewport{height:204px}
     .mfCanvasSelection{left:6px;right:6px;bottom:6px;grid-template-columns:28px minmax(0,1fr) auto;min-height:40px;padding:5px 8px}
@@ -393,6 +498,35 @@ function mfGalaxyCss(){
     .mfSystemDossier .mfSysStat{margin-top:3px;font-size:8px;line-height:1.1}.mfSystemDossier .mfSysStat span{font-size:7px}
     #mfStageSystem>.mfGalaxyEyebrow{margin:2px 2px 4px}#mfStageSystem>.mfSystemSub{display:none}
     .mfWorldStrip,.mfRegionStrip{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}.mfWorldChip{min-height:52px;padding:5px;font-size:8.5px}.mfWorldChip small{font-size:7.5px}.mfRegionChip{min-height:60px;padding:5px 4px;font-size:8px}.mfRegionChip b,.mfRegionChip small{font-size:8px}
+  }
+  @media(orientation:landscape) and (max-height:560px){
+    #setupScr.galaxyFlow .setupFoot{grid-auto-rows:minmax(44px,auto)}
+    #setupScr.galaxyFlow .setupFoot .mbtn,#setupScr.galaxyFlow .setupFoot .mbtn.alt{height:auto;min-height:44px;max-height:none;line-height:1.1}
+    .mfModeDetails[open]>small{display:block}
+    #mfStageGalaxy>.mfConquestContinue{grid-row:4;min-height:44px}
+    #mfStageGalaxy>.wtpCard{grid-column:2;grid-row:5;margin:0}
+    #mfStageGalaxy>.mfWorldStrip{grid-row:6}
+    #mfStageGalaxy>.mfGalaxyViewport{grid-row:1/7}
+    #mfStagePlanet>.wtpCard{grid-column:2;grid-row:6;margin:0}
+    #mfStageRegion>.wtpCard{grid-column:1;grid-row:2;margin:0}
+    #mfStageRegion>#mfRegionMapHost{grid-row:1/3}
+    .mfSystemDossier,.mfSystemDossier.loreOpen{width:auto;max-height:none;overflow:visible}
+    .mfSystemDossier p{display:block}
+    .mfSystemDossier small,.mfSystemDossier .mfSysStat span{font-size:clamp(9px,.625rem,20px)}
+    .mfSystemDossier .mfSysStat,.mfSystemDossier p{font-size:clamp(10px,.6875rem,22px)}
+    .mfWorldChip,.mfRegionChip,.mfWorldChip small,.mfRegionChip b,.mfRegionChip small{font-size:clamp(9px,.625rem,20px)}
+    #mfStageDeploy .mfQuickSetup{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:10px;row-gap:5px;align-items:start}
+    #mfStageDeploy .mfQuickLabel--plan{grid-column:1;grid-row:1}
+    #mfStageDeploy .mfQuickPlans{grid-column:1;grid-row:2}
+    #mfStageDeploy .mfQuickLabel--team{grid-column:1;grid-row:3}
+    #mfStageDeploy .mfQuickTeam{grid-column:1;grid-row:4}
+    #mfStageDeploy .mfQuickLabel--commander{grid-column:2;grid-row:1}
+    #mfStageDeploy .mfCommanderStageShowcase{grid-column:2;grid-row:2/5}
+    #mfStageDeploy .mfQuickCommanders{grid-column:2;grid-row:5}
+    #mfStageDeploy .mfQuickSummary{grid-column:1;grid-row:5}
+    #mfStageDeploy .mfQuickPlan{min-height:94px;padding:7px}
+    #mfStageDeploy .mfQuickPlan i{font-size:14px}
+    #mfStageDeploy .mfDeployBrief{min-height:40px;margin:1px 0 3px}
   }
   /* Tablet/desktop landscape: use the width instead of stacking the briefing,
      choice strip and hologram into a tall column. The previous 680px portrait
@@ -517,7 +651,10 @@ function mfGalaxyRenderModeContract(){
   const el=$('mfModeContract');if(!el)return;
   const C=typeof modeRewardContract==='function'?modeRewardContract(activeWarMode):{nm:'STANDARD',xp:1,rule:'1 PLAYER - AI ALLIES OPTIONAL',accent:'#63d9ff',item:''};
   const item=C.item&&typeof INV_CONSUMABLES!=='undefined'?INV_CONSUMABLES.find(x=>x.id===C.item):null,boost=Math.round((C.xp-1)*100);
-  el.style.setProperty('--mode',C.accent||'#63d9ff');el.innerHTML='<div><span>MODE CONTRACT</span><b>'+mfGalaxyEsc(C.nm+' - '+C.rule)+'</b></div><strong>'+(boost?'+'+boost+'% XP':'BASE XP')+'</strong><small>'+(item?mfGalaxyEsc(item.em+' EXCLUSIVE VICTORY REWARD - '+item.nm+' · ONE MATCH'):'NO EXCLUSIVE ITEM CONTRACT')+'</small>';
+  const expanded=!!el.querySelector('.mfModeDetails[open]');
+  /* The reward contract remains inspectable, but a repeated paragraph must not
+     hide the battlefield choice on every stage of a short phone screen. */
+  el.style.setProperty('--mode',C.accent||'#63d9ff');el.innerHTML='<details class="mfModeDetails"'+(expanded?' open':'')+'><summary><span>'+mfGalaxyEsc(C.nm)+'</span><b>'+mfGalaxyEsc(C.rule)+'</b><strong>'+(boost?'+'+boost+'% XP':'BASE XP')+'</strong></summary><small>'+(item?mfGalaxyEsc(item.em+' EXCLUSIVE VICTORY REWARD - '+item.nm+' · ONE MATCH'):'NO EXCLUSIVE ITEM CONTRACT')+'</small></details>';
   const go=$('mfConquestContinue');if(!go)return;
   if(activeWarMode==='standard'){
     const map=mfConquestNextMap(),L=mfConquestLocate(map),D=MAPDEFS[map]||{};go.disabled=false;
@@ -1027,13 +1164,15 @@ function mfGalaxyToggleSystemLore(){
   mfSystemLoreOpen=!mfSystemLoreOpen;
   if(typeof sfx==='function')sfx('ui');
   const dos=$('mfSystemDossier');if(dos)dos.classList.toggle('loreOpen',mfSystemLoreOpen);
-  const btn=document.querySelector('[data-mf-sys-lore]');if(btn)btn.classList.toggle('loreOn',mfSystemLoreOpen);
+  const btn=document.querySelector('[data-mf-sys-lore]');if(btn){btn.classList.toggle('loreOn',mfSystemLoreOpen);btn.setAttribute('aria-expanded',String(mfSystemLoreOpen));btn.textContent=mfSystemLoreOpen?'HIDE WORLD INTEL':'WORLD INTEL';}
 }
 function mfGalaxySetStage(stage){
   if(MF_GALAXY_STAGES.indexOf(stage)<0)stage='galaxy';
   if(stage!=='system')mfSystemLoreOpen=false;
   mfGalaxyStage=stage;mfGalaxyRenderStage();
-  const sc=$('setupScr')&&$('setupScr').querySelector('.setupScroll');if(sc)sc.scrollTop=0;
+  const setup=$('setupScr'),sc=setup&&setup.querySelector('.setupScroll');
+  if(sc){sc.scrollTop=0;sc.scrollLeft=0;}
+  if(setup)setup.scrollLeft=0;
   /* Tiny seam for warprimer.js — does not change stage order or locks. */
   if(typeof window.wtpOnStage==='function') try{ window.wtpOnStage(stage); }catch(e){}
   if(typeof audMusicEnterScreen==='function') audMusicEnterScreen('setupScr');
@@ -1062,10 +1201,10 @@ function mfGalaxyRenderSystem(){
   const open=mfConquestPlanetOpen(key),done=mfConquestPlanetComplete(key),wins=mfConquestPlanetWins(key);
   const pct=Math.round(wins/12*100);
   box.innerHTML='<div class="mfGalaxyEyebrow"><span>'+mfGalaxyEsc(S.nm)+'</span><span class="mfGalaxyLive">'+mfGalaxyEsc(S.star)+'</span></div>'
-    +'<p class="mfStageSub mfSystemSub">One playable homeworld. Other bodies on the rings are lore only.</p>'
+    +'<p class="mfStageSub mfSystemSub">Select the highlighted homeworld. Other orbiting bodies are not yet battlefields.</p>'
     +'<div class="mfSystemTheatre"><div class="mfSystemViewport">'
     +'<canvas id="mfSystemCanvas" width="640" height="420" aria-label="'+mfGalaxyEsc(S.nm)+' orbital map"></canvas>'
-    +'<aside class="mfSystemDossier'+(open?'':' locked')+(mfSystemLoreOpen?' loreOpen':'')+'" id="mfSystemDossier"><small>SYSTEM</small><b>'+mfGalaxyEsc(S.nm)+'</b>'
+    +'</div><aside class="mfSystemDossier'+(open?'':' locked')+(mfSystemLoreOpen?' loreOpen':'')+'" id="mfSystemDossier"><small>SYSTEM</small><b>'+mfGalaxyEsc(S.nm)+'</b>'
     +'<span class="mfSysBadge">'+(open?(done?'SECURED':wins+'/12'):'LOCKED')+'</span>'
     +'<div class="mfSysSchematic" aria-hidden="true"><i class="star"></i><em></em><i class="world"></i><span>'+mfGalaxyEsc(P.nm)+'</span></div>'
     +'<div class="mfSysSurvey"><span>SURVEY</span><i><b style="width:'+pct+'%"></b></i></div>'
@@ -1074,6 +1213,7 @@ function mfGalaxyRenderSystem(){
     +'<div class="mfSysStat"><span>THEATRE</span>4 REGIONS · 12 SITES</div>'
     +(P.climate?'<div class="mfSysStat"><span>CLIMATE</span>'+mfGalaxyEsc(P.climate)+'</div>':'')
     +'<p>'+mfGalaxyEsc(P.lore||P.ds||S.ds||'')+'</p>'
+    +'<button type="button" class="mfSysLoreBtn" data-mf-sys-lore aria-expanded="'+mfSystemLoreOpen+'">'+(mfSystemLoreOpen?'HIDE WORLD INTEL':'WORLD INTEL')+'</button>'
     +'<div class="mfSysLoreExtra"><p class="mfSysBrief">'+mfGalaxyEsc(P.ds||P.lore||'')+'</p>'
     +(P.sector?'<div class="mfSysStat"><span>SECTOR</span>'+mfGalaxyEsc(P.sector)+'</div>':'')
     +(P.biodome?'<div class="mfSysStat"><span>BIODOME</span>'+mfGalaxyEsc(P.biodome)+'</div>':'')
@@ -1081,8 +1221,7 @@ function mfGalaxyRenderSystem(){
     +(P.diameter?'<div class="mfSysStat"><span>DIAMETER</span>'+mfGalaxyEsc(P.diameter)+(P.dayLen?' · '+mfGalaxyEsc(P.dayLen):'')+'</div>':'')
     +'<div class="mfSysStat"><span>FACTION</span>'+mfGalaxyEsc(facNm)+'</div></div>'
     +(open?'':'<div class="mfBriefGate">Conquer the previous system to open this orbit.</div>')
-    +'</aside></div>'
-    +'<div class="mfGalaxyHelp"><span>DRAG TO ORBIT</span><b>'+(open?'TAP HOMEWORLD, TAP AGAIN TO ENTER':'LOCKED')+'</b></div></div>';
+    +'</aside><div class="mfGalaxyHelp"><span>DRAG TO ORBIT</span><b>'+(open?'TAP HOMEWORLD, TAP AGAIN TO ENTER':'LOCKED')+'</b></div></div>';
   mfGalaxyDrawSystemView(performance.now());
   mfGalaxyStampSystemPicker();
   const cv=$('mfSystemCanvas');if(!cv)return;let drag=0,lx=0,ly=0,sx=0,sy=0,pointer=-1;
@@ -1097,8 +1236,8 @@ function mfGalaxyRenderPlanet(){
   const facNm=typeof facDisplayName==='function'?facDisplayName(P.fac||'nova'):(P.fac||'NOVA');
   box.innerHTML='<div class="mfGalaxyEyebrow"><span>ORBITAL CARTOGRAPHY</span><span class="mfGalaxyLive">'+mfGalaxyEsc(M.status)+'</span></div>'
     +'<h3 class="mfStageTitle">'+mfGalaxyEsc(P.nm)+'</h3><p class="mfStageSub">'+mfGalaxyEsc(P.ds||'Rotate the world, then select one of its four operational regions.')+'</p>'
-    +'<div class="mfPlanetStats"><div><span>HOMEWORLD</span><b>'+mfGalaxyEsc(facNm)+'</b></div><div><span>CLIMATE</span><b>'+mfGalaxyEsc(P.climate||'VARIED')+'</b></div><div><span>CONQUEST</span><b>'+wins+' / 12</b></div></div>'
-    +'<div class="mfPlanetViewport"><canvas id="mfPlanetCanvas" width="560" height="360" aria-label="Rotatable '+mfGalaxyEsc(P.nm)+' region map"></canvas></div><div class="mfGalaxyHelp"><span>DRAG TO ROTATE</span><b>TAP REGION, TAP AGAIN TO DESCEND</b></div><div class="mfRegionStrip" id="mfRegionStrip"></div>';
+    +'<div class="mfPlanetViewport"><canvas id="mfPlanetCanvas" width="560" height="360" aria-label="Rotatable '+mfGalaxyEsc(P.nm)+' region map"></canvas></div><div class="mfGalaxyHelp"><span>DRAG TO ROTATE</span><b>TAP REGION, TAP AGAIN TO DESCEND</b></div>'
+    +'<div class="mfPlanetStats"><div><span>HOMEWORLD</span><b>'+mfGalaxyEsc(facNm)+'</b></div><div><span>CLIMATE</span><b>'+mfGalaxyEsc(P.climate||'VARIED')+'</b></div><div><span>CONQUEST</span><b>'+wins+' / 12</b></div></div><div class="mfRegionStrip" id="mfRegionStrip"></div>';
   const strip=$('mfRegionStrip');strip.innerHTML=P.regions.map(R=>{const open=mfConquestRegionOpen(key,R.id),done=mfConquestRegionComplete(R),n=mfConquestRegionWins(R),sel=R.id===curRegionId;return '<button type="button" class="mfRegionChip '+(sel?'on ':'')+(open?'':'locked ')+(done?'done':'')+'" data-mf-region="'+R.id+'" aria-pressed="'+sel+'" aria-disabled="'+(!open)+'" style="--pc:'+R.color+';--prog:'+Math.round(n/3*100)+'%"><b>'+mfGalaxyEsc(R.nm)+'</b><small>'+(open?(done?'LIBERATED':(R.poi?mfGalaxyEsc(R.poi):n+' / 3 SECURED')):'REGION LOCKED')+'</small></button>';}).join('');
   mfGalaxyBindChoices(strip);
   const cv=$('mfPlanetCanvas');draw3DPlanetSphere(cv,key,planetYaw,planetPitch,curRegionId);let drag=0,lx=0,ly=0,sx=0,sy=0,pointer=-1;
@@ -1154,19 +1293,22 @@ function getSiteIntel(mapId){
   };
 }
 
-function mfGalaxyRenderRegion(){
+function mfGalaxyRenderRegion(renderCards=true){
   const P=mfGalaxyPlanet(),R=mfGalaxyRegion(),M=mfGalaxyLiveMeta(mfGalaxyPlanetKey()),hero=$('mfRegionHero'),wins=mfConquestRegionWins(R);
   const intel=getSiteIntel(curMap);
+  if(hero)hero.dataset.map=curMap;
   if(hero)hero.innerHTML='<small>'+mfGalaxyEsc(P.nm)+' // '+mfGalaxyEsc(M.front)+'</small><b>'+mfGalaxyEsc(R.nm)+'</b><span>'+mfGalaxyEsc(R.hook||'Secure Compact, Standard and Large sites in order.')+(R.poi?' Landmark: '+mfGalaxyEsc(R.poi)+'.':'')+'</span>'
     +'<div class="mfConquestBar"><b>'+wins+' / 3 SECURED</b><span>'+(wins===3?'REGION LIBERATED':['COMPACT · EASY','STANDARD · NORMAL','LARGE · HARD'][wins]+' NEXT')+'</span></div>'
     +'<div class="mfSiteIntelDossier"><div class="mfIntelChip"><span>THREAT</span><b>'+mfGalaxyEsc(intel.threat.label)+'</b></div><div class="mfIntelChip"><span>HOSTILE</span><b>'+mfGalaxyEsc(intel.threat.enemy)+'</b></div><div class="mfIntelChip"><span>RESOURCE</span><b>'+mfGalaxyEsc(intel.resources.pace)+'</b></div><div class="mfIntelChip"><span>HAZARD</span><b>'+intel.hazard.icon+' '+mfGalaxyEsc(intel.hazard.name)+'</b></div></div>';
-  const panel=$('mfStageRegion');if(panel)panel.style.setProperty('--rc',R.color||M.color);renderMapRow();
+  const panel=$('mfStageRegion');if(panel)panel.style.setProperty('--rc',R.color||M.color);
+  if(renderCards)renderMapRow();
 }
 function mfGalaxySummary(){
   const P=mfGalaxyPlanet(),R=mfGalaxyRegion(),D=MAPDEFS[curMap]||{},C=typeof commanderById==='function'?commanderById(playerCommanderId):null;
   const intel=getSiteIntel(curMap);
   const payout=$('opsBriefPayout')?$('opsBriefPayout').textContent:intel.payout,mods=$('opsBriefMods')?$('opsBriefMods').textContent:String(intel.modifiers),threat=$('opsBriefThreat')?$('opsBriefThreat').textContent:('T'+(difficulty+1));
   const scale=BATTLEFIELD_PRESETS[battlefieldPresetKey(D.size||battlefieldPreset)]||{},domain=D.navalEnabled?(D.waterMode==='river'?'RIVER + NAVAL':'OCEAN + NAVAL'):'LAND DOMAIN';
+  const title=$('mfDeployName'),place=$('mfDeployPlace');if(title)title.textContent=D.nm||'BATTLEFIELD';if(place)place.textContent=P.nm+' / '+R.nm;
   const CQ=mfConquestLocate(curMap),hero=$('mfMissionHero');if(hero)hero.innerHTML='<div class="mfMissionKicker">'+mfGalaxyEsc(P.nm)+' / '+mfGalaxyEsc(R.nm)+(D.poi?' / '+mfGalaxyEsc(D.poi):'')+'</div><h3>'+mfGalaxyEsc(D.nm||'BATTLEFIELD')+'</h3><p>'+mfGalaxyEsc(D.ds||'Operational theatre ready for deployment.')+'</p>'
     +'<div class="mfMissionTags">'+(CQ?'<span>CONQUEST FRONT '+CQ.tier+'</span>':'')+'<span>'+mfGalaxyEsc(threat)+' THREAT</span><span>'+mfGalaxyEsc(scale.km||String(D.size||battlefieldPreset).toUpperCase())+'</span><span>'+mfGalaxyEsc(scale.dur||'LIVE')+'</span><span>'+mfGalaxyEsc(domain)+'</span><span>'+intel.hazard.icon+' '+mfGalaxyEsc(String(D.hazard||'CLEAR').toUpperCase())+'</span><span>'+mfGalaxyEsc(mods)+' MODIFIERS</span><span>'+mfGalaxyEsc(payout)+' PAYOUT</span><span>'+mfGalaxyEsc(C?C.name||C.nm:'COMMANDER')+'</span></div>'
     +'<div class="mfSiteIntelBar"><div class="mfSiteIntelCol"><small>ORBITAL TELEMETRY</small><b>'+mfGalaxyEsc(intel.resources.nodes)+'</b> · <span>'+mfGalaxyEsc(intel.resources.pace)+'</span></div><div class="mfSiteIntelCol"><small>TACTICAL FORECAST</small><b>'+intel.hazard.icon+' '+mfGalaxyEsc(intel.hazard.name)+'</b> · <span>'+mfGalaxyEsc(intel.hazard.desc)+'</span></div></div>';
@@ -1266,7 +1408,7 @@ function mfQuickCommanderHTML(){
   const fac=typeof commanderFactionKey==='function'?commanderFactionKey(playerFaction):playerFaction;
   const roster=((typeof COMMANDER_ROSTERS!=='undefined'&&COMMANDER_ROSTERS[fac])||[]).filter(C=>!C.aiOnly),A=typeof facArt==='function'?facArt(fac):null;
   const fallback='./assets/factions/'+((A&&A.id)||'nova')+'_192.jpg';
-  return roster.map(C=>'<button type="button" class="mfQuickCommander '+(C.id===playerCommanderId?'on':'')+'" data-mf-commander="'+C.id+'"><img src="'+commanderPortraitSrc(C)+'" data-fallback="'+fallback+'" alt="'+mfGalaxyEsc(C.nm)+'" onerror="this.onerror=null;this.src=this.dataset.fallback"><b>'+mfGalaxyEsc(C.nm)+'</b><span>'+mfGalaxyEsc(C.role)+'</span></button>').join('');
+  return roster.filter(C=>C.id!==playerCommanderId).map(C=>'<button type="button" class="mfQuickCommander" data-mf-commander="'+C.id+'" style="--cmd:'+((A&&A.col)||'#65d9ff')+'"><span class="commanderPortraitFrame"><img src="'+(typeof commanderFullBodySrc==='function'?commanderFullBodySrc(C):commanderPortraitSrc(C))+'" data-fallback="'+fallback+'" alt="'+mfGalaxyEsc(C.nm)+'" onerror="this.onerror=null;this.src=this.dataset.fallback">'+(typeof commanderAbilityFloatHTML==='function'?commanderAbilityFloatHTML(C):'')+'</span><b>'+mfGalaxyEsc(C.nm)+'</b><span>'+mfGalaxyEsc(C.role)+'</span></button>').join('');
 }
 function mfQuickRender(){
   const root=$('mfQuickSetup');if(!root)return;mfQuickPlan=mfQuickDetectedPlan();
@@ -1276,6 +1418,20 @@ function mfQuickRender(){
   const cr=$('mfQuickCommanders');if(cr)cr.innerHTML=mfQuickCommanderHTML();
   if(cr)mfGalaxyBindChoices(cr);
   const D=MAPDEFS[curMap]||{},C=typeof commanderById==='function'?commanderById(playerCommanderId):null,S=$('mfQuickSummary');
+  const stage=$('mfCommanderStageShowcase');
+  if(stage&&C&&stage.dataset.commander!==C.id){
+    const fac=typeof commanderFactionKey==='function'?commanderFactionKey(playerFaction):playerFaction,A=typeof facArt==='function'?facArt(fac):null,type=fac==='legion'?28:fac==='syndicate'?29:4;
+    stage.dataset.commander=C.id;stage.style.setProperty('--cmd',(A&&A.col)||'#65d9ff');
+    // Animated personnel feeds are flavor, not required information. Respect the
+    // OS motion preference by omitting the looping bitmap entirely.
+    const talk=typeof commanderTalkingSrc==='function'&&!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)?commanderTalkingSrc(C):'';
+    const portrait=talk||(typeof commanderPortraitSrc==='function'?commanderPortraitSrc(C):'');
+    stage.innerHTML='<div class="mfCommanderStageVisual">'+(portrait?'<img class="mfCommanderStagePortrait" src="'+portrait+'" alt="Personnel feed for '+mfGalaxyEsc(C.nm)+'">':'')+'<div class="mfCommanderStage3D" id="mfCommanderStage3D"></div></div><div class="mfCommanderStageInfo"><i>'+mfGalaxyEsc(C.role)+'</i><h3>'+mfGalaxyEsc(C.nm)+'</h3><p>'+mfGalaxyEsc(C.passive)+'</p>'+(typeof commanderAbilityFloatHTML==='function'?commanderAbilityFloatHTML(C):'')+'</div>';
+    /* The model is faction deployment hardware, not a second portrait of the
+       commander. Keep the real 3D asset, but label and size it honestly so Kai,
+       Renn and Vex are never represented by an unrelated vehicle. */
+    const host=stage.querySelector('#mfCommanderStage3D');if(host&&typeof mfIntelPreviewWindow==='function')host.appendChild(mfIntelPreviewWindow('unit',type,'3D CHASSIS · '+fac.toUpperCase(),typeof playerKitKey==='function'?playerKitKey():fac));
+  }
   if(S)S.innerHTML='<div><span>WORLD</span><b>'+mfGalaxyEsc(mfGalaxyPlanet().nm)+'</b></div><div><span>BATTLEFIELD</span><b>'+mfGalaxyEsc(D.nm||curMap)+'</b></div><div><span>FORCE</span><b>1 + '+activeAllySlots().length+' ALLY</b></div><div><span>COMMANDER</span><b>'+mfGalaxyEsc(C?C.nm:'READY')+'</b></div>';
   const adv=$('mfAdvanced'),sm=adv&&adv.querySelector('.mfDrawerTx small');if(sm)sm.textContent=(goalDef().nm||goalSel)+' / '+(timeLimit?Math.round(timeLimit/60)+' MIN':'NO LIMIT')+' / '+activeAiSlots().length+' AI';
 }
@@ -1286,7 +1442,9 @@ function mfGalaxyRenderStage(){
   document.querySelectorAll('.mfStagePanel').forEach(p=>p.classList.toggle('on',p.dataset.stage===mfGalaxyStage));
   document.querySelectorAll('.mfGalaxyStep').forEach((b,i)=>{b.classList.toggle('on',i===idx);b.classList.toggle('done',i<idx);b.setAttribute('aria-current',i===idx?'step':'false');});
   const labels={galaxy:'GALACTIC OVERVIEW',system:'SOLAR SYSTEM',planet:'PLANETARY ORBIT',region:'BATTLEFIELD SITES',deploy:'DEPLOYMENT BRIEF'};const h=$('setupContext');if(h)h.textContent=labels[mfGalaxyStage];
-  const title=setup.querySelector('.setupHead h2');if(title)title.textContent=(String(activeWarMode||'standard').toUpperCase()+' WAR TABLE');
+  /* The mode contract names Standard/Training/Prologue directly below. Repeating
+     it here forced a horizontally scrolling setup overlay on a 412px phone. */
+  const title=setup.querySelector('.setupHead h2');if(title)title.textContent='CLASSIC WAR TABLE';
   const launch=$('setupStart'),back=$('setupBack');
   /* Galaxy and system share the War Room dock. Later stages step backward. */
   if(back)back.textContent=(mfGalaxyStage==='galaxy'||mfGalaxyStage==='system')?'← WAR ROOM':'← PREVIOUS';
@@ -1310,8 +1468,15 @@ function mfGalaxyRenderStage(){
   else mfGalaxyStopAnim();
   if(mfGalaxyStage==='planet')mfGalaxyRenderPlanet();if(mfGalaxyStage==='region'){
     mfGalaxyRenderRegion();
-    /* Standard openings land on the medium site; keep that card in view. */
-    requestAnimationFrame(()=>{const m=$('mapRow'),sel=m&&m.querySelector('.mapCard.sel');if(sel)sel.scrollIntoView({block:'nearest',inline:'center'});});
+    /* Standard openings land on the medium site. scrollIntoView also pans
+       #setupScr (even with overflow:hidden), shearing the entire War Table in
+       short landscape. Center only the carousel when it actually overflows. */
+    requestAnimationFrame(()=>{
+      const m=$('mapRow'),sel=m&&m.querySelector('.mapCard.sel');
+      if(!sel||m.scrollWidth<=m.clientWidth+1)return;
+      const mr=m.getBoundingClientRect(),sr=sel.getBoundingClientRect();
+      m.scrollLeft+=sr.left-mr.left-(m.clientWidth-sr.width)/2;
+    });
   }if(mfGalaxyStage==='deploy'){if(typeof renderOps==='function')renderOps();mfQuickRender();mfGalaxySummary();}
 }
 
@@ -1347,25 +1512,24 @@ function mfGalaxyAdvance(){
 function mfGalaxyBack(){const i=MF_GALAXY_STAGES.indexOf(mfGalaxyStage);if(i>0)mfGalaxySetStage(MF_GALAXY_STAGES[i-1]);}
 
 function mfRenameFrontNav(){
-  const start=$('startBtn');if(start){start.innerHTML='DEPLOY MASSFRONT <i class="ctaChev" aria-hidden="true">&#187;</i>';start.setAttribute('aria-label','Open deployment war table');}
+  const start=$('startBtn');if(start){start.innerHTML='ENTER MASSFRONT <i class="ctaChev" aria-hidden="true">&#187;</i>';start.setAttribute('aria-label','Enter MASSFRONT command home');}
   /* This function is the authority on the front-nav labels, so it also owns the
      slice markup. It used to write '<span class="gEm">icon</span>LABEL', which
      silently replaced the angled slice structure in index.html the moment the
-     galaxy UI initialised — three of four slices lost their /// mark and
-     sub-line while the one it did not list kept them. Emit the slice shape here
+     galaxy UI initialised — the remaining slices lost their /// mark and
+     sub-line. Emit the slice shape here
      instead of fighting it from CSS. */
   const grid={
     opsBtn:['OPERATIONS','<svg class="sliceIco" viewBox="0 0 24 24" aria-hidden="true"><use href="#mi-clock"/></svg>PULSE WAIT TIME'],
     armoryBtn:['ARSENAL',''],
-    ugaBtn:['UGA COMMAND','LIVE FACTION<i class="sliceBar" aria-hidden="true"><s></s><s></s><s></s></i>'],
     devBtn:['TECH &amp; DEVELOPMENT','']
   };
   for(const id of Object.keys(grid)){
     const b=$(id),v=grid[id];if(!b)continue;
     b.innerHTML='<span class="sliceMark">///</span><span class="sliceBody"><b>'+v[0]+'</b>'+
-      (v[1]?'<small>'+v[1]+'</small>':'')+'</span>'+(id==='ugaBtn'?'<span class="gDot" id="ugaDot"></span>':'');
+      (v[1]?'<small>'+v[1]+'</small>':'')+'</span>';
   }
-  const strip={profileBtn:'INTEL',dailyBtn:'CONTRACTS',dossierBtn:'SOCIAL',settingsBtn:'SETTINGS'};
+  const strip={profileBtn:'CAREER',dailyBtn:'CONTRACTS',dossierBtn:'SOCIAL',settingsBtn:'SETTINGS'};
   for(const id of Object.keys(strip)){const b=$(id),s=b&&b.querySelector('span:last-child');if(s)s.textContent=strip[id];}
   const title=document.querySelector('#armory>h2'),sub=document.querySelector('#armory>.armorySub');if(title)title.textContent='ARSENAL';if(sub)sub.textContent='Market · account vault · mission loadout';
 }
@@ -1382,17 +1546,18 @@ function mfGalaxyBuild(){
       <button type="button" class="mfGalaxyStep on" data-mf-stage="galaxy"><i></i>GALAXY</button><button type="button" class="mfGalaxyStep" data-mf-stage="system"><i></i>SYSTEM</button><button type="button" class="mfGalaxyStep" data-mf-stage="planet"><i></i>PLANET</button><button type="button" class="mfGalaxyStep" data-mf-stage="region"><i></i>REGION</button><button type="button" class="mfGalaxyStep" data-mf-stage="deploy"><i></i>DEPLOY</button>
     </nav>
     <div class="mfModeContract" id="mfModeContract"></div>
-    <section class="mfStagePanel on" data-stage="galaxy" id="mfStageGalaxy"><div class="mfGalaxyEyebrow"><span>FOUR-SYSTEM THEATRE</span><span class="mfGalaxyLive">WAR TABLE ONLINE</span></div><h3 class="mfStageTitle">CHOOSE A SYSTEM</h3><p class="mfStageSub">Sombrero, Andromeda, Orion and Helios are all on this cluster. Drag the hologram, then tap an unlocked star to enter its orbit.</p><button type="button" class="mfConquestContinue" id="mfConquestContinue"></button><div class="mfGalaxyViewport"><canvas id="mfGalaxyCanvas" width="600" height="520" aria-label="Interactive four-system galaxy map"></canvas><div class="mfCanvasSelection" id="mfGalaxySelection" role="status" aria-live="polite"></div></div><div class="mfGalaxyHelp"><span>DRAG TO ROTATE</span><b>TAP AN UNLOCKED STAR</b></div><div class="mfWorldStrip" id="mfWorldStrip"></div></section>
+    <section class="mfStagePanel on" data-stage="galaxy" id="mfStageGalaxy"><div class="mfGalaxyEyebrow"><span>CLASSIC FOUR-SYSTEM THEATRE</span><span class="mfGalaxyLive">WAR TABLE ONLINE</span></div><h3 class="mfStageTitle">CHOOSE A SYSTEM</h3><p class="mfStageSub">Classic and Galactic Command chart the same worlds. Select an unlocked star.</p><button type="button" class="mfConquestContinue" id="mfConquestContinue"></button><div class="mfGalaxyViewport"><canvas id="mfGalaxyCanvas" width="600" height="520" aria-label="Interactive Classic four-system battle map"></canvas><div class="mfCanvasSelection" id="mfGalaxySelection" role="status" aria-live="polite"></div></div><div class="mfGalaxyHelp"><span>DRAG TO ROTATE</span><b>TAP AN UNLOCKED STAR</b></div><div class="mfWorldStrip" id="mfWorldStrip"></div></section>
     <section class="mfStagePanel" data-stage="system" id="mfStageSystem"></section>
     <section class="mfStagePanel" data-stage="planet" id="mfStagePlanet"></section>
     <section class="mfStagePanel" data-stage="region" id="mfStageRegion"><div class="mfGalaxyEyebrow"><span>REGIONAL COMMAND</span><span>3 BATTLEFIELD SITES</span></div><div class="mfRegionHero" id="mfRegionHero"></div><div id="mfRegionMapHost"></div></section>
-    <section class="mfStagePanel" data-stage="deploy" id="mfStageDeploy"><div class="mfGalaxyEyebrow"><span>FINAL DEPLOYMENT PLAN</span><span class="mfGalaxyLive">DROP CORRIDOR READY</span></div><div class="mfMissionHero" id="mfMissionHero"></div><section class="mfLoadoutSummary" id="mfLoadoutSummary" aria-label="Source-derived deployment loadout"></section>
-      <div class="mfQuickSetup" id="mfQuickSetup"><div class="mfQuickLabel"><b>CHOOSE A BATTLE PLAN</b><small>ONE TAP · FULLY EDITABLE</small></div><div class="mfQuickPlans">
-        <button type="button" class="mfQuickPlan" data-mf-plan="first" style="--qp:#6de4a3"><i>01</i><b>FIRST COMMAND</b><span>Supported opening, calm field and rich supply.</span><em>RECOMMENDED</em></button>
-        <button type="button" class="mfQuickPlan" data-mf-plan="classic" style="--qp:#67d8ff"><i>02</i><b>CLASSIC WAR</b><span>Balanced economy, infestation and standard threat.</span><em>CORE RTS</em></button>
-        <button type="button" class="mfQuickPlan" data-mf-plan="fortress" style="--qp:#ffbd68"><i>03</i><b>FORTRESS</b><span>Hard assault against a defensive command plan.</span><em>VETERAN</em></button>
-      </div><div class="mfQuickLabel"><b>TEAM</b><small>STANDARD IS PLAYER VS AI</small></div><div class="mfQuickTeam"><button type="button" class="mfTeamBtn" data-mf-team="solo"><b>SOLO COMMAND</b><span>You versus one enemy AI.</span></button><button type="button" class="mfTeamBtn" data-mf-team="ally"><b>ALLIED STRIKE</b><span>You and one AI ally versus an enemy.</span></button></div>
-      <div class="mfQuickLabel"><b>COMMANDER</b><small>PASSIVE + SIGNATURE ABILITY</small></div><div class="mfQuickCommanders" id="mfQuickCommanders"></div><div class="mfQuickSummary" id="mfQuickSummary"></div></div>
+    <section class="mfStagePanel" data-stage="deploy" id="mfStageDeploy"><div class="mfDeployBrief"><span id="mfDeployPlace"></span><b id="mfDeployName"></b></div>
+      <div class="mfQuickSetup" id="mfQuickSetup"><div class="mfQuickLabel mfQuickLabel--plan"><b>CHOOSE A BATTLE PLAN</b><small>ONE TAP · FULLY EDITABLE</small></div><div class="mfQuickPlans">
+        <button type="button" class="mfQuickPlan" data-mf-plan="first" style="--qp:#6de4a3"><i>01</i><b>FIRST COMMAND</b><span>Calm field · rich supply</span><em>RECOMMENDED</em></button>
+        <button type="button" class="mfQuickPlan" data-mf-plan="classic" style="--qp:#67d8ff"><i>02</i><b>CLASSIC WAR</b><span>Balanced RTS · infestation</span><em>CORE RTS</em></button>
+        <button type="button" class="mfQuickPlan" data-mf-plan="fortress" style="--qp:#ffbd68"><i>03</i><b>FORTRESS</b><span>Hard defensive assault</span><em>VETERAN</em></button>
+      </div><div class="mfQuickLabel mfQuickLabel--team"><b>TEAM</b><small>PLAYER VS AI</small></div><div class="mfQuickTeam"><button type="button" class="mfTeamBtn" data-mf-team="solo"><b>SOLO COMMAND</b><span>You versus one enemy AI.</span></button><button type="button" class="mfTeamBtn" data-mf-team="ally"><b>ALLIED STRIKE</b><span>You and one AI ally versus an enemy.</span></button></div>
+      <div class="mfQuickLabel mfQuickLabel--commander"><b>COMMANDER</b><small>PLAYABLE FACTIONS · BROOD IS THE THREAT</small></div><div class="mfCommanderStageShowcase" id="mfCommanderStageShowcase" aria-live="polite"></div><div class="mfQuickCommanders" id="mfQuickCommanders"></div><div class="mfQuickSummary" id="mfQuickSummary"></div></div>
+      <details class="mfDeployIntel"><summary>MISSION INTEL &amp; EQUIPMENT <span>›</span></summary><div class="mfMissionHero" id="mfMissionHero"></div><section class="mfLoadoutSummary" id="mfLoadoutSummary" aria-label="Source-derived deployment loadout"></section></details>
       <details class="mfConfigDrawer mfAdvanced" data-drawer="advanced" id="mfAdvanced"><summary><span class="mfDrawerEm">⌘</span><span class="mfDrawerTx"><b>ADVANCED CONTROL</b><small>Exact factions, starts, rules, economy and hazards</small></span><span class="mfDrawerArrow">›</span></summary><div class="mfConfigBody" id="mfAdvancedBody"></div></details>
       <div class="mfConfigIntro mfLegacyConfig"><b>MISSION PARAMETERS</b><span>TAP TO EXPAND</span></div>
       <details class="mfConfigDrawer" data-drawer="command" open><summary><span class="mfDrawerEm">♟</span><span class="mfDrawerTx"><b>COMMAND & FORCES</b><small>Commander, factions, AI and start zones</small></span><span class="mfDrawerArrow">›</span></summary><div class="mfConfigBody" id="mfDrawer-command"></div></details>
@@ -1417,6 +1582,7 @@ function mfGalaxyWire(){
     const lore=e.target.closest('[data-mf-sys-lore]');if(lore){e.preventDefault();mfGalaxyToggleSystemLore();return;}
     const step=e.target.closest('[data-mf-stage]');if(step){e.preventDefault();const to=step.dataset.mfStage,ti=MF_GALAXY_STAGES.indexOf(to),ci=MF_GALAXY_STAGES.indexOf(mfGalaxyStage);if(ti<=ci)mfGalaxySetStage(to);return;}
   });
+  setup.addEventListener('click',e=>{if(e.detail===0&&e.target.closest('[data-mf-sys-lore]'))mfGalaxyToggleSystemLore();});
   mfGalaxyBindChoices(setup);
   cv.onpointerdown=e=>{if(e.isPrimary===false||(e.pointerType==='mouse'&&e.button!==0))return;mfGalaxyDragging=true;mfGalaxyDragStartX=mfGalaxyDragX=e.clientX;mfGalaxyDragStartY=mfGalaxyDragY=e.clientY;mfGalaxyDragTravel=0;mfGalaxyDragPointer=e.pointerId;cv.setPointerCapture(e.pointerId);};
   cv.onpointermove=e=>{if(!mfGalaxyDragging||e.pointerId!==mfGalaxyDragPointer)return;const dx=e.clientX-mfGalaxyDragX,dy=e.clientY-mfGalaxyDragY;mfGalaxyDragX=e.clientX;mfGalaxyDragY=e.clientY;mfGalaxyDragTravel=Math.max(mfGalaxyDragTravel,Math.hypot(e.clientX-mfGalaxyDragStartX,e.clientY-mfGalaxyDragStartY));mfGalaxyYaw+=dx*.009;mfGalaxyPitch=clamp(mfGalaxyPitch+dy*.006,-.42,.42);mfGalaxyDraw(performance.now());};

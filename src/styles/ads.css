@@ -22,6 +22,9 @@
 .adsRow .sDs{
   color:#7fa8c4;
 }
+.adsRow:focus-visible,.adPostMatchSkip:focus-visible{
+  outline:2px solid var(--cy);outline-offset:2px;
+}
 
 /* Small "loop" pulse on the emoji glyph so the row hints at motion/video even
    at rest — subtle, off the critical path, and harmless if reduced-motion
@@ -35,4 +38,5 @@
 }
 @media (prefers-reduced-motion: reduce){
   .adsRow .sTx b{ animation:none; }
+  .adPostMatchBar{ display:none; }
 }

@@ -7,11 +7,9 @@
    and jumbotron screens stand in the battlefield itself, beside the highway
    and around the derelict city districts, playing looping video like anything
    else the war left running. There is no ad network wired up yet — only
-   bundled placeholder clips — but every path a real network would need
-   (request a creative for a slot, report an impression, report a failure)
-   already exists behind the AdProvider interface below. Turning on AdMob or a
-   VAST tag later is meant to be AD_CONFIG.provider flipping from 'local' to
-   'network', not a rewrite of the renderer.
+   bundled fictional clips. AdProvider is a local rendering seam, not a live
+   monetization or billable-impression integration. Real creative supply,
+   consent, measurement, security and settlement still need separate work.
 
    This file plugs into an already-running engine without editing any of it.
    Three existing global FUNCTIONS are wrapped (not replaced) at load time:
@@ -119,7 +117,7 @@ function AdSlot(id, x, y, yaw, scale) {
     placement: 'billboard',
     size: { w: AD_HALFW * 2 * scale, h: AD_SCR_H * scale },
     creative: null,           // filled in asynchronously by adAssignCreatives()
-    _dwell: 0, _counted: false, _onscreen: false,
+    _dwell: 0, _dwellCreative: null, _counted: false, _onscreen: false, _shownCreative: null,
     // crossfade rotation state — second creative slot + blend progress
     creative2: null, _rotT: 0, _blend: 0,
   };
@@ -187,6 +185,7 @@ function adScanCitySpots(validSpot, tooClose) {
 }
 
 function adPlaceBoards() {
+  adPauseAll();  // a map change must not leave the previous map's off-screen clips decoding
   adBoards = [];
   if (typeof MAP === 'undefined' || typeof hAt !== 'function') return;   // engine not ready yet
   const MD = (typeof MAPDEFS !== 'undefined' && typeof curMap !== 'undefined' && MAPDEFS[curMap]) || null;
@@ -240,9 +239,8 @@ class AdProvider {
    *  unfilled network request would look like too). Reject only for a real
    *  error; "nothing to show" is not one. */
   async loadCreative(slot) { return null; }
-  /** Fired once per slot per viewing session (continuously on screen for at
-   *  least AD_DWELL_S seconds) — the closest honest proxy for "impression"
-   *  without a server round trip. */
+  /** Local, non-billable view proxy after a sponsor quad/card is continuously
+   *  submitted on screen for AD_DWELL_S seconds. No server or settlement. */
   reportImpression(slot, creative) {}
   /** Playback/decoration failures the renderer couldn't route around. */
   reportError(slot, err) {}
@@ -265,13 +263,15 @@ class LocalAdProvider extends AdProvider {
     const list = this.manifest && this.manifest.creatives;
     if (!list || !list.length) return null;
     const c = list[adHash(slot.id) % list.length];
+    const localMedia = name => typeof name === 'string' && /^[A-Za-z0-9_.-]+$/.test(name) && !name.includes('..')
+      ? './assets/ads/' + name : null;
     return {
       id: c.id, brand: c.brand, accent: c.accent, bg: c.bg,
-      poster: './assets/ads/' + c.poster,
-      video: c.video ? './assets/ads/' + c.video : null,
+      poster: localMedia(c.poster), video: localMedia(c.video),
     };
   }
   reportImpression(slot, creative) {
+    if (!adAdsEnabled()) return;
     AD_STATS.total++;
     AD_STATS.impressions[creative.id] = (AD_STATS.impressions[creative.id] || 0) + 1;
     adStatsSave();
@@ -280,26 +280,11 @@ class LocalAdProvider extends AdProvider {
 }
 
 /* ---- NetworkAdProvider — STUB ----------------------------------------------
-   Not implemented on purpose: a live network integration needs a signed
-   agreement, real IDs and — per store policy — a consent flow before it can
-   request anything (see docs/ADS.md). This class exists so the SEAM is
-   concrete rather than hypothetical. To go live:
-
-     1. AD_CONFIG.provider = 'network' (below) — the entire call-site change.
-     2. _doInit(): load the network SDK (e.g. Google Mobile Ads / AdMob, or a
-        raw VAST/IMA tag), initialise it with real app/unit IDs, and gate the
-        whole thing on the consent flow's result — do not request ads before
-        consent is resolved.
-     3. loadCreative(slot): request a video creative sized to slot.size (an
-        AdMob rewarded/interstitial unit, or a VAST <MediaFile> parsed from
-        the tag response) and resolve with the SAME shape LocalAdProvider
-        resolves with: {id, brand, accent, bg, poster, video}. `video`/
-        `poster` may be blob: or https: URLs — adDrawScreens() only ever
-        consumes them as <video>/<img> sources, so it does not care.
-     4. reportImpression()/reportError(): forward to the network SDK's own
-        tracking callbacks instead of AD_STATS.
-   Everything above this point — geometry, placement, the throttled texture
-   upload, the settings toggle — is provider-agnostic and needs no changes. */
+   Deliberately nonfunctional. A live deal needs approved inventory, provider
+   credentials, consent, a trusted same-origin creative proxy, CORS-safe media,
+   independent viewability/fraud measurement and auditable settlement. The
+   local counter above is not a substitute for any of these (see docs/ADS.md).
+   Keep this class throwing until those choices and controls are implemented. */
 class NetworkAdProvider extends AdProvider {
   constructor(cfg) { super(); this.cfg = cfg || {}; }
   async _doInit() {
@@ -308,11 +293,11 @@ class NetworkAdProvider extends AdProvider {
   async loadCreative(slot) { throw new Error('NetworkAdProvider.loadCreative is not implemented'); }
 }
 
-/* The entire integration surface for going live with a real network: swap
-   this one field (plus the cfg block NetworkAdProvider would need) and every
-   board in the game starts asking the network for fill instead. */
+/* Keep the live provider disabled until a reviewed provider/consent/settlement
+   integration exists. Flipping this field alone does not create paid ads. */
 const AD_CONFIG = { provider: 'local' };
 const AD_PROVIDER = AD_CONFIG.provider === 'network' ? new NetworkAdProvider({}) : new LocalAdProvider();
+function adAdsEnabled() { return !(typeof META !== 'undefined' && META.settings && META.settings.ads === false); }
 
 function adHash(s) {
   let h = 0;
@@ -321,10 +306,12 @@ function adHash(s) {
 }
 
 async function adAssignCreatives() {
+  if (!adAdsEnabled()) return;
   for (const slot of adBoards) {
     try {
       const desc = await AD_PROVIDER.loadCreative(slot);
-      if (desc) { adRegisterCreative(desc); slot.creative = desc.id; }
+      if (!adAdsEnabled()) return;
+      if (desc) { const c = adRegisterCreative(desc); if (c) slot.creative = c.id; }
     } catch (e) { console.warn('adboards: loadCreative failed', slot.id, e); }
   }
   // contextual content is assigned after sponsor creatives so it can override
@@ -334,31 +321,48 @@ async function adAssignCreatives() {
 /* ============================================================================
    IMPRESSION COUNTING
    ============================================================================ */
+// Keep the storage key for Galactic isolation/recovery, but ignore legacy
+// unschematized totals that counted unloaded and contextual screens.
 const AD_STATS_KEY = 'massfront_ads_stats_v1';
 const AD_DWELL_S = 1.5;     // seconds continuously on screen before it counts
 const AD_ROTATE_S = 12;     // seconds between ad rotations
 const AD_FADE_S = 1;        // crossfade duration in seconds
 const AD_TEX_UNIT2 = 8;     // second texture unit for crossfade — 0-3 model, 4-6 post, 7 primary, 8 secondary
-let AD_STATS = { total: 0, impressions: {} };
+let AD_STATS = { v: 2, total: 0, impressions: Object.create(null) };
 
 function adStatsLoad() {
   try {
     const s = localStorage.getItem(AD_STATS_KEY);
-    if (s) AD_STATS = Object.assign({ total: 0, impressions: {} }, JSON.parse(s));
+    if (!s) return;
+    const saved = JSON.parse(s), impressions = Object.create(null);
+    if (!saved || saved.v !== 2) return;
+    if (saved && saved.impressions && typeof saved.impressions === 'object') {
+      for (const [id, n] of Object.entries(saved.impressions)) {
+        if (id.length <= 128 && Number.isSafeInteger(n) && n >= 0) impressions[id] = n;
+      }
+    }
+    AD_STATS = { v: 2, total: Number.isSafeInteger(saved.total) && saved.total >= 0 ? saved.total : 0, impressions };
   } catch (e) {}
 }
 function adStatsSave() { try { localStorage.setItem(AD_STATS_KEY, JSON.stringify(AD_STATS)); } catch (e) {} }
 
+function adMeasurableScene() {
+  // The attract diorama and paused/ended overlays can still call begin3D;
+  // a quad submitted behind those screens is not a viewed battle creative.
+  return !document.hidden && (typeof running === 'undefined' || running) &&
+    (typeof paused === 'undefined' || !paused) && (typeof gameEnded === 'undefined' || !gameEnded);
+}
+function adResetDwell(b) { b._dwell = 0; b._dwellCreative = null; b._counted = false; }
 function adUpdateImpressions(dt) {
   for (const b of adBoards) {
-    if (b._onscreen && b.creative) {
-      b._dwell += dt;
-      if (!b._counted && b._dwell >= AD_DWELL_S) {
-        b._counted = true;
-        const c = AD_CREATIVES[b.creative];
-        try { AD_PROVIDER.reportImpression(b, c || { id: b.creative }); } catch (e) {}
-      }
-    } else { b._dwell = 0; b._counted = false; }
+    const id = adAdsEnabled() && adMeasurableScene() && b._onscreen ? b._shownCreative : null;
+    if (!id || !AD_CREATIVES[id]) { adResetDwell(b); continue; }
+    if (b._dwellCreative !== id) { adResetDwell(b); b._dwellCreative = id; }
+    b._dwell += dt;
+    if (!b._counted && b._dwell >= AD_DWELL_S) {
+      b._counted = true;
+      try { AD_PROVIDER.reportImpression(b, AD_CREATIVES[id]); } catch (e) {}
+    }
   }
 }
 
@@ -381,7 +385,7 @@ function adUpdateImpressions(dt) {
                                  backgrounded tab is not still paying decode
                                  cost
    ============================================================================ */
-const AD_CREATIVES = {};
+const AD_CREATIVES = Object.create(null);
 const AD_UPLOAD_MS = 1000 / 15;     // throttle GPU uploads to ~15fps, not 60
 let adFallbackTex = null;
 let adGlGeneration = 0;
@@ -389,26 +393,51 @@ let adGlGeneration = 0;
 function adMakeTex(seedRGBA) {
   const t = gl.createTexture();
   const was = gl.getParameter(gl.ACTIVE_TEXTURE);
-  gl.activeTexture(gl.TEXTURE7);
-  const prev = gl.getParameter(gl.TEXTURE_BINDING_2D);
-  gl.bindTexture(gl.TEXTURE_2D, t);
-  // no mipmaps: the video texture is rewritten every throttle tick, and
-  // regenerating mips on that cadence would be the "stalled GPU upload"
-  // this whole system exists to avoid. LINEAR/LINEAR keeps it complete
-  // without them — the default min filter needs mips and samples as solid
-  // black on a texture that never gets any, which is precisely the bug this
-  // file's brief called out by name.
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  // seeded immediately with a solid plate colour: a texture object that has
-  // never been written samples as opaque black, i.e. exactly the "black
-  // rectangle" failure mode this system must never show.
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, seedRGBA || new Uint8Array([16, 20, 26, 255]));
-  gl.bindTexture(gl.TEXTURE_2D, prev);
-  gl.activeTexture(was);
+  let prev;
+  try {
+    gl.activeTexture(gl.TEXTURE0 + AD_TEX_UNIT);
+    prev = gl.getParameter(gl.TEXTURE_BINDING_2D);
+    gl.bindTexture(gl.TEXTURE_2D, t);
+    // A seeded non-mipmapped texture remains complete until poster/video decode succeeds.
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, seedRGBA || new Uint8Array([16, 20, 26, 255]));
+  } finally {
+    if (prev !== undefined) gl.bindTexture(gl.TEXTURE_2D, prev);
+    gl.activeTexture(was);
+  }
   return t;
+}
+
+function adUploadTex(tex, source) {
+  const was = gl.getParameter(gl.ACTIVE_TEXTURE);
+  let prev;
+  try {
+    gl.activeTexture(gl.TEXTURE0 + AD_TEX_UNIT);
+    prev = gl.getParameter(gl.TEXTURE_BINDING_2D);
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, source);
+  } finally {
+    // A failed image/video upload must not leave the detail atlas bound to ad media.
+    if (prev !== undefined) gl.bindTexture(gl.TEXTURE_2D, prev);
+    gl.activeTexture(was);
+  }
+}
+
+function adPaintNeutralTex(tex) {
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = 480; canvas.height = 270;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#101820'; ctx.fillRect(0, 0, 480, 270);
+    ctx.strokeStyle = '#426071'; ctx.lineWidth = 3; ctx.strokeRect(14, 14, 452, 242);
+    ctx.fillStyle = '#8baebc'; ctx.textAlign = 'center';
+    ctx.font = '700 22px monospace'; ctx.fillText('MASSFRONT FIELD NETWORK', 240, 126);
+    ctx.font = '600 13px monospace'; ctx.fillText('NO SIGNAL', 240, 156);
+    adUploadTex(tex, canvas);
+  } catch (e) { console.warn('adboards: neutral plate upload failed', e); }
 }
 
 function adResetCreativeTextures(c, generation) {
@@ -419,17 +448,24 @@ function adResetCreativeTextures(c, generation) {
   c.posterLoaded = false;
   c.videoTexPrimed = false;
   c.lastUpload = 0;
-  if (c.poster) adLoadPoster(c, generation);
+  if (c.poster && adAdsEnabled()) adLoadPoster(c, generation);
+}
+
+function adRgb(values, fallback) {
+  return Array.isArray(values) && values.length >= 3
+    ? [0, 1, 2].map(i => Number.isFinite(values[i]) ? Math.max(0, Math.min(255, Math.round(values[i]))) : fallback[i])
+    : fallback.slice();
 }
 
 function adRegisterCreative(desc) {
-  if (!desc || !desc.id) return null;
+  if (!desc || typeof desc.id !== 'string' || !desc.id || desc.id.length > 128) return null;
   let c = AD_CREATIVES[desc.id];
   if (c) return c;
-  const bg = desc.bg || [16, 20, 26];
+  const bg = adRgb(desc.bg, [16, 20, 26]);
   c = AD_CREATIVES[desc.id] = {
-    id: desc.id, brand: desc.brand || desc.id, accent: desc.accent || [190, 220, 255],
-    poster: desc.poster || null, video: desc.video || null, bg: [bg[0], bg[1], bg[2]],
+    id: desc.id, brand: typeof desc.brand === 'string' ? desc.brand.slice(0, 120) : desc.id,
+    accent: adRgb(desc.accent, [190, 220, 255]),
+    poster: adSafeMediaUrl(desc.poster), video: adSafeMediaUrl(desc.video), bg,
     posterTex: null, videoTex: null,
     posterLoaded: false, videoTexPrimed: false,
     videoEl: null, videoState: 'init', lastUpload: 0,
@@ -446,13 +482,8 @@ function adLoadPoster(c, generation) {
        callback into a replacement texture or mark its new seed as loaded. */
     if (generation !== adGlGeneration || posterTex !== c.posterTex) return;
     try {
-      const was = gl.getParameter(gl.ACTIVE_TEXTURE);
-      gl.activeTexture(gl.TEXTURE7);
-      const prev = gl.getParameter(gl.TEXTURE_BINDING_2D);
-      gl.bindTexture(gl.TEXTURE_2D, posterTex);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, img);
-      gl.bindTexture(gl.TEXTURE_2D, prev);
-      gl.activeTexture(was);
+      if (!adAdsEnabled()) return;
+      adUploadTex(posterTex, img);
       if (generation === adGlGeneration && posterTex === c.posterTex) c.posterLoaded = true;
     } catch (e) { console.warn('adboards: poster upload failed', c.id, e); }
   };
@@ -489,7 +520,10 @@ function adTryPlay(c) {
 let _adGestureWired = false;
 function adWireGestureRetry() {
   if (_adGestureWired) return; _adGestureWired = true;
-  const retry = () => { for (const id in AD_CREATIVES) { const c = AD_CREATIVES[id]; if (c.videoState === 'blocked') adTryPlay(c); } };
+  const retry = () => {
+    if (!adAdsEnabled() || document.hidden) return;
+    for (const id in AD_CREATIVES) { const c = AD_CREATIVES[id]; if (c.videoState === 'blocked') adTryPlay(c); }
+  };
   document.addEventListener('pointerdown', retry, { passive: true });
   document.addEventListener('touchstart', retry, { passive: true });
   document.addEventListener('keydown', retry, { passive: true });
@@ -506,8 +540,9 @@ function adPauseAll() {
 function adUpdateCreatives(now, needed) {
   const perfOk = !(typeof perfScale !== 'undefined' && perfScale < 0.5) &&
                  !(typeof META !== 'undefined' && META.settings && META.settings.perf === 'low');
-  const adsOn = !(typeof META !== 'undefined' && META.settings && META.settings.ads === false);
-  const canPlay = perfOk && adsOn && !document.hidden;
+  const adsOn = adAdsEnabled();
+  const reducedMotion = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const canPlay = perfOk && adsOn && adMeasurableScene() && !reducedMotion;
   for (const id in AD_CREATIVES) {
     const c = AD_CREATIVES[id];
     const want = canPlay && needed.has(id) && !!c.video;
@@ -517,7 +552,6 @@ function adUpdateCreatives(now, needed) {
     if (c.videoEl.paused && c.videoState !== 'error') adTryPlay(c);
     if (c.videoState !== 'ready' || c.videoEl.readyState < 2) continue;   // HAVE_CURRENT_DATA
     if (now - c.lastUpload < AD_UPLOAD_MS) continue;
-    c.lastUpload = now;
     try {
       /* MUST NOT use the active unit. begin3D leaves TEXTURE0 = matTex, then
          re-enters 2-3 times per frame. Uploading here used to bind the video
@@ -525,14 +559,9 @@ function adUpdateCreatives(now, needed) {
          the begin3D AFTER shadows, every model sampled an empty atlas and
          the whole army strobed. Unit 7 is the ad scratch unit; restore
          whatever was there (detail / fog / video) before returning. */
-      const was = gl.getParameter(gl.ACTIVE_TEXTURE);
-      gl.activeTexture(gl.TEXTURE0 + AD_TEX_UNIT);
-      const prev = gl.getParameter(gl.TEXTURE_BINDING_2D);
-      gl.bindTexture(gl.TEXTURE_2D, c.videoTex);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, c.videoEl);
-      gl.bindTexture(gl.TEXTURE_2D, prev);
-      gl.activeTexture(was);
+      adUploadTex(c.videoTex, c.videoEl);
       c.videoTexPrimed = true;
+      c.lastUpload = now;
     } catch (e) { /* a mid-decode frame can throw on some mobile browsers — skip this tick, try again next */ }
   }
 }
@@ -637,6 +666,33 @@ function adScreenVerts(b) {
   return _adVerts;
 }
 
+function adProjectedVisible(b) {
+  if (typeof matVP === 'undefined' || !matVP) return true;
+  const v = adScreenVerts(b), m = matVP;
+  const outside = [true, true, true, true, true, true];
+  for (let k = 0; k < 4; k++) {
+    const x = v[k * 5], y = v[k * 5 + 1], z = v[k * 5 + 2];
+    const cx = m[0] * x + m[4] * y + m[8] * z + m[12];
+    const cy = m[1] * x + m[5] * y + m[9] * z + m[13];
+    const cz = m[2] * x + m[6] * y + m[10] * z + m[14];
+    const cw = m[3] * x + m[7] * y + m[11] * z + m[15];
+    if (![cx, cy, cz, cw].every(Number.isFinite)) return false;
+    outside[0] &&= cx < -cw; outside[1] &&= cx > cw;
+    outside[2] &&= cy < -cw; outside[3] &&= cy > cw;
+    outside[4] &&= cz < -cw; outside[5] &&= cz > cw;
+  }
+  return !outside.some(Boolean);
+}
+
+function adFogVisible(b) {
+  // Sponsor screens are self-lit and do not sample the terrain fog shader.
+  // Suppress the whole prop until the player has live sensor coverage, or an
+  // unexplored district glows through black fog and earns a false local view.
+  const radius = AD_HALFW * b.scale;
+  if (typeof fogFxFootprintVisible === 'function') return fogFxFootprintVisible(b.x, b.y, radius);
+  return typeof fogPointVisible !== 'function' || fogPointVisible(b.x, b.y);
+}
+
 /* Draws the video/poster quad for every ON-SCREEN board, plus a soft additive
    halo (piggy-backed on the engine's existing bbAdd billboard-sprite batch —
    no extra shader for that part) so the screen reads as a light source once
@@ -658,6 +714,7 @@ function adDrawScreens(list, knownState) {
   const wasCull  = known ? knownState.cull : gl.getParameter(gl.CULL_FACE);
   const wasDepth = known ? knownState.depth : gl.getParameter(gl.DEPTH_TEST);
   const wasMask  = known ? knownState.depthMask : gl.getParameter(gl.DEPTH_WRITEMASK);
+  const reducedMotion = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   try {
     gl.useProgram(adProg);
@@ -674,18 +731,19 @@ function adDrawScreens(list, knownState) {
     gl.bindBuffer(gl.ARRAY_BUFFER, adVBO);
 
     for (const b of list) {
+      b._shownCreative = null;
       const c = AD_CREATIVES[b.creative];
       const c2 = b.creative2 ? AD_CREATIVES[b.creative2] : null;
       // contextual texture overrides sponsor creative when available
       const ctxTex = b._contextual ? adMakeContextualTex(b) : null;
-      // primary texture: contextual canvas, then video if playing, else poster, else fallback
-      let tex1 = ctxTex || adFallbackTex;
-      if (!ctxTex && c) tex1 = (c.videoTexPrimed && c.videoState === 'ready') ? c.videoTex : (c.posterTex || adFallbackTex);
+      // An unfilled or undecoded creative uses the neutral plate, never a branded seed colour.
+      const primaryTex = c && ((!reducedMotion && c.videoTexPrimed && c.videoState === 'ready') ? c.videoTex : (c.posterLoaded ? c.posterTex : null));
+      let tex1 = ctxTex || primaryTex || adFallbackTex;
       // secondary texture: during crossfade it's the incoming creative
       let tex2 = tex1;
       let mix = 0;
       if (b._blend > 0 && c2) {
-        tex2 = (c2.videoTexPrimed && c2.videoState === 'ready') ? c2.videoTex : (c2.posterTex || adFallbackTex);
+        tex2 = (!reducedMotion && c2.videoTexPrimed && c2.videoState === 'ready') ? c2.videoTex : (c2.posterLoaded ? c2.posterTex : adFallbackTex);
         mix = b._blend;
       }
       // bind both texture units up front — unit 7 for primary, unit 8 for secondary
@@ -696,6 +754,11 @@ function adDrawScreens(list, knownState) {
       gl.uniform1f(AD_U.uMix, mix);
       gl.bufferSubData(gl.ARRAY_BUFFER, 0, adScreenVerts(b));
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      // Local dwell is tied to the creative that actually reached a screen quad.
+      // The >=50% crossfade side owns that interval; lore/tips and neutral plates own none.
+      if (!b._contextual) b._shownCreative = mix >= 0.5 && c2
+        ? (tex2 !== adFallbackTex ? c2.id : null)
+        : (primaryTex ? c.id : null);
       if (typeof bbAdd !== 'undefined' && typeof sprites !== 'undefined' && sprites.glow) {
         const chx = b.x + Math.cos(b.yaw) * AD_FACE_X * b.scale;
         const chz = b.y + Math.sin(b.yaw) * AD_FACE_X * b.scale;
@@ -726,7 +789,8 @@ function adDrawScreens(list, knownState) {
 let adFrameMesh = null;
 function adFlushFrames() {
   if (!adFrameMesh || !adBoards.length) return;
-  for (const b of adBoards) adFrameMesh.add(b.x, b.y, terrainH(b.x, b.y), b.scale, b.yaw, 232, 232, 232, 255);
+  for (const b of adBoards) if (adFogVisible(b))
+    adFrameMesh.add(b.x, b.y, terrainH(b.x, b.y), b.scale, b.yaw, 232, 232, 232, 255);
   adFrameMesh.flush(gl);
 }
 
@@ -768,10 +832,13 @@ function adCamBoundsSafe() { try { return (typeof camBounds === 'function') ? ca
    blend uniform lerps from 0 to 1 over AD_FADE_S seconds, then the old
    creative is dropped and the new one becomes primary. */
 function adUpdateRotation(dt) {
+  // OS reduced-motion preference keeps local screens on a still poster; it
+  // must also stop the timed creative crossfade, not just video decoding.
+  if (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const ids = Object.keys(AD_CREATIVES);
   if (ids.length < 2) return;   // nothing to rotate to
   for (const b of adBoards) {
-    if (!b.creative) continue;
+    if (!b._onscreen || b._contextual || !b.creative) continue;
     b._rotT += dt;
     if (b._blend > 0) {
       // mid-crossfade: advance blend
@@ -941,37 +1008,57 @@ function adMakeContextualTex(board) {
   if (!cached) {
     cached = AD_CTX_TEX_CACHE[board.id] = { tex: adMakeTex(), lastType: '', lastText: '' };
   }
-  const was = gl.getParameter(gl.ACTIVE_TEXTURE);
-  gl.activeTexture(gl.TEXTURE0 + AD_TEX_UNIT);
-  const prev = gl.getParameter(gl.TEXTURE_BINDING_2D);
-  gl.bindTexture(gl.TEXTURE_2D, cached.tex);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, _adCtxCanvas);
-  gl.bindTexture(gl.TEXTURE_2D, prev);
-  gl.activeTexture(was);
+  adUploadTex(cached.tex, _adCtxCanvas);
   cached.lastType = c.type;
   cached.lastText = c.text;
   return cached.tex;
 }
 
 /* ============================================================================
-   POST-MATCH AD SLOT — 5s card on end-game screen, skippable after 3s
+   POST-MATCH AD SLOT — optional 5s card after the result
    ============================================================================
-   Inserted into #gameOver before #goRewards. Shows a sponsor creative with
-   a countdown timer. Touch/click dismisses after 3s. Auto-dismisses at 5s.
-   The card is pure DOM, not a GL draw — the game renderer is paused. */
+   Appended after #goRewards so the payout remains first on a phone. The card
+   is fictional local content, immediately skippable, and auto-dismisses at 5s.
+   It is pure DOM, not a GL draw — the game renderer is paused. */
 const AD_POSTMATCH_S = 5;
-const AD_POSTMATCH_SKIP_S = 3;
 let _adPostMatchTimer = null;
 let _adPostMatchEl = null;
 
+function adSafeMediaUrl(raw) {
+  if (typeof raw !== 'string' || raw.length > 2048) return null;
+  try {
+    const u = new URL(raw, document.baseURI);
+    // The stub has no consent or creative trust pipeline. Same-origin media only.
+    return (u.origin === location.origin &&
+      (u.protocol === 'https:' || u.protocol === 'http:' || u.protocol === 'blob:')) ? u.href : null;
+  } catch (e) { return null; }
+}
+
+function adPostMatchViewable(el) {
+  if (!adAdsEnabled() || document.hidden || !el.isConnected || !el.getClientRects().length) return false;
+  const r = el.getBoundingClientRect();
+  if (r.width <= 0 || r.height <= 0) return false;
+  let left = Math.max(0, r.left), top = Math.max(0, r.top);
+  let right = Math.min(window.innerWidth, r.right), bottom = Math.min(window.innerHeight, r.bottom);
+  const scroll = el.closest('.goResultScroll');
+  if (scroll) {
+    const clip = scroll.getBoundingClientRect();
+    left = Math.max(left, clip.left); top = Math.max(top, clip.top);
+    right = Math.min(right, clip.right); bottom = Math.min(bottom, clip.bottom);
+  }
+  return Math.max(0, right - left) * Math.max(0, bottom - top) >= r.width * r.height * 0.5;
+}
+
 function adShowPostMatchAd(win) {
   adClearPostMatchAd();
+  if (!adAdsEnabled()) return;
   // pick a creative to feature
   const ids = Object.keys(AD_CREATIVES);
   const pick = ids.length ? AD_CREATIVES[ids[adHash('postmatch' + Date.now()) % ids.length]] : null;
-  const brand = pick ? pick.brand : 'MASSFRONT';
-  const accent = pick ? 'rgb(' + pick.accent.join(',') + ')' : '#6ec8ff';
-  const tagline = (pick && pick.poster) ? '' : 'Tactical superiority, delivered.';
+  if (!pick) return;  // no fill: do not invent a sponsor or make players wait on an empty card
+  const brand = String(pick.brand || pick.id);
+  const accent = 'rgb(' + adRgb(pick.accent, [110, 200, 255]).join(',') + ')';
+  const poster = adSafeMediaUrl(pick.poster);
 
   const go = document.getElementById('gameOver');
   if (!go) return;
@@ -985,65 +1072,68 @@ function adShowPostMatchAd(win) {
     st.textContent =
       '.adPostMatch{margin:12px auto 4px;max-width:400px;border-radius:12px;overflow:hidden;' +
       'background:linear-gradient(160deg,rgba(20,32,50,.96),rgba(8,14,26,.98));' +
-      'border:1px solid rgba(110,180,240,.28);cursor:pointer;position:relative}' +
+      'border:1px solid rgba(110,180,240,.28);position:relative}' +
       '.adPostMatchImg{width:100%;display:block;aspect-ratio:16/9;object-fit:cover}' +
       '.adPostMatchBody{padding:10px 14px 12px;text-align:center}' +
-      '.adPostMatchBrand{font:800 11px var(--fT);letter-spacing:.16em;color:' + accent + '}' +
-      '.adPostMatchTag{margin-top:4px;font:600 10px var(--fU);color:#7a9cb8}' +
+      '.adPostMatchBrand{font:800 11px var(--fT);letter-spacing:.16em}' +
+      '.adPostMatchKind{display:block;margin-top:4px;font:600 10px var(--fT);' +
+      'letter-spacing:.1em;color:#9bbbd1}' +
       '.adPostMatchBar{height:3px;background:rgba(110,180,240,.15);position:relative;overflow:hidden}' +
-      '.adPostMatchBar>i{display:block;height:100%;background:' + accent + ';width:100%;' +
+      '.adPostMatchBar>i{display:block;height:100%;width:100%;' +
       'transition:width .1s linear}' +
-      '.adPostMatchSkip{position:absolute;bottom:6px;right:10px;font:700 9px var(--fT);' +
-      'letter-spacing:.12em;color:rgba(160,200,230,.6);opacity:0;transition:opacity .3s}' +
-      '.adPostMatchSkip.show{opacity:1}';
+      '.adPostMatchSkip{display:block;min-width:88px;min-height:44px;margin:8px 10px 10px auto;' +
+      'padding:9px 12px;border-radius:8px;border:1px solid rgba(110,180,240,.45);' +
+      'background:rgba(14,34,52,.96);font:700 11px var(--fT);letter-spacing:.1em;' +
+      'color:#d9eeff;cursor:pointer;touch-action:manipulation}';
     document.head.appendChild(st);
   }
 
   const el = document.createElement('div');
   el.className = 'adPostMatch';
-  el.innerHTML =
-    (pick && pick.poster
-      ? '<img class="adPostMatchImg" src="' + pick.poster + '" alt="' + brand + '" onerror="this.style.display=\'none\'">'
-      : '') +
-    '<div class="adPostMatchBody"><div class="adPostMatchBrand">' + brand.toUpperCase() + '</div>' +
-    (tagline ? '<div class="adPostMatchTag">' + tagline + '</div>' : '') + '</div>' +
-    '<div class="adPostMatchBar"><i id="adPostMatchProg"></i></div>' +
-    '<div class="adPostMatchSkip" id="adPostMatchSkip">TAP TO SKIP</div>';
-
-  // insert before rewards
-  const rewards = document.getElementById('goRewards');
-  if (rewards) {
-    scroll.insertBefore(el, rewards);
-  } else {
-    scroll.appendChild(el);
+  if (poster) {
+    const img = document.createElement('img');
+    img.className = 'adPostMatchImg'; img.src = poster; img.alt = brand;
+    img.addEventListener('error', () => { img.style.display = 'none'; });
+    el.appendChild(img);
   }
+  const body = document.createElement('div'); body.className = 'adPostMatchBody';
+  const label = document.createElement('div'); label.className = 'adPostMatchBrand';
+  label.style.color = accent; label.textContent = brand.toUpperCase();
+  body.appendChild(label);
+  const kind = document.createElement('div'); kind.className = 'adPostMatchKind';
+  kind.textContent = 'FICTIONAL GAME SPONSOR'; body.appendChild(kind);
+  el.appendChild(body);
+  const bar = document.createElement('div'); bar.className = 'adPostMatchBar';
+  const progEl = document.createElement('i'); progEl.id = 'adPostMatchProg'; progEl.style.background = accent;
+  bar.appendChild(progEl); el.appendChild(bar);
+  const skipEl = document.createElement('button'); skipEl.className = 'adPostMatchSkip';
+  skipEl.type = 'button'; skipEl.id = 'adPostMatchSkip'; skipEl.textContent = 'SKIP SCREEN'; el.appendChild(skipEl);
+
+  // #goRewards is the last result section: append after it, never above payout.
+  scroll.appendChild(el);
   _adPostMatchEl = el;
 
-  // track impression
-  if (pick) {
-    AD_STATS.total++;
-    AD_STATS.impressions[pick.id] = (AD_STATS.impressions[pick.id] || 0) + 1;
-    adStatsSave();
-  }
-
-  // timer — 100ms ticks, progress bar, skip reveal
-  let elapsed = 0;
-  const skipEl = el.querySelector('#adPostMatchSkip');
-  const progEl = el.querySelector('#adPostMatchProg');
+  // Count only a continuously visible card, not one inserted below the scroll fold.
+  let elapsed = 0, viewDwell = 0, counted = false;
+  let last = performance.now();
 
   const tick = () => {
-    elapsed += 0.1;
+    if (!adAdsEnabled()) { adClearPostMatchAd(); return; }
+    const now = performance.now(), dt = Math.min(0.5, Math.max(0, (now - last) / 1000));
+    last = now; elapsed += dt;
+    viewDwell = adPostMatchViewable(el) ? viewDwell + dt : 0;
+    if (!counted && viewDwell >= AD_DWELL_S) {
+      counted = true;
+      try { AD_PROVIDER.reportImpression({ id: 'postmatch', placement: 'postmatch' }, pick); } catch (e) {}
+    }
     if (progEl) progEl.style.width = Math.max(0, (1 - elapsed / AD_POSTMATCH_S) * 100) + '%';
-    if (elapsed >= AD_POSTMATCH_SKIP_S && skipEl) skipEl.classList.add('show');
     if (elapsed >= AD_POSTMATCH_S) { adClearPostMatchAd(); return; }
     _adPostMatchTimer = setTimeout(tick, 100);
   };
   _adPostMatchTimer = setTimeout(tick, 100);
 
-  // touch/click to dismiss after skip window
-  el.addEventListener('pointerdown', () => {
-    if (elapsed >= AD_POSTMATCH_SKIP_S) adClearPostMatchAd();
-  });
+  // Explicit button prevents a swipe through the result scroll from dismissing it.
+  skipEl.addEventListener('click', () => adClearPostMatchAd());
 }
 
 function adClearPostMatchAd() {
@@ -1060,15 +1150,25 @@ function adClearPostMatchAd() {
 function adFrameHook(knownState) {
   if (!adBoards.length) return;
   const freshFrame = _adDrawnFrame !== _adFrameId;
-  if (freshFrame) adFlushFrames();                     // cheap, real geometry — draw once per frame
+  if (!freshFrame) return;
+  if (!adAdsEnabled()) {
+    for (const b of adBoards) { b._onscreen = false; b._shownCreative = null; adResetDwell(b); }
+    adPauseAll();
+    _adDrawnFrame = _adFrameId;
+    return;
+  }
 
   const cb = adCamBoundsSafe();
-  if (!cb) return;
   const visible = [];
   const needed = new Set();
   for (const b of adBoards) {
-    b._onscreen = adVis(cb, b.x, b.y, 70);
-    if (b._onscreen && b.creative) { visible.push(b); needed.add(b.creative); }
+    b._shownCreative = null;
+    b._onscreen = !!cb && adVis(cb, b.x, b.y, 70) && adProjectedVisible(b) && adFogVisible(b);
+    if (b._onscreen) {
+      visible.push(b);  // no fill still draws a neutral in-world plate
+      if (!b._contextual && b.creative) needed.add(b.creative);
+      if (!b._contextual && b.creative2) needed.add(b.creative2);
+    }
   }
 
   const now = (typeof performance !== 'undefined') ? performance.now() : Date.now();
@@ -1077,15 +1177,15 @@ function adFrameHook(knownState) {
      That path unbound the material atlas on unit 0 and every hull strobed.
      Uploads and screen draws are once per rAF, on the first begin3D, which
      is before terrain rebinds unit 0. */
-  if (freshFrame) {
-    if (now - _adLastTick >= AD_UPLOAD_MS) {
-      const dt = Math.min(0.5, (now - _adLastTick) / 1000);
-      _adLastTick = now;
-      adUpdateCreatives(now, needed);
-      adUpdateImpressions(dt);
-      adUpdateRotation(dt);
-    }
+  const tick = now - _adLastTick >= AD_UPLOAD_MS;
+  const dt = tick ? Math.min(0.5, (now - _adLastTick) / 1000) : 0;
+  if (tick) _adLastTick = now;
+  try {
+    adFlushFrames();
+    if (tick) { adUpdateCreatives(now, needed); adUpdateRotation(dt); }
     if (visible.length) adDrawScreens(visible,knownState);
+  } finally {
+    if (tick) adUpdateImpressions(dt);  // after the draw, including a failed/empty draw
     _adDrawnFrame = _adFrameId;
   }
 }
@@ -1096,21 +1196,49 @@ function adFrameHook(knownState) {
 function adRenderSettingsRow() {
   const list = document.getElementById('setList');
   if (!list) return;
-  const on = !(typeof META !== 'undefined' && META.settings && META.settings.ads === false);
+  const panel = list.querySelector('#setGroup-display') || list;
+  const on = adAdsEnabled();
   const row = document.createElement('div');
   row.className = 'sItem setRow adsRow';
+  if (row.dataset) row.dataset.set = 'ads';
+  row.tabIndex = 0;
+  if (typeof row.setAttribute === 'function') {
+    row.setAttribute('role', 'button');
+    row.setAttribute('aria-pressed', on ? 'true' : 'false');
+  }
   row.innerHTML =
-    '<div class="sTx"><b>\u{1F4FA} In-World Ad Boards</b>' +
-    '<div class="sDs">Billboards play looping video on the battlefield — off shows static art</div></div>' +
+    '<div class="sTx"><b>\u{1F4FA} Battlefield Screens</b>' +
+    '<div class="sDs">Fictional clips · no paid ads. Off hides screens and result cards.</div></div>' +
     '<div class="sBuy togB' + (on ? ' onT' : '') + '">' + (on ? 'ON' : 'OFF') + '</div>';
-  row.addEventListener('pointerdown', () => {
+  const toggle = keyActivation => {
     if (typeof META === 'undefined' || !META.settings) return;
     META.settings.ads = (META.settings.ads === false);   // toggle, defaulting true -> false -> true
+    if (!adAdsEnabled()) {
+      adPauseAll(); adClearPostMatchAd();
+      for (const b of adBoards) { b._shownCreative = null; adResetDwell(b); }
+    } else {
+      for (const id in AD_CREATIVES) {
+        const c = AD_CREATIVES[id];
+        if (c.poster && !c.posterLoaded) adLoadPoster(c, adGlGeneration);
+      }
+      adAssignCreatives();
+    }
     if (typeof metaSave === 'function') metaSave();
     if (typeof sfx === 'function') sfx('ui');
     renderSettings();   // rebuilds the list; the wrap below re-appends this row
-  });
-  list.appendChild(row);
+    if (keyActivation) {
+      const next = list.querySelector('.adsRow');
+      if (next && typeof next.focus === 'function') try { next.focus({ preventScroll: true }); } catch (e) { next.focus(); }
+    }
+  };
+  // Use the same lift/slop and keyboard activation as the other settings rows.
+  if (typeof mfSettingsBindRow === 'function' && row.dataset) mfSettingsBindRow(row, toggle);
+  else row.addEventListener('click', () => toggle(false));
+  // Keep the choice in the visible DISPLAY panel. Appending to #setList after
+  // the tab panels left it detached from category navigation and hard to find.
+  const anchor = panel.querySelector('#gfxDiagRow');
+  if (anchor && anchor.parentNode === panel) panel.insertBefore(row, anchor);
+  else panel.appendChild(row);
 }
 
 /* ============================================================================
@@ -1156,6 +1284,7 @@ function adGLReset() {
   for (const id in AD_CTX_TEX_CACHE) delete AD_CTX_TEX_CACHE[id];
   adInitScreenProgram();
   adFallbackTex = adMakeTex();
+  adPaintNeutralTex(adFallbackTex);
   for (const id in AD_CREATIVES) adResetCreativeTextures(AD_CREATIVES[id], generation);
   adFrameMesh = new InstMesh(gl, mdlAdBoard(), AD_MAX + 4);
   _adDrawnFrame = -1;
@@ -1182,7 +1311,11 @@ function initAdBoards() {
   adInstallHooks();
   adGLReset();
   adWireGestureRetry();
-  document.addEventListener('visibilitychange', () => { if (document.hidden) adPauseAll(); });
-  AD_PROVIDER.init();   // fire-and-forget; loadCreative() awaits it itself if it's still pending
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { adPauseAll(); for (const b of adBoards) adResetDwell(b); }
+  });
+  // This file auto-inits before boot() restores META.settings. The guarded
+  // setupDoodads() hook requests creatives later, after metaLoad(); an eager
+  // init here would fetch even for a persisted ads-off profile.
 }
 initAdBoards();

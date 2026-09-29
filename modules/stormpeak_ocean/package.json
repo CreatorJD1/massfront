@@ -1,0 +1,20 @@
+{
+  "name": "massfront-stormpeak-ocean-tester-build",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:tester": "vite build --config vite.tester.config.mjs && node tools/build-runtime-manifest.mjs"
+  },
+  "dependencies": {
+    "lucide-react": "0.510.0",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "three": "0.169.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.3.0",
+    "@vitejs/plugin-react": "5.2.0",
+    "tailwindcss": "4.3.0",
+    "vite": "8.2.0"
+  }
+}

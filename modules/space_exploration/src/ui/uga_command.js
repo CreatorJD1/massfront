@@ -21,7 +21,7 @@ import { commitResearch } from '../domain/progression.js';
 import { calculateFacilityCapabilities } from '../domain/construction.js';
 import { COMMANDER_ROSTER_IDS } from '../domain/commander_roster_contract.js';
 import { readAccountLedger, subscribeAccountLedger } from '../domain/account_ledger.js';
-import { deriveGroundControl, groundControlSummary } from '../domain/ground_control.js';
+import { deriveGroundControl, groundControlSummary, isGroundAreaUnlocked, isGroundMapUnlocked } from '../domain/ground_control.js';
 import { resolveBaseRuntimeUrl } from '../host/base_runtime_url.js';
 
 const CAMPAIGN_HUB_SESSION_ROUTE_IDS = new Set([
@@ -230,6 +230,29 @@ function icon(name, className = '') {
   return `<svg class="uga-svg ${className}" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`;
 }
 
+function commandVisual(kind, label) {
+  return `<div class="uga-command-visual is-${escapeHtml(kind)}" role="img" aria-label="${escapeHtml(label)}"><i aria-hidden="true"></i></div>`;
+}
+
+const UGA_DISTRICT_VISUAL_KIND = Object.freeze({
+  command: 'concourse',
+  navigation: 'navigation',
+  survey: 'survey',
+  mission_ops: 'contracts',
+  research: 'research',
+  fabricator: 'arsenal',
+  engineering: 'engineering',
+  embassy: 'embassy',
+  factions: 'embassy',
+  habitat: 'habitat',
+  hangar: 'hangar',
+  logistics: 'logistics'
+});
+
+function districtVisualKind(districtId) {
+  return UGA_DISTRICT_VISUAL_KIND[districtId] || 'concourse';
+}
+
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>'"]/g, char => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
@@ -278,7 +301,9 @@ function normalizeDistrict(id, catalog = {}) {
   const staffSlots = raw.staffSlots || fallback.staffSlots || [];
   const sector = raw.sector || fallback.sector || (['habitat', 'factions', 'logistics'].includes(id) ? 'civil' : 'function');
   const deck = raw.deck || (['command', 'navigation', 'survey', 'mission_ops'].includes(id) ? 'A' : ['research', 'fabricator', 'engineering'].includes(id) ? 'B' : 'C');
-  const deckName = raw.deckName || (deck === 'A' ? 'Deck A — Command & Navigation' : deck === 'B' ? 'Deck B — Science & Industry' : 'Deck C — Civilization & Operations');
+  // Deck letters are still domain IDs, but player-facing zones follow their
+  // actual position in the longitudinal NEXUS-VII cutaway.
+  const deckName = deck === 'A' ? 'Forward · Command' : deck === 'B' ? 'Upper · Ship Systems' : 'Lower · Crew & Bay';
   const authoredTierFeatures = Array.isArray(raw.tiers) ? raw.tiers.map(tier => {
     if (Array.isArray(tier.features)) return tier.features.join(' · ');
     return tier.feature || tier.name;
@@ -357,7 +382,9 @@ export function createUgaCommand(options = {}) {
   let activeHubRouteId = null;
   let confirmationKey = null;
   let sheetExpanded = false;
+  let shipOverviewActive = false;
   let deploymentLoadoutExpanded = false;
+  const hardwareExpandedDistricts = new Set();
   const deploymentDrafts = new Map();
   let visible = options.visible !== false;
   let destroyed = false;
@@ -387,7 +414,7 @@ export function createUgaCommand(options = {}) {
     <header class="uga-command-header">
       <div class="uga-command-identity">
         <span class="uga-command-crest">${icon('crest')}</span>
-        <div><strong>NEXUS-VII</strong><span>UGA CIVILIZATION SHIP // EXPEDITION COMMAND</span></div>
+        <div><strong>NEXUS-VII</strong><span>UGA EXPLORER · SHIP INTERIOR</span></div>
       </div>
       <div class="uga-resource-ribbon" data-region="resources" tabindex="0" aria-label="Ship resources. Swipe horizontally for more."></div>
       <span class="uga-scroll-cue uga-resource-scroll-cue" aria-hidden="true">SWIPE <b>›</b></span>
@@ -395,7 +422,7 @@ export function createUgaCommand(options = {}) {
     </header>
     <nav class="uga-deployment-context" data-deployment-context hidden aria-label="Hangar section navigation">
       <button type="button" data-action="deployment-sections" aria-label="Return to ship sections; keep deployment draft">${icon('chevron')}<span>SHIP SECTIONS</span></button>
-      <div><small>NEXUS-VII // DECK C</small><strong>STRIKE BAY</strong></div>
+      <div><small>NEXUS-VII // LOWER SECTION</small><strong>STRIKE BAY</strong></div>
     </nav>
     <div class="uga-command-stage">
       <aside class="uga-district-rail" data-region="districts" aria-label="Ship districts"></aside>
@@ -408,7 +435,7 @@ export function createUgaCommand(options = {}) {
           <button type="button" data-action="deployment-back" aria-label="Back to missions">${icon('chevron')}<span>BACK TO MISSIONS</span></button>
           <button type="button" class="uga-deployment-toggle" data-action="toggle-deployment-loadout" aria-expanded="false"><span>EDIT LOADOUT</span>${icon('chevron')}</button>
         </div>
-        <button type="button" class="uga-sheet-toggle" data-action="toggle-sheet" aria-expanded="true" aria-label="Collapse management inspector"><span></span><b>MANAGEMENT INSPECTOR</b>${icon('chevron')}</button>
+        <button type="button" class="uga-sheet-toggle" data-action="toggle-sheet" aria-expanded="true" aria-label="Collapse ship room controls"><span></span><b>SHIP ROOM CONTROLS</b>${icon('chevron')}</button>
         <div class="uga-context-body" data-region="context"></div>
       </aside>
     </div>
@@ -433,6 +460,12 @@ export function createUgaCommand(options = {}) {
     return typeof options.getConstructionQuote === 'function'
       ? options.getConstructionQuote(getState(), districtId, facilityId)
       : { ok: false, issues: [{ message: 'Construction authority is unavailable.' }] };
+  }
+
+  function coreCommissionRescueQuote() {
+    return typeof options.getCoreCommissionRescueQuote === 'function'
+      ? options.getCoreCommissionRescueQuote()
+      : { ok: false, issues: [] };
   }
 
   function facilityChoices(districtId, tier) {
@@ -577,6 +610,18 @@ export function createUgaCommand(options = {}) {
     const selectedMapSize = selectedMap?.dataset.mapSize || '';
     planner.dataset.selectedMapId = next.mapId;
     planner.dataset.selectedMapSize = selectedMapSize;
+    planner.dataset.factionId = next.proxyFactionId;
+    const shipNames = { nova: 'Nova Orbital Carrier', dominion: 'Dominion Assault Lander', syndicate: 'Syndicate Phase Manta' };
+    const shipName = shipNames[next.proxyFactionId] || 'HQ Deployment Ship';
+    const commanderName = planner.querySelector('[data-deploy="commanderId"]')?.selectedOptions?.[0]?.textContent?.trim() || 'Select a ready commander';
+    const summaryName = planner.querySelector('.uga-deployment-summary strong');
+    const summaryCrew = planner.querySelector('.uga-deployment-summary p');
+    const shipStation = planner.querySelector('[data-deployment-station="base_deployer"] small');
+    const chassisStation = planner.querySelector('[data-deployment-station="command_chassis"] small');
+    if (summaryName) summaryName.textContent = shipName;
+    if (summaryCrew) summaryCrew.textContent = `${commanderName} · ${next.specialistIds.length} / 3 specialists`;
+    if (shipStation) shipStation.textContent = `${shipName} // ${commanderName}`;
+    if (chassisStation) chassisStation.textContent = commanderName;
     root.dataset.groundRouteStage = planner.dataset.groundRouteStage || '';
     root.dataset.selectedAreaId = selectedAreaId;
     root.dataset.selectedMapId = next.mapId;
@@ -640,6 +685,11 @@ export function createUgaCommand(options = {}) {
     readiness?.classList.toggle('is-ready', ready);
     readiness?.classList.toggle('is-blocked', !ready);
     if (readiness) readiness.dataset.deploymentConfirmState = ready ? 'ready' : 'blocked';
+    const readinessMessage = planner.querySelector('[data-readiness-message]');
+    if (readinessMessage) readinessMessage.textContent = ready ? 'READY FOR LANDING' : message;
+    const mapSelect = planner.querySelector('[data-deploy="mapId"]');
+    const mapName = planner.querySelector('.uga-selected-map');
+    if (mapName) mapName.textContent = mapSelect?.selectedOptions?.[0]?.dataset.mapName || 'Choose a battlefield';
     const deploy = planner.querySelector('[data-action="deploy"]');
     if (deploy) {
       deploy.disabled = !ready;
@@ -744,13 +794,17 @@ export function createUgaCommand(options = {}) {
 
     const filteredIds = DISTRICT_ORDER.filter(id => normalizeDistrict(id, catalog).deck === selectedDeckFilter);
     const deckMeta = {
-      A: ['COMMAND & NAVIGATION', 'Strategic control, routes, survey, and mission planning'],
-      B: ['SCIENCE & INDUSTRY', 'Research, fabrication, propulsion, and ship systems'],
-      C: ['CIVILIZATION & OPERATIONS', 'Residents, recovery, strike teams, and logistics']
+      A: ['FORWARD', 'COMMAND & MISSIONS', 'Command Core, routes, surveys, and mission planning'],
+      B: ['UPPER', 'SYSTEMS & RESEARCH', 'Research, fabrication, drive, and ship engineering'],
+      C: ['LOWER', 'CREW & DEPLOYMENT', 'Habitat, diplomacy, Strike Bay, and expedition cargo']
     }[selectedDeckFilter];
+    const sectionNames = { A: 'Forward command rooms', B: 'Upper systems rooms', C: 'Lower crew and deployment rooms' };
+    const sectionShort = { A: 'COMMAND', B: 'SYSTEMS', C: 'CREW & BAY' };
+    const sectionPosition = { A: 'FORWARD', B: 'UPPER', C: 'LOWER' };
 
     return `
       <div class="uga-rail-top">
+        <div class="uga-ship-location"><b>INSIDE NEXUS-VII</b><small>${shipOverviewActive ? 'SHIP OVERVIEW' : `${sectionPosition[selectedDeckFilter]} · ${sectionShort[selectedDeckFilter]}`}<span class="uga-location-power"> · GRID ${powerGrid.totalConsumedMW}/${powerGrid.totalGeneratedMW} MW</span></small></div>
         <button type="button" class="uga-overview-button" data-action="overview">${icon('overview')}<span>SHIP OVERVIEW</span></button>
         <div class="uga-ship-telemetry-badge">
           <div class="uga-telemetry-rating">
@@ -764,17 +818,17 @@ export function createUgaCommand(options = {}) {
             <span>${powerGrid.surplusMW >= 0 ? `+${powerGrid.surplusMW} MW SURPLUS` : 'BROWNOUT'}</span>
           </div>
         </div>
-        <div class="uga-sector-filter-bar uga-deck-filter-bar" role="tablist" aria-label="Ship deck selector">
-          ${['A', 'B', 'C'].map(deck => `<button type="button" role="tab" aria-selected="${selectedDeckFilter === deck}" class="uga-filter-chip${selectedDeckFilter === deck ? ' is-active' : ''}" data-deck-filter="${deck}">DECK ${deck}</button>`).join('')}
+        <div class="uga-sector-filter-bar uga-deck-filter-bar" role="tablist" aria-label="Ship interior areas">
+          ${['A', 'B', 'C'].map(deck => `<button type="button" role="tab" aria-selected="${selectedDeckFilter === deck}" aria-label="${sectionNames[deck]}" class="uga-filter-chip${selectedDeckFilter === deck ? ' is-active' : ''}" data-deck-filter="${deck}"><span>${sectionPosition[deck]}</span></button>`).join('')}
         </div>
       </div>
-      <div class="uga-deck-summary"><small>DECK ${selectedDeckFilter}</small><b>${deckMeta[0]}</b><span>${deckMeta[1]}</span></div>
+      <div class="uga-deck-summary"><small>${deckMeta[0]} SECTION</small><b>${deckMeta[1]}</b><span>${deckMeta[2]}</span></div>
       <div class="uga-district-list">
         ${filteredIds.map((id, index) => {
           const def = normalizeDistrict(id, catalog);
           const dState = districtTierState(getState(), id, def);
           const level = dState.tier;
-          const active = selectedDistrictId === id && ['command', 'construction'].includes(activeView);
+          const active = !shipOverviewActive && selectedDistrictId === id && ['command', 'construction'].includes(activeView);
           const staffCount = (dState.staff || []).filter(Boolean).length;
           return `<button type="button" class="uga-district-button${active ? ' is-active' : ''} is-${def.sector}" data-district="${id}" aria-pressed="${active}">
             <span class="uga-district-index">${String(index + 1).padStart(2, '0')}</span>
@@ -839,6 +893,11 @@ export function createUgaCommand(options = {}) {
   function staffRows(definition, districtState) {
     const slots = definition.staffSlots || [];
     if (!slots.length) return '<div class="uga-empty-state">No specialist staffing designated for this compartment.</div>';
+    /* The domain refuses every assignment on an uncommissioned compartment
+       (DISTRICT_NOT_COMMISSIONED), so offering the picker there could only
+       produce an error toast — which read as "the crew system is broken".
+       State the actual gate instead, and point at what unblocks it. */
+    if (districtState.commissioned === false) return `<div class="uga-empty-state">Crew stations open after this compartment is commissioned. Finish the ${escapeHtml(definition.name || 'district')} core commissioning first — commissioning work advances as surveys, travel and operations complete expedition cycles.</div>`;
     const state = getState();
     const catalog = getCatalog();
     const allSpecialists = asArray(catalog.specialists || catalog.SPECIALIST_CATALOG || state.specialists || {});
@@ -964,22 +1023,38 @@ export function createUgaCommand(options = {}) {
     const systemCount = Object.keys(systems).length;
     const intelligence = Number(state.intelligence?.bySystem?.[systemId]) || 0;
     const operations = Array.isArray(state.operations?.history) ? state.operations.history.length : 0;
+    // L1: the strategic home finally carries the expedition clock it reports.
+    // The watch quote comes from the domain so a pending operation (which must
+    // resolve first) disables the button for the same reason the ledger would.
+    const watchQuote = typeof options.getDutyWatchQuote === 'function' ? options.getDutyWatchQuote() : null;
+    const watchReady = Boolean(watchQuote?.available);
+    const watchCycles = Number(watchQuote?.cycles) || 0;
+    const atCap = hasPressure && pressure >= 100;
+    // Keep the label to one line at 88px: the front card already shows the
+    // pressure the watch feeds, and the toast spells out the full effect.
+    const watchLabel = !watchReady ? 'FRONT RESOLVING'
+      : atCap ? 'HOLD WATCH · RISK'
+        : `HOLD WATCH +${watchCycles}`;
     return `<section class="uga-command-front is-${frontTone}" aria-label="Current Galactic front status">
       <span>${icon(infestation.confirmed ? 'warning' : 'overview')}</span>
       <div><small>CURRENT SYSTEM</small><strong>${escapeHtml(prettyToken(systemId))}</strong><p>${escapeHtml(frontLabel)}${hasPressure ? ` · PRESSURE ${formatValue(pressure)}` : ''}</p></div>
       <dl><div><dt>ROUTES</dt><dd>${formatValue(discovered)} / ${formatValue(systemCount)}</dd></div><div><dt>INTEL</dt><dd>${formatValue(intelligence)}</dd></div><div><dt>OPS</dt><dd>${formatValue(operations)}</dd></div></dl>
-      <button type="button" data-nav="galaxy">OPEN GALAXY${icon('chevron')}</button>
+      <div class="uga-front-actions">
+        <button type="button" data-front-watch ${watchReady ? '' : 'disabled aria-disabled="true"'} aria-label="Hold duty watch: advance ${watchCycles} expedition cycles, front pressure rises">${escapeHtml(watchLabel)}</button>
+        <button type="button" data-nav="galaxy">OPEN GALAXY${icon('chevron')}</button>
+      </div>
     </section>`;
   }
 
   function constructionQueueMarkup(status) {
     const queue = status.queue || [];
+    const emergencyTransit = getState().ship?.emergencyFuelActive === true;
     return `<section class="uga-construction-queue">
       <header>
         <div><small>EXPEDITION CYCLE ${formatValue(status.cycle)}</small><h3>Global Construction Queue</h3></div>
-        <span>${formatValue(status.active)} / ${formatValue(status.capacity)} ACTIVE · ${queue.length} / ${formatValue(status.queueLimit)} QUEUED</span>
+        <span>${formatValue(status.active)} / ${formatValue(status.capacity)} POWERED · ${queue.length} / ${formatValue(status.queueLimit)} QUEUED</span>
       </header>
-      <p>Construction advances with expeditions: completed surveys add 1 cycle, travel adds 2, and returning ground operations add 2. Queued work waits for an active slot and enough power; opening this screen does not advance time.</p>
+      <p>Construction advances with expeditions: completed surveys add 1 cycle, returning ground operations add 2, and each duty watch on the command front adds 2. ${emergencyTransit ? 'Emergency jumps advance only powered Mission Ops and Strike Bay commissioning; all other jobs pause on those jumps. Clear emergency service in Stores to restore normal travel work.' : 'Normal travel adds 2 cycles.'} Queued work waits for a powered slot; opening this screen does not advance time.</p>
       <div class="uga-construction-power ${status.power?.surplusMW < 0 ? 'is-deficit' : ''}">
         ${icon('power')}<div><b>${status.power?.surplusMW >= 0 ? '+' : ''}${formatValue(status.power?.surplusMW)} MW FORECAST</b><small>${formatValue(status.power?.constructionPowerPerSlotMW)} MW PER ACTIVE SLOT</small></div>
       </div>
@@ -987,13 +1062,15 @@ export function createUgaCommand(options = {}) {
         const facility = facilitiesCatalog(getCatalog())[job.facilityId] || {};
         const progress = Math.min(100, Math.floor((Number(job.workCompleted) || 0) / Math.max(1, Number(job.workRequired) || 1) * 100));
         const cancelKey = `cancel:${job.id}`;
+        const protectedCore = job.kind === 'commission' && (job.districtId === 'mission_ops' || job.districtId === 'hangar') && !(getState().operations?.history?.length);
+        const pausedOnEmergencyJump = emergencyTransit && !(job.kind === 'commission' && (job.districtId === 'mission_ops' || job.districtId === 'hangar'));
         return `<article class="uga-job-card is-${escapeHtml(job.status || 'queued')}${job.status === 'active' ? ' uga-attention' : ''}">
-          <div class="uga-job-order"><b>${String(index + 1).padStart(2, '0')}</b><span>${escapeHtml(prettyToken(job.status || 'queued'))}</span></div>
+          <div class="uga-job-order"><b>${String(index + 1).padStart(2, '0')}</b><span>${pausedOnEmergencyJump ? 'PAUSED ON EMERGENCY JUMPS' : escapeHtml(prettyToken(job.status || 'queued'))}</span></div>
           <div class="uga-job-copy"><small>${escapeHtml(prettyToken(job.kind))} · TIER ${formatValue(job.targetTier)}</small><b>${escapeHtml(facility.name || prettyToken(job.facilityId))}</b><div class="uga-job-progress"><i style="--value:${progress}%"></i><span>${formatValue(job.workCompleted)} / ${formatValue(job.workRequired)} WORK</span></div></div>
           <div class="uga-job-controls">
             <button type="button" data-job-order="${escapeHtml(job.id)}:-1" aria-label="Move ${escapeHtml(facility.name || 'job')} earlier" ${index === 0 ? 'disabled' : ''}>${icon('chevron')}</button>
             <button type="button" data-job-order="${escapeHtml(job.id)}:1" aria-label="Move ${escapeHtml(facility.name || 'job')} later" ${index === queue.length - 1 ? 'disabled' : ''}>${icon('chevron')}</button>
-            <button type="button" class="is-danger${confirmationKey === cancelKey ? ' is-confirming' : ''}" data-job-cancel="${escapeHtml(job.id)}">${confirmationKey === cancelKey ? 'CONFIRM' : 'CANCEL'}</button>
+            <button type="button" class="is-danger${confirmationKey === cancelKey ? ' is-confirming' : ''}" data-job-cancel="${escapeHtml(job.id)}" ${job.rescueFunded || protectedCore ? 'disabled' : ''}>${job.rescueFunded ? 'CORE RESCUE' : protectedCore ? 'REQUIRED CORE' : confirmationKey === cancelKey ? 'CONFIRM' : 'CANCEL'}</button>
           </div>
         </article>`;
       }).join('') : '<div class="uga-empty-state">No construction jobs queued. Select a district plot to commission or expand.</div>'}</div>
@@ -1041,10 +1118,21 @@ export function createUgaCommand(options = {}) {
     if (!selectedBuildPlotId) selectedBuildPlotId = districtState.commissioned === false ? 'tier1' : `tier${Math.min(3, districtState.tier + 1)}`;
     const tier = Math.max(1, Math.min(3, Number(String(selectedBuildPlotId).replace('tier', '')) || 1));
     const commissionQuote = districtState.commissioned === false ? constructionQuote(selectedDistrictId) : null;
+    const rescueQuote = coreCommissionRescueQuote();
+    const rescueGrant = rescueQuote.grant || {};
+    const rescueNeeded = Object.values(rescueGrant).some(value => Number(value) > 0) || Number(rescueQuote.powerGrantMW) > 0;
+    const rescueUsed = getState().ship?.coreCommissionRescueUsed === true;
+    const rescueKey = 'construction:core-rescue';
+    const rescueDetails = [
+      ...['credits', 'alloys', 'components'].filter(key => Number(rescueGrant[key]) > 0).map(key => `${formatValue(rescueGrant[key])} ${key}`),
+      ...(Number(rescueQuote.powerGrantMW) > 0 ? [`${formatValue(rescueQuote.powerGrantMW)} MW backup`] : [])
+    ].join(' · ');
     const commissionKey = `build:${selectedDistrictId}:commission`;
     const choices = tier > 1 ? facilityChoices(selectedDistrictId, tier) : [];
     return `<div class="uga-context-scroll uga-construction-view">
       <div class="uga-context-heading"><div class="uga-heading-icon">${icon('build')}</div><div><span class="uga-sector-pill is-${definition.sector}">NEXUS-VII INTERNAL WORKS</span><h2>Construction</h2></div><div class="uga-heading-badges"><span class="uga-tier-badge">${escapeHtml(definition.name)}</span></div></div>
+      ${commandVisual(districtVisualKind(selectedDistrictId), `${definition.name} sealed interior construction bay`)}
+      ${rescueNeeded || rescueUsed ? `<section class="uga-commission-card"><div><small>FIRST-OPERATION SAFETY NET // ONE TIME</small><h3>Core Commissioning Requisition</h3><p>${rescueUsed ? 'Required core work is protected from cancellation. The backup allocation remains tied to this career.' : `Requisition only the missing Mission Ops and Strike Bay core work. ${escapeHtml(rescueDetails)}; no optional construction budget is paid out.`}</p>${!rescueQuote.ok && !rescueUsed ? `<p class="uga-construction-issue">${icon('warning')}${escapeHtml((rescueQuote.issues || []).map(entry => entry.message).join(' · '))}</p>` : ''}</div>${!rescueUsed ? `<button type="button" class="uga-primary-button${confirmationKey === rescueKey ? ' is-confirming' : ''}" data-core-rescue ${rescueQuote.ok ? '' : 'disabled'}>${confirmationKey === rescueKey ? 'CONFIRM REQUISITION' : 'REQUISITION CORE WORK'}</button>` : ''}</section>` : ''}
       ${constructionQueueMarkup(status)}
       <section class="uga-district-plots"><header><div><small>AUTHORED COMPARTMENT PLOTS</small><h3>${escapeHtml(definition.name)}</h3></div><span>${districtState.commissioned === false ? 'UNCOMMISSIONED' : `TIER ${districtState.tier} ONLINE`}</span></header>
         <div class="uga-build-plot-grid">${[1, 2, 3].map(plotTier => constructionPlotMarkup(definition, districtState, plotTier, status)).join('')}</div>
@@ -1082,7 +1170,7 @@ export function createUgaCommand(options = {}) {
     if (districtId === 'command') return campaignHubPanel(true);
     if (districtId === 'research') return getState().ship?.districts?.research?.commissioned === false ? '' : withoutContextScroll(researchPanel());
     if (districtId === 'factions') return withoutContextScroll(factionPanel());
-    if (districtId === 'mission_ops') return withoutContextScroll(contractsPanel());
+    if (districtId === 'mission_ops') return withoutContextScroll(contractsPanel('contracts'));
     if (districtId === 'survey') return withoutContextScroll(intelPanel());
     if (districtId === 'habitat') return withoutContextScroll(crewPanel());
     if (districtId === 'logistics') return withoutContextScroll(logisticsPanel());
@@ -1102,8 +1190,8 @@ export function createUgaCommand(options = {}) {
          fabricator   inventoryPanel() — Fabrication & Armory is where the
                       manifest belongs. */
     if (districtId === 'engineering') return withoutContextScroll(constructionPanel());
-    if (districtId === 'hangar') return withoutContextScroll(deploymentViewPanel());
-    if (districtId === 'fabricator') return withoutContextScroll(inventoryPanel());
+    if (districtId === 'hangar') return withoutContextScroll(deploymentViewPanel('hangar'));
+    if (districtId === 'fabricator') return withoutContextScroll(inventoryPanel('arsenal'));
     if (districtId === 'navigation') return navigationPanel();
     return '';
   }
@@ -1127,6 +1215,7 @@ export function createUgaCommand(options = {}) {
     const canDepart = fuel > 0;
     return `<div class="uga-section-title"><small>ASTROGATION // CURRENT PLOT</small><h2>Navigation Bridge</h2>
         <p>The ship's position, the systems on file, and the consumables a departure spends.</p></div>
+      ${commandVisual('navigation', 'NEXUS-VII sealed navigation bridge and physical astrogation console')}
       <div class="uga-record-list">
         <article class="uga-record-card">
           <span class="uga-record-sigil">${icon('navigation')}</span>
@@ -1180,13 +1269,13 @@ export function createUgaCommand(options = {}) {
 
     if (districtState.commissioned === false) return `<div class="uga-context-scroll">
       <div class="uga-context-heading"><div class="uga-heading-icon">${icon(selectedDistrictId)}</div><div><span class="uga-sector-pill is-${definition.sector}">${escapeHtml(definition.deckName)}</span><h2>${escapeHtml(definition.name)}</h2></div><div class="uga-heading-badges"><span class="uga-tier-badge">UNCOMMISSIONED</span></div></div>
-      <p class="uga-district-description">${escapeHtml(definition.description)}</p>
+      <section class="uga-commission-card"><div><small>ROOM OFFLINE</small><h3>Commission this compartment</h3><p>Build the Tier-1 core to unlock its crew, modules, and services.</p></div><button type="button" class="uga-primary-button" data-action="open-construction">OPEN CONSTRUCTION</button></section>
+      ${!work ? commandVisual(districtVisualKind(selectedDistrictId), `${definition.name} sealed interior awaiting commissioning`) : ''}
       ${/* A dark compartment does not suspend the job. Recruiting a resident
            faction and reading contracts are how a commander reaches step 03,
            and Mission Operations and the Embassy both start uncommissioned -
            gating them behind their own construction would strand the player
            in front of a commission card with no way to afford it. */ work}
-      <section class="uga-commission-card"><div><small>VISIBLE COMPARTMENT // SYSTEMS OFFLINE</small><h3>Commission the Tier-1 core</h3><p>This district remains physically present aboard NEXUS-VII, but staffing, modules, and its operational controller stay locked until construction completes.</p></div><button type="button" class="uga-primary-button" data-action="open-construction">OPEN CONSTRUCTION</button></section>
     </div>`;
 
     return `<div class="uga-context-scroll">
@@ -1201,21 +1290,25 @@ export function createUgaCommand(options = {}) {
           <span class="uga-tier-badge">${definition.fixed ? 'FIXED' : `TIER ${districtState.tier}`}</span>
         </div>
       </div>
-      ${work}
-      ${work ? `<div class="uga-section-title"><small>COMPARTMENT HARDWARE</small><h2>${escapeHtml(definition.name)} Systems</h2><p>Tier, staffing, module sockets and authorized architecture for this compartment.</p></div>` : ''}
       ${canUpgrade ? `<section class="uga-upgrade-block">
-        <div><small>CURRENT TIER ${districtState.tier} · NEXT TIER ${districtState.tier + 1}</small><b>Choose your next facility</b><p>Compare benefits, costs and power before authorizing construction.</p></div>
-        <button type="button" class="uga-primary-button" data-action="upgrade">VIEW TIER ${districtState.tier + 1} FACILITIES${icon('chevron')}</button>
+        <div><small>ROOM UPGRADE</small><b>Tier ${districtState.tier + 1} facilities</b></div>
+        <button type="button" class="uga-primary-button" data-action="upgrade">VIEW OPTIONS${icon('chevron')}</button>
       </section>` : ''}
-      ${adjacencySynergyBanner(selectedDistrictId)}
-      ${tierRail(districtState.tier, definition.fixed)}
-      <p class="uga-district-description">${escapeHtml(definition.description)}</p>
-      <div class="uga-activity-line"><i></i><span>${escapeHtml(activeTier?.activity ? prettyToken(activeTier.activity) : definition.activity)}</span>${capacityLabel ? `<b>${escapeHtml(capacityLabel)}</b>` : ''}</div>
-      <section class="uga-panel-section"><header><span>CAPABILITY PROGRESSION</span><small>01</small></header>${featureRows(definition, districtState.tier)}</section>
-      <section class="uga-panel-section"><header><span>SPECIALIST STATIONS</span><small>02</small></header><div class="uga-staff-list">${staffRows(definition, districtState)}</div></section>
-      <section class="uga-panel-section"><header><span>VISUAL UPGRADES & ARCHITECTURE</span><small>03</small></header><div class="uga-visual-list">${visualUpgradeRows(definition, districtState)}</div></section>
-      <section class="uga-panel-section"><header><span>INTERNAL MODULE SOCKETS</span><small>04</small></header><div class="uga-socket-list">${socketRows(definition, districtState)}</div></section>
-      ${!definition.fixed && !canUpgrade ? '<div class="uga-max-tier">MAXIMUM AUTHORIZED TIER REACHED</div>' : ''}
+      ${work}
+      <details class="uga-hardware-details" data-hardware-district="${escapeHtml(selectedDistrictId)}" ${hardwareExpandedDistricts.has(selectedDistrictId) ? 'open' : ''}>
+        <summary>${icon('engineering')}<span>ROOM SYSTEMS</span><small>CREW · MODULES · TIERS</small>${icon('chevron')}</summary>
+        <div class="uga-hardware-body">
+          ${adjacencySynergyBanner(selectedDistrictId)}
+          ${tierRail(districtState.tier, definition.fixed)}
+          <p class="uga-district-description">${escapeHtml(definition.description)}</p>
+          <div class="uga-activity-line"><i></i><span>${escapeHtml(activeTier?.activity ? prettyToken(activeTier.activity) : definition.activity)}</span>${capacityLabel ? `<b>${escapeHtml(capacityLabel)}</b>` : ''}</div>
+          <section class="uga-panel-section"><header><span>CAPABILITY PROGRESSION</span><small>01</small></header>${featureRows(definition, districtState.tier)}</section>
+          <section class="uga-panel-section"><header><span>SPECIALIST STATIONS</span><small>02</small></header><div class="uga-staff-list">${staffRows(definition, districtState)}</div></section>
+          <section class="uga-panel-section"><header><span>VISUAL UPGRADES & ARCHITECTURE</span><small>03</small></header><div class="uga-visual-list">${visualUpgradeRows(definition, districtState)}</div></section>
+          <section class="uga-panel-section"><header><span>INTERNAL MODULE SOCKETS</span><small>04</small></header><div class="uga-socket-list">${socketRows(definition, districtState)}</div></section>
+          ${!definition.fixed && !canUpgrade ? '<div class="uga-max-tier">MAXIMUM AUTHORIZED TIER REACHED</div>' : ''}
+        </div>
+      </details>
     </div>`;
   }
 
@@ -1231,6 +1324,7 @@ export function createUgaCommand(options = {}) {
     const factions = fallback.map(base => ({ ...base, ...(definitions.find(item => item.id === base.id) || {}) }));
     return `<div class="uga-context-scroll">
       <div class="uga-section-title"><small>PERMANENT NEXUS-VII RESIDENCY</small><h2>Resident Factions</h2><p>UGA sponsors operations. Resident factions provide the deployable proxy force.</p></div>
+      ${commandVisual('embassy', 'NEXUS-VII sealed coalition embassy and diplomatic chamber')}
       <div class="uga-record-list">${factions.map(faction => {
         const progress = state.factions?.[faction.id] || {};
         const resident = progress.resident === true || progress.residency === 'resident' || progress.status === 'ready' || progress.status === 'recovering' || progress.status === 'deployed';
@@ -1260,11 +1354,34 @@ export function createUgaCommand(options = {}) {
     }).join('')}</div></section>`;
   }
 
+  function planningEligibility(mission, state) {
+    if (typeof options.getMissionEligibility !== 'function') return null;
+    // A contract is open for planning if any authored proxy/support pair can
+    // launch. Otherwise a probe shortage can hide Field Lab, or wounded Nova
+    // crew can hide a valid Dominion-led UGA purge before the planner opens.
+    const residents = Object.entries(state.factions || {})
+      .filter(([, faction]) => faction?.resident)
+      .map(([id]) => id);
+    const proxyIds = mission.access?.type === 'faction_exclusive'
+      ? [mission.access.factionId]
+      : residents.sort((a, b) => Number(b === state.commissioning?.factionId) - Number(a === state.commissioning?.factionId));
+    const supports = asArray(mission.supportIds);
+    let first = null;
+    for (const proxyFactionId of proxyIds.length ? proxyIds : [null]) {
+      for (const supportId of supports.length ? supports : [null]) {
+        const request = { ...(proxyFactionId ? { proxyFactionId } : {}), ...(supportId ? { supportId } : {}) };
+        const result = options.getMissionEligibility(mission.id, request);
+        first ||= result;
+        if (result?.eligible) return result;
+      }
+    }
+    return first;
+  }
+
   function missionLocks(mission, state) {
     const progress = state.missions?.[mission.id] || {};
-    const eligibility = typeof options.getMissionEligibility === 'function'
-      ? options.getMissionEligibility(mission.id) : null;
-    const locks = mission.locks || eligibility?.locks || progress.locks || [];
+    const eligibility = planningEligibility(mission, state);
+    const locks = eligibility?.locks || mission.locks || progress.locks || [];
     if (progress.lockedReason) return [progress.lockedReason];
     return Array.isArray(locks) ? locks
       .filter(lock => typeof lock === 'string' || lock?.met === false || lock?.message)
@@ -1308,12 +1425,17 @@ export function createUgaCommand(options = {}) {
     return Array.isArray(history) ? history.length : 0;
   }
 
-  function contractsPanel() {
+  function contractsPanel(visualKind = 'contracts') {
     const catalog = getCatalog();
     const state = getState();
     const missions = asArray(catalog.missions || catalog.MISSION_CATALOG || state.availableMissions || state.missions).filter(item => item.id);
+    /* Keep live contracts and completed debriefs as separate shelves. Rendering
+       every briefing and archive entry at equal weight previously buried the
+       operation the player came here to launch. This comment must stay outside
+       the template literal so implementation notes never reach the UI. */
     return `<div class="uga-context-scroll">
       <div class="uga-section-title"><small>SPONSORSHIP AND ELIGIBILITY</small><h2>Contracts</h2><p>Faction conflicts require their resident sponsor. Brood purges are issued only by UGA.</p></div>
+      ${commandVisual(visualKind, visualKind === 'hangar' ? 'NEXUS-VII sealed strike hangar and deployment gantry' : 'NEXUS-VII mission planning table and planetary objective beacon')}
       ${!state.commissioning?.completed ? `<section class="uga-commission-card"><div><h3>Hire your first commander</h3><p>Choose a faction and complete commander hiring before planning ground missions. Once hired, select an available commander from that faction in the Deployment Hangar.</p></div><button type="button" class="uga-primary-button" data-host-route="new-career-faction" ${hostRoutesAvailable() ? '' : 'disabled'}>HIRE COMMANDER</button></section>` : ''}
       <section class="uga-panel-section" aria-label="Available operations">
         <header><span>AVAILABLE OPERATIONS</span><small>${String(missions.length).padStart(2, '0')}</small></header>
@@ -1335,14 +1457,6 @@ export function createUgaCommand(options = {}) {
         </button>`;
       }).join('') : '<div class="uga-empty-state">No operation packages are currently available.</div>'}</div>
       </section>
-      /* AN OPERATION BOARD IS NOT A BRIEFING DOCUMENT.
-         Mission Operations measured 902 words in one scroll where the next
-         densest compartment held 284. Every contract was rendering its full
-         summary, its lock list and its sponsor line at once, and the debrief
-         archive sat underneath at the same weight as the live board - so the
-         thing you came to do was buried under the thing you already did. Both
-         are shelves now, and a player who has read their debriefs folds them
-         away for good. */
       <section class="uga-panel-section" aria-label="Operation debriefs">
         <header><span>DEBRIEF ARCHIVE</span><small>${String(debriefCount(state)).padStart(2, '0')}</small></header>
         ${debriefArchive(state, catalog)}
@@ -1350,27 +1464,49 @@ export function createUgaCommand(options = {}) {
     </div>`;
   }
 
+  function missionUnfinished(mission, state, control) {
+    const region = Object.values(control.areas || {}).find(area => area.missionId === mission.id);
+    if (region) return !region.controlled;
+    return !(state.operations?.history || []).some(entry => entry?.result?.outcome === 'victory'
+      && (entry.result.missionId || entry.operation?.missionId) === mission.id);
+  }
+
   function progressPanel() {
     const catalog = getCatalog();
     const state = getState();
     const missions = asArray(catalog.missions || catalog.MISSION_CATALOG || state.availableMissions || state.missions).filter(item => item.id);
-    const nextMission = missions.find(mission => missionLocks(mission, state).length === 0) || missions[0] || null;
+    const control = groundControl();
+    const unfinished = missions.filter(mission => missionUnfinished(mission, state, control)
+      && (mission.access?.type !== 'faction_exclusive' || state.factions?.[mission.access.factionId]?.resident));
+    const foundIds = new Set(Array.isArray(state.discoveries)
+      ? state.discoveries.map(item => item.id) : state.discoveries?.foundIds || []);
+    const known = unfinished.filter(mission => (mission.requirements?.discoveryIds || []).every(id => foundIds.has(id)));
+    const nextMission = known.find(mission => missionLocks(mission, state).length === 0) || known[0] || null;
     const nextLocks = nextMission ? missionLocks(nextMission, state) : [];
-    const nextTitle = nextMission?.name || nextMission?.title || (nextMission ? prettyToken(nextMission.id) : 'No local objective');
+    const needsCommission = !state.commissioning?.completed;
+    const authoredSurveys = asArray(catalog.surveys || catalog.SURVEY_CATALOG);
+    const remainingSignals = authoredSurveys.filter(survey => state.world?.systems?.[survey.systemId]?.discovered
+      && !state.surveys?.[survey.id]?.depleted);
+    const signalsExhausted = authoredSurveys.length > 0 && !remainingSignals.length;
+    const needsSurvey = !needsCommission && !nextMission && unfinished.length > 0 && !signalsExhausted;
+    const nextTitle = needsCommission ? 'Hire your first commander'
+      : nextMission?.name || nextMission?.title || (nextMission ? prettyToken(nextMission.id)
+        : needsSurvey ? 'Survey to reveal the next region' : unfinished.length ? 'Review operation requirements' : 'Current frontier clear');
     const routes = [
-      { id: 'galactic-operations', icon: 'contracts', title: 'Expedition', detail: nextTitle, status: nextMission ? (nextLocks.length ? 'LOCKED' : 'READY') : 'STANDBY' },
-      { id: 'operations', icon: 'mission_ops', title: 'Campaign', detail: 'Missions & weekly operations', status: hostRoutesAvailable() ? 'PLAYABLE' : 'MASSFRONT HOST' },
-      { id: 'development', icon: 'research', title: 'Development', detail: 'Research, crafting & loadouts', status: hostRoutesAvailable() ? 'AVAILABLE' : 'MASSFRONT HOST' }
+      { id: 'galactic-operations', action: needsSurvey ? 'exit' : null, icon: 'contracts', title: 'Expedition', detail: nextTitle, status: needsCommission ? 'COMMISSION' : nextMission ? (nextLocks.length ? 'LOCKED' : 'READY') : needsSurvey ? 'SURVEY' : unfinished.length ? 'REVIEW' : 'COMPLETE' },
+      { id: 'operations', icon: 'mission_ops', title: 'Classic Operations', detail: 'Missions & weekly operations', status: hostRoutesAvailable() ? 'PLAYABLE' : 'MASSFRONT HOST' },
+      { id: 'development', icon: 'research', title: 'Classic Development', detail: 'Classic crafting & loadouts · separate from UGA', status: hostRoutesAvailable() ? 'AVAILABLE' : 'MASSFRONT HOST' }
     ];
-    return `<div class="uga-context-scroll uga-progress-view"><div class="uga-section-title"><small>PROGRESS</small><h2>Choose your next move</h2></div><div class="uga-progress-grid">${routes.map(route => {
+    return `<div class="uga-context-scroll uga-progress-view"><div class="uga-section-title"><small>PROGRESS</small><h2>Choose your next move</h2></div>${commandVisual('navigation', 'NEXUS-VII sealed navigation bridge showing the next expedition routes')}<div class="uga-progress-grid">${routes.map(route => {
       const entry = getCampaignHubRoute(route.id);
-      const reachable = entry && hubRouteReachable(entry);
-      return `<button type="button" class="uga-progress-route${reachable ? '' : ' is-locked'}${route.status === 'LOCKED' ? ' is-objective-locked' : ''}" data-hub-route="${escapeHtml(route.id)}" ${reachable ? '' : 'disabled'}><span>${icon(route.icon)}</span><div><small>${escapeHtml(route.status)}</small><strong>${escapeHtml(route.title)}</strong><p>${escapeHtml(route.detail)}</p></div>${icon(reachable ? 'chevron' : 'lock')}</button>`;
+      const reachable = route.action === 'exit' || entry && hubRouteReachable(entry);
+      const target = route.action ? `data-action="${escapeHtml(route.action)}"` : `data-hub-route="${escapeHtml(route.id)}"`;
+      return `<button type="button" class="uga-progress-route${reachable ? '' : ' is-locked'}${route.status === 'LOCKED' ? ' is-objective-locked' : ''}" ${target} ${reachable ? '' : 'disabled'}><span>${icon(route.icon)}</span><div><small>${escapeHtml(route.status)}</small><strong>${escapeHtml(route.title)}</strong><p>${escapeHtml(route.detail)}</p></div>${icon(reachable ? 'chevron' : 'lock')}</button>`;
     }).join('')}</div></div>`;
   }
 
-  function deploymentViewPanel() {
-    if (!selectedMissionId) return contractsPanel();
+  function deploymentViewPanel(visualKind = 'contracts') {
+    if (!selectedMissionId) return contractsPanel(visualKind);
     return `<div class="uga-context-scroll uga-deployment-view">${deploymentPanel(selectedMissionId)}</div>`;
   }
 
@@ -1393,18 +1529,25 @@ export function createUgaCommand(options = {}) {
     const exclusiveId = mission.access?.type === 'faction_exclusive' ? mission.access.factionId : null;
     const factionOptions = exclusiveId ? factions.filter(item => item.id === exclusiveId) : factions;
     const previousDraft = deploymentDrafts.get(missionId);
+    const defaultEligibility = planningEligibility(mission, state);
     const initialFactionId = factionOptions.some(item => item.id === previousDraft?.proxyFactionId)
       ? previousDraft.proxyFactionId
-      : factionOptions.some(item => item.id === state.commissioning?.factionId)
-        ? state.commissioning.factionId : factionOptions[0]?.id || '';
+      : factionOptions.some(item => item.id === defaultEligibility?.defaults?.proxyFactionId)
+        ? defaultEligibility.defaults.proxyFactionId
+        : factionOptions.some(item => item.id === state.commissioning?.factionId)
+          ? state.commissioning.factionId : factionOptions[0]?.id || '';
     const commanderOptions = readyPersonnel(commanders, state, 'commanders', initialFactionId);
     const specialistOptions = readyPersonnel(specialists, state, 'specialists', initialFactionId);
     const landingZones = mission.landingZoneIds?.length ? mission.landingZoneIds : ['primary'];
-    const defaultEligibility = typeof options.getMissionEligibility === 'function'
-      ? options.getMissionEligibility(missionId) : null;
     const authoritativeManifest = defaultEligibility?.defaults?.deploymentManifest;
     const groundArea = defaultEligibility?.defaults?.groundArea || null;
     const groundMaps = asArray(groundArea?.maps);
+    const clearedMapIds = new Set(groundControl().areas[groundArea?.areaId || groundArea?.id]?.clearedMapIds || []);
+    // Frontier ladder, tier 4 — battlefield sizes unlock in sequence; locked
+    // sizes stay visible with their rung so the next directive is readable.
+    const lockedMapIds = new Set((groundArea?.maps || [])
+      .filter(map => !isGroundMapUnlocked(state, groundArea?.areaId || groundArea?.id || '', map.id))
+      .map(map => map.id));
     const authoredCapacity = mission.deploymentCapacity || { slots: 8, unitLimit: 4, structureLimit: 2, modLimit: 2 };
     const capacity = {
       ...authoredCapacity,
@@ -1422,7 +1565,7 @@ export function createUgaCommand(options = {}) {
       specialistIds: specialistOptions.slice(0, 3).map(item => item.id),
       mapId: defaultEligibility?.defaults?.mapId || '',
       landingZoneId: landingZones[0] || '',
-      supportId: support[0]?.id || '',
+      supportId: defaultEligibility?.defaults?.supportId || support[0]?.id || '',
       doctrineId: doctrines[0]?.id || '',
       deploymentManifest: {
         units: allowedUnits.filter(item => ['recon_team', 'line_section', 'armored_element'].includes(item.id)).map(item => ({ id: item.id, count: 1 })),
@@ -1433,7 +1576,7 @@ export function createUgaCommand(options = {}) {
     // Saved UI drafts are not personnel authority. Preserve cargo selections,
     // but reconcile recovered/deployed personnel against the current roster.
     draft.proxyFactionId = initialFactionId;
-    if (draft.mapId && !groundMaps.some(map => map.id === draft.mapId)) draft.mapId = '';
+    if (draft.mapId && (!groundMaps.some(map => map.id === draft.mapId) || lockedMapIds.has(draft.mapId))) draft.mapId = '';
     if (!commanderOptions.some(item => item.id === draft.commanderId)) {
       draft.commanderId = commanderOptions.find(item => item.id === state.commissioning?.commanderId)?.id || commanderOptions[0]?.id || '';
     }
@@ -1469,20 +1612,20 @@ export function createUgaCommand(options = {}) {
     const deploymentShipNames = { nova: 'Nova Orbital Carrier', dominion: 'Dominion Assault Lander', syndicate: 'Syndicate Phase Manta' };
     const selectedCommander = commanderOptions.find(item => item.id === draft.commanderId);
     const deploymentShipName = deploymentShipNames[draft.proxyFactionId] || 'HQ Deployment Ship';
-    return `<section class="uga-deployment-planner" data-mission-id="${escapeHtml(missionId)}" data-deployment-screen="loadout" data-route="contracts" data-deployment-state="planning" data-ground-route-stage="map" data-selected-area-id="${escapeHtml(groundArea?.areaId || groundArea?.id || '')}" data-selected-map-id="${escapeHtml(draft.mapId)}" data-selected-map-size="${escapeHtml(selectedGroundMap?.size || '')}">
+    return `<section class="uga-deployment-planner" data-mission-id="${escapeHtml(missionId)}" data-faction-id="${escapeHtml(draft.proxyFactionId)}" data-deployment-screen="loadout" data-route="contracts" data-deployment-state="planning" data-ground-route-stage="map" data-selected-area-id="${escapeHtml(groundArea?.areaId || groundArea?.id || '')}" data-selected-map-id="${escapeHtml(draft.mapId)}" data-selected-map-size="${escapeHtml(selectedGroundMap?.size || '')}">
       <div class="uga-deployment-summary" aria-label="Current deployment loadout">
         <span>${icon('hangar')}</span><div><small>HQ DEPLOYMENT CARRIER</small><strong>${escapeHtml(deploymentShipName)}</strong><p>${escapeHtml(selectedCommander?.name || 'Select a ready commander')} · ${draft.specialistIds.length} / 3 specialists</p></div>
       </div>
       <div class="uga-deployment-fields">
-      <header><small>STRIKE BAY // HQ CARRIER LOADOUT</small><h3>Deployment Hangar</h3><p>${escapeHtml(deploymentShipName)} is the selected commander\'s HQ deployment carrier. It delivers the command chassis, starting force, packed HQ structures, and support package into the real ground operation.</p></header>
+      <header><small>STRIKE BAY // HQ CARRIER LOADOUT</small><h3>Deployment Hangar</h3><p>The selected commander\'s carrier delivers the command chassis, starting force, structures, and support package.</p></header>
+      <section class="uga-ground-route" data-ground-route-stage="map" data-ground-area="${escapeHtml(groundArea?.areaId || groundArea?.id || '')}">
+        <div><small>${escapeHtml(groundArea?.planetName || 'PLANET')}</small><strong>${escapeHtml(groundArea?.areaName || groundArea?.name || 'Deployment area')}</strong></div>
+        <label><span>Battlefield · ${clearedMapIds.size} / ${groundMaps.length} cleared</span><strong class="uga-selected-map">${escapeHtml(selectedGroundMap?.name || 'Choose a battlefield')}</strong><select data-deploy="mapId" aria-label="Battlefield size"><option value="">CHOOSE SIZE</option>${groundMaps.map(map => `<option value="${escapeHtml(map.id)}" data-ground-map="${escapeHtml(map.id)}" data-map-size="${escapeHtml(map.size)}" data-map-name="${escapeHtml(map.name)}" ${map.id === draft.mapId ? 'selected' : ''} ${lockedMapIds.has(map.id) ? 'disabled' : ''}>${escapeHtml(map.name)} · ${escapeHtml(prettyToken(map.size))} · ${lockedMapIds.has(map.id) ? 'LOCKED · CLEAR PREVIOUS' : clearedMapIds.has(map.id) ? 'CLEARED / REPLAY' : 'UNCLEARED'}</option>`).join('')}</select></label>
+      </section>
       <div class="uga-deployment-identity" aria-label="Commander and resident force selection">
         <label class="uga-deployment-faction"><span>Resident Faction</span><select data-deploy="factionId">${factionOptions.map(item => `<option value="${escapeHtml(item.id)}" ${item.id === draft.proxyFactionId ? 'selected' : ''}>${escapeHtml(item.name || prettyToken(item.id))}</option>`).join('')}</select></label>
         ${personnelSelect('commander', commanderOptions, 0, draft.commanderId)}
       </div>
-      <section class="uga-ground-route" data-ground-route-stage="map" data-ground-area="${escapeHtml(groundArea?.areaId || groundArea?.id || '')}">
-        <div><small>${escapeHtml(groundArea?.planetName || 'PLANET')}</small><strong>${escapeHtml(groundArea?.areaName || groundArea?.name || 'Deployment area')}</strong></div>
-        <label><span>Battlefield</span><select data-deploy="mapId" aria-label="Battlefield size"><option value="">CHOOSE SIZE</option>${groundMaps.map(map => `<option value="${escapeHtml(map.id)}" data-ground-map="${escapeHtml(map.id)}" data-map-size="${escapeHtml(map.size)}" ${map.id === draft.mapId ? 'selected' : ''}>${escapeHtml(map.name)} · ${escapeHtml(prettyToken(map.size))}</option>`).join('')}</select></label>
-      </section>
       <nav class="uga-deployment-stations" aria-label="Deployment Arena stations">
         ${[
           ['base_deployer', 'HQ Deployment Ship', `${deploymentShipName}${selectedCommander ? ` // ${selectedCommander.name || prettyToken(selectedCommander.id)}` : ''}`],
@@ -1509,7 +1652,7 @@ export function createUgaCommand(options = {}) {
             return `<label><span>${escapeHtml(item.name)}<small>${item.slotCost} SLOT${item.slotCost === 1 ? '' : 'S'} // STRUCTURE</small></span><select data-deploy-structure="${escapeHtml(item.id)}" data-slot-cost="${item.slotCost}">${[0, 1, 2].map(count => `<option value="${count}" ${count === initial ? 'selected' : ''}>${count}</option>`).join('')}</select></label>`;
           }).join('')}
         </div>
-        <fieldset class="uga-mod-picker" data-deployment-section="support_service"><legend>Operation Mods // max ${capacity.modLimit}</legend>${allowedMods.map(item => `<label><input type="checkbox" data-deploy-mod="${escapeHtml(item.id)}" ${selectedModIds.has(item.id) ? 'checked' : ''}><span><b>${escapeHtml(item.name)}</b><small>${escapeHtml(item.effect || '')}</small></span></label>`).join('')}</fieldset>
+        <fieldset class="uga-mod-picker" data-deployment-section="support_service"><legend>Operation Mods // max ${capacity.modLimit}</legend>${allowedMods.map(item => `<label class="uga-mod-control"><input type="checkbox" data-deploy-mod="${escapeHtml(item.id)}" ${selectedModIds.has(item.id) ? 'checked' : ''}><span><b>${escapeHtml(item.name)}</b><small>${escapeHtml(item.effect || '')}</small></span></label>`).join('')}</fieldset>
         <div class="uga-slot-warning" data-deployment-blocker ${canCommit ? 'hidden' : ''}>${icon('warning')}<span>${escapeHtml(blockerMessage)}</span></div>
       </section>
       <label data-deployment-section="base_deployer"><span>HQ Ship Landing Zone</span><select data-deploy="landingZone">${landingZones.map(id => `<option value="${escapeHtml(id)}" ${id === draft.landingZoneId ? 'selected' : ''}>${escapeHtml(prettyToken(id))}</option>`).join('')}</select></label>
@@ -1517,7 +1660,7 @@ export function createUgaCommand(options = {}) {
       <label><span>Doctrine</span><select data-deploy="doctrine">${doctrines.map(item => `<option value="${escapeHtml(item.id)}" ${item.id === draft.doctrineId ? 'selected' : ''}>${escapeHtml(item.name || prettyToken(item.id))}</option>`).join('')}</select></label>
       </div>
       <div class="uga-deployment-readiness${canCommit ? ' is-ready' : ' is-blocked'}" data-deployment-confirm-state="${canCommit ? 'ready' : 'blocked'}">
-        <span><small>LANDING / DEPLOYMENT CAPACITY</small><b data-slot-usage-summary>${slotUsage} / ${capacity.slots} SLOTS</b></span>
+        <span><small data-readiness-message>${canCommit ? 'READY FOR LANDING' : escapeHtml(blockerMessage)}</small><b data-slot-usage-summary>${slotUsage} / ${capacity.slots} SLOTS</b></span>
         <button type="button" class="uga-primary-button" data-action="deploy" ${canCommit ? '' : 'disabled'}>${canCommit ? 'CONFIRM & DEPLOY' : 'LOADOUT BLOCKED'}${icon('chevron')}</button>
       </div>
     </section>`;
@@ -1526,7 +1669,7 @@ export function createUgaCommand(options = {}) {
   function researchPanel() {
     const catalog = getCatalog();
     const state = getState();
-    if (state.ship?.districts?.research?.commissioned === false) return `<div class="uga-context-scroll"><div class="uga-section-title"><h2>Research Directorate Offline</h2><p>Commission its Tier-1 core before assigning research points.</p></div><button type="button" class="uga-primary-button" data-action="open-research-construction">OPEN RESEARCH CONSTRUCTION</button></div>`;
+    if (state.ship?.districts?.research?.commissioned === false) return `<div class="uga-context-scroll"><div class="uga-section-title"><h2>Research Directorate Offline</h2><p>Commission its Tier-1 core before assigning research points.</p></div>${commandVisual('research', 'Dark NEXUS-VII research directorate awaiting commissioning')}<button type="button" class="uga-primary-button" data-action="open-research-construction">OPEN RESEARCH CONSTRUCTION</button></div>`;
     const research = asArray(catalog.research || catalog.RESEARCH_CATALOG);
     const fallback = [
       { id: 'uga_brood_containment', branch: 'UGA', name: 'Brood Containment', cost: 180 },
@@ -1537,6 +1680,7 @@ export function createUgaCommand(options = {}) {
     const capabilities = calculateFacilityCapabilities(state);
     return `<div class="uga-context-scroll">
       <div class="uga-section-title"><small>SHARED RESEARCH BANK</small><h2>Research Allocation</h2><p>Commit points manually. UGA, universal, and faction programs never spend automatically.</p></div>
+      ${commandVisual('research', 'Active NEXUS-VII research directorate and holographic planetary model')}
       <div class="uga-research-bank">${icon('research')}<span>AVAILABLE RESEARCH POINTS</span><b>${formatValue(state.resources?.researchPoints ?? state.resources?.research ?? state.resources?.science)}</b></div>
       <div class="uga-record-list">${entries.map(node => {
         const progress = state.research?.progressById?.[node.id] ?? state.research?.allocations?.[node.id] ?? node.progress ?? 0;
@@ -1549,15 +1693,15 @@ export function createUgaCommand(options = {}) {
         const bioCost = baseBioCost ? Math.max(1, Math.floor(baseBioCost * (100 + (capabilities.bioResearchCostPct || 0)) / 100)) : 0;
         const amount = Math.max(1, Math.min(10, Math.floor(Number(state.resources?.researchPoints) || 0)));
         // The domain command returns a new state without mutating its input.
-        // Preview the same command so residency, completion costs and facility
-        // bonuses cannot disagree with the enabled button.
+        // The integrated UI receives a display projection (including discovery
+        // rows), so its preview must use the host's authoritative domain state.
         let quote = null, blockedReason = '';
         if (!completed) {
-          try { quote = commitResearch(state, node.id, amount); }
+          try { quote = typeof options.getResearchQuote === 'function'
+            ? options.getResearchQuote(node.id, amount)
+            : commitResearch(state, node.id, amount); }
           catch (error) {
-            blockedReason = error.issues?.map(issue => issue.code === 'DEPOSIT_LEDGER_INVALID'
-              ? 'Planetary survey archive requires recalibration'
-              : issue.message || issue.code).filter(Boolean).join(' · ') || error.message;
+            blockedReason = error.issues?.map(issue => issue.message || issue.code).filter(Boolean).join(' · ') || error.message;
           }
         }
         const available = Boolean(quote);
@@ -1575,7 +1719,7 @@ export function createUgaCommand(options = {}) {
     const discoveries = Array.isArray(state.discoveries?.foundIds)
       ? state.discoveries.foundIds.map(id => discoveryCatalog[id] || { id }).filter(Boolean)
       : asArray(state.discoveries || state.intelligence || state.surveys);
-    return `<div class="uga-context-scroll"><div class="uga-section-title"><small>EXPEDITION INTELLIGENCE</small><h2>Intel Archive</h2><p>Persistent survey discoveries, threat assessments, and system-state evidence.</p></div><div class="uga-record-list">${discoveries.length ? discoveries.map(item => `<article class="uga-intel-card"><span>${icon('intel')}</span><div><small>${escapeHtml(item.systemName || item.systemId || 'EXPEDITION RECORD')}</small><h3>${escapeHtml(item.name || item.title || prettyToken(item.id))}</h3><p>${escapeHtml(item.description || item.summary || '')}</p></div></article>`).join('') : '<div class="uga-empty-state">No archived discoveries. Launch probes from planetary orbit to establish records.</div>'}</div></div>`;
+    return `<div class="uga-context-scroll"><div class="uga-section-title"><small>EXPEDITION INTELLIGENCE</small><h2>Intel Archive</h2><p>Persistent survey discoveries, threat assessments, and system-state evidence.</p></div>${commandVisual('survey', 'NEXUS-VII sealed survey laboratory and expedition intelligence archive')}<div class="uga-record-list">${discoveries.length ? discoveries.map(item => `<article class="uga-intel-card"><span>${icon('intel')}</span><div><small>${escapeHtml(item.systemName || item.systemId || 'EXPEDITION RECORD')}</small><h3>${escapeHtml(item.name || item.title || prettyToken(item.id))}</h3><p>${escapeHtml(item.description || item.summary || '')}</p></div></article>`).join('') : '<div class="uga-empty-state">No archived discoveries. Launch probes from planetary orbit to establish records.</div>'}</div></div>`;
   }
 
   function moduleManifest() {
@@ -1595,24 +1739,40 @@ export function createUgaCommand(options = {}) {
 
   function logisticsPanel() {
     const state = getState();
-    return `<div class="uga-context-scroll"><div class="uga-section-title"><small>IMPLEMENTED // LOCAL CAMPAIGN CONTROLLER</small><h2>Stores & Manifest</h2><p>Authoritative fuel, probes, materials, and expedition stores. Crafting uses the base game's Development screen; choose its Crafting tab.</p><button type="button" class="uga-primary-button" data-host-route="development" ${hostRoutesAvailable() ? '' : 'disabled'}>${hostRoutesAvailable() ? 'OPEN DEVELOPMENT · CRAFTING' : 'CRAFTING REQUIRES THE BASE GAME'}</button></div><div class="uga-logistics-grid">${Object.entries(RESOURCE_META).map(([key, [label, iconName]]) => `<article>${icon(iconName)}<span>${escapeHtml(label)}</span><b>${formatValue(state.resources?.[key] ?? state.economy?.[key])}</b></article>`).join('')}</div><section class="uga-panel-section"><header><span>INSTALLED & STORED MODULES</span><small>01</small></header>${manifestRows(moduleManifest())}</section></div>`;
+    const quote = typeof options.getRefuelQuote === 'function' ? options.getRefuelQuote() : null;
+    const probeQuote = typeof options.getProbeResupplyQuote === 'function' ? options.getProbeResupplyQuote() : null;
+    const refuel = quote ? `<section class="uga-panel-section"><header><span>SHIP REFUEL</span><small>${quote.targetFuel} TARGET</small></header>
+      <p>${quote.emergencyActive ? 'Emergency fuel is aboard. Jumps recover crew and can finish essential commissioning, but pause other construction until the 600-credit service is cleared.' : 'Top up fuel for the next deployment or route.'}</p>
+      <button type="button" class="uga-primary-button" data-action="refuel" ${quote.available ? '' : 'disabled'}>${quote.available
+        ? quote.mode === 'paid'
+          ? quote.amount
+            ? `REFUEL +${quote.amount} · ${formatValue(quote.creditsCost)} CREDITS${quote.clearanceCost ? ' INCLUDING SERVICE' : ''}`
+            : `CLEAR EMERGENCY SERVICE · ${formatValue(quote.creditsCost)} CREDITS`
+          : `EMERGENCY REFUEL +${quote.amount} · NO CREDITS`
+        : quote.emergencyActive ? `NEED ${formatValue(quote.clearanceCost)} CREDITS TO CLEAR SERVICE` : 'FUEL RESERVE FULL'}</button>
+      ${quote.mode === 'emergency' && quote.available ? '<small>Emergency fuel has no upfront charge; a 600-credit service clearance restores normal travel construction later. Missions and surveys still progress.</small>' : ''}
+    </section>` : '';
+    const resupply = probeQuote ? `<section class="uga-panel-section"><header><span>SURVEY PROBE RESUPPLY</span><small>${probeQuote.targetProbes} TARGET</small></header>
+      <p>${Number(state.resources?.probes) === 0 ? 'Critical campaign signals have one emergency telemetry launch each. Deposits and Survey Drone support still require stocked probes.' : 'Replenish probes for mineral extraction, mission support, and further surveys.'}</p>
+      <button type="button" class="uga-primary-button" data-action="probe-resupply" ${probeQuote.available && probeQuote.canPay ? '' : 'disabled'}>${probeQuote.available
+        ? probeQuote.canPay ? `RESUPPLY +${probeQuote.amount} · ${formatValue(probeQuote.creditsCost)} CREDITS` : 'RESUPPLY BLOCKED · KEEP CORE RESERVE'
+        : 'PROBE STOCK READY'}</button>
+    </section>` : '';
+    return `<div class="uga-context-scroll"><div class="uga-section-title"><small>UGA EXPEDITION SUPPLY</small><h2>Stores & Manifest</h2><p>Manage Galactic fuel, probes, materials, and ship modules here. Classic Development crafting is a separate battle system.</p></div>${commandVisual('logistics', 'NEXUS-VII sealed logistics and cargo control deck')}<div class="uga-logistics-grid">${Object.entries(RESOURCE_META).map(([key, [label, iconName]]) => `<article>${icon(iconName)}<span>${escapeHtml(label)}</span><b>${formatValue(state.resources?.[key] ?? state.economy?.[key])}</b></article>`).join('')}</div>${refuel}${resupply}<section class="uga-panel-section"><header><span>INSTALLED & STORED MODULES</span><small>01</small></header>${manifestRows(moduleManifest())}</section></div>`;
   }
 
   function returnServicesPanel() {
-    const hostAvailable = hostRoutesAvailable();
     return `<div class="uga-context-scroll uga-return-services" data-return-services>
-      <div class="uga-section-title"><small>EXPEDITION COMPLETE // BACK ABOARD</small><h2>Your next command</h2><p>Your mission result is recorded. Review your ship, prepare equipment, or choose the next operation. Nothing here spends resources automatically.</p></div>
+      <div class="uga-section-title"><small>EXPEDITION COMPLETE // BACK ABOARD</small><h2>Your next command</h2><p>Result saved. Upgrade NEXUS-VII or choose the next expedition. Classic gear and crafting stay in Classic battles.</p></div>
+      ${commandVisual('concourse', 'NEXUS-VII sealed command concourse ready for the next assignment')}
       <button type="button" class="uga-primary-button" data-district="engineering">UPGRADE SHIP · ENGINEERING</button>
-      <button type="button" class="uga-primary-button" data-host-route="development" ${hostAvailable ? '' : 'disabled'}>CRAFT · OPEN DEVELOPMENT</button>
-      <p>${hostAvailable ? 'Choose Crafting inside Development. Equipment and available earned-core purchases remain in the existing Armory.' : 'Crafting, loadout and purchases require the integrated MASSFRONT host; the local preview cannot perform them.'}</p>
-      <button type="button" class="uga-primary-button" data-host-route="armory" ${hostAvailable ? '' : 'disabled'}>EQUIP & BROWSE · ARMORY</button>
       <button type="button" class="uga-primary-button" data-nav="missions">NEXT EXPEDITION OBJECTIVE</button>
-      <button type="button" class="uga-primary-button" data-quick="hub">GALACTIC COMMAND · NEXT OPERATION</button>
     </div>`;
   }
 
-  function inventoryPanel() {
-    return `<div class="uga-context-scroll"><div class="uga-section-title"><small>LOCAL PREVIEW // READ-ONLY MANIFEST</small><h2>Inventory</h2><p>This view reads the campaign inventory source of truth. Equipment assignment, crafting, and account synchronization are not connected in the isolated module.</p></div><section class="uga-panel-section"><header><span>EXPEDITION MODULE MANIFEST</span><small>${String(moduleManifest().length).padStart(2, '0')}</small></header>${manifestRows(moduleManifest())}</section></div>`;
+  function inventoryPanel(visualKind = 'logistics') {
+    const visualLabel = visualKind === 'arsenal' ? 'NEXUS-VII sealed fabrication and armory systems deck' : 'NEXUS-VII sealed cargo manifest and inventory scanning deck';
+    return `<div class="uga-context-scroll"><div class="uga-section-title"><small>UGA // READ-ONLY SHIP MANIFEST</small><h2>Ship Inventory</h2><p>This lists ship modules; it is not a gear-equipping screen. Classic Armory equipment slots do not carry into Galactic deployments.</p></div>${commandVisual(visualKind, visualLabel)}<section class="uga-panel-section"><header><span>EXPEDITION MODULE MANIFEST</span><small>${String(moduleManifest().length).padStart(2, '0')}</small></header>${manifestRows(moduleManifest())}</section></div>`;
   }
 
   function crewPanel() {
@@ -1621,7 +1781,7 @@ export function createUgaCommand(options = {}) {
     const commanders = asArray(catalog.commanders || catalog.COMMANDER_CATALOG || state.personnel?.commanders);
     const specialists = asArray(catalog.specialists || catalog.SPECIALIST_CATALOG || state.personnel?.specialists);
     const roster = [...commanders.map(item => ({ ...item, kind: 'commanders' })), ...specialists.map(item => ({ ...item, kind: 'specialists' }))];
-    return `<div class="uga-context-scroll"><div class="uga-section-title"><small>LOCAL PREVIEW // ACCOUNT HOST NOT CONNECTED</small><h2>Crew & Profile</h2><p>Read-only local commander and specialist readiness. This is not the Embassy and it does not claim account-profile synchronization.</p></div><div class="uga-crew-summary"><article><span>COMMANDERS</span><b>${formatValue(commanders.length)}</b></article><article><span>SPECIALISTS</span><b>${formatValue(specialists.length)}</b></article></div><section class="uga-panel-section"><header><span>LOCAL PERSONNEL ROSTER</span><small>01</small></header>${roster.length ? roster.map(person => { const progress = personnelState(state, person.kind, person.id); return `<div class="uga-manifest-row"><span>${icon('staff')}</span><div><b>${escapeHtml(person.name || prettyToken(person.id))}</b><small>${escapeHtml(prettyToken(person.role || person.kind))} // ${escapeHtml(prettyToken(progress.status || 'UNAVAILABLE'))}</small></div><strong>${escapeHtml(prettyToken(person.factionId || 'UGA'))}</strong></div>`; }).join('') : '<div class="uga-empty-state">No local personnel catalog is available.</div>'}</section></div>`;
+    return `<div class="uga-context-scroll"><div class="uga-section-title"><small>LOCAL PREVIEW // ACCOUNT HOST NOT CONNECTED</small><h2>Crew & Profile</h2><p>Read-only local commander and specialist readiness. This is not the Embassy and it does not claim account-profile synchronization.</p></div>${commandVisual('habitat', 'NEXUS-VII sealed habitat and medical personnel readiness deck')}<div class="uga-crew-summary"><article><span>COMMANDERS</span><b>${formatValue(commanders.length)}</b></article><article><span>SPECIALISTS</span><b>${formatValue(specialists.length)}</b></article></div><section class="uga-panel-section"><header><span>LOCAL PERSONNEL ROSTER</span><small>01</small></header>${roster.length ? roster.map(person => { const progress = personnelState(state, person.kind, person.id); return `<div class="uga-manifest-row"><span>${icon('staff')}</span><div><b>${escapeHtml(person.name || prettyToken(person.id))}</b><small>${escapeHtml(prettyToken(person.role || person.kind))} // ${escapeHtml(prettyToken(progress.status || 'UNAVAILABLE'))}</small></div><strong>${escapeHtml(prettyToken(person.factionId || 'UGA'))}</strong></div>`; }).join('') : '<div class="uga-empty-state">No local personnel catalog is available.</div>'}</section></div>`;
   }
 
   function hubStatusLabel(status) {
@@ -1642,7 +1802,7 @@ export function createUgaCommand(options = {}) {
       const entry = getCampaignHubRoute(id);
       const reachable = hubRouteReachable(entry);
       return `<button type="button" data-hub-route="${escapeHtml(id)}" ${reachable ? '' : 'disabled aria-disabled="true"'} aria-label="${escapeHtml(`${label}${reachable ? '' : ' unavailable'}`)}">${icon(entry?.icon || 'terminal')}<span>${escapeHtml(label)}</span>${icon(reachable ? 'chevron' : 'lock')}</button>`;
-    }).join('')}<button type="button" data-host-route="war-room" ${warTableReady ? '' : 'disabled aria-disabled="true"'} aria-label="War Table${warTableReady ? '' : ' unavailable'}">${icon('terminal')}<span>War Table</span>${icon(warTableReady ? 'chevron' : 'lock')}</button></div></section>`;
+    }).join('')}<button type="button" data-host-route="war-room" ${warTableReady ? '' : 'disabled aria-disabled="true"'} aria-label="Classic War Table${warTableReady ? '' : ' unavailable'}">${icon('terminal')}<span>Classic War Table</span>${icon(warTableReady ? 'chevron' : 'lock')}</button></div></section>`;
   }
 
   /* The single question the strategic home has to answer: what do I do next.
@@ -1704,6 +1864,7 @@ export function createUgaCommand(options = {}) {
   /* The rail needs every step and where the player stands in it, which the
      single-objective early-return below cannot express on its own. */
   function commandJourney(objective) {
+    if (objective?.step === 'complete') return COMMAND_JOURNEY.map(step => ({ ...step, status: 'done', directive: '' }));
     const currentKey = OBJECTIVE_STEP_KEY[objective && objective.step] || 'survey';
     const currentIndex = COMMAND_JOURNEY.findIndex(step => step.key === currentKey);
     const cycled = currentKey === 'survey' && objective && objective.control
@@ -1721,16 +1882,11 @@ export function createUgaCommand(options = {}) {
 
   function journeyRailMarkup(objective) {
     const steps = commandJourney(objective);
-    const current = steps.find(step => step.status === 'current');
     const items = steps.map((step, index) => `<li class="uga-journey-step is-${step.status}" style="--uga-journey-index:${index}"${step.status === 'current' ? ' aria-current="step"' : ''}>
         <b>${escapeHtml(step.no)}</b><span>${escapeHtml(step.name)}</span>
       </li>`).join('');
-    const voice = current && current.directive
-      ? `<p class="uga-journey-keel"><small>KEEL</small>${escapeHtml(current.directive)}</p>`
-      : '';
     return `<div class="uga-journey" role="group" aria-label="Command journey">
       <ol class="uga-journey-rail">${items}</ol>
-      ${voice}
     </div>`;
   }
 
@@ -1750,17 +1906,9 @@ export function createUgaCommand(options = {}) {
 
     const missions = asArray(catalog.missions || catalog.MISSION_CATALOG || state.availableMissions || state.missions)
       .filter(item => item && item.id);
-    const cleared = new Set(
-      (Array.isArray(state.operations?.history) ? state.operations.history : [])
-        .filter(entry => entry?.result?.outcome === 'victory')
-        .map(entry => entry.result.missionId || entry.operation?.missionId)
-        .filter(Boolean)
-    );
-    const ready = missions.find(mission => !cleared.has(mission.id) && missionLocks(mission, state).length === 0);
-    /* Territory, not just a tally of finished contracts. A region falls when all
-       three of its maps are cleared, so this reports the map the player is
-       actually part-way through rather than treating a mission as one unit. */
     const control = groundControl();
+    const unfinished = missions.filter(mission => missionUnfinished(mission, state, control));
+    const ready = unfinished.find(mission => missionLocks(mission, state).length === 0);
 
     if (ready) {
       const region = Object.values(control.areas).find(area => area.missionId === ready.id);
@@ -1777,22 +1925,71 @@ export function createUgaCommand(options = {}) {
       };
     }
 
-    /* Everything currently reachable is cleared, or nothing is reachable yet.
-       Both resolve the same way: go out and find the next objective. */
-    const blocked = missions.filter(mission => !cleared.has(mission.id));
+    // A found region can be blocked by ship commissioning or research; another
+    // scan cannot fix those prerequisites and may waste the player's last probe.
+    const foundIds = new Set(Array.isArray(state.discoveries)
+      ? state.discoveries.map(item => item.id)
+      : state.discoveries?.foundIds || []);
+    const known = unfinished.find(mission => {
+      const required = mission.requirements?.discoveryIds || [];
+      return required.length && required.every(id => foundIds.has(id))
+        && (mission.access?.type !== 'faction_exclusive' || state.factions?.[mission.access.factionId]?.resident);
+    });
+    if (known) {
+      const locks = planningEligibility(known, state)?.locks || [];
+      const name = known.name || known.title || prettyToken(known.id);
+      const core = locks.some(lock => lock.code === 'MISSION_OPS_NOT_COMMISSIONED') ? 'mission_ops'
+        : locks.some(lock => lock.code === 'HANGAR_NOT_COMMISSIONED') ? 'hangar' : null;
+      if (core) return {
+        step: 'deploy', eyebrow: '05 // PREPARE GROUND',
+        title: `Prepare ${name}`,
+        detail: `${name} is discovered. Commission ${core === 'mission_ops' ? 'Mission Operations' : 'Strike Bay'} before planning the deployment.`,
+        label: `OPEN ${core === 'mission_ops' ? 'MISSION OPS' : 'STRIKE BAY'} CONSTRUCTION`,
+        attrs: `data-objective-construction="${core}"`, control
+      };
+      const research = locks.find(lock => lock.code === 'RESEARCH_REQUIRED');
+      return {
+        step: 'deploy', eyebrow: '05 // PREPARE GROUND',
+        title: `Prepare ${name}`,
+        detail: research ? `${name} is discovered. ${research.message}`
+          : `${name} is discovered. ${locks[0]?.message || 'Review its deployment requirements.'}`,
+        label: research ? 'OPEN RESEARCH DIRECTORATE' : 'REVIEW MISSION REQUIREMENTS',
+        attrs: research ? 'data-district="research"' : 'data-district="mission_ops"', control
+      };
+    }
+
+    /* An authored signal is one-shot. Once all discovered signals are depleted,
+       directing the player to scan again promises content that cannot appear. */
+    const blocked = unfinished;
+    const authoredSurveys = asArray(catalog.surveys || catalog.SURVEY_CATALOG);
+    const remainingSignals = authoredSurveys.filter(survey =>
+      state.world?.systems?.[survey.systemId]?.discovered && !state.surveys?.[survey.id]?.depleted);
+    if (authoredSurveys.length && !remainingSignals.length) return blocked.length ? {
+      step: 'deploy', eyebrow: '05 // OPERATIONS NEED ATTENTION',
+      title: 'Review known operation locks',
+      detail: 'All discovered survey signals are archived. Review sponsor, research, and ship requirements; another scan cannot reveal an authored region here.',
+      label: 'VIEW PROGRESS', attrs: 'data-hub-route="progress"', control
+    } : {
+      step: 'complete', eyebrow: 'CURRENT FRONTIER CLEAR',
+      title: 'All authored signals are complete',
+      detail: 'There are no new survey signals or unresolved operations in the current expedition. Review your progress or return to Classic battles.',
+      label: 'VIEW PROGRESS', attrs: 'data-hub-route="progress"', control
+    };
     return {
       step: 'scan', eyebrow: blocked.length ? '04 // SURVEY' : '04 // FRONTIER CLEAR',
       title: blocked.length ? 'Depart and scan for an objective' : 'Scan for the next frontier',
-      detail: blocked.length
-        ? 'Fly to a planet and run a survey. A successful scan reveals resources, a mission-bearing region, or both.'
-        : 'Every reachable operation is resolved. Survey further out to open the next region.',
+      detail: state.resources?.probes === 0
+        ? 'No probes are stocked. Critical campaign signals can use an emergency telemetry launch; deposits and Survey Drone support still require Stores resupply.'
+        : blocked.length
+          ? 'Fly to a planet and run a survey. A successful scan reveals resources, a mission-bearing region, or both.'
+          : 'Every reachable operation is resolved. Survey further out to open the next region.',
       label: 'DEPART AND SURVEY',
       attrs: 'data-action="exit"',
       control
     };
   }
 
-  function commandObjectivePanel(objective = commandObjective()) {
+  function commandObjectivePanel(objective = commandObjective(), embedded = false) {
     /* Territory is the progress that matters — "operations cleared" counted
        paperwork, this counts ground held. Maps are shown alongside regions so a
        player mid-region sees movement instead of a stuck 0. */
@@ -1803,37 +2000,37 @@ export function createUgaCommand(options = {}) {
           <span>MAPS CLEARED</span><b>${summary.mapsCleared} / ${summary.mapsTotal}</b>
         </div>`
       : '';
-    /* When the objective IS "go and survey", its action is exactly what the
-       Depart control directly below already does. Rendering a second button for
-       it would be the duplicate navigation the mobile contract rules out — a
-       control that only restates another control — so the directive states the
-       step and Depart remains the single way to take it. Steps that go somewhere
-       Depart cannot reach (hiring, preparing a deployment) keep their own action. */
-    const action = objective.step === 'scan' ? ''
+    /* The full hub already has Depart below this card. Inside the Command room,
+       that control would land below the phone fold, so the survey action lives
+       in the card instead. Only one copy of that action is rendered per view. */
+    const action = objective.step === 'scan' && !embedded ? ''
       : `<button type="button" class="uga-primary-button uga-attention" ${objective.attrs}>${escapeHtml(objective.label)}</button>`;
-    return `<section class="uga-objective is-${escapeHtml(objective.step)}" data-objective="${escapeHtml(objective.step)}">
+    const art = objective.step === 'commission' ? 'embassy'
+      : objective.step === 'scan' ? 'survey'
+      : objective.step === 'deploy' ? 'hangar' : 'navigation';
+    const directive = commandJourney(objective).find(step => step.status === 'current')?.directive;
+    return `<section class="uga-objective is-${escapeHtml(objective.step)}" data-objective="${escapeHtml(objective.step)}" aria-labelledby="ugaObjectiveTitle">
+      <div class="uga-objective-hero is-${art}">
+        <span class="uga-objective-art" role="img" aria-label="${escapeHtml(art === 'embassy' ? 'Coalition command chamber' : art === 'survey' ? 'Survey laboratory' : art === 'hangar' ? 'Strike hangar' : 'Navigation bridge')}"></span>
+        <div class="uga-objective-hero-copy"><small>${escapeHtml(objective.eyebrow)}</small><h3 id="ugaObjectiveTitle">${escapeHtml(objective.title)}</h3></div>
+      </div>
+      ${embedded ? action : ''}
       ${journeyRailMarkup(objective)}
-      <header><small>${escapeHtml(objective.eyebrow)}</small><h3>${escapeHtml(objective.title)}</h3></header>
-      <p>${escapeHtml(objective.detail)}</p>
       ${progress}
-      ${action}
+      ${embedded ? '' : action}
+      <details class="uga-objective-brief"><summary>MISSION BRIEF</summary><p>${escapeHtml(objective.detail)}</p>${directive ? `<p><b>KEEL</b> ${escapeHtml(directive)}</p>` : ''}</details>
     </section>`;
   }
 
   function campaignHubPanel(embedded = false) {
-    /* ONE THING IS ASKING FOR YOU.
-
-       The journey always has exactly one next action, and on the survey step
-       that action is Depart - the objective deliberately renders no button of
-       its own there rather than duplicating the control directly below it. So
-       the attention signal has to move with the step: it sits on the
-       objective's own button when there is one, and on Depart when Depart is
-       the step. Marking both would say two things are urgent when one is. */
+    /* ONE THING IS ASKING FOR YOU. The full hub keeps its Depart below the
+       directive; the embedded room puts the same survey action in the card,
+       where it is reachable before the journey and briefing. */
     const objective = commandObjective();
     const departAttention = objective.step === 'scan' ? ' uga-attention' : '';
-    return `<div class="${embedded ? 'uga-campaign-hub' : 'uga-context-scroll uga-campaign-hub'}"><div class="uga-section-title"><small>MASSFRONT STRATEGIC HOME // UGA COMMAND</small><h2>Galactic Command</h2><p>Command the expedition, deploy tactical operations, and open career services from one strategic interface.</p></div>
-      ${commandObjectivePanel(objective)}
-      <button type="button" class="uga-campaign-depart${departAttention}" data-action="exit">${icon('chevron')}<span><small>EXPLORE THE FRONTIER</small><b>DEPART / RETURN TO ORBIT</b></span></button>
+    return `<div class="${embedded ? 'uga-campaign-hub is-room-embedded' : 'uga-context-scroll uga-campaign-hub'}">${embedded ? '' : '<div class="uga-section-title"><small>GALACTIC EXPEDITION // UGA COMMAND</small><h2>Galactic Command</h2><p>Explore the expanding galaxy and deploy RTS operations. Classic Standard remains the direct War Table battle route.</p></div>'}
+      ${commandObjectivePanel(objective, embedded)}
+      ${embedded && objective.step === 'scan' ? '' : `<button type="button" class="uga-campaign-depart${departAttention}" data-action="exit">${icon('chevron')}<span><small>EXPLORE THE FRONTIER</small><b>DEPART / RETURN TO ORBIT</b></span></button>`}
       ${commandFrontPanel()}
       ${commandQuickPanel()}
       ${basicAccessPanel()}</div>`;
@@ -1863,6 +2060,7 @@ export function createUgaCommand(options = {}) {
       </section>`;
     }).join('');
     return `<div class="uga-context-scroll uga-campaign-services"><div class="uga-section-title"><small>MORE</small><h2>Services</h2><p>Every destination, shelved by where it happens. Tap a heading to fold it away.</p></div>
+      ${commandVisual('concourse', 'NEXUS-VII sealed command concourse and department access corridor')}
       ${moreNavigationShortcuts()}
       ${shelves}</div>`;
   }
@@ -1958,6 +2156,7 @@ export function createUgaCommand(options = {}) {
     }
     if (target.kind === 'district') {
       if (!DISTRICT_DEFAULTS[target.districtId]) return false;
+      shipOverviewActive = false;
       activeHubRouteId = routeId;
       selectedDistrictId = target.districtId;
       selectedBuildPlotId = null;
@@ -1970,6 +2169,7 @@ export function createUgaCommand(options = {}) {
       return true;
     }
     if (target.kind === 'view') {
+      shipOverviewActive = false;
       activeHubRouteId = routeId;
       activeView = target.view;
       if (activeView === 'command') {
@@ -2044,7 +2244,7 @@ export function createUgaCommand(options = {}) {
     selectedDeckFilter = 'C';
     activeView = 'deployment';
     sheetExpanded = true;
-    deploymentLoadoutExpanded = false;
+    deploymentLoadoutExpanded = usesCompactRoomFocus();
     call('onDistrictFocus', 'hangar');
     if (emit) call('onMissionSelect', selectedMissionId);
     render();
@@ -2054,6 +2254,7 @@ export function createUgaCommand(options = {}) {
 
   function render() {
     if (destroyed) return;
+    if (activeView !== 'command') shipOverviewActive = false;
     root.hidden = !visible;
     if (!visible) return;
     if (activeView === 'factions' || activeView === 'contracts' || activeView === 'deployment') primePersonnelPortraits();
@@ -2115,11 +2316,11 @@ export function createUgaCommand(options = {}) {
     if (commandExit) commandExit.hidden = activeView === 'campaign_hub';
     if (sheetToggle) {
       sheetToggle.setAttribute('aria-expanded', String(sheetExpanded));
-      sheetToggle.setAttribute('aria-label', `${sheetExpanded ? 'Collapse' : 'Expand'} management inspector`);
+      sheetToggle.setAttribute('aria-label', `${sheetExpanded ? 'Collapse' : 'Expand'} ${root.dataset.stage === 'room' ? `${viewLabel} room controls` : 'management inspector'}`);
       const sheetLabel = sheetToggle.querySelector('b');
       if (sheetLabel) sheetLabel.textContent = sheetExpanded
-        ? 'MANAGEMENT INSPECTOR'
-        : `${viewLabel.toUpperCase()} · DETAILS`;
+        ? root.dataset.stage === 'room' ? `${viewLabel.toUpperCase()} · CONTROLS` : 'MANAGEMENT INSPECTOR'
+        : shipOverviewActive ? 'SHIP OVERVIEW · TAP A ROOM' : `${viewLabel.toUpperCase()} · DETAILS`;
     }
     // Portrait probes can settle after the deployment route opens and cause a
     // fresh planner render. Re-publish the authoritative draft so those
@@ -2150,6 +2351,7 @@ export function createUgaCommand(options = {}) {
 
   function selectDistrict(id, settings = {}) {
     if (!DISTRICT_DEFAULTS[id]) return api;
+    shipOverviewActive = false;
     const emit = typeof settings === 'boolean' ? settings : settings.emit !== false;
     const keepConstructionOpen = activeView === 'construction';
     selectedDistrictId = id;
@@ -2181,7 +2383,13 @@ export function createUgaCommand(options = {}) {
      the archive of what they already did is reference, and reference starts
      folded. They are the only two surfaces that open closed, and reopening one
      is remembered for the session like any other fold. */
-  const collapsedSections = new Set(['DEBRIEF ARCHIVE', 'VISUAL UPGRADES & ARCHITECTURE']);
+  /* More is a visual directory, not a seventeen-row report. Its three authored
+     compartment shelves begin closed, show their category artwork, and reveal
+     every existing route with one deliberate tap. */
+  const collapsedSections = new Set([
+    'DEBRIEF ARCHIVE', 'VISUAL UPGRADES & ARCHITECTURE',
+    'ABOARD NEXUS-VII', 'MASSFRONT SERVICES', 'ACCOUNT & SETTINGS'
+  ]);
   function sectionKey(section) {
     const label = section.querySelector('header span, header small');
     return label ? label.textContent.trim() : '';
@@ -2199,6 +2407,12 @@ export function createUgaCommand(options = {}) {
       header.setAttribute('aria-label', `${key || 'Section'}, ${collapsed ? 'collapsed' : 'expanded'}`);
     }
   }
+  root.addEventListener('toggle', event => {
+    const details = event.target;
+    if (!details?.matches?.('[data-hardware-district]')) return;
+    if (details.open) hardwareExpandedDistricts.add(details.dataset.hardwareDistrict);
+    else hardwareExpandedDistricts.delete(details.dataset.hardwareDistrict);
+  }, true);
   root.addEventListener('click', event => {
     const sectionHeader = event.target.closest('.uga-panel-section > header, .uga-basic-access > header');
     if (sectionHeader && root.contains(sectionHeader) && !event.target.closest('button')) {
@@ -2211,7 +2425,11 @@ export function createUgaCommand(options = {}) {
     }
     const button = event.target.closest('button');
     if (!button || !root.contains(button)) return;
+    if (button.hasAttribute('data-front-watch')) return void call('onDutyWatch');
+    if (button.dataset.action === 'refuel') return void call('onRefuel');
+    if (button.dataset.action === 'probe-resupply') return void call('onProbeResupply');
     if (button.dataset.deckFilter) {
+      shipOverviewActive = false;
       activeHubRouteId = null;
       selectedDeckFilter = button.dataset.deckFilter;
       const nextDistrict = DISTRICT_ORDER.find(id => normalizeDistrict(id, districtsCatalog(getCatalog())).deck === selectedDeckFilter);
@@ -2222,6 +2440,7 @@ export function createUgaCommand(options = {}) {
       if (nextDistrict) call('onDistrictFocus', nextDistrict);
       return;
     }
+    if (button.dataset.objectiveConstruction) return void api.openConstructionPlot(button.dataset.objectiveConstruction, 'tier1');
     if (button.dataset.district) return void selectDistrict(button.dataset.district);
     if (button.dataset.deploymentStation) {
       activateDeploymentStation(button.dataset.deploymentStation);
@@ -2291,6 +2510,18 @@ export function createUgaCommand(options = {}) {
       }
       confirmationKey = null;
       return void call('onConstructionStart', selectedDistrictId, null);
+    }
+    if (button.hasAttribute('data-core-rescue')) {
+      if (confirmationKey !== 'construction:core-rescue') {
+        confirmationKey = 'construction:core-rescue';
+        // Keep the confirmation under the player's finger. Re-rendering this
+        // long inspector reset its scroll and hid the second-tap affordance.
+        button.classList.add('is-confirming');
+        button.textContent = 'CONFIRM REQUISITION';
+        return;
+      }
+      confirmationKey = null;
+      return void call('onCoreCommissionRescue');
     }
     if (button.dataset.buildFacility) {
       const key = `build:${selectedDistrictId}:${button.dataset.buildFacility}`;
@@ -2371,12 +2602,16 @@ export function createUgaCommand(options = {}) {
     if (button.dataset.action === 'overview') {
       activeHubRouteId = null;
       sheetExpanded = false;
-      call('onOverviewFocus');
+      shipOverviewActive = true;
       render();
+      // The scene fits to live control and sheet bounds. Refit only after the
+      // collapsed sheet has actually changed layout on compact phones.
+      call('onOverviewFocus');
       return;
     }
     if (button.dataset.action === 'toggle-sheet') {
       sheetExpanded = !sheetExpanded;
+      if (['command', 'construction'].includes(activeView)) shipOverviewActive = false;
       render();
       if (['command', 'construction'].includes(activeView)) call('onDistrictFocus', selectedDistrictId);
       else call('onOverviewFocus');
@@ -2489,6 +2724,7 @@ export function createUgaCommand(options = {}) {
     openView(view) {
       const allowed = new Set(['command', 'construction', 'return-services', 'campaign_hub', 'services', 'progress', 'factions', 'contracts', 'research', 'intel', 'logistics', 'inventory', 'crew', 'classic']);
       if (allowed.has(view)) {
+        shipOverviewActive = false;
         activeHubRouteId = null;
         activeView = view === 'classic' ? 'campaign_hub' : view;
         sheetExpanded = activeView !== 'command';
