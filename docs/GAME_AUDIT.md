@@ -1,12 +1,23 @@
 # MASSFRONT game audit — sixteen domains, current main
 
-Prepared **2026-09-29**, revised same day after owner review, against `main` at
-`a0c005a8` (tree 1.33.97). The first draft measured whether each system *works*;
-the owner correctly rejected that framing: a screen that renders at 60 fps can
-still bury the player. This revision keeps the engineering evidence but grades
-every domain on the **player-experience question too** — clarity, density, and
-whether the loop tells you where to go. Each domain carries both a **works**
-verdict and an **experience** verdict.
+Prepared **2026-09-29**, revised twice same day after owner review, against
+`main` at `c9b6e0c9` (tree 1.33.97). The first draft measured whether each
+system *works*; the owner correctly rejected that framing: a screen that
+renders at 60 fps can still bury the player. This revision keeps the
+engineering evidence but grades every domain on the **player-experience
+question too** — clarity, density, and whether the loop tells you where to go.
+Each domain carries both a **works** verdict and an **experience** verdict.
+
+**Revision 2 corrections (owner).** (a) The Stormpeak **Ocean Tester is merged
+and in the build** — it is not a branch fixture: `src/stormpeak-tester.js` is
+registered in both manifests, carries real RTS matches (commander,
+constructors, corvettes, destroyers, **submarines**, harbors; victory/defeat
+phases in the ocean sim) and is gated behind a Settings dev toggle that
+explicitly does not score career/XP. (b) The four "homeworlds" are **starting
+planets**, not the extent of the world: the authored star chart holds nine
+systems and 66 named bodies. (c) What is genuinely missing is a **dedication
+unlock loop toward more planets** — the ladder exists and is enforced, but it
+is short and mostly invisible.
 
 **Method.** Source reads; `tools/extract-design-db.mjs` over real source
 (106/113); static gates; packed `www` driven on hardware WebGL2 (RTX 4060
@@ -27,17 +38,17 @@ unmerged Stormpeak nuke chain is noted, not reviewed.
 | 5 | Graphics | SOLID | SOLID — post chain disciplined |
 | 6 | Gameplay | SOLID | PARTIAL — rules fine, direction unclear |
 | 7 | Research & crafting | SOLID/PARTIAL | PARTIAL — deep tree, thin crafting, low discoverability |
-| 8 | Exploration | SOLID | **CLUTTERED** — 517-word hub, mixed vocabulary |
+| 8 | Exploration | SOLID | PARTIAL — ladder works but is invisible; no dedication loop |
 | 9 | RTS loop | SOLID | **CONFUSING** — 6+ commit taps to battle; vocab differs per layer |
 | 10 | Multiplayer | PARTIAL | PARTIAL — honest gates, no opponents |
 | 11 | Physics | SOLID | SOLID |
 | 12 | Blood & gore (infantry) | PARTIAL | restrained by design |
-| 13 | Interior/air/water/land systems | PARTIAL | **LAND-WEIGHTED** — see §4 map census |
+| 13 | Interior/air/water/land systems | PARTIAL | **LAND-WEIGHTED** — Ocean Tester merged but dev-parked; see §4 |
 | 14 | Customization / ship loop | SOLID | PARTIAL — deep but opaque; XCOM bones, weak onboarding |
 | 15 | Ship cutout / section mgmt | PARTIAL | PARTIAL — cutaway is presentation only |
 | 16 | Mobile & desktop GUI | SOLID | PARTIAL — one real regression; density hurts mobile most |
 
-Severity totals: **0 critical · 4 high · 5 medium · 3 low.**
+Severity totals: **0 critical · 5 high · 5 medium · 3 low.**
 
 ---
 
@@ -144,9 +155,25 @@ Crafting: `develop.js` owns materials/modules/wear; the ship nav exposes
 Build/Research/Craft/Upgrade/Inventory, but there is no gather→recipe→fabricate
 loop. Discoverability is the bigger issue: the tree lives behind a shelf fold.
 
-### 8. Exploration — works: SOLID · experience: CLUTTERED
+### 8. Exploration — works: SOLID · experience: PARTIAL
 UGA loop verified to Galactic Command on hardware; 19 suites pass; domain
-naming fixed. Experience: §2.1/§2.3.
+naming fixed. **The world beyond the starting planets exists and is
+ladder-gated:** `UGA_PLANET_LADDER` chains Caldris → Ithara → Zephyros (Aelos),
+Orison → Nacre (Veyra), Meridian K-4 → Tethys Foundry (Karak), plus the four
+War-Table homeworld bodies; `isPlanetUnlocked` opens body N once body N-1's
+primary authored survey is depleted, and ground areas chain the same way
+(per-planet area ladders). Nine systems / 66 named bodies are on the authored
+star chart with contact events (derelicts, convoys, salvage).
+
+**What is missing is the dedication loop the owner describes:** the chains are
+short (2–3 bodies per system), the gating is survey-completion rather than a
+repeated-investment "dedication" mechanic, and — decisively — the locked rungs
+are barely rendered: `uga_command.js` imports the unlock predicates but shows
+no locked-planet ladder board, so a player cannot see what dedication would
+earn. The progression spine works; its promise is not on screen.
+
+Experience: §2.1/§2.3 for density; the ladder invisibility is the domain's own
+high-severity experience gap.
 
 ### 9. RTS loop — works: SOLID · experience: CONFUSING
 Classic flow verified on hardware. **Regression:** `verify-classic-mobile-flow`
@@ -172,7 +199,13 @@ three-layer ceiling; greyscale death fade; no dismemberment/pools/corpses. A
 rating-driven design position; expanding it is an addition.
 
 ### 13. Interior / air / water / land systems — works: PARTIAL · experience: LAND-WEIGHTED
-All four exist but are not equal citizens — see §4.
+All four exist but are not equal citizens — see §4. Correction from revision 2:
+**water play ships** via the merged Ocean Tester (buoyancy, hydrophone,
+submarines with per-faction doctrine: Nova hunter-killer fires dived, Legion
+Leviathan must surface, Syndicate Blackwake is fast/quiet, Brood Abyssal
+regenerates dived) — but it is parked behind a dev toggle that scores nothing,
+so players experience the game as land-only. Interior/orbital remain dormant
+authoring data.
 
 ### 14. Player customization, commanders & specialists, UGA ship loop — works: SOLID · experience: PARTIAL
 The XCOM-2-like spine is real and test-proven: 50 facilities, 33 modules all
@@ -192,47 +225,47 @@ mobile more than desktop — small-print rows multiply on narrow screens.
 
 ---
 
-## 4. Map-type census — the owner's "only land" point, measured
+## 4. Map-type census — measured, with the owner's corrections applied
 
-The battle catalogue is the region tables in `src/engine/gl.js`:
+The battle catalogue is the region tables in `src/engine/gl.js`, **plus the
+merged Ocean Tester as the water theatre**:
 
-- **48 authored region maps** (16 regions × small/medium/large across four
-  homeworlds), plus 56 legacy standalone map defs in the design DB.
-- **Water is authored, not missing:** an explicit `wet` table gives **12 of 48
-  region maps real water** — 8 `ocean` (all three Aelos Harbor Command maps,
-  all three Nordhall Frostwake Isles maps, Nordhall cliff/peaks mediums) and 4
-  `river` (Aelos north/basin/ridge, Nordhall frost). `navalEnabled=true` flows
-  from that table, seabed+bridge render flags are forced on, and hBias is
-  clamped so coasts read.
-- **Naval exists to fight on it:** Harbor (4 factions, "must be sited on the
-  shore"), Sea Bastion (water placement), Corvette/Dreadnought (naval:1 in
-  TYPES), AI builds harbors by difficulty ([1,2,3] at time thresholds) and
-  repositions naval production. Naval rally/probe tooling exists
-  (`probe-naval-rally`, `capture-water-shore`) but **`probe-naval-rally`
-  currently throws** (`Cannot read properties of null` on a flow-field entry) —
-  a stale probe against the current coast, same class as the harness rot above;
-  it needs a look before naval can claim end-to-end verification.
-- **Two homeworlds are deliberately dry:** Dominion (Pyraeth) dusk pads and
-  Brood (Vespera) magma — the code comment says so explicitly. So even the
-  water that exists is faction-clustered: Nova coast + Syndicate ice.
+- **48 authored region maps** (16 regions × small/medium/large across the four
+  starting homeworlds), plus 56 legacy standalone map defs in the design DB.
+- **Water on the War Table:** an explicit `wet` table gives **12 of 48 region
+  maps real water** — 8 `ocean`, 4 `river` — with `navalEnabled` flowing from
+  it, seabed+bridge rendering forced, and coast clamping. Harbor (shore-sited),
+  Sea Bastion, Corvette/Dreadnought (`naval:1`) and AI naval production are
+  real; `probe-naval-rally` currently throws on a stale flow-field access and
+  needs repair before naval claims end-to-end verification.
+- **Water as a theatre: the Ocean Tester ships.** `modules/stormpeak_ocean/` is
+  merged on main, registered in both manifests, opened from Settings
+  ("Ocean Theatre Tester" dev toggle) or the War Room DEV MODULES card, and
+  returned from via its HUD. Its sim is a real RTS match: commander,
+  constructors, corvettes, destroyers, **submarines** (four faction doctrines:
+  Nova Hunter-Killer fires dived with hull sonar; Legion Leviathan is thicker
+  and must surface to fire; Syndicate Blackwake is fastest/quietest; Brood
+  Abyssal knits hull while dived), harbor/extractor/reactor/silo buildings,
+  victory and defeat phases. Deliberately excluded: career, XP, saves — the
+  host contract says so on the toggle and the card footer.
+- **Two War-Table homeworlds are deliberately dry:** Dominion (Pyraeth) dusk
+  pads and Brood (Vespera) magma — the code comment says so explicitly. Water
+  maps therefore cluster on Nova coast + Syndicate ice.
 - **Interior battles: authored, not runtime.** `interiortopology-stage10.js`
-  carries four source-authored interior navigation graphs, portal profiles,
-  unit envelopes — `status:'AUTHORING_ONLY'`, `runtimeReady:false`,
-  `modelPackBinding:false`. No interior RTS map is playable today.
-- **Orbital/air-surface battles: candidates.** `orbitaltopology-stage10.js`:
-  6 AUTHORING_CANDIDATE, 1 AUTHORING_ONLY, 1 REJECTED. The Stage-10 theatre
+  carries four source-authored interior navigation graphs, portal profiles and
+  unit envelopes — `status:'AUTHORING_ONLY'`, `runtimeReady:false`.
+- **Orbital/air-surface: candidates.** `orbitaltopology-stage10.js`: 6
+  AUTHORING_CANDIDATE, 1 AUTHORING_ONLY, 1 REJECTED. The Stage-10 theatre
   catalog itself is `AUTHORING_ONLY`, `runtimeReady:false`.
-- **Air is a layer, not a theatre:** aircraft (Raptor etc., `air:1`,
-  `airwarfare.js` bands/missions) fight *over land/water maps*; there is no
-  air-only map. The naval-submarine feature branch (`feature/faction-submarines`,
-  2 commits) is **not merged** into main.
+- **Air is a layer, not a theatre:** aircraft fight over land/water maps; the
+  naval-submarine feature branch (`feature/faction-submarines`) is superseded —
+  its doctrine lives in the merged ocean module now.
 
-**Map verdict:** the catalogue is land-weighted by design — 75% of region maps
-are land-only, water maps cluster on two of four homeworlds, and
-interior/orbital/naval-submarine play is authored data awaiting runtime
-approval. If the owner wants map-type variety (water-heavy, air-surface,
-interior, orbital), the honest state is: naval is real and playable on 12 maps
-pending the probe fix; everything else is authored-but-dormant.
+**Map verdict:** land-weighted on the War Table (75% land-only region maps,
+water clustered on two homeworlds), with real water RTS shipped but parked
+behind a dev toggle. Interior/orbital are authored-but-dormant. The owner's
+frame is the right one: the map-type variety gap is not "no water exists" —
+it is that water play is not yet a scored, discoverable part of the career.
 
 ---
 
@@ -247,15 +280,25 @@ pending the probe fix; everything else is authored-but-dormant.
 3. **Say the loop out loud** (High, design) — one persistent "what am I doing
    and why" line that survives across Classic and UGA (the objective panel
    exists; give it the same authority on the front and in Classic setup).
-4. **Unify the vocabulary** (Medium) — pick mission vs operation vs contract
-   per context and rename on-screen (domain layer can keep its internal names).
-5. **Fix `probe-naval-rally`** (Medium) — stale flow-field access; needed
-   before naval play can claim verification.
-6. **Decide the dormant theatres** (Medium) — interior/orbital data is authored
-   and gated by `runtimeReady:false`; either schedule activation or say in
-   copy that they're future.
-7. **Unit ambience at zoom** (Low) — small idle motion or icon shimmer.
-8. **Cutaway damage board** (Low) — per-section visualization on the hull.
+4. **Surface the dedication ladder** (High, design) — render the planet/area
+chains (locked rungs, what unlocks them, survey progress) on the Galactic
+Command hub; the predicates and catalogs already exist, only the board is
+missing. Pair with the owner's direction: homeworlds are starting planets —
+the visible promise should be "more worlds open as you dedicate."
+5. **Promote the Ocean Tester from dev toggle to scored theatre** (High,
+design) — the water RTS is merged and complete (subs, doctrines, victory);
+what keeps the game feeling land-only is that it scores nothing and hides in
+Settings. Decide the career contract (XP? rewards? ladder rung?) and surface
+it in the mode list.
+6. **Unify the vocabulary** (Medium) — pick mission vs operation vs contract
+per context and rename on-screen (domain layer can keep its internal names).
+7. **Fix `probe-naval-rally`** (Medium) — stale flow-field access; needed
+before War-Table naval play can claim verification.
+8. **Decide the dormant theatres** (Medium) — interior/orbital data is authored
+and gated by `runtimeReady:false`; either schedule activation or say in
+the star chart copy that they're future.
+9. **Unit ambience at zoom** (Low) — small idle motion or icon shimmer.
+10. **Cutaway damage board** (Low) — per-section visualization on the hull.
 
 ## Appendix — checks run (2026-09-29, revision 2)
 
