@@ -17,11 +17,11 @@ import {
   getCampaignHubRoute,
   getCampaignHubSessionType
 } from './campaign_hub_registry.js?v=20260908-commandhome2';
-import { commitResearch } from '../domain/progression.js';
+import { commitResearch, frontierLadderRows } from '../domain/progression.js';
 import { calculateFacilityCapabilities } from '../domain/construction.js';
 import { COMMANDER_ROSTER_IDS } from '../domain/commander_roster_contract.js';
 import { readAccountLedger, subscribeAccountLedger } from '../domain/account_ledger.js';
-import { deriveGroundControl, groundControlSummary, isGroundAreaUnlocked, isGroundMapUnlocked } from '../domain/ground_control.js';
+import { deriveGroundControl, groundControlSummary, isGroundAreaUnlocked, isGroundMapUnlocked, isPlanetUnlocked } from '../domain/ground_control.js';
 import { resolveBaseRuntimeUrl } from '../host/base_runtime_url.js';
 
 const CAMPAIGN_HUB_SESSION_ROUTE_IDS = new Set([
@@ -347,6 +347,24 @@ function districtTierState(state, id, definition) {
   };
 }
 
+/* SECTION-DAMAGE READOUT -----------------------------------------------------
+   The cutaway shows where a compartment is, never what state it is in. NEXUS-VII
+   has no hit-point hull in the XCOM sense — its "damage" is the domain's real
+   condition surface: an uncommissioned core, retrofit facilities taken offline,
+   and queued construction/retrofit work. Deriving the strip from that surface
+   (instead of minting a second health stat) keeps one source of truth: the same
+   fields the power grid and construction queue already enforce. */
+function districtCondition(state, id, dState) {
+  const construction = Array.isArray(state?.ship?.constructionHistory) ? state.ship.constructionHistory : [];
+  const queued = construction.some(job => job && job.districtId === id && job.status !== 'completed');
+  const offlineTiers = [2, 3].filter(tier => dState.facilityOffline?.[`tier${tier}`]);
+  if (dState.commissioned === false) return { code: 'UNCOMMISSIONED', tone: 'danger', note: 'Core offline' };
+  if (offlineTiers.length === 2) return { code: 'CRITICAL', tone: 'danger', note: 'T2+T3 offline' };
+  if (offlineTiers.length) return { code: 'DEGRADED', tone: 'warning', note: `Tier ${offlineTiers.join('+')} offline` };
+  if (queued) return { code: 'REPAIRING', tone: 'warning', note: 'Work in queue' };
+  return { code: 'NOMINAL', tone: 'stable', note: '' };
+}
+
 function upgradeCost(definition, tier) {
   const raw = definition.tiers?.find?.(entry => Number(entry.level) === tier + 1)?.cost ||
     definition.tiers?.[tier]?.cost || definition.upgradeCosts?.[tier + 1] ||
@@ -432,7 +450,7 @@ export function createUgaCommand(options = {}) {
       </div>
       <aside class="uga-context-panel">
         <div class="uga-deployment-toolbar" data-deployment-toolbar hidden>
-          <button type="button" data-action="deployment-back" aria-label="Back to missions">${icon('chevron')}<span>BACK TO MISSIONS</span></button>
+          <button type="button" data-action="deployment-back" aria-label="Back to operations">${icon('chevron')}<span>BACK TO OPERATIONS</span></button>
           <button type="button" class="uga-deployment-toggle" data-action="toggle-deployment-loadout" aria-expanded="false"><span>EDIT LOADOUT</span>${icon('chevron')}</button>
         </div>
         <button type="button" class="uga-sheet-toggle" data-action="toggle-sheet" aria-expanded="true" aria-label="Collapse ship room controls"><span></span><b>SHIP ROOM CONTROLS</b>${icon('chevron')}</button>
@@ -793,8 +811,13 @@ export function createUgaCommand(options = {}) {
     const shipRating = typeof options.getShipExplorationRating === 'function' ? options.getShipExplorationRating(state) : { rating: 12, className: 'Class I · Survey Cruiser' };
 
     const filteredIds = DISTRICT_ORDER.filter(id => normalizeDistrict(id, catalog).deck === selectedDeckFilter);
+    const liveState = getState();
+    const deckCondition = filteredIds.map(id => districtCondition(liveState, id, districtTierState(liveState, id, normalizeDistrict(id, catalog))))
+      .reduce((worst, c) => c.tone === 'danger' || worst.tone === 'danger' ? { tone: 'danger', code: 'DAMAGE' }
+        : c.tone === 'warning' || worst.tone === 'warning' ? { tone: 'warning', code: 'STRAINED' } : worst,
+      { tone: 'stable', code: 'NOMINAL' });
     const deckMeta = {
-      A: ['FORWARD', 'COMMAND & MISSIONS', 'Command Core, routes, surveys, and mission planning'],
+      A: ['FORWARD', 'COMMAND & OPERATIONS', 'Command Core, routes, surveys, and operation planning'],
       B: ['UPPER', 'SYSTEMS & RESEARCH', 'Research, fabrication, drive, and ship engineering'],
       C: ['LOWER', 'CREW & DEPLOYMENT', 'Habitat, diplomacy, Strike Bay, and expedition cargo']
     }[selectedDeckFilter];
@@ -817,6 +840,11 @@ export function createUgaCommand(options = {}) {
             <b>${powerGrid.totalConsumedMW} / ${powerGrid.totalGeneratedMW} MW</b>
             <span>${powerGrid.surplusMW >= 0 ? `+${powerGrid.surplusMW} MW SURPLUS` : 'BROWNOUT'}</span>
           </div>
+          <div class="uga-telemetry-condition is-${deckCondition.tone}">
+            <small>${icon('warning')} SECTION</small>
+            <b>${escapeHtml(deckCondition.code)}</b>
+            <span>${filteredIds.length} COMPARTMENTS</span>
+          </div>
         </div>
         <div class="uga-sector-filter-bar uga-deck-filter-bar" role="tablist" aria-label="Ship interior areas">
           ${['A', 'B', 'C'].map(deck => `<button type="button" role="tab" aria-selected="${selectedDeckFilter === deck}" aria-label="${sectionNames[deck]}" class="uga-filter-chip${selectedDeckFilter === deck ? ' is-active' : ''}" data-deck-filter="${deck}"><span>${sectionPosition[deck]}</span></button>`).join('')}
@@ -837,6 +865,11 @@ export function createUgaCommand(options = {}) {
               <b>${escapeHtml(def.name)}</b>
               <small>${def.fixed ? 'FIXED CORE' : dState.commissioned === false ? 'UNCOMMISSIONED' : `TIER ${level} // 3`} · <em class="uga-sector-tag ${def.sector}">${def.sector.toUpperCase()}</em>${staffCount > 0 ? ` · ${icon('staff', 'uga-staff-mini')} ${staffCount}` : ''}</small>
             </span>
+            ${(() => {
+              const cond = districtCondition(liveState, id, dState);
+              return cond.tone === 'stable' ? '' :
+                `<span class="uga-district-condition is-${cond.tone}" title="${escapeHtml(cond.note)}">${escapeHtml(cond.code)}</span>`;
+            })()}
             ${icon('chevron', 'uga-row-chevron')}
           </button>`;
         }).join('')}
@@ -1436,7 +1469,7 @@ export function createUgaCommand(options = {}) {
     return `<div class="uga-context-scroll">
       <div class="uga-section-title"><small>SPONSORSHIP AND ELIGIBILITY</small><h2>Contracts</h2><p>Faction conflicts require their resident sponsor. Brood purges are issued only by UGA.</p></div>
       ${commandVisual(visualKind, visualKind === 'hangar' ? 'NEXUS-VII sealed strike hangar and deployment gantry' : 'NEXUS-VII mission planning table and planetary objective beacon')}
-      ${!state.commissioning?.completed ? `<section class="uga-commission-card"><div><h3>Hire your first commander</h3><p>Choose a faction and complete commander hiring before planning ground missions. Once hired, select an available commander from that faction in the Deployment Hangar.</p></div><button type="button" class="uga-primary-button" data-host-route="new-career-faction" ${hostRoutesAvailable() ? '' : 'disabled'}>HIRE COMMANDER</button></section>` : ''}
+      ${!state.commissioning?.completed ? `<section class="uga-commission-card"><div><h3>Hire your first commander</h3><p>Choose a faction and complete commander hiring before planning ground operations. Once hired, select an available commander from that faction in the Deployment Hangar.</p></div><button type="button" class="uga-primary-button" data-host-route="new-career-faction" ${hostRoutesAvailable() ? '' : 'disabled'}>HIRE COMMANDER</button></section>` : ''}
       <section class="uga-panel-section" aria-label="Available operations">
         <header><span>AVAILABLE OPERATIONS</span><small>${String(missions.length).padStart(2, '0')}</small></header>
       <div class="uga-record-list">${missions.length ? missions.map(mission => {
@@ -1791,6 +1824,56 @@ export function createUgaCommand(options = {}) {
     return 'UNAVAILABLE';
   }
 
+  /* DEDICATION LADDER -------------------------------------------------------
+     The frontier is authored as one directed ladder — system rungs chart in
+     sequence, a system's planets open when the prior body's primary survey is
+     depleted, and a region opens on the prior region's first victory — but
+     until now that gate lived only in the eligibility locks. A player staring
+     at the hub could see ONE next action and the War Table worlds, and could
+     reasonably ask "locked for how long?". This board renders every rung of
+     that same ladder via the domain projection, which reads the same
+     predicates the locks use, so a gate and its display can never disagree:
+     what is held, what is charted, what is one survey or one victory away,
+     and what is still fog.
+
+     Undiscovered systems render greyed to show the road ahead without
+     offering dead buttons. Probe count is read from resources, the same
+     number the survey room quotes. */
+  function dedicationLadderPanel() {
+    const state = getState();
+    const control = groundControl();
+    const systems = frontierLadderRows(state, control);
+    if (!systems.length) return '';
+    const areas = Object.values(control.areas);
+    const probes = state.resources?.probes;
+    const held = areas.filter(area => area.controlled).length;
+    const body = systems.map(system => {
+      const planets = system.planets.map(planet => {
+        const areasMarkup = planet.areas.map(area =>
+          `<li class="uga-ladder-area is-${area.held ? 'held' : area.open ? 'open' : 'fog'}">` +
+            `<span>${escapeHtml(area.name)}</span>` +
+            `<b>${area.cleared} / ${area.total}</b>` +
+            `<small>${area.held ? 'HELD' : area.open ? 'OPEN' : 'AHEAD'}</small></li>`).join('');
+        return `<li class="uga-ladder-planet is-${planet.open ? 'open' : 'fog'}" data-planet="${escapeHtml(planet.id)}">` +
+          `<b>${escapeHtml(planet.name)}</b>` +
+          `<span>${escapeHtml(planet.chip)}</span>` +
+          `<small>${escapeHtml(planet.note)}</small>` +
+          (areasMarkup ? `<ul class="uga-ladder-areas">${areasMarkup}</ul>` : '') +
+          `</li>`;
+      }).join('');
+      return `<li class="uga-ladder-system is-${system.reached ? 'reached' : 'fog'}">` +
+        `<b>${escapeHtml(system.name)}</b><small>${escapeHtml(system.classification)}</small>` +
+        (planets ? `<ul class="uga-ladder-planets">${planets}</ul>` : '') +
+        `</li>`;
+    }).join('');
+    return `<section class="uga-panel-section uga-ladder" aria-label="Frontier dedication ladder">` +
+      `<header><span>FRONTIER DEDICATION LADDER</span><small>${held} / ${areas.length} REGIONS HELD</small></header>` +
+      `<p class="uga-service-shelf-detail">Each body charts when the one before it is surveyed; each region opens on the previous region's first victory.</p>` +
+      `<ol class="uga-ladder-systems">${body}</ol>` +
+      (Number.isFinite(probes) ? `<footer><small>PROBES STOCKED: ${probes}</small></footer>` : '') +
+      `</section>`;
+  }
+
   function basicAccessPanel() {
     const modes = [
       ['standard', 'Standard'],
@@ -1953,7 +2036,7 @@ export function createUgaCommand(options = {}) {
         title: `Prepare ${name}`,
         detail: research ? `${name} is discovered. ${research.message}`
           : `${name} is discovered. ${locks[0]?.message || 'Review its deployment requirements.'}`,
-        label: research ? 'OPEN RESEARCH DIRECTORATE' : 'REVIEW MISSION REQUIREMENTS',
+        label: research ? 'OPEN RESEARCH DIRECTORATE' : 'REVIEW OPERATION REQUIREMENTS',
         attrs: research ? 'data-district="research"' : 'data-district="mission_ops"', control
       };
     }
@@ -1981,7 +2064,7 @@ export function createUgaCommand(options = {}) {
       detail: state.resources?.probes === 0
         ? 'No probes are stocked. Critical campaign signals can use an emergency telemetry launch; deposits and Survey Drone support still require Stores resupply.'
         : blocked.length
-          ? 'Fly to a planet and run a survey. A successful scan reveals resources, a mission-bearing region, or both.'
+          ? 'Fly to a planet and run a survey. A successful scan reveals resources, an operation-bearing region, or both.'
           : 'Every reachable operation is resolved. Survey further out to open the next region.',
       label: 'DEPART AND SURVEY',
       attrs: 'data-action="exit"',
@@ -2018,7 +2101,7 @@ export function createUgaCommand(options = {}) {
       ${journeyRailMarkup(objective)}
       ${progress}
       ${embedded ? '' : action}
-      <details class="uga-objective-brief"><summary>MISSION BRIEF</summary><p>${escapeHtml(objective.detail)}</p>${directive ? `<p><b>KEEL</b> ${escapeHtml(directive)}</p>` : ''}</details>
+      <details class="uga-objective-brief"><summary>OPERATION BRIEF</summary><p>${escapeHtml(objective.detail)}</p>${directive ? `<p><b>KEEL</b> ${escapeHtml(directive)}</p>` : ''}</details>
     </section>`;
   }
 
@@ -2031,6 +2114,7 @@ export function createUgaCommand(options = {}) {
     return `<div class="${embedded ? 'uga-campaign-hub is-room-embedded' : 'uga-context-scroll uga-campaign-hub'}">${embedded ? '' : '<div class="uga-section-title"><small>GALACTIC EXPEDITION // UGA COMMAND</small><h2>Galactic Command</h2><p>Explore the expanding galaxy and deploy RTS operations. Classic Standard remains the direct War Table battle route.</p></div>'}
       ${commandObjectivePanel(objective, embedded)}
       ${embedded && objective.step === 'scan' ? '' : `<button type="button" class="uga-campaign-depart${departAttention}" data-action="exit">${icon('chevron')}<span><small>EXPLORE THE FRONTIER</small><b>DEPART / RETURN TO ORBIT</b></span></button>`}
+      ${dedicationLadderPanel()}
       ${commandFrontPanel()}
       ${commandQuickPanel()}
       ${basicAccessPanel()}</div>`;

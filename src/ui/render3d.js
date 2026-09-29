@@ -2044,6 +2044,16 @@ function render(dtDraw){
         const br=(typeof TEAMB!=='undefined'&&TEAMB[uteam[i]])||body;
         bbIcon.add(MF_ICO.pl_ring,X,Y,ih,dpx*1.26,0,br[0],br[1],br[2],ia);
       }
+      /* Audit fix #9 — unit ambience at zoom. A full-icon army is static rows
+         of plates; a slow shared-breath shimmer (one clock, no per-unit state,
+         ±6% alpha around the ramp value) reads as a living force from orbit
+         while costing zero extra instances. Idles only: a marching army
+         already has motion, and shimmering it would read as flicker. */
+      if(!umov[i]){
+        const simT=(typeof stats!=='undefined'&&Number.isFinite(stats.t))?stats.t:0;
+        const breath=Math.sin(simT*1.7+(i%16)*0.42)*0.5+0.5;
+        ia=(255*(uMark*(0.94+0.12*breath)))|0;
+      }
       if(uIcon>=1) continue;          // fully iconised: no mesh work at all
     }
     if(stackSkip) continue;

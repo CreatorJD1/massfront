@@ -128,6 +128,35 @@ async function mfOpenStormpeakTester(options){
     return finish('Ocean Theatre Tester could not be opened');
   }
 }
+/* Career-shaped counters without a career contract --------------------------
+   The theatre writes its settled outcome to a namespaced sessionStorage key
+   (see modules/stormpeak_ocean host-return.ts). Consume it here on return:
+   counting runs in META keeps the owner's no-XP/no-save promise intact while
+   the War Room card can still say whether the last outing held the region.
+   Everything is defensive: an absent key, private-mode storage, or an older
+   counter shape all degrade to "no record yet". */
+const MF_STORMPEAK_RESULT_KEY='massfront.stormpeak.result.v1';
+function mfStormpeakConsumeResult(){
+  let rec=null;
+  try{ rec=JSON.parse(sessionStorage.getItem(MF_STORMPEAK_RESULT_KEY)||'null'); }catch(e){ rec=null; }
+  try{ sessionStorage.removeItem(MF_STORMPEAK_RESULT_KEY); }catch(e){}
+  if(!rec||rec.kind!=='MassfrontStormpeakResultV1'||rec.schemaVersion!==1) return null;
+  if(rec.outcome!=='victory'&&rec.outcome!=='defeat') return null;
+  if(typeof META==='undefined'||!META) return null;
+  const s=META.stormpeak||(META.stormpeak={runs:0,wins:0,lastOutcome:null,lastSeconds:0});
+  s.runs=(s.runs|0)+1;
+  if(rec.outcome==='victory')s.wins=(s.wins|0)+1;
+  s.lastOutcome=rec.outcome;s.lastSeconds=rec.seconds|0;s.lastAt=Date.now();
+  if(typeof metaSave==='function'){ try{ metaSave(); }catch(e){} }
+  return rec;
+}
+function mfStormpeakRecordText(){
+  try{
+    const s=META&&META.stormpeak;
+    if(!s||!(s.runs>0)) return '';
+    return s.wins+' of '+s.runs+' sorties held the region';
+  }catch(e){ return ''; }
+}
 function mfStormpeakResumeHost(){
   let resume='settings', nonce='';
   try{
@@ -164,6 +193,7 @@ function mfStormpeakResumeHost(){
       return !!b&&b.classicFallbackActive!==true;
     }catch(e){ return false; }
   })();
+  mfStormpeakConsumeResult();
   if(galacticHome){
     if(typeof toast==='function') toast('Ocean Theatre Tester closed — back in MASSFRONT');
     return true;
@@ -273,9 +303,11 @@ function mfStormpeakInjectWarCard(){
   btn.type='button';
   btn.className='warCard';
   btn.dataset.mode='stormpeak';
+  const record=mfStormpeakRecordText();
   btn.innerHTML='<span class="warEm">\u2248</span>'
     +'<span class="warBody"><span class="warNm">OCEAN TESTER</span>'
     +'<span class="warDs">DEV · Stormpeak Tessendorf theatre, hull buoyancy, hydrophone</span>'
+    +(record?'<span class="warFootTx">'+record.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</span>':'')
     +'<span class="warFootTx">Does not write career, XP, or saves</span></span>';
   host.appendChild(btn);
   mfStormpeakBindRow(btn,()=>mfOpenStormpeakTester({resume:'warScr'}));

@@ -14,15 +14,20 @@ import {
   SHIP_DISTRICT_IDS,
   SPECIALIST_CATALOG,
   SURVEY_CATALOG,
-  refreshChainedSurveyAvailability,
+  UGA_GROUND_AREA_CATALOG,
+  UGA_GROUND_AREA_LADDER,
+  UGA_PLANET_LADDER,
   SYSTEM_CATALOG,
+  getPlanetLadderEntry,
+  getPlanetPrimarySurveyId,
+  refreshChainedSurveyAvailability,
   getUgaGroundAreaOptions
 } from './catalog.js';
 import { COMMANDER1_BY_CAMPAIGN_FACTION, isSelectableCommanderIdV1 } from './commander_roster_contract.js';
 import { clamp, deepClone } from './deterministic.js';
 import { DomainValidationError, issue } from './errors.js';
 import { assertDomainState } from './state_store.js';
-import { isPlanetUnlocked } from './ground_control.js';
+import { isGroundAreaUnlocked, isPlanetUnlocked } from './ground_control.js';
 import { CONSTRUCTION_FACILITY_CATALOG, getFacilityChoices } from './construction_catalog.js';
 import {
   advanceExpeditionCycles,
@@ -72,6 +77,62 @@ const CAMPAIGN_CRITICAL_SURVEY_IDS = new Set([
 
 function fail(message, code, path = '') {
   throw new DomainValidationError(message, [issue(code, message, path)], code);
+}
+
+/* FRONTIER LADDER PROJECTION ----------------------------------------------
+   The unlock predicates (isPlanetUnlocked / isGroundAreaUnlocked) and the
+   eligibility locks are the authority; this projects the same catalogs into
+   display rows so the hub's dedication ladder board renders exactly what the
+   gates enforce. Lives domain-side because it reads four catalog exports the
+   UI should not import directly — the UI already speaks to the domain through
+   progression and ground_control. */
+export function frontierLadderRows(state, control) {
+  const systems = Object.values(SYSTEM_CATALOG).sort((a, b) => (a.sequence || 0) - (b.sequence || 0));
+  return systems.map(system => {
+    const systemId = system.id;
+    const reached = state.world?.systems?.[systemId]?.discovered === true;
+    const planets = (UGA_PLANET_LADDER[systemId] || []).map(rung => {
+      const ladder = getPlanetLadderEntry(systemId, rung.id);
+      const open = isPlanetUnlocked(state, systemId, rung.id);
+      /* Two different surveys matter and conflating them would lie: this
+         body's own primary survey is what CHARTS it, while the PRIOR body's
+         primary survey is the gate that OPENS the rung (that is exactly what
+         isPlanetUnlocked tests). Show the first as the chip and the second
+         as the note. */
+      const primarySurveyId = getPlanetPrimarySurveyId(rung.id);
+      const surveyRecord = primarySurveyId ? state.surveys?.[primarySurveyId] : null;
+      const charted = !primarySurveyId || surveyRecord?.depleted === true || surveyRecord?.status === 'completed';
+      const gateSurveyId = ladder?.prior ? getPlanetPrimarySurveyId(ladder.prior.id) : null;
+      const gateSurvey = gateSurveyId ? SURVEY_CATALOG[gateSurveyId] : null;
+      const gateDone = !gateSurveyId || state.surveys?.[gateSurveyId]?.depleted === true || state.surveys?.[gateSurveyId]?.status === 'completed';
+      let chip, note;
+      if (charted) {
+        /* A body with no authored primary survey charts trivially (nothing
+           gates on it), but "CHARTED" there would claim a scan the player
+           never ran — Zephyros showed that lie on the first render. */
+        chip = primarySurveyId ? 'CHARTED' : 'OPEN';
+        note = primarySurveyId ? 'Primary survey complete' : 'No primary survey authored';
+      }
+      else if (!ladder?.prior) { chip = 'SURVEY'; note = 'Open — primary survey pending'; }
+      else if (!gateDone) { chip = 'UNCHARTED'; note = gateSurvey ? `Requires: ${gateSurvey.name}` : 'Chart the prior body first'; }
+      else { chip = 'READY'; note = 'Gate open — primary survey pending'; }
+      const areas = (UGA_GROUND_AREA_LADDER[rung.id] || []).map(areaId => {
+        const area = UGA_GROUND_AREA_CATALOG[areaId];
+        const record = control?.areas?.[areaId];
+        if (!area || !record) return null;
+        return {
+          id: areaId,
+          name: record.areaName,
+          cleared: record.clearedMapIds.length,
+          total: record.totalMaps,
+          held: record.controlled === true,
+          open: isGroundAreaUnlocked(state, areaId)
+        };
+      }).filter(Boolean);
+      return { id: rung.id, name: rung.name, open, charted, chip, note, areas };
+    });
+    return { id: systemId, name: system.name, classification: system.classification || '', reached, planets };
+  });
 }
 
 function assertCost(resources, cost, path = 'resources') {

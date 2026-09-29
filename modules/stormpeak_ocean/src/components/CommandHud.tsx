@@ -20,7 +20,7 @@ import { DEFS, PLACE_ORDER, PRODUCE_ORDER, unitLabel, type BuildingId, type Fact
 import { FACTION_META, FACTION_ORDER, stationName } from "@/lib/massfront/submarines";
 import { LIGHT_ORDER, LIGHTS } from "@/lib/ocean/world/lightSim.js";
 import type { MatchSnapshot, OceanStats, SonarSnap } from "./ocean-types";
-import { returnToMassfront } from "../host-return";
+import { recordStormpeakResult, returnToMassfront } from "../host-return";
 import { SonarScope } from "./SonarHud";
 
 const SEA_STATES = [
@@ -251,6 +251,17 @@ export function CommandHud({
   const selectedSub = selected.find((e) => e.sub);
   const playerSub = selectedSub || snap?.ents.find((e) => e.sub && e.team === 0 && e.alive);
   const toggle = (id: Sheet) => setSheet((s) => (s === id ? null : id));
+
+  /* One record per settled run: the outcome overlay renders on every frame
+     while phase sits on victory/defeat, so write the counter on the first
+     render that sees a settled outcome and let a ref keep the later ones
+     from double-counting. */
+  const recordedRef = useRef<string | null>(null);
+  const outcome = snap?.outcome === "victory" || snap?.outcome === "defeat" ? snap.outcome : null;
+  if (outcome && recordedRef.current !== outcome) {
+    recordedRef.current = outcome;
+    recordStormpeakResult(outcome, snap?.time ?? 0);
+  }
 
   return (
     <div className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-between">

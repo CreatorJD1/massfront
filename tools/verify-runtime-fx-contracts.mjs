@@ -32,7 +32,12 @@ const server=createServer(async(req,res)=>{try{
   res.end(await readFile(f));
 }catch{res.writeHead(404);res.end('nf');}});
 await new Promise(r=>server.listen(0,'127.0.0.1',r));
-const url=`http://127.0.0.1:${server.address().port}/?fxprobe=1`;
+/* galacticFallback=classic is the launcher's own module-return bypass: it
+   treats this boot as a recovered classic route, skips the gateway and never
+   re-shows #updScr. DOM-hiding the launcher instead fought its pollers — the
+   updater re-raised the panel after the hide pass and every evidence PNG
+   captured the September launcher, not the battlefield. */
+const url=`http://127.0.0.1:${server.address().port}/?fxprobe=1&galacticFallback=classic`;
 
 const checks=[];
 function check(name,ok,evidence){checks.push({name,pass:!!ok,evidence});console.log(`${ok?'PASS':'FAIL'} ${name} [${evidence}]`);}
@@ -78,6 +83,29 @@ try{
     localStorage.setItem('mf_auth_gate_v1','1');
   }catch{}});
   await page.goto(url,{waitUntil:'domcontentloaded',timeout:60000});
+  /* Leave the launcher through its own front door, exactly as the launch-
+     affordance harness does: Play (intro auto-continue) -> offline identity ->
+     wait for passed/bypass. The launcher's pollers re-raise #updScr whenever
+     the updater settles, so CSS-hiding it at boot lost the race and every
+     capture showed the September launcher panel instead of the battlefield. */
+  await page.waitForFunction(()=>typeof mfLauncherSnapshot==='function',null,{timeout:90000});
+  await page.waitForFunction(()=>{
+    const p=document.getElementById('mfLaunchPlay'),o=document.getElementById('mfLaunchOffline');
+    return (p&&!p.disabled)||(o&&!o.disabled);
+  },null,{timeout:90000});
+  await page.evaluate(()=>{
+    const p=document.getElementById('mfLaunchPlay'),o=document.getElementById('mfLaunchOffline');
+    (p&&!p.disabled?p:o)?.click();
+  });
+  const introStart=page.locator('#mfIntroStart');
+  await introStart.waitFor({state:'visible',timeout:20000}).catch(()=>{});
+  if(await introStart.isVisible()) await introStart.click({timeout:5000}).catch(()=>{});
+  await page.locator('#apOfflineBtn').waitFor({state:'visible',timeout:30000}).catch(()=>{});
+  if(await page.locator('#apOfflineBtn').isVisible().catch(()=>false)) await page.locator('#apOfflineBtn').click({timeout:10000});
+  await page.waitForFunction(()=>{
+    const s=typeof mfLauncherSnapshot==='function'?mfLauncherSnapshot():null;
+    return Boolean(s&&(s.passed||s.bypass));
+  },null,{timeout:120000}).catch(()=>{});
   await page.waitForFunction(()=>typeof resetWorld==='function'&&typeof render==='function'&&
     typeof mfEmitMacroFx==='function'&&typeof shieldFxTelemetry==='function'&&typeof orgfxDeath==='function',null,{timeout:120000});
   const gpu=await page.evaluate(()=>{const c=document.createElement('canvas'),g=c.getContext('webgl2');
@@ -90,7 +118,7 @@ try{
     try{if(typeof apClose==='function')apClose();}catch{}
     try{if(typeof stopAttract==='function')stopAttract();}catch{}
     document.body.classList.add('mfIntroDone');
-    for(const id of ['mfBootCover','apOverlay','loadScr','mfIntroSkip','mfIntroReplay','pauseOverlay','gameOver','levelUp','dispatch','setupScr','startScreen']){
+    for(const id of ['mfBootCover','apOverlay','loadScr','mfIntroSkip','mfIntroReplay','pauseOverlay','gameOver','levelUp','dispatch','setupScr','startScreen','updScr']){
       const e=document.getElementById(id);if(e)e.style.setProperty('display','none','important');
     }
     document.querySelectorAll('.mfTitleReveal').forEach(e=>e.style.setProperty('display','none','important'));
@@ -363,11 +391,12 @@ try{
     for(let k=-2;k<=2;k++)orgfxHit(cx-60,cy+k*18,16,1,.2,k%3);
     orgfxDeath(cx+35,cy,34,2);
     for(let n=0;n<4;n++)render(1/60);
-    let drops=0,splats=0,wisps=0;
-    for(let i=0;i<ORGFX_CAP;i++)if(orgLife[i]>0){if(orgKind[i]===ORGFX_DROP)drops++;else if(orgKind[i]===ORGFX_SPLAT)splats++;else wisps++;}
-    return {before,after:orgfxCount(),drops,splats,wisps,cap:ORGFX_CAP,gpfxBefore,gpfxAfter:gpfxLive};
+    let drops=0,splats=0,wisps=0,pools=0;
+    for(let i=0;i<ORGFX_CAP;i++)if(orgLife[i]>0){if(orgKind[i]===ORGFX_DROP)drops++;else if(orgKind[i]===ORGFX_SPLAT)splats++;else if(orgKind[i]===ORGFX_POOL)pools++;else wisps++;}
+    return {before,after:orgfxCount(),drops,splats,wisps,pools,cap:ORGFX_CAP,gpfxBefore,gpfxAfter:gpfxLive};
   });
   check('organic hit/death burst is bounded and includes wet splats',organic.after>organic.before&&organic.after<=organic.cap&&organic.splats>0,JSON.stringify(organic));
+  check('organic death leaves a persistent ichor pool',organic.pools>0,JSON.stringify(organic));
   check('organic liquid avoids GPU spray',organic.gpfxAfter===organic.gpfxBefore,JSON.stringify(organic));
   await capturePng(page,'04-organic-ichor-hit-death.png');
 
@@ -385,11 +414,18 @@ try{
     for(let n=0;n<8;n++){tick++;emitAirSmoke(a,TYPES[raptor],false);}
     const orgBefore=orgfxCount();beginAirCrash(b);
     for(let n=0;n<5;n++){tick++;airCrashTick(b,.06);render(1/60);}
+    /* emitAirSmoke now feeds the fixed-step world-history volume first
+       (mfOrdnanceTrailSimSample in volfx.js) and only falls back to the
+       legacy particle arrays when a history row is unavailable. Counting
+       flife/fzh therefore measured a path the healthy game no longer takes;
+       the honest bound is the trail history telemetry (8 rows x 12 points). */
     let airbornePuffs=0;for(let i=0;i<MAXPART;i++)if(flife[i]>0&&fzh[i]>0)airbornePuffs++;
-    const mid={a,b,crashing:!!uCrash[b],alive:!!ualive[b],alt:ualt[b],airbornePuffs,fCount,gpfxLive,org:orgfxCount()};
+    const hist=typeof volFxTrailHistoryTelemetry==='function'?volFxTrailHistoryTelemetry():null;
+    const mid={a,b,crashing:!!uCrash[b],alive:!!ualive[b],alt:ualt[b],airbornePuffs,fCount,gpfxLive,org:orgfxCount(),hist};
     return {mid,orgBefore,raptor,particleCap:MAXPART,renderer:{...macroFxTelemetry()}};
   });
-  check('damaged aircraft trail uses elevated bounded puffs',air.mid.airbornePuffs>0&&air.mid.airbornePuffs<80&&air.mid.fCount<air.particleCap,JSON.stringify(air.mid));
+  const trailBound=air.mid.hist?air.mid.hist.points>0&&air.mid.hist.rows<=8&&air.mid.hist.points<=96:false;
+  check('damaged aircraft trail uses bounded elevated volume history',trailBound||(air.mid.airbornePuffs>0&&air.mid.airbornePuffs<80),JSON.stringify(air.mid));
   /* Existing organic droplets may expire while the aircraft scene advances.
      The mechanical crash contract is no NEW ichor, so a decreasing count is
      valid and an increasing count is the only failure. */
