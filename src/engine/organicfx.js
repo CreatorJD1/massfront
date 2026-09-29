@@ -6,9 +6,15 @@
    authored 4x4 sheet carries internal droplets as one connected silhouette;
    this module never expands it into a point spray or a pile of glow quads.
 
-   Civic rule: ichor never deforms terrain, adds a crater, or records a burn.
+   ichor pools: a death or a bio seep can leave one persistent pool — a fourth
+   kind that replays the same authored spread sheet over ~20 s at a larger,
+   darker, lower-alpha scale, so ground the Brood bleeds on stays visibly
+   claimed for a whole engagement instead of evaporating in a second. The pool
+   is still one billboard per event with a hard count cap, and it inherits the
+   civic rule: no terrain deformation, no crater, no burn record.
    ============================================================================ */
-const ORGFX_CAP=384, ORGFX_DROP=0, ORGFX_SPLAT=1, ORGFX_WISP=2;
+const ORGFX_CAP=384, ORGFX_DROP=0, ORGFX_SPLAT=1, ORGFX_WISP=2, ORGFX_POOL=3;
+const ORGFX_POOL_MAX=48;
 const orgX=new Float32Array(ORGFX_CAP),orgY=new Float32Array(ORGFX_CAP);
 const orgZ=new Float32Array(ORGFX_CAP),orgVx=new Float32Array(ORGFX_CAP);
 const orgVy=new Float32Array(ORGFX_CAP),orgVz=new Float32Array(ORGFX_CAP);
@@ -24,7 +30,8 @@ const ORGFX_PAL=[
   [[214,168,40],[78,48,12],[255,220,110]],
   [[186,82,245],[48,18,64],[220,150,255]]
 ];
-const ORGFX_TELEMETRY={total:0,dropped:0,maxLayers:0,last:null,events:[]};
+const ORGFX_TELEMETRY={total:0,dropped:0,maxLayers:0,pools:0,last:null,events:[]};
+function orgfxPoolCount(){let n=0;for(let i=0;i<ORGFX_CAP;i++)if(orgLife[i]&&orgKind[i]===ORGFX_POOL)n++;return n;}
 
 function orgfxQ(){
   return (typeof mfVfxQ==='function')?mfVfxQ()
@@ -108,6 +115,16 @@ function orgfxBurst(x,y,size,dirX,dirY,death,caste){
   }
   if(death&&q>=.95&&!strat&&layers<3&&orgfxAdd(ORGFX_WISP,x,y,floor+scale*.28,0,0,7,.58,
     scale*.72,wet[0],wet[1],wet[2],burstRot,1))layers++;
+  /* The pool is a persistent layer, not one of the three event layers: it
+     outlives the burst by an order of magnitude and must not gate the splash
+     stack. Skip it at strategic zoom (the ground is two pixels wide) and when
+     48 pools already cover the field — a fresh stain reads better than
+     evicting a pool the player is watching. */
+  if(death&&!strat&&!orgfxOverview()&&q>=.65&&orgfxPoolCount()<ORGFX_POOL_MAX){
+    const pr=(dark[0]*.55+wet[0]*.45)|0,pg=(dark[1]*.55+wet[1]*.45)|0,pb=(dark[2]*.55+wet[2]*.45)|0;
+    if(orgfxAdd(ORGFX_POOL,x+dx*scale*.10,y+dy*scale*.10,floor+.34,0,0,0,
+      18+q*8,Math.min(26,scale*1.05),pr,pg,pb,burstRot+((q-.5)*.3),1.18))ORGFX_TELEMETRY.pools++;
+  }
   orgfxRecord(!!death,layers);
   return layers;
 }
@@ -137,9 +154,17 @@ function orgfxOnBld(B,dmg,died){
 }
 function orgfxSeep(x,y,size){
   const q=orgfxQ();if(q<.95||orgfxStrategic())return;
-  const pal=orgfxPal(orgfxCaste(size)),wet=pal[0],floor=orgfxH(x,y);
+  const pal=orgfxPal(orgfxCaste(size)),wet=pal[0],dark=pal[1],floor=orgfxH(x,y);
   orgfxAdd(ORGFX_SPLAT,x,y,floor+.36,0,0,0,1.1,Math.min(10,Math.max(4,size*.38)),
     wet[0]*.55|0,wet[1]*.55|0,wet[2]*.55|0,Math.random()*Math.PI*2,1.14);
+  /* Bio impacts puddle too, but a seep is an event, not a death: a small,
+     short-lived pool and only on the max-quality path this function already
+     gates, so artillery-saturated matches do not drown in extra billboards. */
+  if(orgfxPoolCount()<ORGFX_POOL_MAX){
+    const pr=(dark[0]*.55+wet[0]*.45)|0,pg=(dark[1]*.55+wet[1]*.45)|0,pb=(dark[2]*.55+wet[2]*.45)|0;
+    if(orgfxAdd(ORGFX_POOL,x,y,floor+.34,0,0,0,9+q*4,Math.min(14,Math.max(6,size*.55)),
+      pr,pg,pb,Math.random()*Math.PI*2,1.12))ORGFX_TELEMETRY.pools++;
+  }
 }
 
 function orgfxTick(dt){
@@ -169,6 +194,18 @@ function orgfxEnqueue(){
       if(typeof macroFxQueueRect==='function')macroFxQueueRect(typeof MF_MACROFX_ICHOR==='number'?MF_MACROFX_ICHOR:17,
         X,Y,orgZ[i],orgSize[i]*(orgAsp[i]||1),orgSize[i],.995,a,tint,orgRot[i]);
       else macroFxQueue(17,X,Y,orgZ[i],orgSize[i],.995,a,tint,orgRot[i]);
+    }else if(k===ORGFX_POOL){
+      /* The authored spread sheet IS the pool-forming motion: crawl age01
+         across the full 16 frames over the pool's whole life, grow the radius
+         to its stored target over the first sixth, and dry out — darken and
+          fade — across the final quarter instead of popping out. */
+      const age=1-lf,grow=Math.min(1,age*6),dry=age>.75?(age-.75)/.25:0;
+      const sz=orgSize[i]*(.45+.55*grow);
+      const a=Math.min(150,150*Math.min(1,lf*2.4))*(1-dry*.85);
+      const dr=((orgR[i]|0)*(1-dry*.35))|0,dg=((orgG[i]|0)*(1-dry*.35))|0,db=((orgB[i]|0)*(1-dry*.35))|0;
+      if(typeof macroFxQueueRect==='function')macroFxQueueRect(typeof MF_MACROFX_ICHOR==='number'?MF_MACROFX_ICHOR:17,
+        X,Y,orgZ[i],sz*(orgAsp[i]||1),sz,age,a,(dr<<16)|(dg<<8)|db,orgRot[i]);
+      else macroFxQueue(17,X,Y,orgZ[i],sz,age,a,(dr<<16)|(dg<<8)|db,orgRot[i]);
     }else if(k===ORGFX_WISP){
       macroFxQueue(typeof MF_MACROFX_TRAIL==='number'?MF_MACROFX_TRAIL:14,X,Y,orgZ[i],
         orgSize[i]*(1+age*.45),Math.min(.98,.42+age*.52),115*lf,tint,orgRot[i]);

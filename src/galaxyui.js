@@ -86,6 +86,11 @@ function mfGalaxyCss(){
   .mfGalaxyStep i{position:absolute;left:50%;top:2px;transform:translateX(-50%);width:8px;height:8px;border-radius:50%;background:#294357;box-shadow:0 0 0 3px #081523}
   .mfGalaxyStep.done{color:#8ebcd1}.mfGalaxyStep.done:before{background:#328cad}.mfGalaxyStep.done i{background:#43c8ee;box-shadow:0 0 8px #43c8ee,0 0 0 3px #081523}
   .mfGalaxyStep.on{color:#effcff}.mfGalaxyStep.on i{background:#fff;box-shadow:0 0 10px #5ce0ff,0 0 0 3px #123249}
+  .mfLoopBanner{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:center;margin:0 0 7px;padding:7px 11px;
+    border:1px solid rgba(103,216,255,.2);border-left:3px solid #67d8ff;border-radius:10px;background:linear-gradient(105deg,rgba(12,44,64,.5),rgba(5,13,23,.9))}
+  .mfLoopBanner small{grid-column:1;color:#67d8ff;font:800 7px/1 var(--fT);letter-spacing:.14em}
+  .mfLoopBanner b{grid-column:1;margin-top:2px;color:#b9d9e8;font:650 9px/1.35 var(--fU)}
+  .mfLoopBanner strong{grid-column:2;grid-row:1/3;color:#eefaff;font:900 9px/1.2 var(--fT);letter-spacing:.04em;text-align:right;white-space:nowrap}
   .mfModeContract{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:center;margin:2px 0 9px;padding:10px 11px;
     border:1px solid color-mix(in srgb,var(--mode,#63d9ff) 38%,transparent);border-radius:11px;background:linear-gradient(105deg,color-mix(in srgb,var(--mode,#63d9ff) 12%,#071321),rgba(5,13,23,.94));box-shadow:inset 3px 0 0 var(--mode,#63d9ff)}
   .mfModeContract span,.mfModeContract b,.mfModeContract small,.mfModeContract strong{display:block}.mfModeContract span{color:var(--mode,#63d9ff);font:800 7px/1 var(--fT);letter-spacing:.14em}.mfModeContract b{margin-top:3px;color:#eefaff;font:900 10px/1.15 var(--fT);letter-spacing:.08em}.mfModeContract small{grid-column:1;color:#789bb0;font:650 8px/1.3 var(--fU)}.mfModeContract strong{grid-column:2;grid-row:1/3;color:#ffe089;font:900 14px/1 var(--fT);white-space:nowrap}
@@ -439,6 +444,9 @@ function mfGalaxyCss(){
     .mfGalaxyHost{width:min(100%,880px);padding:0 calc(var(--sar) + 10px) 7px calc(var(--sal) + 10px)}
     .mfGalaxyStepper{padding:3px 2px 4px}.mfGalaxyStep{min-height:44px;padding-top:15px}
     .mfModeContract{margin:0 0 5px;padding:5px 9px}.mfModeContract b{margin-top:2px}.mfModeContract small{display:none}
+    /* The banner states what the stepper already shows here; its ~25px buys
+       the region card the clearance the dock-overlap fix exists for. */
+    #setupScr.galaxyFlow .mfLoopBanner{display:none}
     /* The selected region card starts just below this summary. On a 412px-tall
        phone its weather description otherwise lands behind the fixed dock;
        reclaim wrapper spacing without shrinking the 44px summary target. */
@@ -472,7 +480,7 @@ function mfGalaxyCss(){
     #mfStageRegion .mfIntelChip span{font-size:7px}#mfStageRegion .mfIntelChip b{font-size:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     #mfStageRegion>#mfRegionMapHost{grid-column:2;min-width:0}
     #setupScr.galaxyFlow #mfStageRegion #mapRow{display:flex!important;gap:6px!important;overflow-x:auto;margin:0;scroll-snap-type:x mandatory}
-    #mfStageRegion #mapRow .mapCard{flex:0 0 calc(100% - 28px);display:grid;grid-template-columns:minmax(120px,35%) minmax(0,1fr);align-content:start;gap:3px 8px;min-height:204px;height:auto;padding:6px;box-sizing:border-box;text-align:left;scroll-snap-align:center}
+    #mfStageRegion #mapRow .mapCard{flex:0 0 calc(100% - 28px);display:grid;grid-template-columns:minmax(120px,35%) minmax(0,1fr);align-content:start;gap:3px 8px;min-height:200px;height:auto;padding:6px;box-sizing:border-box;text-align:left;scroll-snap-align:center}
     #mfStageRegion #mapRow .mapCard canvas{grid-column:1;grid-row:1/8;width:100%;height:auto;aspect-ratio:1/1}
     #mfStageRegion #mapRow .mSize,#mfStageRegion #mapRow .mNm,#mfStageRegion #mapRow .mDs,#mfStageRegion #mapRow .mConquest,#mfStageRegion #mapRow .mReward,#mfStageRegion #mapRow .mHz{grid-column:2;min-width:0;margin:0;overflow-wrap:anywhere}
     #mfStageRegion #mapRow .mSize{font-size:9.5px}
@@ -481,8 +489,14 @@ function mfGalaxyCss(){
     #mfStageRegion #mapRow .mHz b{font-size:10px}
     #mfStageRegion #mapRow .mConquest,#mfStageRegion #mapRow .mReward{display:block;padding-top:3px;font-size:10px;line-height:1.2}
     /* The threat pair fits on one line at this width; keeping it stacked
-       pushed the weather explanation beneath the fixed action dock. */
-    #setupScr.galaxyFlow #mfStageRegion #mapRow .mapCard{gap:2px 8px;padding:3px 6px}
+       pushed the weather explanation beneath the fixed action dock.
+       Measured at 915x412: dock top 304px, weather row bottom 302.1px — a
+       0.1px miss. The card's 7 content rows are inflated by the spanning
+       square canvas (leftover grid height distributes into every spanned
+       row), and align-self:end makes that WORSE by pinning rows to the
+       inflated bottoms. Narrowing the canvas column instead removes the
+       inflation at the source and keeps the preview square. */
+    #setupScr.galaxyFlow #mfStageRegion #mapRow .mapCard{gap:2px 8px;padding:3px 6px;grid-template-columns:minmax(120px,30%) minmax(0,1fr)}
     #setupScr.galaxyFlow #mfStageRegion #mapRow .mConquest{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
     #setupScr.galaxyFlow #mfStageRegion #mapRow .mReward{margin-top:1px}
     #setupScr.galaxyFlow #mfStageRegion #mapRow .mHz{margin-top:0}
@@ -655,6 +669,7 @@ function mfGalaxyRenderModeContract(){
   /* The reward contract remains inspectable, but a repeated paragraph must not
      hide the battlefield choice on every stage of a short phone screen. */
   el.style.setProperty('--mode',C.accent||'#63d9ff');el.innerHTML='<details class="mfModeDetails"'+(expanded?' open':'')+'><summary><span>'+mfGalaxyEsc(C.nm)+'</span><b>'+mfGalaxyEsc(C.rule)+'</b><strong>'+(boost?'+'+boost+'% XP':'BASE XP')+'</strong></summary><small>'+(item?mfGalaxyEsc(item.em+' EXCLUSIVE VICTORY REWARD - '+item.nm+' · ONE MATCH'):'NO EXCLUSIVE ITEM CONTRACT')+'</small></details>';
+  mfGalaxyRenderLoopBanner();
   const go=$('mfConquestContinue');if(!go)return;
   if(activeWarMode==='standard'){
     const map=mfConquestNextMap(),L=mfConquestLocate(map),D=MAPDEFS[map]||{};go.disabled=false;
@@ -664,6 +679,29 @@ function mfGalaxyRenderModeContract(){
   }else{
     go.disabled=true;go.innerHTML='<div><span>'+mfGalaxyEsc(String(activeWarMode||'standard').toUpperCase())+' THEATRE PREVIEW</span><b>'+(activeWarMode==='mmo'?'PERSISTENT WARFRONT SERVICE IN DEVELOPMENT':'SELECT AN AUTHORED OPERATION')+'</b></div><small>PREVIEW</small>';
   }
+}
+/* LOOP DIRECTION BANNER -----------------------------------------------------
+   Audit fix #3 ("say the loop out loud"): the objective panel answers "what
+   next" inside UGA Command, but nothing on the front or in Classic setup
+   carried the same authority, so a new player met two parallel products with
+   no pointer between them. One line, one truth source: in Classic setup it
+   names the conquest front (derived from the same mfConquest* functions the
+   continue card uses); in the UGA hub the objective panel already speaks, so
+   the banner shows the other door instead. No new state — everything below is
+   derived at render time from existing globals. */
+function mfGalaxyRenderLoopBanner(){
+  const el=$('mfLoopBanner');if(!el)return;
+  let where,why,route='';
+  if(typeof activeWarMode!=='undefined'&&activeWarMode!=='standard'){
+    where=activeWarMode==='mmo'?'MMO WARFRONT':'THIS THEATRE';
+    why=activeWarMode==='mmo'?'Persistent warfront service is in development. Classic conquest below is the live front.':'Preview only — the live front is Classic conquest below.';
+  }else{
+    const map=mfConquestNextMap(),L=mfConquestLocate(map),D=MAPDEFS[map]||{};
+    where='CONQUEST FRONT '+L.tier+' OF '+mfConquestTotalMaps();
+    why='Secure sites planet by planet; each victory unlocks the next battlefield.';
+    route=mfGalaxyEsc(L.P.nm+' · '+(D.nm||map));
+  }
+  el.innerHTML='<small>'+mfGalaxyEsc(where)+'</small><b>'+why+'</b>'+(route?'<strong>'+route+' ›</strong>':'');
 }
 function mfConquestReward(map){
   if(!mfConquestGateActive()||(typeof storyCampaignActiveId!=='undefined'&&storyCampaignActiveId))return null;
@@ -1169,7 +1207,7 @@ function mfGalaxyToggleSystemLore(){
 function mfGalaxySetStage(stage){
   if(MF_GALAXY_STAGES.indexOf(stage)<0)stage='galaxy';
   if(stage!=='system')mfSystemLoreOpen=false;
-  mfGalaxyStage=stage;mfGalaxyRenderStage();
+  mfGalaxyStage=stage;mfGalaxyRenderStage();mfGalaxyRenderLoopBanner();
   const setup=$('setupScr'),sc=setup&&setup.querySelector('.setupScroll');
   if(sc){sc.scrollTop=0;sc.scrollLeft=0;}
   if(setup)setup.scrollLeft=0;
@@ -1545,6 +1583,7 @@ function mfGalaxyBuild(){
     <nav class="mfGalaxyStepper" aria-label="Deployment route">
       <button type="button" class="mfGalaxyStep on" data-mf-stage="galaxy"><i></i>GALAXY</button><button type="button" class="mfGalaxyStep" data-mf-stage="system"><i></i>SYSTEM</button><button type="button" class="mfGalaxyStep" data-mf-stage="planet"><i></i>PLANET</button><button type="button" class="mfGalaxyStep" data-mf-stage="region"><i></i>REGION</button><button type="button" class="mfGalaxyStep" data-mf-stage="deploy"><i></i>DEPLOY</button>
     </nav>
+    <div class="mfLoopBanner" id="mfLoopBanner" role="status"></div>
     <div class="mfModeContract" id="mfModeContract"></div>
     <section class="mfStagePanel on" data-stage="galaxy" id="mfStageGalaxy"><div class="mfGalaxyEyebrow"><span>CLASSIC FOUR-SYSTEM THEATRE</span><span class="mfGalaxyLive">WAR TABLE ONLINE</span></div><h3 class="mfStageTitle">CHOOSE A SYSTEM</h3><p class="mfStageSub">Classic and Galactic Command chart the same worlds. Select an unlocked star.</p><button type="button" class="mfConquestContinue" id="mfConquestContinue"></button><div class="mfGalaxyViewport"><canvas id="mfGalaxyCanvas" width="600" height="520" aria-label="Interactive Classic four-system battle map"></canvas><div class="mfCanvasSelection" id="mfGalaxySelection" role="status" aria-live="polite"></div></div><div class="mfGalaxyHelp"><span>DRAG TO ROTATE</span><b>TAP AN UNLOCKED STAR</b></div><div class="mfWorldStrip" id="mfWorldStrip"></div></section>
     <section class="mfStagePanel" data-stage="system" id="mfStageSystem"></section>

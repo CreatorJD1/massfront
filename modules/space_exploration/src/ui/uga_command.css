@@ -437,6 +437,42 @@
 @keyframes uga-pulse { 50% { opacity: .35; } }
 
 .uga-panel-section { margin-top: 12px; }
+
+/* Frontier dedication ladder — the rung board under the objective card.
+   Status colors reuse the convention the rooms already teach: cyan = live
+   work, dim = fog. Locked rungs are visible but greyed; the note line, not a
+   lock glyph, says why ("Requires: Outer Relay Phase Trace"). */
+/* The shell styles list items elsewhere, so the ladder resets every nested
+   list itself — an `ol`-only rule leaked the shell's markers onto the planet
+   rungs as stray rings. */
+.uga-ladder ol, .uga-ladder ul { list-style: none; margin: 0; padding: 0; }
+.uga-ladder li::before { content: none; }
+.uga-ladder-systems { display: grid; gap: 8px; margin-top: 8px !important; }
+.uga-ladder-system { border: 1px solid rgba(92, 196, 232, .14); border-left-width: 3px; padding: 7px 9px; }
+.uga-ladder-system.is-reached { border-left-color: rgba(92, 196, 232, .75); }
+.uga-ladder-system.is-fog { opacity: .55; }
+.uga-ladder-system > b { display: block; font-size: 12px; letter-spacing: .04em; color: #cfe9f6; }
+.uga-ladder-system > small { display: block; margin-top: 1px; color: #6f8fa3; font: 8px/1.2 Consolas, monospace; letter-spacing: .08em; }
+.uga-ladder-planets { display: grid; gap: 6px; margin-top: 6px !important; }
+.uga-ladder-planet { border: 1px solid rgba(92, 196, 232, .12); padding: 6px 8px; }
+.uga-ladder-planet.is-fog { opacity: .6; }
+.uga-ladder-planet > b { display: inline-block; font-size: 11px; color: #e6f4fb; }
+.uga-ladder-planet > span { float: right; font: 8px/1.6 Consolas, monospace; letter-spacing: .1em; color: #63d9ff; }
+.uga-ladder-planet.is-fog > span { color: #b7803c; }
+.uga-ladder-planet > small { display: block; margin-top: 2px; color: #8fa9ba; font-size: 9px; line-height: 1.35; }
+.uga-ladder-areas { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px; margin-top: 5px !important; }
+.uga-ladder-area { display: flex; align-items: baseline; gap: 6px; border: 1px solid rgba(92, 196, 232, .1); padding: 4px 6px; }
+.uga-ladder-area > span { flex: 1; min-width: 0; font-size: 9px; color: #cfe9f6; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.uga-ladder-area > b { font: 9px/1 Consolas, monospace; color: #9db8ca; }
+.uga-ladder-area > small { font: 7px/1 Consolas, monospace; letter-spacing: .1em; color: #63d9ff; }
+.uga-ladder-area.is-held > small { color: #6fe3a5; }
+.uga-ladder-area.is-fog { opacity: .55; }
+.uga-ladder-area.is-fog > small { color: #b7803c; }
+.uga-ladder > footer { margin-top: 6px; color: #6f8fa3; }
+.uga-ladder > footer small { font: 8px/1 Consolas, monospace; letter-spacing: .1em; }
+@media (max-width: 480px) {
+  .uga-ladder-areas { grid-template-columns: 1fr; }
+}
 .uga-panel-section > header { min-height: 44px; display: flex; align-items: center; justify-content: space-between; color: #9db8ca; border-bottom: 1px solid rgba(92, 196, 232, .18); }
 .uga-panel-section > header span { font-size: 7px; font-weight: 800; letter-spacing: .13em; }
 .uga-panel-section > header small { color: #6f8fa3; font: 9px/1 Consolas, monospace; }
@@ -1014,6 +1050,41 @@
   gap: 2px;
 }
 
+/* Section-damage readout — per-compartment condition chip and the deck rollup
+   in the telemetry badge. Tones reuse the front card's convention so DANGER /
+   WARN read the same everywhere on the ship. The badge grid is two columns;
+   the condition block takes its own full-width row beneath rating + power. */
+.uga-telemetry-condition {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+  grid-column: 1 / -1;
+}
+.uga-telemetry-condition small {
+  font-size: 8px;
+  color: var(--uga-muted);
+  letter-spacing: .08em;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.uga-telemetry-condition b { font-size: 11px; color: #fff; white-space: nowrap; }
+.uga-telemetry-condition span { font-size: 7px; color: var(--uga-muted); letter-spacing: .06em; }
+.uga-telemetry-condition.is-danger b { color: #ff8d7a; }
+.uga-telemetry-condition.is-warning b { color: #ffcf7a; }
+.uga-telemetry-condition.is-stable b { color: #7ae0a2; }
+.uga-district-condition {
+  flex: 0 0 auto;
+  align-self: center;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font: 700 7px/1 Consolas, monospace;
+  letter-spacing: .1em;
+}
+.uga-district-condition.is-danger { color: #ffb3a7; background: rgba(255, 107, 82, .16); }
+.uga-district-condition.is-warning { color: #ffe0a7; background: rgba(255, 190, 82, .14); }
+
 .uga-telemetry-rating small, .uga-telemetry-power small {
   font-size: 8px;
   color: var(--uga-muted);
@@ -1430,11 +1501,18 @@
     flex: 1 1 auto;
     min-width: 118px;
     max-width: 180px;
-    grid-template-columns: 1fr;
+    /* Two columns so the section-state rollup sits beside power instead of
+       overflowing the single-column stack past the badge box — at 412px it
+       painted over the deck filter chips. */
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     border-radius: 4px;
     background: rgba(3, 14, 23, .9);
   }
   .uga-telemetry-rating { display: none; }
+  .uga-telemetry-condition { grid-column: auto; }
+  /* Icon + caption cannot fit the ~56px column at 412px; the tone-colored
+     code (DAMAGE / STRAINED / NOMINAL) identifies the block on its own. */
+  .uga-telemetry-condition small, .uga-telemetry-condition span { display: none; }
   /* Three inline labels wrapped unpredictably inside the 118px mobile badge and
      painted over the ship/deck controls. Keep the actual power values on two
      deterministic rows; the lightning icon already identifies this telemetry. */

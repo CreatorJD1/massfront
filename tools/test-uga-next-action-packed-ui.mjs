@@ -204,7 +204,11 @@ try {
   const objective = page.locator('.uga-campaign-hub [data-objective]');
   report.objectiveBefore = await objective.evaluate(element => ({
     step: element.dataset.objective, title: element.querySelector('h3')?.textContent,
-    detail: element.querySelector(':scope > p')?.textContent,
+    // The brief moved into a collapsed <details>; the directive paragraph that
+    // used to sit directly under the section now lives inside it as its first
+    // <p> (a second <p> carries the KEEL line). textContent reads it even
+    // while collapsed, so assert on the authored copy, not its visibility.
+    detail: element.querySelector('.uga-objective-brief p')?.textContent,
     constructionTarget: element.querySelector('[data-objective-construction]')?.dataset.objectiveConstruction,
     buttonCount: element.querySelectorAll('button').length
   }));

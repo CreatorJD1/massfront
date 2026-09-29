@@ -1,5 +1,38 @@
 export const STORMPEAK_RETURN_KEY = 'massfront.stormpeak.return.v1';
 
+/* Run-result handoff -------------------------------------------------------
+   The owner's contract for this surface is explicit: no XP, no cores, no
+   operation history. The host still counts finished runs as lightweight META
+   counters so the War Room card can say what happened out there. Both
+   documents share an origin, and the return ticket already proves
+   sessionStorage survives the hop out and back, so a second namespaced key is
+   the cheapest honest channel — no postMessage handshake to keep alive. */
+export const STORMPEAK_RESULT_KEY = 'massfront.stormpeak.result.v1';
+
+export type StormpeakResult = {
+  schemaVersion: 1;
+  kind: 'MassfrontStormpeakResultV1';
+  outcome: 'victory' | 'defeat';
+  seconds: number;
+  recordedAt: number;
+};
+
+export function recordStormpeakResult(outcome: 'victory' | 'defeat', seconds: number): void {
+  try {
+    const record: StormpeakResult = {
+      schemaVersion: 1,
+      kind: 'MassfrontStormpeakResultV1',
+      outcome,
+      seconds: Math.max(0, Math.round(seconds)),
+      recordedAt: Date.now(),
+    };
+    sessionStorage.setItem(STORMPEAK_RESULT_KEY, JSON.stringify(record));
+  } catch {
+    /* A private-mode session without storage still plays; the host simply
+       records nothing this run. */
+  }
+}
+
 export type StormpeakReturnTicket = {
   schemaVersion: 1;
   kind: 'MassfrontStormpeakReturnV1';

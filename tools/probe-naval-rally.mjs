@@ -232,6 +232,7 @@ try {
       const stride = Math.max(1, Math.floor(candidates.length / 220));
       let distancePairs = 0;
       let reachablePairs = 0;
+      let pendingFields = 0;
       for (let a = 0; a < candidates.length; a += stride) {
         for (let b = a + stride; b < candidates.length; b += stride) {
           const A = candidates[a], B = candidates[b];
@@ -239,7 +240,21 @@ try {
           if (distance < minLane || distance > maxLane) continue;
           distancePairs++;
           const field = requestField(B[0], B[1], true);
-          if (field < 0 || !fields[field] || fields[field].dirs[ffCell(A[0], A[1])] >= 8) continue;
+          let F = field >= 0 ? fields[field] : null;
+          /* requestField returns a slot it may still be flooding: the first
+             request of a tick builds synchronously, the rest defer with
+             dirs === null, and the sim drains that queue only on unit ticks.
+             lane() evaluates before any unit exists, so pump the slices here
+             instead of dereferencing null or misreading a pending field as
+             unreachable. The pool is LRU-bounded; a slot evicted mid-drain
+             just skips its pair. */
+          if (F && !F.dirs && typeof mfNavBuildSlice === 'function') {
+            let pump = 240;
+            while (pump-- > 0 && (mfNavQueue.length || mfNavJob)) mfNavBuildSlice(30000);
+            F = field >= 0 ? fields[field] : null;
+          }
+          if (!F || !F.dirs) { pendingFields++; continue; }
+          if (F.dirs[ffCell(A[0], A[1])] >= 8) continue;
           reachablePairs++;
           const score = Math.abs(distance - idealLane);
           if (score < bestScore) {
@@ -248,7 +263,7 @@ try {
           }
         }
       }
-      if (!best) throw new Error(`no open-water lane: candidates=${candidates.length} stride=${stride} distancePairs=${distancePairs} reachablePairs=${reachablePairs}`);
+      if (!best) throw new Error(`no open-water lane: candidates=${candidates.length} stride=${stride} distancePairs=${distancePairs} reachablePairs=${reachablePairs} pendingFields=${pendingFields}`);
       return best;
     };
 
