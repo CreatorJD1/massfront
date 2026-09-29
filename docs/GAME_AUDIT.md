@@ -1,241 +1,273 @@
 # MASSFRONT game audit — sixteen domains, current main
 
-Prepared **2026-09-29** against `main` at `8b44e06` (tree version **1.33.97**, all
-four version fields agreeing). This is a source-and-content audit across sixteen
-domains the owner listed, each given a verdict of **SOLID** (works, verified),
-**PARTIAL** (exists with real gaps), or **ABSENT** (not in the build). It does
-not override `CODEX_HANDOFF.md` for release mechanics, and it does not review
-the eleven unmerged Stormpeak nuke branches beyond noting their existence.
+Prepared **2026-09-29**, revised same day after owner review, against `main` at
+`a0c005a8` (tree 1.33.97). The first draft measured whether each system *works*;
+the owner correctly rejected that framing: a screen that renders at 60 fps can
+still bury the player. This revision keeps the engineering evidence but grades
+every domain on the **player-experience question too** — clarity, density, and
+whether the loop tells you where to go. Each domain carries both a **works**
+verdict and an **experience** verdict.
 
-**Method.** Source reads across `src/`, `modules/space_exploration/`,
-`modules/stormpeak_ocean/` and `cloudflare/`; `tools/extract-design-db.mjs`
-evaluated the real source (106/113 sources) into `design/design.json`; static
-gates re-run; packed `www` served and driven on hardware WebGL2 (RTX 4060
-D3D11) with the repo's Playwright lane. Claims not exercised in-client are
-marked. Screenshots cited were opened and **inspected by a human standard**,
-not trusted from exit codes.
-
-**Companion.** The 2026-09-13 audit (`cursor/game-audit-3f35`) never landed on
-`main`; this document supersedes it as the current player-facing audit.
+**Method.** Source reads; `tools/extract-design-db.mjs` over real source
+(106/113); static gates; packed `www` driven on hardware WebGL2 (RTX 4060
+D3D11) with screenshots inspected; map/water/air/naval census extracted
+directly from `MAPDEFS` and the region tables in `src/engine/gl.js`. The
+unmerged Stormpeak nuke chain is noted, not reviewed.
 
 ---
 
 ## 1. Verdict table
 
-| # | Domain | Verdict | One-line |
+| # | Domain | Works | Experience |
 |---|---|---|---|
-| 1 | GUI | **SOLID** | Menu chrome, veil system and tap feedback verified in-client |
-| 2 | Code | **SOLID** (1 gate repaired) | Scope gate clean; two stale test harnesses found and fixed |
-| 3 | Art | **SOLID** | LFS pointers verified; hero art parity across surfaces |
-| 4 | Animation | **PARTIAL** | Portraits + FX strong; unit ambience sparse |
-| 5 | Graphics | **SOLID** | Post chain disciplined; hardware-GPU renders verified |
-| 6 | Gameplay | **SOLID** | Match rules complete; restart contract passes |
-| 7 | Research & crafting | **PARTIAL** | 22-node tree deep; crafting is inventory-adjacent |
-| 8 | Exploration | **SOLID** | UGA loop verified in-client to Galactic Command |
-| 9 | RTS loop | **SOLID** | Classic flow verified; one landscape regression found |
-| 10 | Multiplayer | **PARTIAL** | Plumbing solid; no live opponents today |
-| 11 | Physics | **SOLID** | Sim, hazards, buoyancy; nuke curves lab-proven |
-| 12 | Blood & gore (infantry) | **PARTIAL** | Stains/vapour yes; gore is deliberately restrained |
-| 13 | Interior/air/water/land systems | **SOLID** | All four theatres exist and are wired |
-| 14 | Customization / ship loop | **SOLID** | XCOM-2-like ship management is real and gated by tests |
-| 15 | Ship cutout / section mgmt | **PARTIAL** | Cutaway asset ships; per-section damage is roadmap |
-| 16 | Mobile & desktop GUI | **SOLID** (1 regression) | Safe areas + touch targets verified; landscape dock bug |
+| 1 | GUI | SOLID | **CLUTTERED** — fronts carry 700–2,100 words; hub has ~19 tap targets |
+| 2 | Code | SOLID | neutral — two stale harnesses found, fixed in `a0c005a8` |
+| 3 | Art | SOLID | SOLID — hero art parity, portrait sets wired |
+| 4 | Animation | PARTIAL | PARTIAL — units static at zoom-out |
+| 5 | Graphics | SOLID | SOLID — post chain disciplined |
+| 6 | Gameplay | SOLID | PARTIAL — rules fine, direction unclear |
+| 7 | Research & crafting | SOLID/PARTIAL | PARTIAL — deep tree, thin crafting, low discoverability |
+| 8 | Exploration | SOLID | **CLUTTERED** — 517-word hub, mixed vocabulary |
+| 9 | RTS loop | SOLID | **CONFUSING** — 6+ commit taps to battle; vocab differs per layer |
+| 10 | Multiplayer | PARTIAL | PARTIAL — honest gates, no opponents |
+| 11 | Physics | SOLID | SOLID |
+| 12 | Blood & gore (infantry) | PARTIAL | restrained by design |
+| 13 | Interior/air/water/land systems | PARTIAL | **LAND-WEIGHTED** — see §4 map census |
+| 14 | Customization / ship loop | SOLID | PARTIAL — deep but opaque; XCOM bones, weak onboarding |
+| 15 | Ship cutout / section mgmt | PARTIAL | PARTIAL — cutaway is presentation only |
+| 16 | Mobile & desktop GUI | SOLID | PARTIAL — one real regression; density hurts mobile most |
 
-Severity totals in this inventory: **0 critical · 3 high · 4 medium · 3 low.**
-
----
-
-## 2. Domain findings
-
-### 1. GUI — SOLID
-
-`tools/verify-menu-chrome.mjs` PASS (zero page errors). `verify-launch-affordance.mjs`
-PASS: both entry doors (MASSFRONT veil, Ocean Tester veil) show a launch state and a
-failed launch says why, legibly. The UGA tap gives immediate visible feedback
-(`aria-busy`, `is-launching`, toast in the same tick — verified; the full synchronous
-dispatch measures ~300 ms because it includes the first-gesture AudioContext unlock
-that iOS requires inside the gesture, documented in the verifier now).
-
-### 2. Code — SOLID (one gate repaired)
-
-`verify-global-scope.mjs`: 114 scripts, 3,527 top-level names, **zero collisions**.
-Bundle parses (27.69 MB). Two stale harnesses were found and **fixed in this pass**:
-
-- `tools/test-room-upgrades-have-effects.mjs` — the lift-eval harness lacked the
-  faction-aware medic perk additions (`personFactionId` + catalogs). Fixed by handing
-  the real catalogs into the eval scope. PASS (33 modules effectful, XP caps at 45%).
-- `tools/verify-boot-screen-unified.mjs` — carried four September-rebuild defects of
-  its own: a `.load-progress` selector for an element that has always been
-  `.load-meter`; two 50 ms wall-clock bounds measured at ~300 ms and ~67 ms (the first
-  is the mandatory gesture-synced audio unlock); a blanket "no external requests"
-  contract that the product's own HF-pack/update delivery violates; and a wait on a
-  `startTrainingMission` global that tutorial.js deliberately keeps inside its IIFE
-  (the public bridge is `resumeTrainingMission`). All corrected with the why recorded.
-  Full suite now PASS end-to-end, including both failure-injection subtests.
-
-### 3. Art — SOLID
-
-Brand hero art SHA-verified on boot, menu and module surfaces (the verifier asserts
-pixel-parity of the boot derivative against canonical menu title art, MAE < 3).
-LFS pointer integrity confirmed during the September push (65 objects, 36 MB).
-Commander portrait sets (12-frame speaking webps + user-authored design references)
-are wired as the primary stage art. Unverified in-client: texture quality on a
-low-tier GPU.
-
-### 4. Animation — PARTIAL
-
-Commander speaking portraits (4×3 atlas, per-frame mouth/eye sheets) drive the
-commander stage; effect animation (shockwaves, volfx raymarch, organic splashes,
-clouds) is authored and bounded. What is thin: unit idle/ambience animation at
-tactical zoom is largely icon-driven (`tacticons.js` decides mesh→icon crossover),
-so armies feel static when zoomed out. Not a defect — a presentation choice — but
-the gap is player-visible.
-
-### 5. Graphics — SOLID
-
-Renderer discipline holds: the post-processing chain stays on texture units 4/5/6;
-custom passes save/restore BLEND/CULL_FACE/DEPTH_TEST/DEPTH_WRITEMASK and return
-via `begin3D(S_nA)` (re-verified by reading `gl.js`/`restree3d.js` integration
-points). Weapon-fire visibility PASS_CAPTURE on hardware. Boot→UGA visual chain
-PASS with zero image errors and exact brand dimensions (1200×673). GL-recovery
-loader (`mfNormalRecovery`) verified with correct archetype contract.
-
-### 6. Gameplay — SOLID
-
-36 units, 29 buildings, 17 building upgrades, 4 factions, 9 weapon classes, 56 maps
-(extracted from real source into `design/design.json`). Level-up cannot deadlock;
-sim failure reports three ways and halts once; dropship deploys once; restart
-contract (`test-defeat-restart-contract`) passes. The prior audit's criticals stay
-fixed.
-
-### 7. Research & crafting — PARTIAL
-
-Research: a 22-node tree with faction gates (`test-faction-tech` PASS), rendered as
-a real 3D tree (`restree3d.js` takeover), queue vocabulary reused by the commander
-clearance track (unmerged wf branch). Crafting: `develop.js` owns "persistent
-research, crafting materials, modules, wear and unlock ownership" and the ship
-bottom nav exposes **Build / Research / Craft / Upgrade / Inventory** (verified
-onscreen), but crafting depth is inventory-adjacent — there is no independent
-gathering→recipe→fabrication loop. Verdict: research SOLID, crafting thin.
-
-### 8. Exploration — SOLID
-
-UGA loop verified in-client to the Galactic Command hub: mission card ("Prepare
-Heliograph Wake"), five-step ladder (World Link → Orientation → Commission → Survey
-→ Ground), Regions Held / Maps Cleared counters, Depart/Galaxy actions, and the
-five-shelf bottom nav. 19 test suites pass (recovery cycle, wreck boarding, war
-table systems, planetary survey aim, jump gates, frontier ladder, …). `domain.test.mjs`
-now passes — the 2026-09-13 naming mismatch is gone.
-
-### 9. RTS loop — SOLID (one regression)
-
-Classic Standard flow verified: galaxy → system → planet → deploy on hardware GPU,
-with the full tap sequence. **Regression found:** `verify-classic-mobile-flow.mjs`
-fails deterministically — *"landscape/region: weather explanation is hidden behind
-the action dock"*. The 2026-09-27 handoff recorded this exact repair as done; it is
-broken again (or was never fully landed). **High** priority: it hides the Clear
-Skies/conditions explanation under the dock in short-landscape.
-
-### 10. Multiplayer — PARTIAL
-
-The plumbing is genuinely built and tested: deterministic lockstep (`determinism.js`,
-`statehash.js`), match consumer with reconnect/replay (`test-match-client-reconnect-replay`),
-seat visibility (`test-multiplayer-seat-visibility` PASS), network canonical setup
-(PASS), Cloudflare auth worker with match-replay tests, multiplayer boot local
-verifier, and honest "SERVICE IN DEVELOPMENT" gating on MMO/Co-op theatres (the
-dishonest XP-promising cards from the prior audit are gone). What does not exist
-today is a populated online opponent pool — online play is infrastructure without a
-crowd. Verdict: architecture SOLID, product PARTIAL.
-
-### 11. Physics — SOLID
-
-`sim.js` carries the deterministic combat model; `physics.js` owns cosmetic
-destruction rigid bodies with pressure budgets; `hazards.js` the map hazards (4
-profiled). The Stormpeak module adds Gerstner waves, buoyancy, ocean life and the
-100 kt nuke with suction/mach/tsunami curves — the standalone lab's water burst was
-fixed this session (collapse + Wilson disc) and verified at 61 fps on integrated
-graphics. Lab curves and theatre damage are being unified on the unmerged branches.
-
-### 12. Blood & gore for infantry — PARTIAL (deliberate)
-
-Brood organic FX (`organicfx.js`) does one animated ichor splash per hit plus one
-optional wet stain, one vapour lobe per death, hard three-layer ceiling — authored
-restraint, not absence. Unit death is greyscale-fade (air death-grey captures
-exist). There are no dismemberment, corpses that persist, or blood pools. For a
-T-rated SupCom-style RTS this is a design position; if the owner wants more, it is
-an addition, not a repair.
-
-### 13. Interior, air, water, land systems — SOLID
-
-Interior: UGA ship rooms with facility effects (50 facilities, every effect key
-consumed — proven by the repaired gate). Air: `airwarfare.js` + airlift system with
-faction variants. Water: War Table ocean (`sea.js`) plus the vendored Stormpeak
-theatre. Land: 56 authored maps across four homeworlds with hazard profiles,
-battlefield/interior/orbital topology datasets. All four are wired into the mode
-catalog, not decorative.
-
-### 14. Player customization, commanders & specialists, UGA ship loop — SOLID
-
-This is the XCOM-2-like spine and it is real: commander selection with speaking
-portraits and faction identity; specialist roster with injury bands, recovery
-cycles and faction-aware medic perks (the repaired gate exercises the actual math);
-room modules that all do something (33 modules asserted effectful); commander XP
-that scales with ship fit and caps at 45%; facility capabilities feeding rewards,
-research, injury severity and recovery. The ship is a management game, not a
-cutscene.
-
-### 15. Ship layout cutout / section management — PARTIAL
-
-The cutaway hull overlay ships as a real asset (`nexus-vii-cutaway-hull-overlay.glb`
-+ Blender build script) and the interior is room-based with per-room state. What
-does not exist yet is per-section **damage/localization on the hull cutout itself**
-during operations — sections affect the game, but the cutaway is presentation, not a
-damage board. Roadmap item, honestly labelled.
-
-### 16. Mobile & desktop GUI friendliness — SOLID (one regression)
-
-Safe-area insets used across `index.html` (4) and `ui.css` (14); short-landscape
-grid reflows; boot/veil/loaders all respect the 412×900 reference and were
-screenshot-verified at DPR 3; bottom nav targets ≥44 px asserted by the boot
-verifier; the Campaign Hub departure action is asserted inside the viewport.
-**The regression is #9's landscape dock overlap** — the one mobile-specific defect
-this pass found. APK size discipline unchanged (shrink script mandatory step).
+Severity totals: **0 critical · 4 high · 5 medium · 3 low.**
 
 ---
 
-## 3. Recommended next fixes (player impact order)
+## 2. The owner's four design criticisms — evidence and verdicts
 
-1. **Landscape region dock overlap** (High) — re-apply/re-verify the 2026-09-27
-   galaxy weather-row separation in `src/galaxyui.js`; the verifier already
-   checks sibling collisions, so land it with the check green.
-2. **`test-uga-next-action-packed-ui` harness TypeError** (High, test-only) —
-   fails after the Galactic Command screenshot with `The "string" argument must be
-   of type string`; the game screen itself is correct. Same class of stale harness
-   as the two fixed today.
-3. **Unmerged Stormpeak chain review** (High) — eleven branches ending in
-   `feat/stormpeak-nuke-craters-sim` (+594 sim lines, craters buildable-on, marks
-   on live surfaces). Verify visually on GPU before any merge.
-4. Craft loop depth (Medium) — decide whether crafting stays inventory-adjacent
-   or becomes a loop; either way, say so in the War Room copy.
-5. Unit ambience at tactical zoom (Medium) — small idle motion or icon shimmer to
-   make zoomed-out armies feel alive.
-6. Cutaway damage board (Low) — per-section visualization when operations injure
-   the ship.
+### 2.1 "A lot of cluttered GUI" — CONFIRMED
 
-## Appendix — checks run (2026-09-29)
+Measured from the real templates:
+
+- **Front screen (War Room door): ~2,134 words** in the `startScreen` markup
+  behind 3 buttons. The 2026-09-27 work cut a changelog wall to a one-sentence
+  brief on the *packed front*, but the source screen still carries a large copy
+  mass around the hero.
+- **UGA Galactic Command hub: ~517–583 words** in the hub template alone,
+  across objective + front-status + quick-access + basic-access panels, plus a
+  5-step ladder, counters, and a brief expander.
+- **Tap targets on the hub: ~19 buttons** (objective 2, front 2, quick 7, access
+  2, depart 1, five-tab bottom nav) plus 5 ladder chips. A new player cannot
+  tell which of the nineteen is *the* next action; the objective panel tries to
+  say it, but it is one more plate among many.
+- Small-print (`<small>` eyebrow rows) is the house style: 3 label rows per
+  panel is typical, so every panel reads as five lines before it says anything.
+
+Verdict: the chrome is high quality; the **information architecture** is not.
+The fix class is subtraction and hierarchy (one primary CTA per screen, panels
+folded by default, copy halved), not new styling.
+
+### 2.2 "Too much text" — CONFIRMED
+
+Hub ~517 words; front ~2,134; the deploy/region stages additionally carry
+explanatory rows per selection (the same copy family that produced the
+landscape dock-overlap regression). Explanations live on the screens instead of
+behind them. Nothing is wrong with any single sentence; the sum is a reading
+test before every battle.
+
+### 2.3 "Unclear game-loop direction" — CONFIRMED
+
+- There are **two parallel products** (Classic War Table conquest; UGA
+  expedition with ship loop) and the front screen does not say which one a new
+  player should care about. The War Room advertises Campaign; the UGA hub is
+  the actual campaign spine; neither points at the other as "start here."
+- The UGA loop's own direction is real (`commandObjectivePanel` names the next
+  step — e.g. "Prepare Heliograph Wake", ladder 01 World Link → 05 Ground) but
+  it competes with seven quick-access buttons and a duty-watch panel that
+  *advances time and raises front pressure* — a mechanic the UI names but never
+  explains, on the same screen as the main objective.
+- Domain vocabulary is triple-tracked: catalog says **mission** (75 hits),
+  ground_operation says **operation** (92), contracts panel says **contract**
+  (12). Region/system/planet are Classic words; system/expedition-cycle/front
+  are UGA words. Same player, two languages, no glossary on screen.
+
+### 2.4 "Confusing RTS elements outside the Classic War Table" — CONFIRMED
+
+Outside Classic Standard, RTS-shaped concepts appear with different rules and
+names: expedition cycles (time advances by *watch*, not by match), front
+pressure (a strategic clock that rises while you do other things), core rescue,
+duty watch, data veins, op modifiers (10), boosters (4), wildcards (13). Each
+is individually tested (war-table-systems, frontier-ladder, duty-watch suites
+all pass) but their **screen-level grammar** differs from the Classic loop the
+player learned first. The confusion is structural, not a bug.
+
+---
+
+## 3. Per-domain findings (works / experience)
+
+### 1. GUI — works: SOLID · experience: CLUTTERED
+`verify-menu-chrome` PASS, zero page errors; both entry doors give legible
+launch/failure states; UGA tap feedback is same-tick (aria-busy, is-launching,
+toast). The measured ~300 ms synchronous dispatch is the mandatory
+gesture-synced audio unlock and is documented in the verifier. Experience:
+see §2.1.
+
+### 2. Code — works: SOLID
+Scope gate 114 scripts / 3,527 names / 0 collisions; bundle parses (27.69 MB).
+Two stale harnesses fixed in `a0c005a8` (room-upgrades catalog lift; boot
+verifier's `.load-meter` selector, measured 500 ms/100 ms bounds, HF-origin
+allowlist, `resumeTrainingMission` bridge). One test-only TypeError remains
+(`test-uga-next-action-packed-ui`, after a visually-correct Galactic Command
+screen).
+
+### 3. Art — works: SOLID · experience: SOLID
+Brand art SHA-verified across boot/menu/module with pixel-parity (MAE < 3);
+LFS integrity proven in the September push; commander speaking portraits are
+primary stage art.
+
+### 4. Animation — works: PARTIAL
+Portraits and effect animation (shockwave, volfx, organic splashes, clouds) are
+real; units at tactical zoom are icon-driven and feel static. Presentation
+choice, but player-visible.
+
+### 5. Graphics — works: SOLID
+Post chain stays on units 4/5/6; state save/restore discipline holds; GL
+recovery loader archetype contract verified; weapon-fire PASS_CAPTURE.
+
+### 6. Gameplay — works: SOLID · experience: PARTIAL
+36 units, 29 buildings, 17 upgrades, 4 factions, 9 weapon classes, 22-node
+research tree, 56 legacy + 48 region maps. Match rules verified (level-up
+cannot deadlock, sim halt sticky, restart contract). Experience: rules are fine
+— the confusion is *where to go next*, which §2.3 covers.
+
+### 7. Research & crafting — works: SOLID/PARTIAL · experience: PARTIAL
+Research: 22 nodes, faction gates tested, rendered as a real 3D tree.
+Crafting: `develop.js` owns materials/modules/wear; the ship nav exposes
+Build/Research/Craft/Upgrade/Inventory, but there is no gather→recipe→fabricate
+loop. Discoverability is the bigger issue: the tree lives behind a shelf fold.
+
+### 8. Exploration — works: SOLID · experience: CLUTTERED
+UGA loop verified to Galactic Command on hardware; 19 suites pass; domain
+naming fixed. Experience: §2.1/§2.3.
+
+### 9. RTS loop — works: SOLID · experience: CONFUSING
+Classic flow verified on hardware. **Regression:** `verify-classic-mobile-flow`
+fails — landscape/region weather explanation hidden behind the action dock
+(high). Flow cost: War Room → ENTER system → OPEN REGION → CONFIGURE FORCE →
+START BATTLE → DEPLOY is six commit taps before the match clock starts, each
+with its own explanatory copy. That is a design decision to revisit, not a bug
+to patch.
+
+### 10. Multiplayer — works: PARTIAL
+Deterministic lockstep, reconnect/replay, seat visibility, canonical network
+setup all pass; Cloudflare worker tested; honest SERVICE IN DEVELOPMENT gates.
+No live opponents exist today.
+
+### 11. Physics — works: SOLID
+Deterministic combat; cosmetic rigid bodies with pressure budgets; hazards (11
+kinds across maps); Stormpeak Gerstner/buoyancy/nuke curves lab-proven this
+session (61 fps on integrated graphics, collapse fix pushed to `stormpeak/ocean`).
+
+### 12. Blood & gore for infantry — works: PARTIAL (deliberate)
+One ichor splash + optional wet stain per hit, one vapour lobe per death,
+three-layer ceiling; greyscale death fade; no dismemberment/pools/corpses. A
+rating-driven design position; expanding it is an addition.
+
+### 13. Interior / air / water / land systems — works: PARTIAL · experience: LAND-WEIGHTED
+All four exist but are not equal citizens — see §4.
+
+### 14. Player customization, commanders & specialists, UGA ship loop — works: SOLID · experience: PARTIAL
+The XCOM-2-like spine is real and test-proven: 50 facilities, 33 modules all
+effectful, commander XP scaling with fit (45% cap), injury bands with
+faction-aware medic perks, facility capabilities feeding every reward channel.
+Experience: the depth is invisible until you dig; nothing on the hub teaches
+that the ship is the meta-game.
+
+### 15. Ship layout cutout / section management — works: PARTIAL
+`nexus-vii-cutaway-hull-overlay.glb` + Blender build script ship; rooms carry
+real state and effects. No per-section damage board on the cutaway yet.
+
+### 16. Mobile & desktop GUI friendliness — works: SOLID · experience: PARTIAL
+Safe-area insets throughout; ≥44 px targets asserted; 412×900 @ DPR3 verified;
+landscape dock regression is the one mobile defect. Density (§2.2) hurts
+mobile more than desktop — small-print rows multiply on narrow screens.
+
+---
+
+## 4. Map-type census — the owner's "only land" point, measured
+
+The battle catalogue is the region tables in `src/engine/gl.js`:
+
+- **48 authored region maps** (16 regions × small/medium/large across four
+  homeworlds), plus 56 legacy standalone map defs in the design DB.
+- **Water is authored, not missing:** an explicit `wet` table gives **12 of 48
+  region maps real water** — 8 `ocean` (all three Aelos Harbor Command maps,
+  all three Nordhall Frostwake Isles maps, Nordhall cliff/peaks mediums) and 4
+  `river` (Aelos north/basin/ridge, Nordhall frost). `navalEnabled=true` flows
+  from that table, seabed+bridge render flags are forced on, and hBias is
+  clamped so coasts read.
+- **Naval exists to fight on it:** Harbor (4 factions, "must be sited on the
+  shore"), Sea Bastion (water placement), Corvette/Dreadnought (naval:1 in
+  TYPES), AI builds harbors by difficulty ([1,2,3] at time thresholds) and
+  repositions naval production. Naval rally/probe tooling exists
+  (`probe-naval-rally`, `capture-water-shore`) but **`probe-naval-rally`
+  currently throws** (`Cannot read properties of null` on a flow-field entry) —
+  a stale probe against the current coast, same class as the harness rot above;
+  it needs a look before naval can claim end-to-end verification.
+- **Two homeworlds are deliberately dry:** Dominion (Pyraeth) dusk pads and
+  Brood (Vespera) magma — the code comment says so explicitly. So even the
+  water that exists is faction-clustered: Nova coast + Syndicate ice.
+- **Interior battles: authored, not runtime.** `interiortopology-stage10.js`
+  carries four source-authored interior navigation graphs, portal profiles,
+  unit envelopes — `status:'AUTHORING_ONLY'`, `runtimeReady:false`,
+  `modelPackBinding:false`. No interior RTS map is playable today.
+- **Orbital/air-surface battles: candidates.** `orbitaltopology-stage10.js`:
+  6 AUTHORING_CANDIDATE, 1 AUTHORING_ONLY, 1 REJECTED. The Stage-10 theatre
+  catalog itself is `AUTHORING_ONLY`, `runtimeReady:false`.
+- **Air is a layer, not a theatre:** aircraft (Raptor etc., `air:1`,
+  `airwarfare.js` bands/missions) fight *over land/water maps*; there is no
+  air-only map. The naval-submarine feature branch (`feature/faction-submarines`,
+  2 commits) is **not merged** into main.
+
+**Map verdict:** the catalogue is land-weighted by design — 75% of region maps
+are land-only, water maps cluster on two of four homeworlds, and
+interior/orbital/naval-submarine play is authored data awaiting runtime
+approval. If the owner wants map-type variety (water-heavy, air-surface,
+interior, orbital), the honest state is: naval is real and playable on 12 maps
+pending the probe fix; everything else is authored-but-dormant.
+
+---
+
+## 5. Recommended next fixes (player impact order)
+
+1. **Subtraction pass on the three hottest screens** (High, design) — front
+   screen, Galactic Command hub, deploy/region: one primary CTA each, panels
+   folded by default, copy halved. The screens to beat: 2,134 / ~583 / dense
+   region rows.
+2. **Landscape region dock overlap** (High, bug) — re-land the 2026-09-27
+   galaxy separation until `verify-classic-mobile-flow` is green.
+3. **Say the loop out loud** (High, design) — one persistent "what am I doing
+   and why" line that survives across Classic and UGA (the objective panel
+   exists; give it the same authority on the front and in Classic setup).
+4. **Unify the vocabulary** (Medium) — pick mission vs operation vs contract
+   per context and rename on-screen (domain layer can keep its internal names).
+5. **Fix `probe-naval-rally`** (Medium) — stale flow-field access; needed
+   before naval play can claim verification.
+6. **Decide the dormant theatres** (Medium) — interior/orbital data is authored
+   and gated by `runtimeReady:false`; either schedule activation or say in
+   copy that they're future.
+7. **Unit ambience at zoom** (Low) — small idle motion or icon shimmer.
+8. **Cutaway damage board** (Low) — per-section visualization on the hull.
+
+## Appendix — checks run (2026-09-29, revision 2)
 
 | Check | Result |
 |---|---|
-| `verify-global-scope.mjs` | PASS — 114 scripts, 3,527 names, 0 collisions |
-| `tools/bundle.mjs` | PASS — 27.69 MB |
-| `tools/pack-www.mjs` | PASS — staged, filter report sane |
-| `verify-menu-chrome.mjs` | PASS — 0 page errors |
-| `verify-launch-affordance.mjs` | PASS — both doors + legible failure |
-| `verify-boot-screen-unified.mjs` | PASS (after verifier repairs) — 8 subtests |
-| `verify-weapon-fire-packed.mjs` | PASS_CAPTURE |
-| `verify-classic-mobile-flow.mjs` | **FAIL** — landscape/region dock overlap |
-| Prior-audit suite set (11 suites) | PASS incl. repaired room-upgrades gate |
-| `space_exploration` suites (19 files) | PASS |
-| Domain spot suites (multiplayer/network/sonar/inventory/faction-tech/campaign) | 6 PASS, 1 harness TypeError |
-| `extract-design-db.mjs` | 106/113 sources → design.json |
-| Version fields (update.json, sw.js, webmanifest, package.json) | all 1.33.97 |
+| `verify-global-scope.mjs` / bundle / pack-www | PASS / PASS (27.69 MB) / PASS |
+| `verify-menu-chrome`, `verify-launch-affordance` | PASS, PASS |
+| `verify-boot-screen-unified.mjs` | PASS 8/8 (after `a0c005a8` verifier repairs) |
+| `verify-weapon-fire-packed` | PASS_CAPTURE |
+| `verify-classic-mobile-flow` | **FAIL** — landscape dock overlap |
+| Prior-audit suite set + repaired room-upgrades gate | PASS |
+| space_exploration suites (19) | PASS |
+| Domain spot suites | 6 PASS, 1 harness TypeError |
+| Map census (gl.js MAPDEFS + regions + wet table) | 48 region maps; 12 wet (8 ocean, 4 river); 56 legacy; interior/orbital AUTHORING_ONLY/CANDIDATE, runtimeReady:false |
+| Version fields (4 channels) | all 1.33.97 |
