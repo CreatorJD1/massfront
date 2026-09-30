@@ -42,14 +42,14 @@
    ============================================================================ */
 
 /* Bumped by the release script. Compared against the manifest's `version`. */
-const APP_VERSION = '1.33.98';
+const APP_VERSION = '1.33.99';
 
 /* Release notes for the PACKAGED build, bumped by the release script beside
    APP_VERSION and PACKAGED_REV. A device that has never taken an OTA has no
    download history to read notes from, and an offline device can never fetch
    them, so the build carries its own copy — otherwise a fresh install shows a
    permanently empty first entry in the mailbox. */
-const APP_NOTES = "Sixteen-domain audit, wave one. The ship interior now states each compartment's real condition: uncommissioned cores, offline retrofit tiers and queued repair work surface as DEGRADED / DAMAGE chips on the room list and in the telemetry badge, which also no longer overflows its box on narrow phones. The galaxy view names the conquest front — CONQUEST FRONT n OF 48 with the current map — without overlapping the landscape dock, and the campaign hub gains a dedication ladder showing every planet's charted, survey and gate state in one board. Fallen organic units leave persistent ichor pools that grow, dry and fade, and idle units seen up close breathe instead of freezing. The Ocean Theatre Tester now records its outcomes into the campaign, and the War Room card reports how many sorties held the region. Mission-bearing wording is unified to 'operation' throughout. Known incomplete work: physical Safari PWA and Android-device acceptance, optional Galactic allies, human co-op and Versus, and dropped-session production restoration. These are not completed features.";
+const APP_NOTES = "Sixteen-domain audit, wave two. The interface got the measured subtraction pass: the frontier dedication ladder folds on the Galactic Command hub (hub copy 270 to 88 words), unselected battlefield cards keep chips instead of prose, the region primer card is one line, and the deployment drawer leads with plain labels. Classic setup dock stays pixel-verified in both orientations. probe-naval-rally no longer double-steps the sim cadence, so War Table naval verification is honest again. The cloud playtest smoke test now follows the real player boot path, galactic handoff included.";
 
 /* The channel URL in update-config.json remains publisher-configurable, but a
    production checker also needs one known-good recovery path. More importantly,
