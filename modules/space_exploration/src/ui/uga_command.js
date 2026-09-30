@@ -2470,9 +2470,14 @@ export function createUgaCommand(options = {}) {
   /* More is a visual directory, not a seventeen-row report. Its three authored
      compartment shelves begin closed, show their category artwork, and reveal
      every existing route with one deliberate tap. */
+  /* FRONTIER DEDICATION LADDER joins them (2026-09-30 subtraction pass):
+     it measured 190 words — 43% of all hub copy — and pushed the objective
+     panel down the scroll. The header keeps "0 / 9 REGIONS HELD", which is
+     the part the ladder exists to say; the rung-by-rung road is one tap
+     away and pairs with the item-4 board work. */
   const collapsedSections = new Set([
     'DEBRIEF ARCHIVE', 'VISUAL UPGRADES & ARCHITECTURE',
-    'ABOARD NEXUS-VII', 'MASSFRONT SERVICES', 'ACCOUNT & SETTINGS'
+    'ABOARD NEXUS-VII', 'MASSFRONT SERVICES', 'ACCOUNT & SETTINGS', 'FRONTIER DEDICATION LADDER'
   ]);
   function sectionKey(section) {
     const label = section.querySelector('header span, header small');

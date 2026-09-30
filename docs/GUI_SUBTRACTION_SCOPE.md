@@ -1,5 +1,9 @@
 # GUI subtraction pass — runtime inventory and change list (audit item 1)
 
+**Status: changes 1–4 IMPLEMENTED and verified 2026-09-30 (see "Implemented"
+at the end). Change 5 satisfied by inspection. Change list below is the
+owner-approved scope.**
+
 **2026-09-30.** Audit §2.1–2.3 graded the three hottest screens from template
 source. Before cutting anything, this pass measured what a player actually
 sees: a Playwright probe ([tmp/inventory-subtraction.mjs](../tmp/inventory-subtraction.mjs),
@@ -104,3 +108,30 @@ that is a product decision, not a subtraction).
 3. `verify-menu-chrome` + space_exploration suites stay green.
 4. Screenshot diff against `tmp/subtraction-inventory-1790773407669/` for
    visual regression; inspect via the luminance renderer.
+
+## Implemented (2026-09-30)
+
+| # | Change | Files | Measured result |
+|---|---|---|---|
+| 1 | Ladder folds by default | `modules/space_exploration/src/ui/uga_command.js` — one entry in `collapsedSections`, comment records the 190-word measurement | Hub **270 → 88 words**, taps 20→20 (header still tappable), primary CTA still exactly one (HIRE COMMANDER) |
+| 2 | Unselected region cards drop prose rows | `src/galaxyui.js` CSS: `:not(.sel) .mDs/.mHz{display:none}` | Region **243 → 196 words**; selected card keeps all asserted rows (49 w), others 26/20 w |
+| 3 | War Primer REGION card one line | `src/warprimer.js` copy only — no `PRIMER_VERSION` bump, veterans are not re-lectured | Region card 26 → 20 words, single line |
+| 4 | Deploy drawer label | `src/galaxyui.js`: `MISSION INTEL & EQUIPMENT` → `LOADOUT & RULES` (sole occurrence repo-wide) | Deploy unchanged at 196 w / 15 taps |
+| 5 | One primary CTA per screen | No code — probe now reports primary-class buttons | Hub: 1 (HIRE COMMANDER); classic screens: dock pattern, single `#setupStart` per stage |
+
+Verification all green: `verify-classic-mobile-flow` **PASS** (11 captures,
+both orientations — the region row-overlap and dock-clearance assertions run
+against the modified cards), `verify-menu-chrome` **PASS**, space_exploration
+suites frontier-ladder / duty-watch / front-status-ground-control /
+contract-planning-fallback / core-commission-rescue all **PASS** (duty-watch
+passes silently, exit 0). Post-change probe:
+`tmp/subtraction-inventory-1790774990143.json`; screenshots inspected via the
+luminance renderer — hub ladder rail gone, region unselected cards render as
+chip rows, no overlap or clipping. Note: editing a module file staled the
+signed exploration manifest, so `pack-www` required
+`node modules/space_exploration/tools/build-runtime-content-manifest.mjs`
+first — expected on any module edit.
+
+Not shipped to the five channels yet: per `docs/FIVE_CHANNEL_UPDATE.md`, that
+is a release act with version bumps, deliberately left for the next release
+cut rather than folded into this UI change.
