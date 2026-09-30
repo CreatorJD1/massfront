@@ -290,6 +290,12 @@ function mfGalaxyCss(){
     #mfStageRegion #mapRow .mapCard .mSize,#mfStageRegion #mapRow .mapCard .mNm,#mfStageRegion #mapRow .mapCard .mDs,#mfStageRegion #mapRow .mapCard .mConquest,#mfStageRegion #mapRow .mapCard .mReward,#mfStageRegion #mapRow .mapCard .mHz{grid-column:2;min-width:0;margin:0;overflow-wrap:anywhere}
     #mfStageRegion #mapRow .mapCard .mNm{min-height:0;justify-content:flex-start;text-align:left}
     #mfStageRegion #mapRow .mapCard .mConquest,#mfStageRegion #mapRow .mapCard .mReward{display:block;padding-top:4px}
+    /* Subtraction pass (audit item 1): the three site cards measured 49/48/30
+       visible words — two prose rows each that the selected site's dossier and
+       the deploy brief restate. Unselected cards keep name, size and the
+       conquest/hazard chips; the selected card keeps every row the mobile-flow
+       verifier asserts. */
+    #mfStageRegion #mapRow .mapCard:not(.sel) .mDs,#mfStageRegion #mapRow .mapCard:not(.sel) .mHz{display:none}
     .mfWorldChip{font-size:7px}.mfRegionChip{font-size:6.5px}.mfStageTitle{letter-spacing:.12em}.mfQuickPlan{min-height:98px;padding-left:6px;padding-right:6px}.mfQuickPlan span{font-size:7.5px}.mfQuickSummary{grid-template-columns:repeat(2,minmax(0,1fr))}}
   @media(max-width:380px){.mfLoadoutHead{display:block}.mfLoadoutChips{justify-content:flex-start;margin-top:7px}.mfLoadoutCommand,.mfLoadoutGrid{grid-template-columns:1fr}}
   @media(max-width:355px){.mfGalaxyStep{font-size:8.5px;letter-spacing:.03em}.mfWorldStrip,.mfRegionStrip{grid-template-columns:repeat(2,1fr)}.mfPlanetStats{grid-template-columns:1fr 1fr}}
@@ -1596,7 +1602,7 @@ function mfGalaxyBuild(){
         <button type="button" class="mfQuickPlan" data-mf-plan="fortress" style="--qp:#ffbd68"><i>03</i><b>FORTRESS</b><span>Hard defensive assault</span><em>VETERAN</em></button>
       </div><div class="mfQuickLabel mfQuickLabel--team"><b>TEAM</b><small>PLAYER VS AI</small></div><div class="mfQuickTeam"><button type="button" class="mfTeamBtn" data-mf-team="solo"><b>SOLO COMMAND</b><span>You versus one enemy AI.</span></button><button type="button" class="mfTeamBtn" data-mf-team="ally"><b>ALLIED STRIKE</b><span>You and one AI ally versus an enemy.</span></button></div>
       <div class="mfQuickLabel mfQuickLabel--commander"><b>COMMANDER</b><small>PLAYABLE FACTIONS · BROOD IS THE THREAT</small></div><div class="mfCommanderStageShowcase" id="mfCommanderStageShowcase" aria-live="polite"></div><div class="mfQuickCommanders" id="mfQuickCommanders"></div><div class="mfQuickSummary" id="mfQuickSummary"></div></div>
-      <details class="mfDeployIntel"><summary>MISSION INTEL &amp; EQUIPMENT <span>›</span></summary><div class="mfMissionHero" id="mfMissionHero"></div><section class="mfLoadoutSummary" id="mfLoadoutSummary" aria-label="Source-derived deployment loadout"></section></details>
+      <details class="mfDeployIntel"><summary>LOADOUT &amp; RULES <span>›</span></summary><div class="mfMissionHero" id="mfMissionHero"></div><section class="mfLoadoutSummary" id="mfLoadoutSummary" aria-label="Source-derived deployment loadout"></section></details>
       <details class="mfConfigDrawer mfAdvanced" data-drawer="advanced" id="mfAdvanced"><summary><span class="mfDrawerEm">⌘</span><span class="mfDrawerTx"><b>ADVANCED CONTROL</b><small>Exact factions, starts, rules, economy and hazards</small></span><span class="mfDrawerArrow">›</span></summary><div class="mfConfigBody" id="mfAdvancedBody"></div></details>
       <div class="mfConfigIntro mfLegacyConfig"><b>MISSION PARAMETERS</b><span>TAP TO EXPAND</span></div>
       <details class="mfConfigDrawer" data-drawer="command" open><summary><span class="mfDrawerEm">♟</span><span class="mfDrawerTx"><b>COMMAND & FORCES</b><small>Commander, factions, AI and start zones</small></span><span class="mfDrawerArrow">›</span></summary><div class="mfConfigBody" id="mfDrawer-command"></div></details>

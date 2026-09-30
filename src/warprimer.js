@@ -47,7 +47,9 @@ var STAGES=[
  { id:'planet', nm:'PLANET',
    tx:'Choose a region on the globe or in the list. Conquest opens neighboring regions.' },
  { id:'region', nm:'REGION',
-   tx:'Choose a site. STANDARD is the balanced medium battlefield; COMPACT is a shorter fight.' },
+   /* Subtraction pass (audit item 1): region stacks this card on three ~50-word
+   site dossiers, so it gets one line — the choice itself is on the screen. */
+   tx:'Choose a site. STANDARD is the balanced pick.' },
  { id:'deploy', nm:'DEPLOY',
    tx:'Review your force, then START BATTLE. Pick landing ground and tap DEPLOY BASE HERE.' }
 ];
