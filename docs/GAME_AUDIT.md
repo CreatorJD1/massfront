@@ -76,6 +76,17 @@ Verdict: the chrome is high quality; the **information architecture** is not.
 The fix class is subtraction and hierarchy (one primary CTA per screen, panels
 folded by default, copy halved), not new styling.
 
+**Runtime correction (2026-09-30 subtraction pass).** A Playwright probe on
+packed `www` measured what players actually see; change list in
+[GUI_SUBTRACTION_SCOPE.md](GUI_SUBTRACTION_SCOPE.md). Findings: the ~2,134-word
+`#startScreen` never displays — the UGA takeover routes players to the hub;
+the hub resolves to 270 visible words and 20 real taps, of which ONE panel
+(the 190-word dedication ladder) is 43%; the deploy stage's "87 taps" below
+was a measurement artifact (a closed drawer's invisible boxes) — the real
+count is 15 and its fold works as designed; the War Room is already clean
+(70 words, 4 taps). Real subtraction targets: fold the ladder, halve the
+region site dossiers, shorten one War Primer card.
+
 ### 2.2 "Too much text" — CONFIRMED
 
 Hub ~517 words; front ~2,134; the deploy/region stages additionally carry
@@ -271,10 +282,13 @@ it is that water play is not yet a scored, discoverable part of the career.
 
 ## 5. Recommended next fixes (player impact order)
 
-1. **Subtraction pass on the three hottest screens** (High, design) — front
-   screen, Galactic Command hub, deploy/region: one primary CTA each, panels
-   folded by default, copy halved. The screens to beat: 2,134 / ~583 / dense
-   region rows.
+1. **Subtraction pass on the three hottest screens** (High, design) —
+   MEASURED 2026-09-30, scope and change list in
+   [GUI_SUBTRACTION_SCOPE.md](GUI_SUBTRACTION_SCOPE.md); the real targets
+   after runtime correction are the 190-word hub ladder panel (fold), the
+   region stage's three ~50-word site dossiers (halve), and one War Primer
+   card (shorten). Front screen and deploy need nothing — the former never
+   displays, the latter already folds to 15 taps.
 2. **Landscape region dock overlap** (High, bug) — re-land the 2026-09-27
    galaxy separation until `verify-classic-mobile-flow` is green.
 3. **Say the loop out loud** (High, design) — one persistent "what am I doing
