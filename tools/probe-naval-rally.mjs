@@ -368,7 +368,10 @@ try {
       let overlapTicks = 0;
       let overlapPairTicks = 0;
       for (let step = 0; step < TICKS; step++) {
-        tick++;
+        /* tick++ belongs to unitTick itself (sim.js); an external bump here
+           double-stepped the global cadence so every (i+tick)-strided branch —
+           acquisition, dust, and the lod-1 movement half-rate — permanently
+           skipped the even-index half of the formation. */
         stats.t += DT;
         unitTick(DT);
         let anyOverlap = false;
