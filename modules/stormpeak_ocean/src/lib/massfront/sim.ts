@@ -85,6 +85,199 @@ export type OceanBlast = {
   z: number;
   power: number;
   kind: "shell" | "torp" | "super" | "rogue" | "nuke";
+  /** Set for nukes: the surface the sim resolved the blast on. */
+  surface?: NukeSurface;
+};
+
+export type NukeSurface = "water" | "land";
+
+/**
+ * Stormpeak nuke tuning: every designer-facing number for the 100 kt lab nuke.
+ * All times are SIM seconds. The blast clock only advances inside match.step()
+ * while the phase is "live", so pause / brief / victory / defeat freeze it.
+ * nukeFx (physics/nuke.js) reads age and radii from the match; it has no clock.
+ */
+export const NUKE_TUNING = {
+  /** Damage scale for shock / tsunami (the old hard-coded nukeFx power). */
+  power: 4.4,
+  /** Whole blast lifetime (s). A new detonation is rejected until it ends. */
+  durationS: 24,
+
+  /** Instant-kill window for UNITS: the fireball's lethal lifetime (s). Buildings / Cores burn instead. */
+  fireballLethalS: 3.0,
+  /** Minimum instant-kill radius while the fireball is up. */
+  fireballKillMinR: 18,
+  /** Fireball radius: base + grow * (1 - e^(-age/growTauS)) * e^(-max(0, age - holdS)/fadeTauS). */
+  fireBaseR: 8,
+  fireGrowR: 42,
+  fireGrowTauS: 0.55,
+  fireHoldS: 2.4,
+  fireFadeTauS: 2.2,
+
+  /** After the fireball: units in the ground-zero zone burn (hp per second) instead of being ashed. */
+  groundZeroDps: 80,
+  /**
+   * Buildings and Cores inside groundZeroR burn at this rate instead (hp per second,
+   * dt-scaled), both while the fireball is up (it never ashes them) and afterwards.
+   */
+  groundZeroBuildingDps: 60,
+  /** Minimum ground-zero burn radius (the fire curve still sets it when larger). */
+  groundZeroMinR: 40,
+
+  /** Shockwave (mach front): base + burst * age * e^(-age/burstTauS) + speed * age. */
+  machBaseR: 22,
+  machBurstR: 70,
+  machBurstTauS: 2.8,
+  machSpeed: 32,
+
+  /** Tsunami ring: 0 before startS, then base + speed * (age - startS). Land blasts scale by landMul. */
+  tsunamiStartS: 1.8,
+  tsunamiBaseR: 24,
+  tsunamiSpeed: 30,
+  tsunamiLandMul: 0.35,
+
+  /**
+   * Tsunami damage falls off (squared) over a FIXED reach from ground zero:
+   * fall = max(0, 1 - d / tsunamiReach) ** 2; damage = (unit 90 | building 40) * power * fall.
+   * Nothing takes tsunami damage (or knockback) at d >= tsunamiReach, however far
+   * the ring itself travels. Exposed in nukeState() so visuals can fade the ring.
+   */
+  tsunamiReach: 200,
+  /**
+   * Mobile units (never buildings or Cores) hit by the tsunami at d <= this are
+   * killed outright. Buildings and Cores always just take the scaled damage.
+   */
+  tsunamiKillR: 45,
+
+  /** Suction window (s); water blasts only. Profile is sin(pi * phase) over the window. */
+  suctionStartS: 1.4,
+  suctionEndS: 6.5,
+  /**
+   * TOTAL inward pull (world units) on a unit that stays in range for the whole
+   * suction window. Frame-rate independent.
+   */
+  suctionTotalPull: 150,
+  /**
+   * Suction pulls units within machR * suctionReach, i.e. this fraction of the CURRENT
+   * shock-front radius (it grows with the blast: ~275 at the end of the window on the
+   * tester curves, so 0.6 reaches ~165 at most).
+   */
+  suctionReach: 0.6,
+  /** Suction stops pulling inside this distance from ground zero. */
+  suctionMinD: 45,
+} as const;
+
+/**
+ * Water-wave hit tuning (waveField crests / cavity collapses / jets from every
+ * explosion kind). The render loop only samples the wave field and queues the
+ * sample (match.queueWaveHits); the sim applies it inside step() on sim ticks,
+ * so nothing lands while paused / brief / ended and totals do not depend on fps.
+ *
+ * Two different kinds of input:
+ *  - form is a ONE-SHOT hit: waveField.sensorAt reports each crest / collapse /
+ *    jet once per unit per blast (it dedupes internally). Damage is therefore
+ *    per hit, not per second; dt-scaling it would make it fps-dependent.
+ *  - push is a CONTINUOUS force sampled every frame. It used to be applied per
+ *    frame (0.04 * push, capped 1.6/frame); it is now a per-second rate that
+ *    equals the old 60 fps behaviour.
+ */
+export const WAVE_TUNING = {
+  /** HP removed per point of form on a single hit (unchanged from the old per-hit rate). */
+  formDamage: 0.55,
+  /** Hits with less form than this do no damage (unchanged). */
+  formMin: 0.85,
+  /** Continuous shove speed per unit of sampled push, per second (0.04/frame * 60). */
+  pushGainPerSec: 2.4,
+  /** Max continuous shove speed, units per second (1.6/frame * 60). */
+  pushCapPerSec: 96,
+  /** A single hit with form above this also delivers a one-shot slam shove. */
+  slamFormThreshold: 8,
+  /** Max total shove (units) on the slam frame, as before (the old 8.5/frame cap). */
+  slamPushCap: 8.5,
+} as const;
+
+export type NukeRadii = {
+  fireR: number;
+  machR: number;
+  tsunamiR: number;
+  /** 0..1 suction profile (0 on land or outside the window). */
+  suction: number;
+  /** Fireball visible and lethal. */
+  fireballOn: boolean;
+  /** Instant-kill radius while fireballOn, otherwise the ground-zero burn radius. */
+  groundZeroR: number;
+};
+
+/** The single source of truth for the blast's radius curves (sim + visuals). */
+export function nukeRadii(age: number, surface: NukeSurface = "water"): NukeRadii {
+  const T = NUKE_TUNING;
+  const land = surface === "land";
+  const grow = 1 - Math.exp(-age / T.fireGrowTauS);
+  const hold = Math.exp(-Math.max(0, age - T.fireHoldS) / T.fireFadeTauS);
+  const fireR = T.fireBaseR + T.fireGrowR * grow * hold;
+  const machR =
+    T.machBaseR + T.machBurstR * age * Math.exp(-age / T.machBurstTauS) + T.machSpeed * age;
+  const tsunamiRaw =
+    age < T.tsunamiStartS ? 0 : T.tsunamiBaseR + (age - T.tsunamiStartS) * T.tsunamiSpeed;
+  const tsunamiR = land ? tsunamiRaw * T.tsunamiLandMul : tsunamiRaw;
+  const span = T.suctionEndS - T.suctionStartS;
+  const suction =
+    !land && age > T.suctionStartS && age < T.suctionEndS
+      ? Math.sin(((age - T.suctionStartS) / span) * Math.PI)
+      : 0;
+  const fireballOn = age < T.fireballLethalS;
+  const groundZeroR = fireballOn
+    ? Math.max(T.fireballKillMinR, fireR)
+    : Math.max(T.groundZeroMinR, fireR);
+  return { fireR, machR, tsunamiR, suction, fireballOn, groundZeroR };
+}
+
+/**
+ * Tsunami hit at distance d from ground zero (one hit per ent per blast).
+ * kill = instant kill; units only, buildings and Cores just take dmg.
+ */
+export function nukeTsunamiHit(d: number, building: boolean) {
+  const T = NUKE_TUNING;
+  const p = Math.max(0.8, T.power);
+  const lin = Math.max(0, Math.min(1, 1 - d / T.tsunamiReach));
+  const fall = lin * lin;
+  const dmg = (building ? 40 : 90) * p * fall;
+  const kill = !building && d <= T.tsunamiKillR;
+  return { fall, dmg, kill };
+}
+
+/** Read-only view of the live blast for visuals / HUD. */
+export type NukeView = NukeRadii & {
+  id: number;
+  x: number;
+  z: number;
+  surface: NukeSurface;
+  power: number;
+  /** Render age: sim age plus the unconsumed step accumulator (frozen when not live). */
+  age: number;
+  /** Age at the last completed sim tick. */
+  simAge: number;
+  startTick: number;
+  startTime: number;
+  durationS: number;
+  /** NUKE_TUNING.tsunamiReach: tsunami damage is (1 - d / tsunamiReach) ** 2, zero at and beyond it. */
+  tsunamiReach: number;
+  /** NUKE_TUNING.tsunamiKillR: the tsunami instantly kills units (not buildings / Cores) at d <= this. */
+  tsunamiKillR: number;
+};
+
+type NukeBlast = {
+  id: number;
+  x: number;
+  z: number;
+  surface: NukeSurface;
+  startTick: number;
+  startTime: number;
+  ticks: number;
+  machR0: number;
+  tsunamiR0: number;
+  shockHit: Set<number>;
+  tsunamiHit: Set<number>;
 };
 
 export type WaveHit = {
@@ -183,9 +376,16 @@ export function createMatch(
   const shots: Shot[] = [];
   const notices: Notice[] = [];
   const blasts: OceanBlast[] = [];
-  const nukeHit = new Set<string>();
+  let nuke: NukeBlast | null = null;
+  let nukeId = 1;
+  let simTick = 0;
   let waveLoad = 0;
   let waveForm = 0;
+  /** One-shot wave hits (form, slam shove) waiting for the next live sim tick. */
+  type WavePending = { form: number; tag?: string; slamX: number; slamZ: number };
+  const wavePending = new Map<number, WavePending>();
+  /** Latest continuous wave push per ent (world units of force), replaced every sample. */
+  let wavePush: Array<{ id: number; x: number; z: number }> = [];
   const selected: number[] = [];
   let buildKind: BuildingId | null = null;
   let ghost: Snapshot["ghost"] = null;
@@ -586,51 +786,105 @@ export function createMatch(
       if (n) n.taken = -1;
     }
     if (e.kind === "core") {
-      phase = e.team === BROOD ? "victory" : "defeat";
+      /* First core loss decides the match and locks it: a later core death
+         (nuke, wave, shell) can no longer flip victory <-> defeat. */
+      if (phase !== "victory" && phase !== "defeat") {
+        phase = e.team === BROOD ? "victory" : "defeat";
+      }
       notice(e.team === BROOD ? "BROOD CORE DESTROYED" : "COMMAND CORE LOST");
     }
   }
 
-  function applyWaveHits(hits: WaveHit[]) {
+  /**
+   * Render loop -> sim hand-off. Only records the sample; stepWaveHits() applies
+   * it on sim ticks. Ignored unless the match is live.
+   */
+  function queueWaveHits(hits: WaveHit[]) {
+    if (phase !== "live") {
+      wavePush = [];
+      return;
+    }
+    const W = WAVE_TUNING;
     let maxLoad = 0;
     let maxForm = 0;
+    const push: typeof wavePush = [];
     for (const h of hits) {
       if (h.load > maxLoad) maxLoad = h.load;
       if (h.form > maxForm) maxForm = h.form;
-      const e = ents.find((x) => x.id === h.id && x.alive);
-      if (!e || e.hover) continue;
-      if (!e.building) {
-        const px = h.pushX || 0;
-        const pz = h.pushZ || 0;
-        const cap = h.form > 8 ? 8.5 : 1.6;
-        e.x += clamp(px * 0.04, -cap, cap);
-        e.z += clamp(pz * 0.04, -cap, cap);
+      const px = h.pushX || 0;
+      const pz = h.pushZ || 0;
+      if (px || pz) push.push({ id: h.id, x: px, z: pz });
+      const slam = h.form > W.slamFormThreshold;
+      if (h.form < W.formMin && !slam) continue;
+      const p = wavePending.get(h.id) || { form: 0, slamX: 0, slamZ: 0 };
+      if (h.form >= W.formMin) {
+        p.form += h.form;
+        if (h.form > 10) p.tag = h.tag || p.tag || "";
       }
-      if (h.form < 0.85) continue;
-      e.hp -= h.form * 0.55;
-      if (h.form > 10 && e.team === PLAYER) {
-        notice(h.tag === "COLLAPSE" ? "CAVITY COLLAPSE — HULL STRESS" : "WAVE FORM HIT");
+      if (slam) {
+        /* Old slam frame: shove capped at slamPushCap instead of the normal
+           per-frame cap. The continuous rate already covers the normal share. */
+        const normalCap = W.pushCapPerSec / 60;
+        const g = W.pushGainPerSec / 60;
+        const slamShove = (f: number) =>
+          clamp(f * g, -W.slamPushCap, W.slamPushCap) - clamp(f * g, -normalCap, normalCap);
+        p.slamX += slamShove(px);
+        p.slamZ += slamShove(pz);
       }
-      if (e.hp <= 0) killEnt(e);
+      wavePending.set(h.id, p);
     }
+    wavePush = push;
     waveLoad = maxLoad;
     waveForm = maxForm;
   }
 
-  function nukeSweep(wx: {
-    x: number;
-    z: number;
-    power: number;
-    fireR: number;
-    machR: number;
-    machR0: number;
-    tsunamiR: number;
-    tsunamiR0: number;
-    suction: number;
-  }) {
-    const p = Math.max(0.8, wx.power);
-    const x = wx.x;
-    const z = wx.z;
+  /** Apply queued wave hits for one sim tick. Called only from step() while live. */
+  function stepWaveHits(dt: number) {
+    const W = WAVE_TUNING;
+    if (wavePush.length) {
+      const cap = W.pushCapPerSec * dt;
+      for (const w of wavePush) {
+        const e = ents.find((x) => x.id === w.id && x.alive);
+        if (!e || e.hover || e.building) continue;
+        e.x += clamp(w.x * W.pushGainPerSec * dt, -cap, cap);
+        e.z += clamp(w.z * W.pushGainPerSec * dt, -cap, cap);
+      }
+    }
+    if (!wavePending.size) return;
+    for (const [id, h] of wavePending) {
+      if (phase !== "live") break;
+      const e = ents.find((x) => x.id === id && x.alive);
+      if (!e || e.hover) continue;
+      if (!e.building) {
+        e.x += h.slamX;
+        e.z += h.slamZ;
+      }
+      if (h.form <= 0) continue;
+      e.hp -= h.form * W.formDamage;
+      if (h.tag != null && e.team === PLAYER) {
+        notice(h.tag === "COLLAPSE" ? "CAVITY COLLAPSE — HULL STRESS" : "WAVE FORM HIT");
+      }
+      if (e.hp <= 0) killEnt(e);
+    }
+    wavePending.clear();
+  }
+
+  /**
+   * One sim tick of nuke damage. Private: only stepNuke() (inside step(), live
+   * phase only) calls it, so nothing on the render loop can apply blast damage.
+   */
+  function nukeSweep(b: NukeBlast, dt: number) {
+    const T = NUKE_TUNING;
+    const age = b.ticks * TICK;
+    const r = nukeRadii(age, b.surface);
+    const p = Math.max(0.8, T.power);
+    const x = b.x;
+    const z = b.z;
+    const machR0 = b.machR0;
+    const tsunamiR0 = b.tsunamiR0;
+    /* sin profile integrates to 2*span/pi, so this speed sums to suctionTotalPull. */
+    const span = T.suctionEndS - T.suctionStartS;
+    const suctionSpeed = T.suctionTotalPull * (Math.PI / (2 * span)) * r.suction;
     for (const e of ents) {
       if (!e.alive) continue;
       const d = Math.hypot(e.x - x, e.z - z);
@@ -638,23 +892,31 @@ export function createMatch(
       const ox = (e.x - x) * inv;
       const oz = (e.z - z) * inv;
 
-      if (d < wx.fireR && !nukeHit.has(`f${e.id}`)) {
-        nukeHit.add(`f${e.id}`);
-        e.hp = 0;
-        if (e.team === PLAYER) notice(e.building ? "VAPORIZED" : "ASHED");
-        killEnt(e);
-        continue;
+      if (d < r.groundZeroR) {
+        if (r.fireballOn && !e.building) {
+          e.hp = 0;
+          if (e.team === PLAYER) notice("ASHED");
+          killEnt(e);
+          continue;
+        }
+        e.hp -= (e.building ? T.groundZeroBuildingDps : T.groundZeroDps) * dt;
+        if (e.hp <= 0) {
+          if (e.team === PLAYER) notice("GROUND ZERO — ASHED");
+          killEnt(e);
+          continue;
+        }
+        if (e.team === PLAYER) notice("GROUND ZERO — HULL BURNING");
       }
 
-      if (wx.suction > 0.05 && d < wx.machR * 0.92 && d > 8) {
-        const pull = wx.suction * (e.building ? 0.4 : 3.8);
+      if (suctionSpeed > 0 && !e.building && d < r.machR * T.suctionReach && d > T.suctionMinD) {
+        const pull = Math.min(suctionSpeed * dt, d - T.suctionMinD);
         e.x -= ox * pull;
         e.z -= oz * pull;
       }
 
-      if (d <= wx.machR && d > wx.machR0 - 4 && !nukeHit.has(`s${e.id}`)) {
-        nukeHit.add(`s${e.id}`);
-        const fall = clamp(1 - d / Math.max(80, wx.machR), 0, 1);
+      if (d <= r.machR && d > machR0 - 4 && !b.shockHit.has(e.id)) {
+        b.shockHit.add(e.id);
+        const fall = clamp(1 - d / Math.max(80, r.machR), 0, 1);
         const dmg = (e.building ? 28 : 55) * p * fall * fall;
         e.hp -= dmg;
         if (!e.building) {
@@ -670,26 +932,99 @@ export function createMatch(
         }
       }
 
-      if (wx.tsunamiR > 6 && d <= wx.tsunamiR && d > wx.tsunamiR0 - 6 && !nukeHit.has(`t${e.id}`)) {
-        nukeHit.add(`t${e.id}`);
-        const fall = clamp(1 - d / Math.max(120, wx.tsunamiR * 1.2), 0, 1);
-        const dmg = (e.building ? 40 : 90) * p * fall;
-        e.hp -= dmg;
+      if (r.tsunamiR > 6 && d <= r.tsunamiR && d > tsunamiR0 - 6 && !b.tsunamiHit.has(e.id)) {
+        b.tsunamiHit.add(e.id);
+        const hit = nukeTsunamiHit(d, e.building);
+        const fall = hit.fall;
+        e.hp -= hit.dmg;
         if (!e.building) {
           e.x += ox * (14 + p * 6) * fall;
           e.z += oz * (14 + p * 6) * fall;
         }
-        if (fall > 0.45) {
+        if (hit.kill) {
           e.hp = 0;
           if (e.team === PLAYER) notice("TSUNAMI — ASHED");
-        } else if (e.team === PLAYER) notice("BASE SURGE");
+        } else if (fall > 0 && e.team === PLAYER) notice("BASE SURGE");
         if (e.hp <= 0) killEnt(e);
       }
     }
+    const shotR = Math.max(r.groundZeroR, r.machR * 0.2);
     for (const s of shots) {
       if (!s.alive) continue;
-      if (Math.hypot(s.x - x, s.z - z) < Math.max(wx.fireR, wx.machR * 0.2)) s.alive = false;
+      if (Math.hypot(s.x - x, s.z - z) < shotR) s.alive = false;
     }
+    b.machR0 = r.machR;
+    b.tsunamiR0 = r.tsunamiR;
+  }
+
+  /** Advance the blast clock by one sim tick. Called only from step() while live. */
+  function stepNuke(dt: number) {
+    if (!nuke || phase !== "live") return;
+    nukeSweep(nuke, dt);
+    nuke.ticks += 1;
+    if (nuke.ticks * TICK > NUKE_TUNING.durationS) nuke = null;
+  }
+
+  /**
+   * Result is locked: let a running blast finish visually (no sweep, no damage)
+   * so the effect does not freeze on the flash frame behind the end screen.
+   */
+  function stepNukeAfterMatch(dt: number) {
+    if (!nuke) return;
+    acc += dt;
+    while (acc >= TICK) {
+      acc -= TICK;
+      nuke.ticks += 1;
+      if (nuke.ticks * TICK > NUKE_TUNING.durationS) {
+        nuke = null;
+        return;
+      }
+    }
+  }
+
+  function nukeView(): NukeView | null {
+    if (!nuke) return null;
+    const simAge = nuke.ticks * TICK;
+    /* acc only grows while live, so the render age freezes with the sim. */
+    const age = Math.min(NUKE_TUNING.durationS, simAge + clamp(acc, 0, TICK));
+    return {
+      ...nukeRadii(age, nuke.surface),
+      id: nuke.id,
+      x: nuke.x,
+      z: nuke.z,
+      surface: nuke.surface,
+      power: NUKE_TUNING.power,
+      age,
+      simAge,
+      startTick: nuke.startTick,
+      startTime: nuke.startTime,
+      durationS: NUKE_TUNING.durationS,
+      tsunamiReach: NUKE_TUNING.tsunamiReach,
+      tsunamiKillR: NUKE_TUNING.tsunamiKillR,
+    };
+  }
+
+  /** Start a nuke in the sim. Rejected while one is active or the match is not live. */
+  function startNuke(x: number, z: number, surface: NukeSurface) {
+    if (nuke) {
+      notice("WARHEAD ALREADY DETONATING");
+      return false;
+    }
+    if (phase !== "live") return false;
+    nuke = {
+      id: nukeId++,
+      x,
+      z,
+      surface,
+      startTick: simTick,
+      startTime: time,
+      ticks: 0,
+      machR0: 0,
+      tsunamiR0: 0,
+      shockHit: new Set(),
+      tsunamiHit: new Set(),
+    };
+    return true;
   }
 
   function stepBallast(e: Ent, dt: number) {
@@ -834,6 +1169,10 @@ export function createMatch(
   seed();
 
   function step(dt: number) {
+    if (phase === "victory" || phase === "defeat") {
+      stepNukeAfterMatch(Math.min(0.1, dt));
+      return;
+    }
     if (phase !== "live") return;
     const cap = Math.min(0.1, dt);
     acc += cap;
@@ -850,7 +1189,10 @@ export function createMatch(
         stepBallast(e, TICK);
       }
       stepShots(TICK);
+      stepWaveHits(TICK);
+      stepNuke(TICK);
       for (const n of notices) n.age += TICK;
+      simTick++;
     }
     ai(cap);
   }
@@ -990,17 +1332,34 @@ export function createMatch(
   return {
     step,
     snapshot,
-    applyWaveHits,
+    /** Render loop hands over the latest wave-field sample; applied in step(). */
+    queueWaveHits,
     consumeBlasts() {
       const out = blasts.slice();
       blasts.length = 0;
       return out;
     },
-    detonate(x: number, z: number, power = 1, kind: OceanBlast["kind"] = "super") {
+    /**
+     * Returns false when rejected. Nukes are rejected while a blast is active
+     * (no reset of the running blast) or while the match is not live.
+     */
+    detonate(
+      x: number,
+      z: number,
+      power = 1,
+      kind: OceanBlast["kind"] = "super",
+      surface: NukeSurface = "water",
+    ) {
+      if (kind === "nuke") {
+        if (!startNuke(x, z, surface)) return false;
+        blasts.push({ x, z, power, kind, surface });
+        return true;
+      }
       boom(x, z, power, kind);
-      if (kind === "nuke") nukeHit.clear();
+      return true;
     },
-    nukeSweep,
+    /** Live nuke blast (age + radii from the sim clock) or null. Read-only. */
+    nukeState: nukeView,
     pointerDown,
     pointerMove,
     pointerUp,

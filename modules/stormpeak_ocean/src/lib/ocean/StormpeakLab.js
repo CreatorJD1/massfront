@@ -385,6 +385,14 @@ export function bootStormpeakLab(canvas, opts = {}) {
   const rtsView = createRtsView(scene, camera, { wetKit });
   if (opts.onMatch) opts.onMatch(match.snapshot());
   let lastSnap = match.snapshot();
+  /* The sim owns the nuke (clock, radii, damage); it resolves land vs water at
+     detonation and rejects a second warhead while one is still running. */
+  const fireNuke = () => {
+    const x = controls.focal.x;
+    const z = controls.focal.z;
+    return match.detonate(x, z, 4.4, "nuke", probeSurface(x, z, lastSnap.ents));
+  };
+  let lastNukeAge = -1;
 
   controls.onDiveIntent = (d) => {
     match.setSubDepth(metresFromDive(d));
@@ -457,7 +465,7 @@ export function bootStormpeakLab(canvas, opts = {}) {
     }
     if (e.code === "KeyN") {
       e.preventDefault();
-      match.detonate(controls.focal.x, controls.focal.z, 4.4, "nuke");
+      fireNuke();
     }
     if (e.code === "Digit1") match.produce("constructor");
     if (e.code === "Digit2") match.produce("corvette");
@@ -771,12 +779,12 @@ export function bootStormpeakLab(canvas, opts = {}) {
     const blasts = match.consumeBlasts();
     for (let i = 0; i < blasts.length; i++) {
       const b = blasts[i];
-      const surface = probeSurface(b.x, b.z, snap.ents);
+      const surface = b.surface || probeSurface(b.x, b.z, snap.ents);
       waves.detonate(b.x, b.z, b.power, b.kind, surface);
       const y = sea.height(b.x, b.z);
       if (b.kind !== "nuke") splashes.emitCrown(b.x, y, b.z, b.power);
       if (b.kind === "nuke") {
-        nukeFx.ignite(b.x, b.z, b.power, surface);
+        /* nukeFx ignites itself from match.nukeState() below. */
         life.addTrauma(0.4);
       } else if (b.power > 0.5) life.addTrauma(0.1 + b.power * 0.32);
     }
@@ -825,7 +833,9 @@ export function bootStormpeakLab(canvas, opts = {}) {
         pushZ: extra.pushZ,
       };
     });
-    match.applyWaveHits(hits);
+    /* Sample only: the sim applies wave damage / push inside match.step(), on
+       sim ticks, and only while the match is live. */
+    match.queueWaveHits(hits);
 
     life.emitFromSnap(snap, focalSea.h);
     const weather = life.update({
@@ -838,11 +848,17 @@ export function bootStormpeakLab(canvas, opts = {}) {
       cam: camera.position,
     });
     const flashAmt = weather?.flash || 0;
-    const nukeWx = nukeFx.update(t, focalSea.h, camera.position);
+    /* Visual only: blast damage runs inside match.step() on the sim clock. */
+    const nukeWx = nukeFx.update(match.nukeState(), focalSea.h, camera.position);
+    const prevNukeAge = lastNukeAge;
+    lastNukeAge = nukeWx.live ? nukeWx.age : -1;
     if (nukeWx.live) {
-      match.nukeSweep(nukeWx);
       if (nukeWx.sonicBoom) life.addTrauma(0.5);
-      if (nukeWx.age < 3 && Math.floor(nukeWx.age * 2) !== Math.floor((nukeWx.age - dt) * 2)) {
+      if (
+        nukeWx.age < 3 &&
+        nukeWx.age > prevNukeAge &&
+        Math.floor(nukeWx.age * 2) !== Math.floor(prevNukeAge * 2)
+      ) {
         const a = Math.random() * Math.PI * 2;
         const rr = nukeWx.tsunamiR > 8 ? nukeWx.tsunamiR : Math.min(nukeWx.machR * 0.3, 60);
         splashes.emitCrown(nukeWx.x + Math.cos(a) * rr, focalSea.h, nukeWx.z + Math.sin(a) * rr, 0.55);
@@ -1055,7 +1071,7 @@ export function bootStormpeakLab(canvas, opts = {}) {
         return !!(e && e.dived);
       },
       detonate: (x, z, p) => match.detonate(x, z, p, "super"),
-      nuke: () => match.detonate(controls.focal.x, controls.focal.z, 4.4, "nuke"),
+      nuke: () => fireNuke(),
       live: () => waves.live(),
     };
     window.__waveTest = window.__ballastTest;
@@ -1103,7 +1119,7 @@ export function bootStormpeakLab(canvas, opts = {}) {
     getBeaufort: () => beaufortForce,
     setLight,
     detonate: (x, z, p) => match.detonate(x, z, p ?? 1.15, "super"),
-    nuke: () => match.detonate(controls.focal.x, controls.focal.z, 4.4, "nuke"),
+    nuke: () => fireNuke(),
     dispose() {
       running = false;
       renderer.setAnimationLoop(null);
